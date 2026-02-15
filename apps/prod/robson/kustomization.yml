@@ -1,0 +1,30 @@
+# Kustomization for Robson Production
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yml
+  - frontend-deploy.yml
+  - frontend-svc.yml
+  - backend-deploy.yml
+  - backend-svc.yml
+  - redis-deploy.yml
+  - redis-svc.yml
+  - paradedb-statefulset.yml
+  - paradedb-svc.yml
+  - cronjobs.yml
+  - gateway.yml
+  - httproutes.yml
+  - issuer.yml
+
+commonLabels:
+  app.kubernetes.io/part-of: robson
+  environment: production
+
+images:
+  - name: robson-frontend
+    newName: ldamasio/robson-frontend
+    newTag: latest
+  - name: robson-backend
+    newName: ldamasio/robson-backend
+    newTag: latest

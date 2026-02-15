@@ -1,0 +1,37 @@
+# Platform Applications
+# Manages all cluster-wide platform services
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: platform
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: platform
+    app.kubernetes.io/component: gitops
+    app.kubernetes.io/part-of: rbx-infra
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: rbx-platform
+
+  source:
+    repoURL: https://github.com/ldamasio/rbx-infra
+    targetRevision: main
+    path: platform
+    directory:
+      recurse: true
+      exclude: "*/excluded/*"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

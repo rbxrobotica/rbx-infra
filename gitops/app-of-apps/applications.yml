@@ -1,0 +1,33 @@
+# Applications (App of Apps)
+# Manages all product application deployments
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: applications
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: applications
+    app.kubernetes.io/component: gitops
+    app.kubernetes.io/part-of: rbx-infra
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/ldamasio/rbx-infra
+    targetRevision: main
+    path: apps
+    directory:
+      recurse: true
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

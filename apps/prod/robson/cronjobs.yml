@@ -1,0 +1,119 @@
+# Robson CronJobs
+# Scheduled tasks for trading operations
+
+---
+# Stop Monitor CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: robson-stop-monitor
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robson-stop-monitor
+    app.kubernetes.io/component: cronjob
+    app.kubernetes.io/part-of: robson
+spec:
+  schedule: "*/5 * * * *"  # Every 5 minutes
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: stop-monitor
+              image: ldamasio/robson-backend:latest
+              command:
+                - python
+                - manage.py
+                - monitor_stop_orders
+              env:
+                - name: DJANGO_SETTINGS_MODULE
+                  value: "monolith.settings.production"
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: robson-secrets
+                      key: database-url
+                - name: REDIS_URL
+                  value: "redis://robson-redis:6379/0"
+          restartPolicy: OnFailure
+
+---
+# Trailing Stop CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: robson-trailing-stop
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robson-trailing-stop
+    app.kubernetes.io/component: cronjob
+    app.kubernetes.io/part-of: robson
+spec:
+  schedule: "*/1 * * * *"  # Every minute
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: trailing-stop
+              image: ldamasio/robson-backend:latest
+              command:
+                - python
+                - manage.py
+                - update_trailing_stops
+              env:
+                - name: DJANGO_SETTINGS_MODULE
+                  value: "monolith.settings.production"
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: robson-secrets
+                      key: database-url
+                - name: REDIS_URL
+                  value: "redis://robson-redis:6379/0"
+          restartPolicy: OnFailure
+
+---
+# Pattern Scan CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: robson-pattern-scan
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robson-pattern-scan
+    app.kubernetes.io/component: cronjob
+    app.kubernetes.io/part-of: robson
+spec:
+  schedule: "0 */4 * * *"  # Every 4 hours
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: pattern-scan
+              image: ldamasio/robson-backend:latest
+              command:
+                - python
+                - manage.py
+                - scan_patterns
+              env:
+                - name: DJANGO_SETTINGS_MODULE
+                  value: "monolith.settings.production"
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: robson-secrets
+                      key: database-url
+                - name: REDIS_URL
+                  value: "redis://robson-redis:6379/0"
+          restartPolicy: OnFailure

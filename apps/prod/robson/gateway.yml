@@ -1,0 +1,43 @@
+# Gateway API: Robson Gateway
+# Entry point for all Robson traffic
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: robson-gateway
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robson-gateway
+    app.kubernetes.io/part-of: robson
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: https-frontend
+      protocol: HTTPS
+      port: 443
+      hostname: app.robson.rbx.ia.br
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: robson-frontend-tls
+            namespace: robson
+      allowedRoutes:
+        namespaces:
+          from: Same
+    - name: https-backend
+      protocol: HTTPS
+      port: 443
+      hostname: api.robson.rbx.ia.br
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - name: robson-backend-tls
+            namespace: robson
+      allowedRoutes:
+        namespaces:
+          from: Same

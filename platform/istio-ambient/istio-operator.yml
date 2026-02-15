@@ -1,0 +1,32 @@
+# Istio Ambient Mode Configuration
+# Uses Istio Operator or Helm for installation
+
+# Istio CNI configuration for ambient mode
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: istio-ambient
+  namespace: istio-system
+  labels:
+    app.kubernetes.io/name: istio-ambient
+    app.kubernetes.io/part-of: rbx-infra
+spec:
+  profile: ambient
+  meshConfig:
+    accessLogFile: /dev/stdout
+    defaultConfig:
+      proxyMetadata:
+        ISTIO_META_DNS_CAPTURE: "true"
+  components:
+    cni:
+      enabled: true
+      namespace: istio-system
+    pilot:
+      enabled: true
+      k8s:
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+    ztunnel:
+      enabled: true

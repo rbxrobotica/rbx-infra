@@ -1,0 +1,19 @@
+# Robson Redis Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: robson-redis
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robson-redis
+    app.kubernetes.io/component: cache
+    app.kubernetes.io/part-of: robson
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: robson-redis
+  ports:
+    - port: 6379
+      targetPort: redis
+      protocol: TCP
+      name: redis

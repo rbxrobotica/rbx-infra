@@ -1,0 +1,39 @@
+# Gitignore for rbx-infra
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets (never commit actual secrets)
+*.secret.yml
+*.secret.yaml
+secrets/
+.env
+.env.*
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Generated files
+docs/structure.txt
+
+# Ansible
+*.retry
+*.log
+bootstrap/ansible/*.log
+
+# K9s
+*.log
+
+# Kustomize build output
+build/

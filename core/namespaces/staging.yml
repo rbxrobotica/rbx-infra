@@ -1,0 +1,10 @@
+# Namespace: staging
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: staging
+  labels:
+    environment: staging
+    istio.io/dataplane-mode: ambient
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

@@ -1,0 +1,71 @@
+# Workflow: Update Image Tags
+# Triggered by repository_dispatch from application repositories
+name: Update Image Tag
+
+on:
+  repository_dispatch:
+    types: [image-updated]
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Image name to update'
+        required: true
+      tag:
+        description: 'New tag for the image'
+        required: true
+      app:
+        description: 'Application name (robson, strategos, thalamus)'
+        required: true
+        default: 'robson'
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout rbx-infra
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update image tag
+        run: |
+          APP="${{ github.event.client_payload.app || inputs.app }}"
+          IMAGE="${{ github.event.client_payload.image || inputs.image }}"
+          TAG="${{ github.event.client_payload.tag || inputs.tag }}"
+
+          # Update kustomization.yml
+          cd apps/prod/${APP}
+
+          # Extract just the tag if full image reference provided
+          TAG_ONLY=$(echo "$TAG" | sed 's/.*://')
+
+          # Update the image tag in kustomization.yml
+          sed -i "s|newTag: .*|newTag: ${TAG_ONLY}|" kustomization.yml
+
+          echo "Updated ${IMAGE} to tag ${TAG_ONLY}"
+
+      - name: Commit and push
+        run: |
+          git add .
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update image tag for ${{ github.event.client_payload.app || inputs.app }}"
+          git push
+
+      - name: Notify ArgoCD
+        if: success()
+        run: |
+          # ArgoCD will auto-sync, but we can force a refresh
+          echo "Image tag updated. ArgoCD will sync automatically."
+
+  notify:
+    needs: update-manifest
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Send notification
+        run: |
+          echo "Image update workflow completed with status: ${{ needs.update-manifest.result }}"

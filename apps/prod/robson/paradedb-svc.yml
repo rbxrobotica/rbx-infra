@@ -1,0 +1,19 @@
+# Robson ParadeDB Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: robson-paradedb
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robson-paradedb
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: robson
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: robson-paradedb
+  ports:
+    - port: 5432
+      targetPort: postgres
+      protocol: TCP
+      name: postgres

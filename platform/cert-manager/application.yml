@@ -1,0 +1,39 @@
+# ArgoCD Application: cert-manager
+# Manages TLS certificate lifecycle
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: cert-manager
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/part-of: rbx-infra
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  project: rbx-platform
+
+  source:
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: v1.14.0
+    helm:
+      values: |
+        installCRDs: true
+        prometheus:
+          enabled: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

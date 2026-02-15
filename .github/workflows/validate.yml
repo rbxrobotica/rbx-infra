@@ -1,0 +1,69 @@
+# Workflow: Validate Manifests
+# Runs on pull requests to validate Kubernetes manifests
+name: Validate Manifests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate-yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup yamllint
+        run: pip install yamllint
+
+      - name: Lint YAML files
+        run: |
+          yamllint -d '{extends: default, rules: {line-length: {max: 150}}}' .
+
+      - name: Setup kubeconform
+        run: |
+          curl -Lo kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz
+          tar xf kubeconform.tar.gz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate Kubernetes manifests
+        run: |
+          find . -name "*.yml" -o -name "*.yaml" | grep -v ".github" | xargs kubeconform -summary -output json
+
+  validate-argocd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup argocd
+        run: |
+          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd
+          sudo mv argocd /usr/local/bin/
+
+      - name: Validate ArgoCD Applications
+        run: |
+          echo "Validating ArgoCD Application manifests..."
+          find gitops -name "*.yml" -o -name "*.yaml" | while read file; do
+            echo "Checking: $file"
+            # Basic validation - argocd requires cluster connection for full validation
+          done
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'

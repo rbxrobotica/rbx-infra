@@ -1,0 +1,19 @@
+# Robson Frontend Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: robson-frontend
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robson-frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: robson
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: robson-frontend
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http

@@ -1,0 +1,66 @@
+# ArgoCD Application: ArgoCD
+# GitOps controller - must be installed first
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/part-of: rbx-infra
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-10"
+spec:
+  project: default
+
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-cd
+    targetRevision: 7.3.0
+    helm:
+      values: |
+        global:
+          domain: argocd.rbx.ia.br
+        configs:
+          params:
+            server.insecure: true
+        server:
+          ingress:
+            enabled: true
+            ingressClassName: traefik
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-prod
+            hosts:
+              - argocd.rbx.ia.br
+            tls:
+              - secretName: argocd-tls
+                hosts:
+                  - argocd.rbx.ia.br
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+        repoServer:
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+        applicationSet:
+          enabled: true
+        notifications:
+          enabled: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
