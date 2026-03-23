@@ -26,8 +26,8 @@ spec:
     - group: apps
       kind: StatefulSet
       name: robson-paradedb
-      jsonPointers:
-        - /spec/volumeClaimTemplates/0/spec/storageClassName
+      jqPathExpressions:
+        - .spec.volumeClaimTemplates[]?
 
   syncPolicy:
     automated:
@@ -36,3 +36,4 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
