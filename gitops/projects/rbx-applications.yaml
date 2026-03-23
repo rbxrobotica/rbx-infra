@@ -31,6 +31,8 @@ spec:
 
   # Cluster resources (only what applications need)
   clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
     - group: gateway.networking.k8s.io
       kind: Gateway
     - group: gateway.networking.k8s.io
