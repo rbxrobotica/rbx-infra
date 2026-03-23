@@ -220,8 +220,7 @@ spec:
               command:
                 - python
                 - manage.py
-                - scan_patterns
-                - --continuous
+                - detect_patterns
               env:
                 - name: DJANGO_SETTINGS_MODULE
                   value: "backend.settings"
