@@ -30,10 +30,3 @@ commonLabels:
   app.kubernetes.io/part-of: robson
   environment: production
 
-images:
-  - name: robson-frontend
-    newName: ldamasio/robson-frontend
-    newTag: latest
-  - name: robson-backend
-    newName: ldamasio/robson-backend
-    newTag: latest

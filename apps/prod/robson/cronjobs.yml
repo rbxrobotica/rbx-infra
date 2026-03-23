@@ -1,19 +1,19 @@
-# Robson CronJobs
+# Robson CronJobs (Production)
 # Scheduled tasks for trading operations
 
 ---
-# Stop Monitor CronJob
+# Stop Monitor CronJob — every minute
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: robson-stop-monitor
+  name: rbs-stop-monitor-cronjob
   namespace: robson
   labels:
-    app.kubernetes.io/name: robson-stop-monitor
+    app.kubernetes.io/name: rbs-stop-monitor-cronjob
     app.kubernetes.io/component: cronjob
     app.kubernetes.io/part-of: robson
 spec:
-  schedule: "*/5 * * * *"  # Every 5 minutes
+  schedule: "* * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -23,36 +23,93 @@ spec:
         spec:
           containers:
             - name: stop-monitor
-              image: ldamasio/robson-backend:latest
+              image: ldamasio/rbs-backend-monolith-prod:sha-d64519c
+              imagePullPolicy: Always
               command:
                 - python
                 - manage.py
                 - monitor_stop_orders
               env:
                 - name: DJANGO_SETTINGS_MODULE
-                  value: "monolith.settings.production"
-                - name: DATABASE_URL
+                  value: "backend.settings"
+                - name: DEBUG
+                  value: "False"
+                - name: RBS_SECRET_KEY
                   valueFrom:
                     secretKeyRef:
-                      name: robson-secrets
-                      key: database-url
+                      name: rbs-django-secret
+                      key: RBS_SECRET_KEY
+                - name: RBS_BINANCE_API_KEY_TEST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_API_KEY_TEST
+                - name: RBS_BINANCE_SECRET_KEY_TEST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_SECRET_KEY_TEST
+                - name: RBS_BINANCE_API_KEY_PROD
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_API_KEY_PROD
+                - name: RBS_BINANCE_SECRET_KEY_PROD
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_SECRET_KEY_PROD
+                - name: RBS_BINANCE_API_URL_TEST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_API_URL_TEST
+                - name: RBS_PG_DATABASE
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_DATABASE
+                - name: RBS_PG_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_USER
+                - name: RBS_PG_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_PASSWORD
+                - name: RBS_PG_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_HOST
+                - name: RBS_PG_PORT
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_PORT
                 - name: REDIS_URL
-                  value: "redis://robson-redis:6379/0"
+                  value: "redis://robson-redis:6379/1"
+                - name: BINANCE_USE_TESTNET
+                  value: "False"
+                - name: TRADING_ENABLED
+                  value: "True"
           restartPolicy: OnFailure
 
 ---
-# Trailing Stop CronJob
+# Trailing Stop CronJob — every minute
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: robson-trailing-stop
+  name: rbs-trailing-stop-cronjob
   namespace: robson
   labels:
-    app.kubernetes.io/name: robson-trailing-stop
+    app.kubernetes.io/name: rbs-trailing-stop-cronjob
     app.kubernetes.io/component: cronjob
     app.kubernetes.io/part-of: robson
 spec:
-  schedule: "*/1 * * * *"  # Every minute
+  schedule: "* * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -62,36 +119,93 @@ spec:
         spec:
           containers:
             - name: trailing-stop
-              image: ldamasio/robson-backend:latest
+              image: ldamasio/rbs-backend-monolith-prod:sha-d64519c
+              imagePullPolicy: Always
               command:
                 - python
                 - manage.py
                 - update_trailing_stops
               env:
                 - name: DJANGO_SETTINGS_MODULE
-                  value: "monolith.settings.production"
-                - name: DATABASE_URL
+                  value: "backend.settings"
+                - name: DEBUG
+                  value: "False"
+                - name: RBS_SECRET_KEY
                   valueFrom:
                     secretKeyRef:
-                      name: robson-secrets
-                      key: database-url
+                      name: rbs-django-secret
+                      key: RBS_SECRET_KEY
+                - name: RBS_BINANCE_API_KEY_TEST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_API_KEY_TEST
+                - name: RBS_BINANCE_SECRET_KEY_TEST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_SECRET_KEY_TEST
+                - name: RBS_BINANCE_API_KEY_PROD
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_API_KEY_PROD
+                - name: RBS_BINANCE_SECRET_KEY_PROD
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_SECRET_KEY_PROD
+                - name: RBS_BINANCE_API_URL_TEST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_API_URL_TEST
+                - name: RBS_PG_DATABASE
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_DATABASE
+                - name: RBS_PG_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_USER
+                - name: RBS_PG_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_PASSWORD
+                - name: RBS_PG_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_HOST
+                - name: RBS_PG_PORT
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_PORT
                 - name: REDIS_URL
-                  value: "redis://robson-redis:6379/0"
+                  value: "redis://robson-redis:6379/1"
+                - name: BINANCE_USE_TESTNET
+                  value: "False"
+                - name: TRADING_ENABLED
+                  value: "True"
           restartPolicy: OnFailure
 
 ---
-# Pattern Scan CronJob
+# Pattern Scan CronJob — every 15 minutes
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: robson-pattern-scan
+  name: rbs-pattern-scan-cronjob
   namespace: robson
   labels:
-    app.kubernetes.io/name: robson-pattern-scan
+    app.kubernetes.io/name: rbs-pattern-scan-cronjob
     app.kubernetes.io/component: cronjob
     app.kubernetes.io/part-of: robson
 spec:
-  schedule: "0 */4 * * *"  # Every 4 hours
+  schedule: "*/15 * * * *"
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -101,19 +215,76 @@ spec:
         spec:
           containers:
             - name: pattern-scan
-              image: ldamasio/robson-backend:latest
+              image: ldamasio/rbs-backend-monolith-prod:sha-f2ccc34
+              imagePullPolicy: Always
               command:
                 - python
                 - manage.py
                 - scan_patterns
               env:
                 - name: DJANGO_SETTINGS_MODULE
-                  value: "monolith.settings.production"
-                - name: DATABASE_URL
+                  value: "backend.settings"
+                - name: DEBUG
+                  value: "False"
+                - name: RBS_SECRET_KEY
                   valueFrom:
                     secretKeyRef:
-                      name: robson-secrets
-                      key: database-url
+                      name: rbs-django-secret
+                      key: RBS_SECRET_KEY
+                - name: RBS_BINANCE_API_KEY_TEST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_API_KEY_TEST
+                - name: RBS_BINANCE_SECRET_KEY_TEST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_SECRET_KEY_TEST
+                - name: RBS_BINANCE_API_KEY_PROD
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_API_KEY_PROD
+                - name: RBS_BINANCE_SECRET_KEY_PROD
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_SECRET_KEY_PROD
+                - name: RBS_BINANCE_API_URL_TEST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: RBS_BINANCE_API_URL_TEST
+                - name: RBS_PG_DATABASE
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_DATABASE
+                - name: RBS_PG_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_USER
+                - name: RBS_PG_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_PASSWORD
+                - name: RBS_PG_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_HOST
+                - name: RBS_PG_PORT
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbs-django-secret
+                      key: POSTGRES_PORT
                 - name: REDIS_URL
-                  value: "redis://robson-redis:6379/0"
+                  value: "redis://robson-redis:6379/1"
+                - name: BINANCE_USE_TESTNET
+                  value: "True"
+                - name: TRADING_ENABLED
+                  value: "True"
           restartPolicy: OnFailure

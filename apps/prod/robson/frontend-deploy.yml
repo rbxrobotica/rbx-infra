@@ -1,4 +1,5 @@
 # Robson Frontend Deployment (Production)
+# Image: ldamasio/rbs-frontend-prod
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -9,7 +10,7 @@ metadata:
     app.kubernetes.io/component: frontend
     app.kubernetes.io/part-of: robson
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: robson-frontend
@@ -18,40 +19,34 @@ spec:
       labels:
         app.kubernetes.io/name: robson-frontend
         app.kubernetes.io/component: frontend
-        sidecar.istio.io/inject: "false"
     spec:
       containers:
-        - name: frontend
-          image: ldamasio/robson-frontend:latest
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 80
-              name: http
-          resources:
-            requests:
-              cpu: 50m
-              memory: 64Mi
-            limits:
-              cpu: 200m
-              memory: 128Mi
-          livenessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          readinessProbe:
-            httpGet:
-              path: /
-              port: 80
-            initialDelaySeconds: 2
-            periodSeconds: 5
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/name: robson-frontend
-                topologyKey: kubernetes.io/hostname
+      - name: frontend
+        image: ldamasio/rbs-frontend-prod:sha-d64519c
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          name: http
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "100Mi"
+          limits:
+            cpu: "500m"
+            memory: "200Mi"

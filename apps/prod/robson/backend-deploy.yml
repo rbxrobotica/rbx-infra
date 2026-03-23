@@ -1,4 +1,5 @@
 # Robson Backend Deployment (Production)
+# Image: ldamasio/rbs-backend-monolith-prod
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -9,7 +10,7 @@ metadata:
     app.kubernetes.io/component: backend
     app.kubernetes.io/part-of: robson
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: robson-backend
@@ -20,60 +21,103 @@ spec:
         app.kubernetes.io/component: backend
     spec:
       containers:
-        - name: django
-          image: ldamasio/robson-backend:latest
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8000
-              name: http
-          env:
-            - name: DJANGO_SETTINGS_MODULE
-              value: "monolith.settings.production"
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: robson-secrets
-                  key: database-url
-            - name: REDIS_URL
-              value: "redis://robson-redis:6379/0"
-          resources:
-            requests:
-              cpu: 100m
-              memory: 256Mi
-            limits:
-              cpu: 500m
-              memory: 512Mi
-          livenessProbe:
-            httpGet:
-              path: /health/
-              port: 8000
-            initialDelaySeconds: 10
-            periodSeconds: 15
-          readinessProbe:
-            httpGet:
-              path: /health/
-              port: 8000
-            initialDelaySeconds: 5
-            periodSeconds: 10
-        - name: nginx
-          image: ldamasio/robson-nginx:latest
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 8080
-              name: http
-          resources:
-            requests:
-              cpu: 25m
-              memory: 32Mi
-            limits:
-              cpu: 100m
-              memory: 64Mi
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/name: robson-backend
-                topologyKey: kubernetes.io/hostname
+      - name: backend
+        image: ldamasio/rbs-backend-monolith-prod:sha-d64519c
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DJANGO_SETTINGS_MODULE
+          value: "backend.settings"
+        - name: DEBUG
+          value: "False"
+        - name: RBS_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rbs-django-secret
+              key: RBS_SECRET_KEY
+        - name: RBS_BINANCE_API_KEY_TEST
+          valueFrom:
+            secretKeyRef:
+              name: rbs-django-secret
+              key: RBS_BINANCE_API_KEY_TEST
+        - name: RBS_BINANCE_SECRET_KEY_TEST
+          valueFrom:
+            secretKeyRef:
+              name: rbs-django-secret
+              key: RBS_BINANCE_SECRET_KEY_TEST
+        - name: RBS_BINANCE_API_KEY_PROD
+          valueFrom:
+            secretKeyRef:
+              name: rbs-django-secret
+              key: RBS_BINANCE_API_KEY_PROD
+        - name: RBS_BINANCE_SECRET_KEY_PROD
+          valueFrom:
+            secretKeyRef:
+              name: rbs-django-secret
+              key: RBS_BINANCE_SECRET_KEY_PROD
+        - name: RBS_BINANCE_API_URL_TEST
+          valueFrom:
+            secretKeyRef:
+              name: rbs-django-secret
+              key: RBS_BINANCE_API_URL_TEST
+        - name: RBS_PG_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: rbs-django-secret
+              key: POSTGRES_DATABASE
+        - name: RBS_PG_USER
+          valueFrom:
+            secretKeyRef:
+              name: rbs-django-secret
+              key: POSTGRES_USER
+        - name: RBS_PG_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: rbs-django-secret
+              key: POSTGRES_PASSWORD
+        - name: RBS_PG_HOST
+          valueFrom:
+            secretKeyRef:
+              name: rbs-django-secret
+              key: POSTGRES_HOST
+        - name: RBS_PG_PORT
+          valueFrom:
+            secretKeyRef:
+              name: rbs-django-secret
+              key: POSTGRES_PORT
+        - name: REDIS_URL
+          value: "redis://robson-redis:6379/1"
+        - name: GROQ_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: rbs-groq-secret
+              key: GROQ_API_KEY
+        - name: BINANCE_USE_TESTNET
+          value: "False"
+        - name: TRADING_ENABLED
+          value: "True"
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            cpu: "750m"
+            memory: "1000Mi"
+          limits:
+            cpu: "1500m"
+            memory: "1000Mi"
