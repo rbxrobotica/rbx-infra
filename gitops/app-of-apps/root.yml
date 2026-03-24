@@ -16,7 +16,7 @@ spec:
   project: default
 
   source:
-    repoURL: https://github.com/ldamasio/rbx-infra
+    repoURL: https://github.com/rbxrobotica/rbx-infra
     targetRevision: main
     path: gitops/app-of-apps
 

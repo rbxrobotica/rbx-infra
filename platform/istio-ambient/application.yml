@@ -17,7 +17,7 @@ spec:
   project: rbx-platform
 
   source:
-    repoURL: https://github.com/ldamasio/rbx-infra
+    repoURL: https://github.com/rbxrobotica/rbx-infra
     targetRevision: main
     path: platform/istio-ambient
     directory:

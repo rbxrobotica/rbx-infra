@@ -15,7 +15,7 @@ spec:
   project: rbx-applications
 
   source:
-    repoURL: https://github.com/ldamasio/rbx-infra
+    repoURL: https://github.com/rbxrobotica/rbx-infra
     targetRevision: main
     path: apps
     directory:
