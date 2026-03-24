@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: truthmetal-svc
+  namespace: truthmetal
+  labels:
+    app.kubernetes.io/name: truthmetal-svc
+    app.kubernetes.io/part-of: truthmetal
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: truthmetal
+  ports:
+    - port: 8080
+      targetPort: 8000
+      protocol: TCP

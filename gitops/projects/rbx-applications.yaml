@@ -1,5 +1,3 @@
-# ArgoCD AppProject: rbx-applications
-# Manages all product application deployments (robson, strategos, thalamus, websites)
 apiVersion: argoproj.io/v1alpha1
 kind: AppProject
 metadata:
@@ -11,12 +9,8 @@ metadata:
     app.kubernetes.io/part-of: rbx-infra
 spec:
   description: Product application deployments
-
-  # Source repositories
   sourceRepos:
     - https://github.com/ldamasio/rbx-infra
-
-  # Destination clusters and namespaces
   destinations:
     - namespace: robson
       server: https://kubernetes.default.svc
@@ -34,8 +28,8 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: websites
       server: https://kubernetes.default.svc
-
-  # Cluster resources (only what applications need)
+    - namespace: truthmetal
+      server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
@@ -47,20 +41,19 @@ spec:
       kind: ClusterIssuer
     - group: networking.k8s.io
       kind: IngressClass
-
-  # Namespaced resources allowed
   namespaceResourceWhitelist:
-    - group: '*'
-      kind: '*'
-
-  # Roles for application teams
+    - group: "*"
+      kind: "*"
   roles:
     - name: developer
       description: Developers with namespace-scoped access
       policies:
-        - p, proj:rbx-applications:developer, applications, get, rbx-applications/*, allow
-        - p, proj:rbx-applications:developer, applications, sync, rbx-applications/*, allow
+        - p, proj:rbx-applications:developer, applications, get,
+          rbx-applications/*, allow
+        - p, proj:rbx-applications:developer, applications, sync,
+          rbx-applications/*, allow
         - p, proj:rbx-applications:developer, exec, *, rbx-applications/*, allow
-        - p, proj:rbx-applications:developer, logs, get, rbx-applications/*, allow
+        - p, proj:rbx-applications:developer, logs, get, rbx-applications/*,
+          allow
       groups:
         - rbx:developers

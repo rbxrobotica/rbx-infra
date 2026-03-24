@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: truthmetal-ingress
+  namespace: truthmetal
+  labels:
+    app.kubernetes.io/name: truthmetal-ingress
+    app.kubernetes.io/part-of: truthmetal
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: truthmetal-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - api.truthmetal.rbx.ia.br
+      secretName: truthmetal-tls
+  rules:
+    - host: api.truthmetal.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: truthmetal-svc
+                port:
+                  number: 8080
