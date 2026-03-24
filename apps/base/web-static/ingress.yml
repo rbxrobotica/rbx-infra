@@ -1,0 +1,28 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: __NAME__-ingress
+  namespace: __NAME__
+  labels:
+    app.kubernetes.io/name: __NAME__-ingress
+    app.kubernetes.io/part-of: __NAME__
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: __NAME__-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - __DOMAIN__
+      secretName: __NAME__-tls
+  rules:
+    - host: __DOMAIN__
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: __NAME__-svc
+                port:
+                  number: 80

@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: __NAME__
+  labels:
+    app.kubernetes.io/part-of: __NAME__
+    environment: production
+    istio.io/dataplane-mode: ambient
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
