@@ -38,7 +38,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: rbx-frontend
-          image: docker.io/ldamasio/rbx-ia-br-prod:latest
+          image: ghcr.io/rbxrobotica/rbx-ia-br:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000

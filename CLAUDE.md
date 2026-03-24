@@ -41,12 +41,19 @@ Priority order for ArgoCD sync:
 4. `-1`: Namespaces, AppProjects
 5. `0`: Applications (default)
 
+## Container Registry
+
+All RBX products use **`ghcr.io/rbxrobotica/<product>`** (GitHub Container Registry).
+- CI authenticates with `GITHUB_TOKEN` (automatic) — no Docker Hub credentials needed.
+- See `docs/CONTAINER-REGISTRY.md` for the full standard, CI template, and migration guide.
+
 ## Important Rules
 
 1. **No secrets in Git** - Use external-secrets or Kubernetes secrets
 2. **No manual kubectl apply** - All changes through Git
 3. **English only** - Official RBX Systems language
 4. **K9s for operations** - Primary cluster management tool
+5. **GHCR only** - No Docker Hub; all images at `ghcr.io/rbxrobotica/<product>`
 
 ## Common Tasks
 

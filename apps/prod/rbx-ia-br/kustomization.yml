@@ -14,5 +14,5 @@ commonLabels:
   environment: production
 
 images:
-  - name: docker.io/ldamasio/rbx-ia-br-prod
+  - name: ghcr.io/rbxrobotica/rbx-ia-br
     newTag: latest
