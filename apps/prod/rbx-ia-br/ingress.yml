@@ -1,0 +1,29 @@
+# Ingress: rbx.ia.br (site nacional)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rbx-ia-br-ingress
+  namespace: rbx-ia-br
+  labels:
+    app.kubernetes.io/name: rbx-ia-br-ingress
+    app.kubernetes.io/part-of: rbx-ia-br
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: rbx-ia-br-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - rbx.ia.br
+      secretName: rbx-ia-br-tls
+  rules:
+    - host: rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-ia-br-svc
+                port:
+                  number: 80

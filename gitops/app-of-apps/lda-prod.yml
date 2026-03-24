@@ -1,0 +1,31 @@
+# ArgoCD Application: lda-prod (leandrodamasio.rbx.ia.br)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lda-prod
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: lda-prod
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: lda-prod
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/ldamasio/rbx-infra
+    targetRevision: main
+    path: apps/prod/lda-prod
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lda-prod
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

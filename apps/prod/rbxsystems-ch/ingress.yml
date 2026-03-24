@@ -1,0 +1,29 @@
+# Ingress: rbxsystems.ch (site internacional)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rbxsystems-ch-ingress
+  namespace: rbxsystems-ch
+  labels:
+    app.kubernetes.io/name: rbxsystems-ch-ingress
+    app.kubernetes.io/part-of: rbxsystems-ch
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: rbxsystems-ch-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - rbxsystems.ch
+      secretName: rbxsystems-ch-tls
+  rules:
+    - host: rbxsystems.ch
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbxsystems-ch-svc
+                port:
+                  number: 80

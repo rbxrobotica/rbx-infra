@@ -1,0 +1,11 @@
+# Namespace: rbxsystems-ch (rbxsystems.ch — site internacional)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbxsystems-ch
+  labels:
+    app.kubernetes.io/part-of: rbxsystems-ch
+    environment: production
+    istio.io/dataplane-mode: ambient
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

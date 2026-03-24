@@ -1,0 +1,31 @@
+# ArgoCD Application: rbx-ia-br (rbx.ia.br — site nacional)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-ia-br
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-ia-br
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-ia-br
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/ldamasio/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-ia-br
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-ia-br
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true

@@ -1,22 +1,22 @@
-# Deployment: rbx.ia.br + rbxsystems.ch
+# Deployment: rbxsystems.ch (site internacional RBX Systems)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: rbx-ia-br-prod
-  namespace: robson
+  name: rbxsystems-ch
+  namespace: rbxsystems-ch
   labels:
-    app.kubernetes.io/name: rbx-ia-br-prod
+    app.kubernetes.io/name: rbxsystems-ch
     app.kubernetes.io/component: frontend
-    app.kubernetes.io/part-of: rbx-infra
+    app.kubernetes.io/part-of: rbxsystems-ch
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app.kubernetes.io/name: rbx-ia-br-prod
+      app.kubernetes.io/name: rbxsystems-ch
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: rbx-ia-br-prod
+        app.kubernetes.io/name: rbxsystems-ch
         app.kubernetes.io/component: frontend
     spec:
       affinity:
@@ -34,7 +34,7 @@ spec:
               podAffinityTerm:
                 labelSelector:
                   matchLabels:
-                    app.kubernetes.io/name: rbx-ia-br-prod
+                    app.kubernetes.io/name: rbxsystems-ch
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: rbx-frontend

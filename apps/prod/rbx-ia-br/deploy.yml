@@ -1,22 +1,22 @@
-# Deployment: leandrodamasio.rbx.ia.br
+# Deployment: rbx.ia.br (site nacional RBX Systems)
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lda-prod
-  namespace: robson
+  name: rbx-ia-br
+  namespace: rbx-ia-br
   labels:
-    app.kubernetes.io/name: lda-prod
+    app.kubernetes.io/name: rbx-ia-br
     app.kubernetes.io/component: frontend
-    app.kubernetes.io/part-of: rbx-infra
+    app.kubernetes.io/part-of: rbx-ia-br
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
-      app.kubernetes.io/name: lda-prod
+      app.kubernetes.io/name: rbx-ia-br
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: lda-prod
+        app.kubernetes.io/name: rbx-ia-br
         app.kubernetes.io/component: frontend
     spec:
       affinity:
@@ -28,9 +28,17 @@ spec:
                     operator: NotIn
                     values:
                       - analytics
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: rbx-ia-br
+                topologyKey: kubernetes.io/hostname
       containers:
-        - name: lda-frontend
-          image: docker.io/ldamasio/lda-prod:latest
+        - name: rbx-frontend
+          image: docker.io/ldamasio/rbx-ia-br-prod:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000

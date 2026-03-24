@@ -1,0 +1,11 @@
+# Namespace: rbx-ia-br (rbx.ia.br — site nacional)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-ia-br
+  labels:
+    app.kubernetes.io/part-of: rbx-ia-br
+    environment: production
+    istio.io/dataplane-mode: ambient
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

@@ -1,0 +1,14 @@
+# Kustomization for rbxsystems-ch (rbxsystems.ch)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yml
+  - middleware-https.yml
+  - deploy.yml
+  - svc.yml
+  - ingress.yml
+
+commonLabels:
+  app.kubernetes.io/part-of: rbxsystems-ch
+  environment: production

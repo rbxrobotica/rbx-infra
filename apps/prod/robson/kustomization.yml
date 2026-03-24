@@ -6,6 +6,7 @@ resources:
   # Namespace
   - namespace.yml
   # Robson trading app
+  - middleware-https.yml
   - frontend-deploy.yml
   - frontend-svc.yml
   - frontend-ingress.yml
@@ -17,14 +18,6 @@ resources:
   - paradedb-statefulset.yml
   - paradedb-svc.yml
   - cronjobs.yml
-  # leandrodamasio.rbx.ia.br
-  - lda-prod-deploy.yml
-  - lda-prod-svc.yml
-  - lda-prod-ingress.yml
-  # rbx.ia.br + rbxsystems.ch
-  - rbx-ia-br-prod-deploy.yml
-  - rbx-ia-br-prod-svc.yml
-  - rbx-ia-br-prod-ingress.yml
 
 commonLabels:
   app.kubernetes.io/part-of: robson

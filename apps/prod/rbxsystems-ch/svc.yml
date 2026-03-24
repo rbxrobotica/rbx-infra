@@ -1,0 +1,17 @@
+# Service: rbxsystems.ch
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbxsystems-ch-svc
+  namespace: rbxsystems-ch
+  labels:
+    app.kubernetes.io/name: rbxsystems-ch-svc
+    app.kubernetes.io/part-of: rbxsystems-ch
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rbxsystems-ch
+  ports:
+    - port: 80
+      targetPort: 3000
+      protocol: TCP
