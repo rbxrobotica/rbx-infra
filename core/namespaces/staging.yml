@@ -6,7 +6,6 @@ metadata:
   labels:
     name: staging
     environment: staging
-    istio.io/dataplane-mode: ambient
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 

@@ -9,7 +9,6 @@ metadata:
   labels:
     name: analytics-jobs
     purpose: analytics
-    istio-injection: disabled
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 

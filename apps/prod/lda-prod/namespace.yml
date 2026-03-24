@@ -6,6 +6,5 @@ metadata:
   labels:
     app.kubernetes.io/part-of: lda-prod
     environment: production
-    istio.io/dataplane-mode: ambient
   annotations:
     argocd.argoproj.io/sync-wave: "-1"

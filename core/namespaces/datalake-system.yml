@@ -9,7 +9,6 @@ metadata:
   labels:
     name: datalake-system
     purpose: deep-storage
-    istio-injection: disabled
   annotations:
     argocd.argoproj.io/sync-wave: "-1"
 
