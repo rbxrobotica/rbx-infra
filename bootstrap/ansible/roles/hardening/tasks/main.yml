@@ -1,0 +1,94 @@
+---
+- name: Update apt cache
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install security packages
+  apt:
+    name:
+      - ufw
+      - fail2ban
+      - unattended-upgrades
+    state: present
+
+- name: Disable SSH password authentication
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PasswordAuthentication"
+    line: "PasswordAuthentication no"
+  notify: restart sshd
+
+- name: Disable SSH root password login (keep key-based)
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "^#?PermitRootLogin"
+    line: "PermitRootLogin prohibit-password"
+  notify: restart sshd
+
+- name: Reset ufw to defaults
+  ufw:
+    state: reset
+
+- name: Allow SSH
+  ufw:
+    rule: allow
+    port: "{{ ssh_port }}"
+    proto: tcp
+
+- name: Allow kubectl access only from your machine
+  ufw:
+    rule: allow
+    port: "6443"
+    proto: tcp
+    src: "{{ item }}"
+  loop: "{{ kubectl_allowed_ips }}"
+  when: inventory_hostname in groups['k3s_server']
+
+- name: Allow HTTP (Traefik)
+  ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+
+- name: Allow HTTPS (Traefik)
+  ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+
+- name: Allow k3s internal communication between nodes
+  ufw:
+    rule: allow
+    src: "{{ hostvars[item].ansible_host }}"
+  loop: "{{ groups['all'] }}"
+
+- name: Enable ufw
+  ufw:
+    state: enabled
+    policy: deny
+
+- name: Configure fail2ban for SSH
+  copy:
+    dest: /etc/fail2ban/jail.local
+    content: |
+      [sshd]
+      enabled = true
+      port = {{ ssh_port }}
+      maxretry = 5
+      bantime = 3600
+      findtime = 600
+  notify: restart fail2ban
+
+- name: Enable and start fail2ban
+  systemd:
+    name: fail2ban
+    enabled: yes
+    state: started
+
+- name: Enable unattended security upgrades
+  copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";

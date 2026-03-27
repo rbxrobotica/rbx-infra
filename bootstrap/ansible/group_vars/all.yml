@@ -1,0 +1,17 @@
+ansible_user: root
+ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+
+# k3s version — check latest at https://github.com/k3s-io/k3s/releases
+k3s_version: "v1.32.3+k3s1"
+
+# Tiger public IP — used as TLS SAN so kubectl works without tunnel
+k3s_server_ip: "158.220.116.31"
+
+# Your local machine's public IPs — port 6443 will be restricted to these only
+# IPv4: curl -4s ifconfig.me  |  IPv6: curl -6s ifconfig.me
+kubectl_allowed_ips:
+  - "189.120.75.123"
+  - "2804:14c:13b:8448:59dd:2bd1:2969:804"
+
+# SSH hardening
+ssh_port: 22

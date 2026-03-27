@@ -1,0 +1,29 @@
+---
+- name: Install k3s agent
+  shell: |
+    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - agent \
+      --server https://{{ k3s_server_ip }}:6443 \
+      --token {{ hostvars['tiger']['k3s_token'] }} \
+      --node-name {{ inventory_hostname }}
+  args:
+    creates: /usr/local/bin/k3s
+
+- name: Enable and start k3s-agent
+  systemd:
+    name: k3s-agent
+    enabled: yes
+    state: started
+
+- name: Apply node labels
+  delegate_to: localhost
+  shell: >
+    kubectl --kubeconfig ~/.kube/config-rbx label node {{ inventory_hostname }}
+    {{ item }} --overwrite
+  loop: "{{ k3s_node_labels | default([]) }}"
+
+- name: Apply node taints
+  delegate_to: localhost
+  shell: >
+    kubectl --kubeconfig ~/.kube/config-rbx taint node {{ inventory_hostname }}
+    {{ item }} --overwrite
+  loop: "{{ k3s_node_taints | default([]) }}"

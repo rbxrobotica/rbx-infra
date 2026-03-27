@@ -1,0 +1,18 @@
+---
+# Phase 1: Harden all nodes
+- name: Harden all nodes
+  hosts: all
+  roles:
+    - hardening
+
+# Phase 2: Install k3s control-plane
+- name: Install k3s server
+  hosts: k3s_server
+  roles:
+    - k3s-server
+
+# Phase 3: Join workers
+- name: Install k3s agents
+  hosts: k3s_agents
+  roles:
+    - k3s-agent

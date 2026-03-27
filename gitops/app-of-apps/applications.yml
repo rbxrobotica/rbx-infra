@@ -12,12 +12,12 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: rbx-applications
+  project: default
 
   source:
     repoURL: https://github.com/rbxrobotica/rbx-infra
     targetRevision: main
-    path: apps
+    path: apps/staging
     directory:
       recurse: true
 
