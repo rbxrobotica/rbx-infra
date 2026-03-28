@@ -8,26 +8,6 @@
     state: present
     update_cache: yes
 
-- name: Add paradedb apt repository key
-  get_url:
-    url: https://pkg.paradedb.com/paradedb.gpg
-    dest: /etc/apt/keyrings/paradedb.gpg
-    mode: '0644'
-
-- name: Add paradedb apt repository
-  apt_repository:
-    repo: "deb [signed-by=/etc/apt/keyrings/paradedb.gpg] https://pkg.paradedb.com/apt stable main"
-    filename: paradedb
-    state: present
-
-- name: Install paradedb search extension
-  apt:
-    name: postgresql-16-pg-search
-    state: present
-    update_cache: yes
-  notify: restart postgresql
-  ignore_errors: yes  # skip if not yet available for this distro version
-
 - name: Configure PostgreSQL to listen on all interfaces
   lineinfile:
     path: /etc/postgresql/16/main/postgresql.conf
