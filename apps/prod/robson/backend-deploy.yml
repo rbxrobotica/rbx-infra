@@ -92,7 +92,7 @@ spec:
         - name: GROQ_API_KEY
           valueFrom:
             secretKeyRef:
-              name: rbs-groq-secret
+              name: rbx-groq-secret
               key: GROQ_API_KEY
         - name: BINANCE_USE_TESTNET
           value: "False"
