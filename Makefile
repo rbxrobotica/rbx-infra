@@ -20,7 +20,7 @@ help:
 # Provision cluster from scratch (run after VPS reinstall)
 provision:
 	@echo "Running Ansible playbooks..."
-	cd bootstrap/ansible && ansible-playbook -i inventory/hosts.yml site.yml
+	cd bootstrap/ansible && ansible-playbook -i inventory/hosts.yml site.yml -e @group_vars/vault.yml
 
 # Update firewall rule when your local IP changes
 update-ip:

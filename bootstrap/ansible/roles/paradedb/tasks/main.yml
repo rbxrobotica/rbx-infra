@@ -62,8 +62,16 @@
   postgresql_user:
     name: "{{ paradedb_robson_user }}"
     password: "{{ paradedb_robson_password }}"
+    state: present
+
+- name: Grant robson user privileges on robson database
+  become: yes
+  become_user: postgres
+  postgresql_privs:
     db: "{{ paradedb_robson_db }}"
-    priv: ALL
+    role: "{{ paradedb_robson_user }}"
+    type: database
+    privs: ALL
     state: present
 
 - name: Create truthmetal user
@@ -72,8 +80,16 @@
   postgresql_user:
     name: "{{ paradedb_truthmetal_user }}"
     password: "{{ paradedb_truthmetal_password }}"
+    state: present
+
+- name: Grant truthmetal user privileges on truthmetal database
+  become: yes
+  become_user: postgres
+  postgresql_privs:
     db: "{{ paradedb_truthmetal_db }}"
-    priv: ALL
+    role: "{{ paradedb_truthmetal_user }}"
+    type: database
+    privs: ALL
     state: present
 
 - name: Allow ufw port 5432 from k3s nodes
