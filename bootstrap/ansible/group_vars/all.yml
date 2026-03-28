@@ -17,11 +17,10 @@ kubectl_allowed_ips:
 ssh_port: 22
 
 # ParadeDB on jaguar — used by all apps
-# Set passwords here; use the same values when creating k8s secrets
+# Database names and users are non-sensitive (committed here)
+# Passwords live in group_vars/vault.yml (gitignored — never commit)
 paradedb_robson_db: "robson"
 paradedb_robson_user: "robson"
-paradedb_robson_password: "CHANGE_ME"
 
 paradedb_truthmetal_db: "truthmetal"
 paradedb_truthmetal_user: "truthmetal"
-paradedb_truthmetal_password: "CHANGE_ME"
