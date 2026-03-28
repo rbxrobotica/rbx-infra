@@ -7,6 +7,7 @@
       --node-name {{ inventory_hostname }}
   args:
     creates: /usr/local/bin/k3s
+  when: hostvars['tiger']['k3s_token'] is defined
 
 - name: Enable and start k3s-agent
   systemd:
