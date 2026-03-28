@@ -16,3 +16,9 @@
   hosts: k3s_agents
   roles:
     - k3s-agent
+
+# Phase 4: Install ParadeDB on jaguar (all app databases)
+- name: Install ParadeDB
+  hosts: db_server
+  roles:
+    - paradedb

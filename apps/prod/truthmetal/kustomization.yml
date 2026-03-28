@@ -4,7 +4,6 @@ kind: Kustomization
 resources:
   - namespace.yml
   - middleware-https.yml
-  - postgres-statefulset.yml
   - postgres-svc.yml
   - redis-deploy.yml
   - redis-svc.yml

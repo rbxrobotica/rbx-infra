@@ -1,4 +1,5 @@
-# Robson ParadeDB Service
+# ParadeDB external service — database runs natively on jaguar (161.97.147.76)
+# Apps connect to this service as if it were local; traffic routes to jaguar.
 apiVersion: v1
 kind: Service
 metadata:
@@ -9,32 +10,19 @@ metadata:
     app.kubernetes.io/component: database
     app.kubernetes.io/part-of: robson
 spec:
-  type: ClusterIP
-  selector:
-    app.kubernetes.io/name: robson-paradedb
   ports:
     - port: 5432
-      targetPort: postgres
       protocol: TCP
       name: postgres
-
 ---
-# paradedb alias service — POSTGRES_HOST=paradedb.robson.svc.cluster.local in rbs-django-secret
 apiVersion: v1
-kind: Service
+kind: Endpoints
 metadata:
-  name: paradedb
+  name: robson-paradedb
   namespace: robson
-  labels:
-    app.kubernetes.io/name: robson-paradedb
-    app.kubernetes.io/component: database
-    app.kubernetes.io/part-of: robson
-spec:
-  type: ClusterIP
-  selector:
-    app.kubernetes.io/name: robson-paradedb
-  ports:
-    - port: 5432
-      targetPort: postgres
-      protocol: TCP
-      name: postgres
+subsets:
+  - addresses:
+      - ip: 161.97.147.76
+    ports:
+      - port: 5432
+        name: postgres

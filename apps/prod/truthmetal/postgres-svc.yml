@@ -1,3 +1,5 @@
+# ParadeDB external service — database runs natively on jaguar (161.97.147.76)
+# Apps connect to this service as if it were local; traffic routes to jaguar.
 apiVersion: v1
 kind: Service
 metadata:
@@ -8,10 +10,19 @@ metadata:
     app.kubernetes.io/component: database
     app.kubernetes.io/part-of: truthmetal
 spec:
-  selector:
-    app.kubernetes.io/name: truthmetal-postgres
   ports:
     - port: 5432
-      targetPort: 5432
+      protocol: TCP
       name: postgres
-  clusterIP: None
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: truthmetal-postgres
+  namespace: truthmetal
+subsets:
+  - addresses:
+      - ip: 161.97.147.76
+    ports:
+      - port: 5432
+        name: postgres

@@ -15,7 +15,6 @@ resources:
   - backend-ingress.yml
   - redis-deploy.yml
   - redis-svc.yml
-  - paradedb-statefulset.yml
   - paradedb-svc.yml
   - cronjobs.yml
 
