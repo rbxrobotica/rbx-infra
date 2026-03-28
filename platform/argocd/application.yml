@@ -64,3 +64,31 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      name: argocd-applicationset-controller
+      jsonPointers:
+        - /spec/selector
+    - group: apps
+      kind: Deployment
+      name: argocd-dex-server
+      jsonPointers:
+        - /spec/selector
+    - group: apps
+      kind: Deployment
+      name: argocd-repo-server
+      jsonPointers:
+        - /spec/selector
+    - group: apps
+      kind: Deployment
+      name: argocd-server
+      jsonPointers:
+        - /spec/selector
+    - group: apps
+      kind: StatefulSet
+      name: argocd-application-controller
+      jsonPointers:
+        - /spec/selector

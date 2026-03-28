@@ -37,3 +37,29 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
+
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle
+    - group: apps
+      kind: Deployment
+      name: cert-manager
+      jsonPointers:
+        - /spec/selector
+    - group: apps
+      kind: Deployment
+      name: cert-manager-cainjector
+      jsonPointers:
+        - /spec/selector
+    - group: apps
+      kind: Deployment
+      name: cert-manager-webhook
+      jsonPointers:
+        - /spec/selector
