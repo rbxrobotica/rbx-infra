@@ -41,6 +41,7 @@
   meta: flush_handlers
 
 - name: Create robson database
+  become: yes
   become_user: postgres
   postgresql_db:
     name: "{{ paradedb_robson_db }}"
@@ -48,6 +49,7 @@
     state: present
 
 - name: Create truthmetal database
+  become: yes
   become_user: postgres
   postgresql_db:
     name: "{{ paradedb_truthmetal_db }}"
@@ -55,6 +57,7 @@
     state: present
 
 - name: Create robson user
+  become: yes
   become_user: postgres
   postgresql_user:
     name: "{{ paradedb_robson_user }}"
@@ -64,6 +67,7 @@
     state: present
 
 - name: Create truthmetal user
+  become: yes
   become_user: postgres
   postgresql_user:
     name: "{{ paradedb_truthmetal_user }}"
