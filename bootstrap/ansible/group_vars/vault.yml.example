@@ -1,0 +1,11 @@
+# Template for vault.yml — copy this file, fill in values, never commit the result.
+#
+# After cloning:
+#   cp bootstrap/ansible/group_vars/vault.yml.example \
+#      bootstrap/ansible/group_vars/vault.yml
+#   # then edit vault.yml with real passwords
+#
+# Generate strong passwords with: openssl rand -base64 24
+
+paradedb_robson_password: "CHANGE_ME"
+paradedb_truthmetal_password: "CHANGE_ME"
