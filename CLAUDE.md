@@ -54,6 +54,7 @@ All RBX products use **`ghcr.io/rbxrobotica/<product>`** (GitHub Container Regis
 3. **English only** - Official RBX Systems language
 4. **K9s for operations** - Primary cluster management tool
 5. **GHCR only** - No Docker Hub; all images at `ghcr.io/rbxrobotica/<product>`
+6. **No ServerSideApply** - Do NOT use `ServerSideApply=true` in ArgoCD Applications (see `docs/ARGOCD-BEST-PRACTICES.md`)
 
 ## Common Tasks
 
@@ -61,8 +62,35 @@ All RBX products use **`ghcr.io/rbxrobotica/<product>`** (GitHub Container Regis
 
 1. Create namespace in `core/namespaces/`
 2. Create deployment files in `apps/prod/{app}/`
-3. Create ArgoCD Application in `gitops/app-of-apps/`
+3. Create ArgoCD Application in `gitops/app-of-apps/` using this template:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-app
+  namespace: argocd
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/my-app
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: my-app
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # NEVER add ServerSideApply=true
+```
+
 4. Commit and push
+
+**IMPORTANT**: See `docs/ARGOCD-BEST-PRACTICES.md` for detailed guidelines.
 
 ### Updating Image Tags
 
