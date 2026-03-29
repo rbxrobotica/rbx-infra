@@ -8,6 +8,9 @@ resources:
   - deploy.yml
   - svc.yml
   - ingress.yml
+  - rbac-external-secrets.yml
+  - secretstore-k8s.yml
+  - externalsecret-s3.yml
 
 commonLabels:
   app.kubernetes.io/part-of: rbxsystems-ch

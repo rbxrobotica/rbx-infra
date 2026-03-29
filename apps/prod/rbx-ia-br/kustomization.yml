@@ -8,6 +8,8 @@ resources:
   - deploy.yml
   - svc.yml
   - ingress.yml
+  - secretstore-k8s.yml
+  - rbac-external-secrets-reader.yml
 
 commonLabels:
   app.kubernetes.io/part-of: rbx-ia-br
