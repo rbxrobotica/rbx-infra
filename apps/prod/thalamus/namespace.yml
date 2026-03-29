@@ -1,9 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: thalamus
-  labels:
-    app.kubernetes.io/part-of: thalamus
-    environment: production
-  annotations:
-    argocd.argoproj.io/sync-wave: "-1"
