@@ -22,3 +22,14 @@ commonLabels:
   app.kubernetes.io/part-of: robson
   environment: production
 
+patches:
+  # paradedb-svc is an external service (Endpoints point to jaguar node).
+  # commonLabels would add a spec.selector, causing kube to auto-manage
+  # Endpoints and ignore the manual ones. This patch removes that selector.
+  - patch: |-
+      - op: remove
+        path: /spec/selector
+    target:
+      kind: Service
+      name: robson-paradedb
+

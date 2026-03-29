@@ -1,9 +1,9 @@
 # Incident Report: ArgoCD OutOfSync Issues
 
-**Date**: 2026-03-28
+**Date**: 2026-03-28 / 2026-03-29
 **Severity**: P2 (High)
 **Status**: Resolved
-**Duration**: ~2 hours
+**Duration**: ~2 hours (ArgoCD) + follow-up session (robson-prod DB connectivity)
 
 ## Summary
 
