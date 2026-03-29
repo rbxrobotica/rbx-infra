@@ -12,3 +12,7 @@ resources:
 commonLabels:
   app.kubernetes.io/part-of: rbxsystems-ch
   environment: production
+
+images:
+  - name: ghcr.io/rbxrobotica/rbx-ia-br
+    newTag: sha-2cc143f
