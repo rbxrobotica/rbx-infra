@@ -56,8 +56,10 @@ jobs:
 
       - name: Commit and push
         run: |
-          git add .
-          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update image tag for ${{ github.event.client_payload.app || inputs.app }}"
+          git add apps/prod/${{ github.event.client_payload.app || inputs.app }}/kustomization.yml
+          if ! git diff --quiet || ! git diff --staged --quiet; then
+            git commit -m "chore: update image tag for ${{ github.event.client_payload.app || inputs.app }}"
+          fi
           git push
 
       - name: Notify ArgoCD
