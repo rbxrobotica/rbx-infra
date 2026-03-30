@@ -14,9 +14,12 @@ on:
         description: 'New tag for the image'
         required: true
       app:
-        description: 'Application name (robson, strategos, thalamus)'
+        description: 'Application name (lda-prod, robson, strategos, thalamus)'
         required: true
         default: 'robson'
+
+permissions:
+  contents: write
 
 jobs:
   update-manifest:
@@ -40,6 +43,8 @@ jobs:
 
           # Update kustomization.yml
           cd apps/prod/${APP}
+
+          test -f kustomization.yml
 
           # Extract just the tag if full image reference provided
           TAG_ONLY=$(echo "$TAG" | sed 's/.*://')

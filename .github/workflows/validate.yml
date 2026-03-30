@@ -28,9 +28,17 @@ jobs:
           tar xf kubeconform.tar.gz
           sudo mv kubeconform /usr/local/bin/
 
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
       - name: Validate Kubernetes manifests
         run: |
           find . -name "*.yml" -o -name "*.yaml" | grep -v ".github" | xargs kubeconform -summary -output json
+
+      - name: Validate rendered production overlays
+        run: |
+          kubectl kustomize apps/prod/lda-prod >/dev/null
+          kubectl kustomize apps/prod/rbxsystems-ch >/dev/null
 
   validate-argocd:
     runs-on: ubuntu-latest

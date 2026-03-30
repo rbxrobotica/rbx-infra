@@ -12,3 +12,7 @@ resources:
 commonLabels:
   app.kubernetes.io/part-of: lda-prod
   environment: production
+
+images:
+  - name: docker.io/ldamasio/lda-prod
+    newTag: latest

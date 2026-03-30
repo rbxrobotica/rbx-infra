@@ -15,9 +15,20 @@ spec:
   tls:
     - hosts:
         - leandrodamasio.rbx.ia.br
+        - leandrodamasio.rbxsystems.ch
       secretName: lda-prod-tls
   rules:
     - host: leandrodamasio.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: lda-prod-svc
+                port:
+                  number: 80
+    - host: leandrodamasio.rbxsystems.ch
       http:
         paths:
           - path: /
