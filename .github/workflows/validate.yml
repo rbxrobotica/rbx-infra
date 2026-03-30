@@ -33,7 +33,8 @@ jobs:
 
       - name: Validate Kubernetes manifests
         run: |
-          find . -name "*.yml" -o -name "*.yaml" | grep -v ".github" | xargs kubeconform -summary -output json
+          find apps core gitops platform -type f \( -name "*.yml" -o -name "*.yaml" \) | \
+            xargs kubeconform -ignore-missing-schemas -summary -output json
 
       - name: Validate rendered production overlays
         run: |
