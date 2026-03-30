@@ -23,5 +23,3 @@ labels:
       app.kubernetes.io/part-of: robson
       environment: production
     includeSelectors: false
-
-

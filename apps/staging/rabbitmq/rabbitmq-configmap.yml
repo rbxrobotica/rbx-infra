@@ -101,15 +101,58 @@ data:
       ],
       "exchanges": [
         {"name": "stop_commands", "vhost": "/robson", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {}},
-        {"name": "stop_commands.dlx", "vhost": "/robson", "type": "fanout", "durable": true, "auto_delete": false, "internal": false, "arguments": {}},
+        {
+          "name": "stop_commands.dlx",
+          "vhost": "/robson",
+          "type": "fanout",
+          "durable": true,
+          "auto_delete": false,
+          "internal": false,
+          "arguments": {}
+        },
         {"name": "stop_events", "vhost": "/robson", "type": "topic", "durable": true, "auto_delete": false, "internal": false, "arguments": {}}
       ],
       "bindings": [
-        {"source": "stop_commands", "vhost": "/robson", "destination": "stop_commands.critical", "destination_type": "queue", "routing_key": "stop.command.#", "arguments": {}},
-        {"source": "stop_commands.dlx", "vhost": "/robson", "destination": "stop_commands.dlq", "destination_type": "queue", "routing_key": "", "arguments": {}},
-        {"source": "stop_events", "vhost": "/robson", "destination": "stop_events.audit", "destination_type": "queue", "routing_key": "stop.event.#", "arguments": {}},
-        {"source": "stop_events", "vhost": "/robson", "destination": "stop_events.notify", "destination_type": "queue", "routing_key": "stop.event.executed.#", "arguments": {}},
-        {"source": "stop_events", "vhost": "/robson", "destination": "stop_events.notify", "destination_type": "queue", "routing_key": "stop.event.failed.#", "arguments": {}}
+        {
+          "source": "stop_commands",
+          "vhost": "/robson",
+          "destination": "stop_commands.critical",
+          "destination_type": "queue",
+          "routing_key": "stop.command.#",
+          "arguments": {}
+        },
+        {
+          "source": "stop_commands.dlx",
+          "vhost": "/robson",
+          "destination": "stop_commands.dlq",
+          "destination_type": "queue",
+          "routing_key": "",
+          "arguments": {}
+        },
+        {
+          "source": "stop_events",
+          "vhost": "/robson",
+          "destination": "stop_events.audit",
+          "destination_type": "queue",
+          "routing_key": "stop.event.#",
+          "arguments": {}
+        },
+        {
+          "source": "stop_events",
+          "vhost": "/robson",
+          "destination": "stop_events.notify",
+          "destination_type": "queue",
+          "routing_key": "stop.event.executed.#",
+          "arguments": {}
+        },
+        {
+          "source": "stop_events",
+          "vhost": "/robson",
+          "destination": "stop_events.notify",
+          "destination_type": "queue",
+          "routing_key": "stop.event.failed.#",
+          "arguments": {}
+        }
       ]
     }
 
