@@ -1,0 +1,94 @@
+---
+# Installs and configures PowerDNS Authoritative Server 4.9.
+# Behavior differs based on pdns_role (primary vs secondary).
+
+- name: Install PowerDNS Authoritative Server
+  apt:
+    name:
+      - pdns-server
+      - pdns-tools
+    state: present
+    update_cache: yes
+
+- name: Install gpgsql backend (primary only)
+  apt:
+    name: pdns-backend-pgsql
+    state: present
+  when: pdns_backend == "gpgsql"
+
+- name: Install bind backend package (secondary only)
+  apt:
+    name: pdns-backend-bind
+    state: present
+  when: pdns_backend == "bind"
+
+- name: Remove default bind backend config (primary)
+  file:
+    path: /etc/powerdns/pdns.d/bind.conf
+    state: absent
+  when: pdns_backend == "gpgsql"
+  notify: restart pdns
+
+- name: Remove default gpgsql backend config (secondary)
+  file:
+    path: /etc/powerdns/pdns.d/gpgsql.conf
+    state: absent
+  when: pdns_backend == "bind"
+  notify: restart pdns
+
+- name: Create zones directory (secondary only)
+  file:
+    path: "{{ pdns_zones_dir }}"
+    state: directory
+    owner: pdns
+    group: pdns
+    mode: "0750"
+  when: pdns_role == "secondary"
+
+- name: Deploy PowerDNS primary configuration
+  template:
+    src: pdns-primary.conf.j2
+    dest: /etc/powerdns/pdns.conf
+    owner: root
+    group: pdns
+    mode: "0640"
+  when: pdns_role == "primary"
+  notify: restart pdns
+
+- name: Deploy PowerDNS secondary configuration
+  template:
+    src: pdns-secondary.conf.j2
+    dest: /etc/powerdns/pdns.conf
+    owner: root
+    group: pdns
+    mode: "0640"
+  when: pdns_role == "secondary"
+  notify: restart pdns
+
+- name: Deploy bind backend zone config (secondary only)
+  template:
+    src: named.conf.j2
+    dest: /etc/powerdns/named.conf
+    owner: root
+    group: pdns
+    mode: "0640"
+  when: pdns_role == "secondary"
+  notify: restart pdns
+
+- name: Initialize gpgsql schema (primary only, idempotent)
+  shell: |
+    psql -h {{ pdns_db_host }} -p {{ pdns_db_port }} -U {{ pdns_db_user }} -d {{ pdns_db_name }} \
+      -c "SELECT 1 FROM domains LIMIT 1;" 2>/dev/null || \
+    psql -h {{ pdns_db_host }} -p {{ pdns_db_port }} -U {{ pdns_db_user }} -d {{ pdns_db_name }} \
+      -f /usr/share/doc/pdns-backend-pgsql/schema.pgsql.sql
+  environment:
+    PGPASSWORD: "{{ pdns_db_password }}"
+  when: pdns_role == "primary"
+  register: schema_init
+  changed_when: "'SELECT 1' not in (schema_init.stderr | default(''))"
+
+- name: Enable and start PowerDNS
+  systemd:
+    name: pdns
+    enabled: yes
+    state: started

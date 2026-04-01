@@ -1,0 +1,10 @@
+# PowerDNS BIND backend — zone configuration for secondary
+# Managed by Ansible — do not edit manually
+
+{% for zone in pdns_zones %}
+zone "{{ zone }}" {
+    type slave;
+    file "{{ pdns_zones_dir }}/{{ zone }}.zone";
+    masters { {{ pdns_primary_ip }}; };
+};
+{% endfor %}

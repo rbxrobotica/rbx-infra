@@ -1,0 +1,6 @@
+---
+pdns_role: secondary
+pdns_backend: bind
+
+# Primary IP for AXFR/IXFR requests
+pdns_primary_ip: "149.102.139.33"

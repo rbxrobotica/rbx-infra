@@ -1,0 +1,4 @@
+---
+pdns_version: "4.9"
+pdns_config_dir: "/etc/powerdns"
+pdns_zones_dir: "/etc/powerdns/zones"

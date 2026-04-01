@@ -24,3 +24,7 @@ paradedb_robson_user: "robson"
 
 paradedb_truthmetal_db: "truthmetal"
 paradedb_truthmetal_user: "truthmetal"
+
+# PowerDNS database (jaguar — used by pdns-database role)
+pdns_db_name: "pdns"
+pdns_db_user: "pdns"

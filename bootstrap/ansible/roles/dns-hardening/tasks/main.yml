@@ -1,0 +1,81 @@
+---
+# DNS-specific firewall hardening for pantera and eagle.
+# Replaces the generic hardening firewall rules with DNS-only rules.
+# This role runs AFTER the base hardening role.
+
+- name: Remove HTTP rule (not needed on DNS servers)
+  ufw:
+    rule: allow
+    port: "80"
+    proto: tcp
+    delete: yes
+  ignore_errors: yes
+
+- name: Remove HTTPS rule (not needed on DNS servers)
+  ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+    delete: yes
+  ignore_errors: yes
+
+- name: Remove kubectl 6443 rule (not needed on DNS servers)
+  ufw:
+    rule: allow
+    port: "6443"
+    proto: tcp
+    src: "{{ item }}"
+    delete: yes
+  loop: "{{ kubectl_allowed_ips }}"
+  ignore_errors: yes
+
+- name: Remove broad inter-node allow rules from base hardening
+  ufw:
+    rule: allow
+    src: "{{ hostvars[item].ansible_host }}"
+    delete: yes
+  loop: "{{ groups['all'] }}"
+  when: item not in groups['dns_servers']
+  ignore_errors: yes
+
+- name: Allow DNS queries (UDP)
+  ufw:
+    rule: allow
+    port: "53"
+    proto: udp
+
+- name: Allow DNS queries and zone transfers (TCP)
+  ufw:
+    rule: allow
+    port: "53"
+    proto: tcp
+
+- name: Allow communication between DNS servers (IPv4)
+  ufw:
+    rule: allow
+    src: "{{ hostvars[item].ansible_host }}"
+  loop: "{{ groups['dns_servers'] }}"
+  when: hostvars[item].ansible_host != ansible_host
+
+- name: Allow communication between DNS servers (IPv6)
+  ufw:
+    rule: allow
+    src: "{{ hostvars[item].ansible_host_ipv6 }}"
+  loop: "{{ groups['dns_servers'] }}"
+  when:
+    - hostvars[item].ansible_host != ansible_host
+    - hostvars[item].ansible_host_ipv6 is defined
+
+- name: Allow pantera to reach jaguar Postgres (primary only)
+  ufw:
+    rule: allow
+    port: "5432"
+    proto: tcp
+    direction: out
+    dest: "{{ hostvars['jaguar'].ansible_host }}"
+  when: pdns_role == "primary"
+
+- name: Ensure ufw is enabled with deny default
+  ufw:
+    state: enabled
+    policy: deny

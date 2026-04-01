@@ -22,3 +22,22 @@
   hosts: db_server
   roles:
     - paradedb
+
+# Phase 5: Create PowerDNS database on jaguar
+- name: Setup PowerDNS database
+  hosts: db_server
+  roles:
+    - pdns-database
+
+# Phase 6: Harden DNS servers (DNS-specific firewall)
+- name: Harden DNS servers
+  hosts: dns_servers
+  roles:
+    - dns-hardening
+
+# Phase 7: Deploy PowerDNS
+- name: Deploy PowerDNS
+  hosts: dns_servers
+  serial: 1
+  roles:
+    - pdns

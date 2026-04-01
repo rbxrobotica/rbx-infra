@@ -45,23 +45,26 @@
   loop: "{{ kubectl_allowed_ips }}"
   when: inventory_hostname in groups['k3s_server']
 
-- name: Allow HTTP (Traefik)
+- name: Allow HTTP (Traefik — k3s nodes only)
   ufw:
     rule: allow
     port: "80"
     proto: tcp
+  when: inventory_hostname not in groups.get('dns_servers', [])
 
-- name: Allow HTTPS (Traefik)
+- name: Allow HTTPS (Traefik — k3s nodes only)
   ufw:
     rule: allow
     port: "443"
     proto: tcp
+  when: inventory_hostname not in groups.get('dns_servers', [])
 
-- name: Allow k3s internal communication between nodes
+- name: Allow k3s internal communication between cluster nodes
   ufw:
     rule: allow
     src: "{{ hostvars[item].ansible_host }}"
-  loop: "{{ groups['all'] }}"
+  loop: "{{ groups['k3s_server'] | default([]) + groups['k3s_agents'] | default([]) }}"
+  when: inventory_hostname not in groups.get('dns_servers', [])
 
 - name: Enable ufw
   ufw:

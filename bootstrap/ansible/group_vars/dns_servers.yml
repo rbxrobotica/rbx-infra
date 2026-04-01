@@ -1,0 +1,34 @@
+---
+# PowerDNS Authoritative 4.9
+pdns_version: "4.9"
+
+# DNS zones served
+pdns_zones:
+  - rbxsystems.ch
+  - strategos.gr
+
+# SOA defaults (phase 1)
+pdns_soa_refresh: 3600      # 1h
+pdns_soa_retry: 900          # 15m
+pdns_soa_expire: 604800      # 7d
+pdns_soa_minimum: 300        # 5m (negative cache TTL)
+pdns_default_ttl: 3600       # 1h default TTL
+
+# SOA contact
+pdns_soa_rname: "hostmaster.rbxsystems.ch"
+
+# AXFR ACL — secondary IPs (IPv4 + IPv6)
+pdns_axfr_allowed:
+  - "167.86.92.97"
+  - "2a02:c207:2252:7581::1"
+
+# PowerDNS API (enabled on primary only, used for management)
+pdns_api_enabled: true
+pdns_api_listen: "127.0.0.1:8081"
+
+# Postgres connection (primary only — secondary uses bind backend)
+pdns_db_host: "161.97.147.76"
+pdns_db_port: 5432
+pdns_db_name: "pdns"
+pdns_db_user: "pdns"
+# pdns_db_password: defined in vault.yml

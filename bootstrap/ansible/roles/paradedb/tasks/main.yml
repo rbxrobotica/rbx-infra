@@ -15,14 +15,21 @@
     line: "listen_addresses = '*'"
   notify: restart postgresql
 
-- name: Allow k3s nodes in pg_hba.conf
+- name: Allow k3s nodes to access their databases in pg_hba.conf
   lineinfile:
     path: /etc/postgresql/16/main/pg_hba.conf
-    line: "host all all {{ hostvars[item].ansible_host }}/32 scram-sha-256"
+    line: "host {{ item.db }} {{ item.user }} {{ item.host }}/32 scram-sha-256"
     insertafter: EOF
-  loop: "{{ groups['all'] }}"
-  when: hostvars[item].ansible_host != ansible_host
+  loop:
+    # k3s nodes access app databases only
+    - { host: "{{ hostvars['tiger'].ansible_host }}", db: "{{ paradedb_robson_db }}", user: "{{ paradedb_robson_user }}" }
+    - { host: "{{ hostvars['tiger'].ansible_host }}", db: "{{ paradedb_truthmetal_db }}", user: "{{ paradedb_truthmetal_user }}" }
+    - { host: "{{ hostvars['altaica'].ansible_host }}", db: "{{ paradedb_robson_db }}", user: "{{ paradedb_robson_user }}" }
+    - { host: "{{ hostvars['altaica'].ansible_host }}", db: "{{ paradedb_truthmetal_db }}", user: "{{ paradedb_truthmetal_user }}" }
+    - { host: "{{ hostvars['sumatrae'].ansible_host }}", db: "{{ paradedb_robson_db }}", user: "{{ paradedb_robson_user }}" }
+    - { host: "{{ hostvars['sumatrae'].ansible_host }}", db: "{{ paradedb_truthmetal_db }}", user: "{{ paradedb_truthmetal_user }}" }
   notify: restart postgresql
+  # NOTE: pantera/eagle pg_hba entries are managed by pdns-database role (pdns db only)
 
 - name: Allow localhost connections
   lineinfile:
@@ -92,11 +99,12 @@
     privs: ALL
     state: present
 
-- name: Allow ufw port 5432 from k3s nodes
+- name: Allow ufw port 5432 from k3s cluster nodes only
   ufw:
     rule: allow
     port: "5432"
     proto: tcp
     src: "{{ hostvars[item].ansible_host }}"
-  loop: "{{ groups['all'] }}"
+  loop: "{{ groups['k3s_server'] | default([]) + groups['k3s_agents'] | default([]) }}"
   when: hostvars[item].ansible_host != ansible_host
+  # NOTE: pantera firewall rule is managed by pdns-database role

@@ -1,0 +1,4 @@
+---
+pdns_db_name: "pdns"
+pdns_db_user: "pdns"
+# pdns_db_password: must be defined in vault.yml

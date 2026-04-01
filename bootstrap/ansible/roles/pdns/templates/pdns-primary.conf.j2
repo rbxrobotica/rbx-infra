@@ -1,0 +1,49 @@
+# PowerDNS Authoritative — PRIMARY ({{ inventory_hostname }})
+# Managed by Ansible — do not edit manually
+
+setuid=pdns
+setgid=pdns
+
+# Network
+local-address=0.0.0.0,::
+local-port=53
+
+# Backend: PostgreSQL
+launch=gpgsql
+gpgsql-host={{ pdns_db_host }}
+gpgsql-port={{ pdns_db_port }}
+gpgsql-dbname={{ pdns_db_name }}
+gpgsql-user={{ pdns_db_user }}
+gpgsql-password={{ pdns_db_password }}
+
+# Primary mode
+primary=yes
+secondary=no
+
+# AXFR ACL — only secondary IPs (IPv4 + IPv6)
+allow-axfr-ips={{ pdns_axfr_allowed | join(',') }}
+
+# NOTIFY secondary on zone changes
+also-notify={{ pdns_axfr_allowed | first }}
+only-notify={{ pdns_axfr_allowed | join(',') }}
+
+# SOA defaults
+default-soa-content=ns1.rbxsystems.ch {{ pdns_soa_rname }}. 0 {{ pdns_soa_refresh }} {{ pdns_soa_retry }} {{ pdns_soa_expire }} {{ pdns_soa_minimum }}
+default-ttl={{ pdns_default_ttl }}
+
+# API (local management only)
+{% if pdns_api_enabled | default(false) %}
+webserver=yes
+webserver-address={{ pdns_api_listen.split(':')[0] }}
+webserver-port={{ pdns_api_listen.split(':')[1] }}
+webserver-allow-from=127.0.0.1
+api=yes
+api-key={{ pdns_api_key }}
+{% endif %}
+
+# Logging
+loglevel=4
+log-dns-queries=no
+
+# Security
+version-string=anonymous

@@ -1,0 +1,33 @@
+# PowerDNS Authoritative — SECONDARY ({{ inventory_hostname }})
+# Managed by Ansible — do not edit manually
+
+setuid=pdns
+setgid=pdns
+
+# Network
+local-address=0.0.0.0,::
+local-port=53
+
+# Backend: BIND (zone files from AXFR, no Postgres dependency)
+launch=bind
+bind-config=/etc/powerdns/named.conf
+bind-supermaster-config=/etc/powerdns/named.conf
+bind-supermaster-destdir={{ pdns_zones_dir }}
+
+# Secondary mode
+primary=no
+secondary=yes
+autosecondary=yes
+
+# Accept NOTIFY from primary
+allow-notify-from={{ hostvars['pantera'].ansible_host }},{{ hostvars['pantera'].ansible_host_ipv6 | default('') }}
+
+# Default TTL
+default-ttl={{ pdns_default_ttl }}
+
+# Logging
+loglevel=4
+log-dns-queries=no
+
+# Security
+version-string=anonymous
