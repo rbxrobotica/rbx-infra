@@ -1,0 +1,19 @@
+# Robsond Service (ClusterIP — internal only)
+apiVersion: v1
+kind: Service
+metadata:
+  name: robsond
+  namespace: robson-v2
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: daemon
+    app.kubernetes.io/part-of: robson
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app.kubernetes.io/name: robsond

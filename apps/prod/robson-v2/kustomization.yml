@@ -1,0 +1,20 @@
+# Kustomization for Robson v2 Production (Foundation Deploy)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yml
+  - robsond-rbac.yml
+  - robsond-configmap.yml
+  - robsond-db-migrate-job.yml
+  - robsond-deployment.yml
+  - robsond-service.yml
+  - paradedb-svc.yml
+  # robsond-init-sql.yml is DEPRECATED — migrations cover the same schema.
+  # Do NOT add it back; it would conflict with robsond-db-migrate-job.
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: robson
+      environment: production
+    includeSelectors: false

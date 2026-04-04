@@ -1,0 +1,81 @@
+# robsond DB bootstrap Job
+#
+# Runs once at deploy time to:
+#   1. Apply all SQLx migrations (robsond db migrate)
+#   2. Seed the tenant/account rows (robsond db init --tenant-id $PROJECTION_TENANT_ID)
+#
+# Prerequisites (run BEFORE first ArgoCD sync):
+#   1. Create the robson_v2 database via Ansible (paradedb role)
+#   2. Generate PROJECTION_TENANT_ID: uuidgen
+#   3. Create the secret:
+#        kubectl create secret generic robsond-secret -n robson-v2 \
+#          --from-literal=database-url="postgresql://robson_v2:<pass>@paradedb:5432/robson_v2" \
+#          --from-literal=projection-tenant-id="<uuid>"
+#
+# After ArgoCD syncs this Job, inspect its logs to confirm:
+#   kubectl logs -n robson-v2 -l job-name=robsond-db-migrate
+#
+# The Job is restartPolicy=OnFailure so it retries on transient DB errors.
+# Once succeeded, ArgoCD will keep it in Completed state (not re-run).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: robsond-db-migrate
+  namespace: robson-v2
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: db-migrate
+    app.kubernetes.io/part-of: robson
+  annotations:
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: robsond
+        app.kubernetes.io/component: db-migrate
+    spec:
+      serviceAccountName: robsond
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      restartPolicy: OnFailure
+
+      containers:
+      - name: db-migrate
+        image: ghcr.io/rbxrobotica/robson-v2:sha-c28055dd
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "=== Running robsond db migrate ==="
+          robsond db migrate
+          echo "=== Running robsond db init ==="
+          robsond db init --tenant-id "${PROJECTION_TENANT_ID}"
+          echo "=== Bootstrap complete ==="
+
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: robsond-secret
+              key: database-url
+        - name: PROJECTION_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: robsond-secret
+              key: projection-tenant-id
+
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
+          limits:
+            cpu: "250m"
+            memory: "128Mi"

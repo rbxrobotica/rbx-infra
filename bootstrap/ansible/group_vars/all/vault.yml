@@ -1,0 +1,17 @@
+# SECRETS — encrypt this file with ansible-vault before rollout
+# Command: ansible-vault encrypt bootstrap/ansible/group_vars/vault.yml
+#
+# IMPORTANT: This file MUST be encrypted before any production use.
+# Never commit unencrypted secrets to git.
+# Generate new passwords with: openssl rand -base64 24
+
+# Application database passwords (jaguar)
+paradedb_robson_password: "pZdOyeVJAhTYlGUTChUILo0l8blwsxdI"
+paradedb_robson_v2_password: "O0kkoUJfwF+iPyXcbu9RMN5gokVXYNAa"
+paradedb_truthmetal_password: "OTV74ZwdkUmJbjJaIgMlD2e060VpTMRM"
+
+# PowerDNS database password (jaguar — pdns db)
+pdns_db_password: "7NFbbniICpUfmI7Wr1VQaNoUz/ce0K3w"
+
+# PowerDNS API key (primary only — local management)
+pdns_api_key: "kWO5nWgAzqbnhm/A/+MM8VL7I3Dbakjg"

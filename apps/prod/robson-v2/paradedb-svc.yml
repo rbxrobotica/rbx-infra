@@ -1,0 +1,31 @@
+# ParadeDB External Service (shared with robson v1)
+# Points to the same external PostgreSQL host
+apiVersion: v1
+kind: Service
+metadata:
+  name: paradedb
+  namespace: robson-v2
+  labels:
+    app.kubernetes.io/name: paradedb
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: robson
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: paradedb
+  namespace: robson-v2
+subsets:
+- addresses:
+  - ip: 161.97.147.76
+  ports:
+  - port: 5432
+    protocol: TCP
+    name: postgres

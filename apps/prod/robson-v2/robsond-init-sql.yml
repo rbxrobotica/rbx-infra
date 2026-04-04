@@ -1,0 +1,115 @@
+-- DEPRECATED: This file is no longer used.
+-- Migration 20240101000000_initial_schema.sql covers the same schema.
+-- Bootstrap is now handled by robsond-db-migrate-job.yml (PreSync ArgoCD hook).
+-- DO NOT apply this file manually — it will conflict with SQLx migrations.
+--
+-- Kept for historical reference only. Safe to delete in a future cleanup.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: robsond-init-sql
+  namespace: robson-v2
+data:
+  init-sql: |
+    -- Migration 001: Initial schema (manually applied)
+    -- This creates the positions table needed by migration 006
+    -- Migration 001 was skipped due to sqlx::migrate! issues
+    -- See docs/migrations.md for details
+    --
+    CREATE TABLE positions (
+        id UUID PRIMARY KEY,
+        account_id UUID NOT NULL,
+        symbol VARCHAR(20) NOT NULL,
+        side VARCHAR(10) NOT NULL CHECK (side IN ('long', 'short')),
+        state VARCHAR(20) NOT NULL CHECK (state IN (
+            'armed', 'entering', 'active', 'exiting', 'closed', 'error'
+        )),
+        state_data JSONB NOT NULL DEFAULT '{}',
+        entry_price DECIMAL(20, 8),
+        entry_filled_at TIMESTAMPTZ,
+        tech_stop_distance DECIMAL(20, 8),
+        tech_stop_distance_pct DECIMAL(10, 6),
+        quantity DECIMAL(20, 8) NOT NULL DEFAULT 0,
+        realized_pnl DECIMAL(20, 8) NOT NULL DEFAULT 0,
+        fees_paid DECIMAL(20, 8) NOT NULL DEFAULT 0,
+        entry_order_id UUID,
+        exit_order_id UUID,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL default now(),
+        closed_at TIMESTAMPTZ
+    );
+    CREATE INDEX idx_positions_account_id ON positions(account_id);
+    create index idx_positions_symbol on positions(symbol);
+    create index idx_positions_state ON positions(state);
+    create index idx_positions_created_at ON positions(created_at);
+    -- Events (Immutable audit log)
+    CREATE TABLE events (
+        id BIGSERIAL PRIMARY KEY,
+        position_id UUID NOT NULL,
+        event_type VARCHAR(50) NOT NULL,
+        event_data JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+    create INDEX idx_events_position_id ON events(position_id);
+    create INDEX idx_events_event_type ON events(event_type);
+    create INDEX idx_events_created_at ON events(created_at);
+    -- Orders
+    CREATE TABLE orders (
+        id UUID PRIMARY KEY,
+        position_id UUID NOT NULL,
+        exchange_order_id VARCHAR(100),
+        client_order_id VARCHAR(100) NOT NULL,
+        symbol VARCHAR(20) NOT NULL,
+        side VARCHAR(10) NOT NULL CHECK (side IN ('buy', 'sell')),
+        order_type VARCHAR(20) NOT NULL CHECK (order_type IN (
+            'market', 'limit', 'stop_loss_limit'
+        )),
+        quantity DECIMAL(20, 8) NOT NULL,
+        price DECIMAL(20, 8),  -- NULL for market orders
+        stop_price DECIMAL(20, 8),  -- For stop orders
+        status VARCHAR(20) NOT NULL CHECK (status IN (
+            'pending', 'submitted', 'partial', 'filled', 'cancelled', 'rejected'
+        )),
+        filled_quantity DECIMAL(20, 8),
+        fill_price DECIMAL(20, 8),
+        filled_at TIMESTAMPTZ,
+        fee_paid DECIMAL(20, 8),
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        CONSTRAINT fk_orders_position FOREIGN KEY (position_id)
+            REFERENCES positions(id) ON DELETE CASCADE
+    );
+    CREATE INDEX idx_orders_position_id ON orders(position_id);
+    create INDEX idx_orders_exchange_order_id ON orders(exchange_order_id);
+    create INDEX idx_orders_client_order_id ON orders(client_order_id);
+    create INDEX idx_orders_status ON orders(status);
+    -- Intents (idempotency)
+    CREATE TABLE intents (
+        id UUID PRIMARY KEY,
+        position_id UUID NOT NULL,
+        intent_type VARCHAR(50) NOT NULL,
+        intent_data JSONB NOT NULL,
+        status VARCHAR(20) NOT NULL CHECK (status IN (
+            'pending', 'processing', 'completed', 'failed'
+        )),
+        result JSONB,
+        error TEXT,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        completed_at TIMESTAMPTZ,
+        CONSTRAINT fk_intents_position FOREIGN KEY (position_id)
+            REFERENCES positions(id) ON DELETE CASCADE
+    );
+    create INDEX idx_intents_position_id on intents(position_id);
+    create INDEX idx_intents_status on intents(status);
+    create unique INDEX idx_intents_idempotency ON intents(id, position_id);
+    -- Trigger for updated_at
+    CREATE OR REPLACE function update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+ NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+CREATE TRIGGER positions_updated_at
+    before update on positions
+    for each row
+    EXECUTE FUNCTION update_updated_at_column();

@@ -1,0 +1,9 @@
+# Namespace: robson-v2
+# Robson v2 daemon (Rust) — deployed alongside Django v1
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: robson-v2
+  labels:
+    app.kubernetes.io/part-of: robson
+    environment: production

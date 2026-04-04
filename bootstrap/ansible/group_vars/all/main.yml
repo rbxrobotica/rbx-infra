@@ -19,8 +19,15 @@ ssh_port: 22
 # ParadeDB on jaguar — used by all apps
 # Database names and users are non-sensitive (committed here)
 # Passwords live in group_vars/vault.yml (gitignored — never commit)
+
+# robson (Django v1 — existing, do not change)
 paradedb_robson_db: "robson"
 paradedb_robson_user: "robson"
+
+# robson_v2 (robsond daemon — event-sourced, separate from Django)
+# Keeps robsond's schema isolated from Django's ORM schema.
+paradedb_robson_v2_db: "robson_v2"
+paradedb_robson_v2_user: "robson_v2"
 
 paradedb_truthmetal_db: "truthmetal"
 paradedb_truthmetal_user: "truthmetal"

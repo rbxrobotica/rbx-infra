@@ -1,0 +1,32 @@
+# Robsond ConfigMap (Production - Foundation Mode)
+#
+# FOUNDATION MODE: Position monitor disabled, no Binance API keys.
+# The daemon runs passively — health checks, DB, event sourcing — but
+# cannot execute any trades. Django v1 CronJobs remain sole execution
+# authority.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: robsond-config
+  namespace: robson-v2
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: daemon
+    app.kubernetes.io/part-of: robson
+data:
+  # Runtime environment
+  ROBSON_ENV: "production"
+  ROBSON_API_HOST: "0.0.0.0"
+  ROBSON_API_PORT: "8080"
+
+  # Logging
+  RUST_LOG: "robsond=info,robson_engine=info,robson_exec=info,robson_store=info"
+
+  # Position monitor: DISABLED for foundation deploy
+  # Prevents safety net from detecting/executing on rogue positions
+  ROBSON_POSITION_MONITOR_ENABLED: "false"
+  ROBSON_POSITION_MONITOR_SYMBOLS: "BTCUSDT"
+
+  # Projection worker
+  PROJECTION_STREAM_KEY: "robson:daemon"
+  PROJECTION_POLL_INTERVAL_MS: "500"
