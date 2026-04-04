@@ -110,6 +110,17 @@
     privs: ALL
     state: present
 
+- name: Grant robson_v2 user CREATE on public schema (required for PostgreSQL 15+)
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_robson_v2_db }}"
+    role: "{{ paradedb_robson_v2_user }}"
+    type: schema
+    objs: public
+    privs: CREATE,USAGE
+    state: present
+
 - name: Create truthmetal user
   become: yes
   become_user: postgres
