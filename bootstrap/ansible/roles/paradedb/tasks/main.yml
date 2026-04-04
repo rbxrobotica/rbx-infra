@@ -23,10 +23,13 @@
   loop:
     # k3s nodes access app databases only
     - { host: "{{ hostvars['tiger'].ansible_host }}", db: "{{ paradedb_robson_db }}", user: "{{ paradedb_robson_user }}" }
+    - { host: "{{ hostvars['tiger'].ansible_host }}", db: "{{ paradedb_robson_v2_db }}", user: "{{ paradedb_robson_v2_user }}" }
     - { host: "{{ hostvars['tiger'].ansible_host }}", db: "{{ paradedb_truthmetal_db }}", user: "{{ paradedb_truthmetal_user }}" }
     - { host: "{{ hostvars['altaica'].ansible_host }}", db: "{{ paradedb_robson_db }}", user: "{{ paradedb_robson_user }}" }
+    - { host: "{{ hostvars['altaica'].ansible_host }}", db: "{{ paradedb_robson_v2_db }}", user: "{{ paradedb_robson_v2_user }}" }
     - { host: "{{ hostvars['altaica'].ansible_host }}", db: "{{ paradedb_truthmetal_db }}", user: "{{ paradedb_truthmetal_user }}" }
     - { host: "{{ hostvars['sumatrae'].ansible_host }}", db: "{{ paradedb_robson_db }}", user: "{{ paradedb_robson_user }}" }
+    - { host: "{{ hostvars['sumatrae'].ansible_host }}", db: "{{ paradedb_robson_v2_db }}", user: "{{ paradedb_robson_v2_user }}" }
     - { host: "{{ hostvars['sumatrae'].ansible_host }}", db: "{{ paradedb_truthmetal_db }}", user: "{{ paradedb_truthmetal_user }}" }
   notify: restart postgresql
   # NOTE: pantera/eagle pg_hba entries are managed by pdns-database role (pdns db only)
@@ -55,6 +58,14 @@
     encoding: UTF8
     state: present
 
+- name: Create robson_v2 database
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: "{{ paradedb_robson_v2_db }}"
+    encoding: UTF8
+    state: present
+
 - name: Create truthmetal database
   become: yes
   become_user: postgres
@@ -77,6 +88,24 @@
   postgresql_privs:
     db: "{{ paradedb_robson_db }}"
     role: "{{ paradedb_robson_user }}"
+    type: database
+    privs: ALL
+    state: present
+
+- name: Create robson_v2 user
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ paradedb_robson_v2_user }}"
+    password: "{{ paradedb_robson_v2_password }}"
+    state: present
+
+- name: Grant robson_v2 user privileges on robson_v2 database
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_robson_v2_db }}"
+    role: "{{ paradedb_robson_v2_user }}"
     type: database
     privs: ALL
     state: present

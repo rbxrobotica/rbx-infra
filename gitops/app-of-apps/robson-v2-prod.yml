@@ -1,0 +1,31 @@
+# ArgoCD Application: Robson v2 Production (Foundation Deploy)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: robson-v2-prod
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: robson-v2-prod
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: robson
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/robson-v2
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: robson-v2
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true

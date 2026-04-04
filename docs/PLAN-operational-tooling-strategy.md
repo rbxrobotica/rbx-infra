@@ -41,7 +41,7 @@ We will adopt a **layered operational tooling strategy** using best-in-class ope
 |-------|------|---------|---------|
 | **Strategic Brain** | Strategos Core | Strategic decisions, objectives, governance, memory | VPS Jaguar (k3s) |
 | **Event Router** | Thalamus Core | Webhook orchestration, event streaming, data transformation | VPS Jaguar (k3s) |
-| **Operational ERP/CRM** | Odoo 17 Community | CRM, sales, accounting, contacts, WhatsApp integration | VPS Jaguar (k3s) |
+| **Operational ERP/CRM** | Odoo 20 Community | CRM, sales, accounting, contacts, WhatsApp integration | VPS Jaguar (k3s) |
 | **Task Management** | ClickUp (SaaS) | Projects, tasks, notifications, team collaboration | ClickUp Cloud |
 | **Customer Interface** | WhatsApp Business API | Sales funnel, customer communication, bot automation | Meta Cloud API |
 
@@ -76,7 +76,7 @@ We will adopt a **layered operational tooling strategy** using best-in-class ope
             ▼                              ▼
 ┌──────────────────────────┐    ┌──────────────────────────┐
 │   OPERATIONAL LAYER      │    │   EXECUTION LAYER        │
-│  Odoo 17 Community       │    │  ClickUp (SaaS)          │
+│  Odoo 20 Community       │    │  ClickUp (SaaS)          │
 │  - CRM: Leads, deals     │    │  - Tasks, projects       │
 │  - Sales: Proposals      │    │  - Desktop notifications │
 │  - Accounting: Invoicing │    │  - Team collaboration    │
@@ -185,7 +185,7 @@ We will adopt a **layered operational tooling strategy** using best-in-class ope
 
 ### Technology Choices
 
-#### Odoo 17 Community Edition
+#### Odoo 20 Community Edition
 
 **Why Odoo:**
 - ✅ Open source (LGPL), self-hosted control
@@ -1002,7 +1002,7 @@ Total Year 1: ~R$ 8,548 (~R$ 712/month average)
 - [Strategos Core Philosophy](../../strategos-core/PHILOSOPHY.md)
 - [Strategic vs Tactical Boundaries](../../strategos-core/docs/architecture/strategic-vs-tactical.md)
 - [Thalamus-Strategos Interaction](../../strategos-core/docs/architecture/thalamus-interaction.md)
-- [Odoo Official Documentation](https://www.odoo.com/documentation/17.0/)
+- [Odoo Official Documentation](https://www.odoo.com/documentation/19.0/)
 - [ClickUp API Documentation](https://clickup.com/api)
 - [WhatsApp Business Platform](https://developers.facebook.com/docs/whatsapp)
 
