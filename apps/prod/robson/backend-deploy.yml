@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: backend
-        image: ldamasio/rbs-backend-monolith-prod:sha-de0e95e
+        image: ldamasio/rbs-backend-monolith-prod:sha-5972b82
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
