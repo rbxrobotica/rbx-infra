@@ -1,7 +1,16 @@
 # RBX Catalog Implementation Guide
 
-**Last updated:** 2026-04-08  
+**Last updated:** 2026-04-08
 **Scope:** `rbx-catalog-registry`, `rbx-catalog-api`, `rbx-catalog-console`, and RBX GitOps integration in `rbx-infra`
+
+**Per-repo implementation guides** (focused, repo-specific):
+- `rbx-catalog-registry/docs/IMPLEMENTATION-GUIDE.md` — entity authoring, schema evolution, CI/CD trigger
+- `rbx-catalog-api/docs/IMPLEMENTATION-GUIDE.md` — API architecture, endpoints, Docker build, CI/CD → rbx-infra
+- `rbx-catalog-console/docs/IMPLEMENTATION-GUIDE.md` — console architecture, build-time env, CI/CD → rbx-infra
+
+This document covers the full cross-system picture. Read it when you need to understand how the pieces fit together.
+
+---
 
 ## 1. System Overview
 
@@ -154,7 +163,9 @@ Useful verification:
 
 ```bash
 curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/catalog
 curl http://127.0.0.1:8000/catalog/entities
+curl http://127.0.0.1:8000/catalog/stats
 ```
 
 ### Console
