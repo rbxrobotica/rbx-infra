@@ -31,8 +31,7 @@ Both pantera and eagle were drained from k3s and VPS-reinstalled before DNS prov
 - NS records in both zones point to ns1/ns2.rbxsystems.ch
 
 ### Registrar delegation
-rbxsystems.ch was delegated at Infomaniak from ns11/ns12.infomaniak.ch to ns1/ns2.rbxsystems.ch.
-**.ch registry propagation may still be in flight depending on when this is read.** TTL on the old NS records was 3600s. Verify with `dig @8.8.8.8 rbxsystems.ch NS +trace` before assuming delegation is complete.
+rbxsystems.ch cutover is complete. Infomaniak delegation was switched from ns11/ns12.infomaniak.ch to ns1/ns2.rbxsystems.ch and has propagated. `dig @8.8.8.8 rbxsystems.ch NS +trace` resolves through pantera/eagle.
 
 strategos.gr delegation: pending (not yet changed at .gr registrar).
 
@@ -129,7 +128,7 @@ dig @149.102.139.33 _dmarc.rbxsystems.ch TXT +short
 
 **DKIM records absent by design:** All four DKIM CNAME variables in `terraform.tfvars` are commented out. The Terraform resources use `count = var.dkim_X != "" ? 1 : 0`, so they are simply not created until values are provided. This is intentional — not a bug.
 
-**.ch registry propagation lag:** The .ch registry can take time to publish updated NS/glue records after the registrar-side change. `dig +trace` hitting the Infomaniak nameservers instead of ns1/ns2 means propagation is still in flight. Do not diagnose email delivery issues until the trace reaches pantera/eagle cleanly.
+**.ch delegation complete:** rbxsystems.ch cutover propagated successfully. `dig @8.8.8.8 rbxsystems.ch NS +trace` resolves through ns1/ns2.rbxsystems.ch (pantera/eagle).
 
 ---
 
@@ -138,14 +137,13 @@ dig @149.102.139.33 _dmarc.rbxsystems.ch TXT +short
 In this order:
 
 1. **Rotate pdns API key** (see warning above — key was exposed in session output)
-2. **Confirm delegation propagation** — `dig @8.8.8.8 rbxsystems.ch NS +trace` must resolve through ns1/ns2.rbxsystems.ch
-3. **Change strategos.gr NS** at .gr registrar to ns1/ns2.rbxsystems.ch
-4. **Configure Postmark** — create Sender Signatures for:
+2. **Change strategos.gr NS** at .gr registrar to ns1/ns2.rbxsystems.ch
+3. **Configure Postmark** — create Sender Signatures for:
    - `rbxsystems.ch`
    - `tx.rbxsystems.ch`
    - `strategos.gr`
    - `tx.strategos.gr`
-5. **Add DKIM values** to `infra/terraform/dns/terraform.tfvars`
-6. **`~/.local/bin/tofu apply`** (tunnel must be open)
-7. **Validate email records:** SPF reachable, DKIM CNAME resolves, DMARC `p=none` in place
-8. Verify in Postmark: domain status should show SPF + DKIM confirmed
+4. **Add DKIM values** to `infra/terraform/dns/terraform.tfvars`
+5. **`~/.local/bin/tofu apply`** (tunnel must be open: `ssh -f -N -L 127.0.0.1:18081:127.0.0.1:8081 root@149.102.139.33`)
+6. **Validate email records:** SPF reachable, DKIM CNAME resolves, DMARC `p=none` in place
+7. Verify in Postmark: domain status should show SPF + DKIM confirmed
