@@ -33,6 +33,17 @@
     privs: ALL
     state: present
 
+- name: Grant pdns user CREATE on public schema (PostgreSQL 15+ requires explicit grant)
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ pdns_db_name }}"
+    role: "{{ pdns_db_user }}"
+    type: schema
+    objs: public
+    privs: CREATE
+    state: present
+
 - name: Allow pantera (DNS primary) to connect to pdns database only
   lineinfile:
     path: /etc/postgresql/16/main/pg_hba.conf

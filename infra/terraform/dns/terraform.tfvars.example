@@ -1,0 +1,21 @@
+# Copy to terraform.tfvars (gitignored) and fill in real values.
+# terraform.tfvars is never committed.
+
+# PowerDNS API — accessible via SSH tunnel:
+#   ssh -f -N -L 18081:127.0.0.1:8081 root@149.102.139.33
+pdns_api_url = "http://127.0.0.1:18081"
+
+# API key — must match pdns_api_key in bootstrap/ansible/group_vars/vault.yml
+pdns_api_key = "REPLACE_WITH_PDNS_API_KEY"
+
+# k3s ingress IP (tiger) — default is correct unless cluster changes
+# k3s_ingress_ip = "158.220.116.31"
+
+# DKIM CNAME values from Postmark
+# Leave commented out until Postmark domains are verified.
+# Uncomment and fill after: Postmark > Sender Signatures > DKIM > copy CNAME value.
+
+# dkim_rbxsystems_ch    = "pm-xxxxxxxx.domainkey.postmarkapp.com."
+# dkim_tx_rbxsystems_ch = "pm-xxxxxxxx.domainkey.postmarkapp.com."
+# dkim_strategos_gr     = "pm-xxxxxxxx.domainkey.postmarkapp.com."
+# dkim_tx_strategos_gr  = "pm-xxxxxxxx.domainkey.postmarkapp.com."

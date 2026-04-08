@@ -10,9 +10,11 @@
     state: present
     update_cache: yes
 
-- name: Install gpgsql backend (primary only)
+- name: Install gpgsql backend and postgresql-client (primary only)
   apt:
-    name: pdns-backend-pgsql
+    name:
+      - pdns-backend-pgsql
+      - postgresql-client
     state: present
   when: pdns_backend == "gpgsql"
 
@@ -86,6 +88,14 @@
   when: pdns_role == "primary"
   register: schema_init
   changed_when: "'SELECT 1' not in (schema_init.stderr | default(''))"
+
+- name: Disable systemd-resolved stub listener (conflicts with pdns on port 53)
+  lineinfile:
+    path: /etc/systemd/resolved.conf
+    regexp: '^DNSStubListener='
+    line: 'DNSStubListener=no'
+    insertafter: '^\[Resolve\]'
+  notify: restart systemd-resolved
 
 - name: Enable and start PowerDNS
   systemd:

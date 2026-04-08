@@ -5,6 +5,6 @@
 zone "{{ zone }}" {
     type slave;
     file "{{ pdns_zones_dir }}/{{ zone }}.zone";
-    masters { {{ pdns_primary_ip }}; };
+    masters { {{ pdns_primary_ip }}; {{ hostvars['pantera'].ansible_host_ipv6 }}; };
 };
 {% endfor %}

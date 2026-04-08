@@ -38,3 +38,11 @@ bootstrap/ansible/group_vars/vault.yml
 
 # Kustomize build output
 build/
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+# .terraform.lock.hcl is intentionally committed (pins provider versions)
