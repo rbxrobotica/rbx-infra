@@ -1,0 +1,11 @@
+# Namespace: rbx-catalog
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-catalog
+  labels:
+    app.kubernetes.io/part-of: rbx-catalog
+    environment: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+

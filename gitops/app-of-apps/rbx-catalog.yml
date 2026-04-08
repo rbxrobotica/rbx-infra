@@ -1,0 +1,31 @@
+# ArgoCD Application: rbx-catalog
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-catalog
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-catalog
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-catalog
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-catalog
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-catalog
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+

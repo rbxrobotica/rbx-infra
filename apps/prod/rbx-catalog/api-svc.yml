@@ -1,0 +1,20 @@
+# Service: RBX Catalog API
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-catalog-api
+  namespace: rbx-catalog
+  labels:
+    app.kubernetes.io/name: rbx-catalog-api
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: rbx-catalog
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rbx-catalog-api
+  ports:
+    - port: 8080
+      targetPort: http
+      protocol: TCP
+      name: http
+

@@ -39,6 +39,7 @@ jobs:
       - name: Validate rendered production overlays
         run: |
           kubectl kustomize apps/prod/lda-prod >/dev/null
+          kubectl kustomize apps/prod/rbx-catalog >/dev/null
           kubectl kustomize apps/prod/rbxsystems-ch >/dev/null
 
   validate-argocd:

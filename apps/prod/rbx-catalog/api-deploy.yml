@@ -1,0 +1,64 @@
+# Deployment: RBX Catalog API
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-catalog-api
+  namespace: rbx-catalog
+  labels:
+    app.kubernetes.io/name: rbx-catalog-api
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: rbx-catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-catalog-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-catalog-api
+        app.kubernetes.io/component: backend
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: NotIn
+                    values:
+                      - analytics
+      containers:
+        - name: api
+          image: ghcr.io/rbxrobotica/rbx-catalog-api:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+              name: http
+          env:
+            - name: RBX_REGISTRY_PATH
+              value: /opt/rbx-catalog-registry
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 100m
+            limits:
+              memory: 512Mi
+              cpu: 500m
+

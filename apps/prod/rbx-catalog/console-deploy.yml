@@ -1,0 +1,70 @@
+# Deployment: RBX Catalog Console
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-catalog-console
+  namespace: rbx-catalog
+  labels:
+    app.kubernetes.io/name: rbx-catalog-console
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: rbx-catalog
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-catalog-console
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-catalog-console
+        app.kubernetes.io/component: frontend
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: NotIn
+                    values:
+                      - analytics
+      containers:
+        - name: console
+          image: ghcr.io/rbxrobotica/rbx-catalog-console:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: HOSTNAME
+              value: 0.0.0.0
+            - name: PORT
+              value: "3000"
+            - name: NEXT_PUBLIC_API_URL
+              value: https://api.catalog.rbx.ia.br
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: 500m
+

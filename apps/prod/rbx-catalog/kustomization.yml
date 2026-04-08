@@ -1,0 +1,25 @@
+# Kustomization for rbx-catalog (catalog.rbx.ia.br)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yml
+  - middleware-https.yml
+  - api-deploy.yml
+  - api-svc.yml
+  - api-ingress.yml
+  - console-deploy.yml
+  - console-svc.yml
+  - console-ingress.yml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: rbx-catalog
+      environment: production
+    includeSelectors: false
+
+images:
+  - name: ghcr.io/rbxrobotica/rbx-catalog-api
+    newTag: sha-0000000
+  - name: ghcr.io/rbxrobotica/rbx-catalog-console
+    newTag: sha-0000000

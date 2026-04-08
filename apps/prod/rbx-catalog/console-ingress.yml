@@ -1,0 +1,32 @@
+# Ingress: RBX Catalog Console
+# https://catalog.rbx.ia.br
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rbx-catalog-console-ingress
+  namespace: rbx-catalog
+  labels:
+    app.kubernetes.io/name: rbx-catalog-console-ingress
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: rbx-catalog
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: rbx-catalog-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - catalog.rbx.ia.br
+      secretName: rbx-catalog-console-tls
+  rules:
+    - host: catalog.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-catalog-console
+                port:
+                  number: 80
+
