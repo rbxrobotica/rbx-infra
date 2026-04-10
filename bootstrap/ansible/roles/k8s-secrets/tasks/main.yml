@@ -116,19 +116,54 @@
   changed_when: true
   no_log: true
 
+# ---------------------------------------------------------------------------
+# monitoring namespace secrets (Grafana)
+# ---------------------------------------------------------------------------
+
+- name: Read Grafana admin password from pass
+  command: pass show {{ pass_grafana_admin_password_key }}
+  changed_when: false
+  register: grafana_admin_password_result
+  no_log: true
+
+- name: Ensure monitoring namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace monitoring
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create grafana-admin secret in monitoring
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic grafana-admin \
+      --namespace monitoring \
+      --from-literal=admin-user="admin" \
+      --from-literal=admin-password="{{ grafana_admin_password_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
+# Summary
+# ---------------------------------------------------------------------------
+
 - name: Report bootstrap result
   debug:
     msg:
-      - "robson-v2 secrets bootstrapped successfully"
-      - "  robsond-secret: database-url + projection-tenant-id"
-      - "  ghcr-pull-secret: ghcr.io pull credentials"
-      - "Tenant ID (first bootstrap generates and stores in pass): {{ _robson_v2_tenant_id }}"
+      - "k8s secrets bootstrapped successfully"
+      - "  robson-v2/robsond-secret: database-url + projection-tenant-id"
+      - "  robson-v2/ghcr-pull-secret: ghcr.io pull credentials"
+      - "  monitoring/grafana-admin: Grafana admin credentials"
+      - "Tenant ID (new — stored in pass): {{ _robson_v2_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
 - name: Report bootstrap result (existing tenant)
   debug:
     msg:
-      - "robson-v2 secrets bootstrapped successfully (existing tenant)"
-      - "  robsond-secret: database-url + projection-tenant-id"
-      - "  ghcr-pull-secret: ghcr.io pull credentials"
+      - "k8s secrets bootstrapped successfully"
+      - "  robson-v2/robsond-secret: database-url + projection-tenant-id"
+      - "  robson-v2/ghcr-pull-secret: ghcr.io pull credentials"
+      - "  monitoring/grafana-admin: Grafana admin credentials"
   when: tenant_id_existing.rc == 0

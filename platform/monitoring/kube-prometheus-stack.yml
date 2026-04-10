@@ -1,0 +1,203 @@
+# ArgoCD Application: kube-prometheus-stack
+# Deploys: Prometheus + Grafana + AlertManager + node-exporter + kube-state-metrics
+#
+# Sync wave -5: installs CRDs (PrometheusRule, ServiceMonitor, etc.)
+# that other components may depend on.
+#
+# Grafana admin credentials: monitoring/grafana-admin secret (created by k8s-secrets Ansible role).
+# DNS: grafana.rbxsystems.ch → var.k3s_ingress_ip (managed in infra/terraform/dns/rbxsystems_ch.tf).
+#
+# ADR-11: self-hosted, budget-conscious. Retention: 7d metrics.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: kube-prometheus-stack
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/part-of: rbx-infra
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-5"
+spec:
+  project: rbx-platform
+
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: 67.4.0
+    helm:
+      values: |
+        # ── Grafana ──────────────────────────────────────────────────────────
+        grafana:
+          admin:
+            existingSecret: "grafana-admin"
+            userKey: "admin-user"
+            passwordKey: "admin-password"
+
+          ingress:
+            enabled: true
+            ingressClassName: traefik
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-prod
+              traefik.ingress.kubernetes.io/router.tls: "true"
+            hosts:
+              - grafana.rbxsystems.ch
+            tls:
+              - secretName: grafana-tls
+                hosts:
+                  - grafana.rbxsystems.ch
+
+          persistence:
+            enabled: true
+            storageClassName: local-path
+            accessModes: ["ReadWriteOnce"]
+            size: 5Gi
+
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+
+          # Pre-configure Loki datasource
+          additionalDataSources:
+            - name: Loki
+              type: loki
+              access: proxy
+              url: http://loki.monitoring.svc.cluster.local:3100
+              isDefault: false
+              jsonData:
+                maxLines: 1000
+
+        # ── Prometheus ───────────────────────────────────────────────────────
+        prometheus:
+          prometheusSpec:
+            retention: 7d
+            retentionSize: "9GB"
+
+            storageSpec:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: local-path
+                  accessModes: ["ReadWriteOnce"]
+                  resources:
+                    requests:
+                      storage: 10Gi
+
+            resources:
+              requests:
+                cpu: 100m
+                memory: 256Mi
+              limits:
+                cpu: 500m
+                memory: 512Mi
+
+            # Scrape pods with prometheus.io/scrape: "true" annotations
+            # This picks up robsond and other annotated pods automatically.
+            additionalScrapeConfigs:
+              - job_name: kubernetes-pods-annotations
+                kubernetes_sd_configs:
+                  - role: pod
+                relabel_configs:
+                  - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+                    action: keep
+                    regex: "true"
+                  - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+                    action: replace
+                    target_label: __metrics_path__
+                    regex: (.+)
+                  - source_labels: [__address__, __meta_kubernetes_pod_annotation_prometheus_io_port]
+                    action: replace
+                    regex: ([^:]+)(?::\d+)?;(\d+)
+                    replacement: $1:$2
+                    target_label: __address__
+                  - action: labelmap
+                    regex: __meta_kubernetes_pod_label_(.+)
+                  - source_labels: [__meta_kubernetes_namespace]
+                    action: replace
+                    target_label: kubernetes_namespace
+                  - source_labels: [__meta_kubernetes_pod_name]
+                    action: replace
+                    target_label: kubernetes_pod_name
+
+        # ── AlertManager ─────────────────────────────────────────────────────
+        alertmanager:
+          alertmanagerSpec:
+            replicas: 1
+            storage:
+              volumeClaimTemplate:
+                spec:
+                  storageClassName: local-path
+                  accessModes: ["ReadWriteOnce"]
+                  resources:
+                    requests:
+                      storage: 2Gi
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                cpu: 100m
+                memory: 64Mi
+
+        # ── node-exporter ────────────────────────────────────────────────────
+        nodeExporter:
+          enabled: true
+
+        prometheus-node-exporter:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+
+        # ── kube-state-metrics ───────────────────────────────────────────────
+        kubeStateMetrics:
+          enabled: true
+
+        kube-state-metrics:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+      - ServerSideApply=false
+
+  ignoreDifferences:
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle
+    - group: admissionregistration.k8s.io
+      kind: ValidatingWebhookConfiguration
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle
+    - group: apps
+      kind: Deployment
+      jqPathExpressions:
+        - .spec.selector
+    - group: apps
+      kind: StatefulSet
+      jqPathExpressions:
+        - .spec.selector

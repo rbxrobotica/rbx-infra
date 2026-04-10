@@ -7,8 +7,10 @@ resource "powerdns_zone" "rbxsystems_ch" {
   kind    = "Master"
   account = ""
 
-  # NS records are managed explicitly below for TTL control.
-  nameservers = []
+  # nameservers must match what PowerDNS has in state (set at zone creation).
+  # Actual NS records with TTL control are managed via powerdns_record below.
+  # Changing this attribute forces zone replacement — do not remove or reorder.
+  nameservers = ["ns1.rbxsystems.ch.", "ns2.rbxsystems.ch."]
 }
 
 # --- NS + Glue ---
@@ -155,4 +157,14 @@ resource "powerdns_record" "dmarc_crossdomain_strategos" {
   type    = "TXT"
   ttl     = 3600
   records = ["\"v=DMARC1\""]
+}
+
+# --- Internal tooling ---
+
+resource "powerdns_record" "grafana_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "grafana.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
 }

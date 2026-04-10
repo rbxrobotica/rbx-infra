@@ -1,0 +1,129 @@
+# ArgoCD Application: Promtail
+# DaemonSet on every k3s node. Tails container logs and ships to Loki.
+#
+# Collects: all pod logs via /var/log/pods/** (standard k3s log path).
+# Pipeline: adds namespace, pod, container, node labels to log streams.
+# Target: loki.monitoring.svc.cluster.local:3100
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: promtail
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: promtail
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/part-of: rbx-infra
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: rbx-platform
+
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: promtail
+    targetRevision: 6.16.6
+    helm:
+      values: |
+        config:
+          logLevel: info
+          serverPort: 3101
+
+          clients:
+            - url: http://loki.monitoring.svc.cluster.local:3100/loki/api/v1/push
+
+          snippets:
+            pipelineStages:
+              - cri: {}
+
+            scrapeConfigs: |
+              - job_name: kubernetes-pods
+                pipeline_stages:
+                  - cri: {}
+                kubernetes_sd_configs:
+                  - role: pod
+                relabel_configs:
+                  - source_labels:
+                      - __meta_kubernetes_pod_controller_name
+                    regex: ([0-9a-z-.]+?)(-[0-9a-f]{8,10})?
+                    action: replace
+                    target_label: __tmp_controller_name
+                  - source_labels:
+                      - __meta_kubernetes_pod_label_app_kubernetes_io_name
+                      - __meta_kubernetes_pod_label_app
+                      - __tmp_controller_name
+                      - __meta_kubernetes_pod_name
+                    regex: ^;*([^;]+)(;.*)?$
+                    action: replace
+                    target_label: app
+                  - source_labels:
+                      - __meta_kubernetes_pod_label_app_kubernetes_io_component
+                    action: replace
+                    target_label: component
+                  - action: replace
+                    source_labels:
+                      - __meta_kubernetes_pod_node_name
+                    target_label: node_name
+                  - action: replace
+                    source_labels:
+                      - __meta_kubernetes_namespace
+                    target_label: namespace
+                  - action: replace
+                    replacement: $1
+                    separator: /
+                    source_labels:
+                      - namespace
+                      - app
+                    target_label: job
+                  - action: replace
+                    source_labels:
+                      - __meta_kubernetes_pod_name
+                    target_label: pod
+                  - action: replace
+                    source_labels:
+                      - __meta_kubernetes_pod_container_name
+                    target_label: container
+                  - action: replace
+                    replacement: /var/log/pods/*$1/*.log
+                    separator: /
+                    source_labels:
+                      - __meta_kubernetes_pod_uid
+                      - __meta_kubernetes_pod_container_name
+                    target_label: __path__
+                  - action: replace
+                    regex: true/(.*)
+                    replacement: /var/log/pods/*$1/*.log
+                    separator: /
+                    source_labels:
+                      - __meta_kubernetes_pod_annotationpresent_kubernetes_io_config_hash
+                      - __meta_kubernetes_pod_annotation_kubernetes_io_config_hash
+                      - __meta_kubernetes_pod_container_name
+                    target_label: __path__
+
+        resources:
+          requests:
+            cpu: 20m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+
+        tolerations:
+          - key: node-role.kubernetes.io/master
+            operator: Exists
+            effect: NoSchedule
+          - key: node-role.kubernetes.io/control-plane
+            operator: Exists
+            effect: NoSchedule
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

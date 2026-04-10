@@ -1,0 +1,110 @@
+# ArgoCD Application: Loki
+# Log aggregation — SingleBinary mode (single-operator, single replica).
+# Receives logs from Promtail DaemonSet on all nodes.
+#
+# Storage: local-path PVC on whichever node Loki schedules on.
+# Retention: 30 days (configured in Loki retention_period).
+# No auth: cluster-internal only, not exposed externally.
+#
+# ADR-11: self-hosted. Grafana queries Loki at:
+#   http://loki.monitoring.svc.cluster.local:3100
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: loki
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/part-of: rbx-infra
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  project: rbx-platform
+
+  source:
+    repoURL: https://grafana.github.io/helm-charts
+    chart: loki
+    targetRevision: 6.18.0
+    helm:
+      values: |
+        deploymentMode: SingleBinary
+
+        loki:
+          auth_enabled: false
+
+          commonConfig:
+            replication_factor: 1
+
+          storage:
+            type: filesystem
+
+          schemaConfig:
+            configs:
+              - from: "2024-01-01"
+                store: tsdb
+                object_store: filesystem
+                schema: v13
+                index:
+                  prefix: loki_index_
+                  period: 24h
+
+          limits_config:
+            retention_period: 744h  # 31 days
+
+          compactor:
+            retention_enabled: true
+            retention_delete_delay: 2h
+            delete_request_store: filesystem
+
+        singleBinary:
+          replicas: 1
+          persistence:
+            enabled: true
+            storageClass: local-path
+            size: 20Gi
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 300m
+              memory: 256Mi
+
+        # Disable distributed components (not needed for single-binary)
+        read:
+          replicas: 0
+        write:
+          replicas: 0
+        backend:
+          replicas: 0
+
+        # Disable gateway — Promtail and Grafana connect to loki service directly
+        gateway:
+          enabled: false
+
+        # Disable self-monitoring components to save resources
+        selfMonitoring:
+          enabled: false
+          grafanaAgent:
+            installOperator: false
+
+        lokiCanary:
+          enabled: false
+
+        test:
+          enabled: false
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
