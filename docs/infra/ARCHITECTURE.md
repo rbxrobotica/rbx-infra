@@ -74,9 +74,29 @@ Outbound only. No self-hosted MTA.
 SMTP credentials stored as Kubernetes Secret in the cluster.
 DNS records (SPF, DKIM, DMARC) managed via Terraform.
 
+## Secrets plane
+
+`pass` (GPG-encrypted git repo) is the single source of truth for all secrets.
+
+```
+pass (operator's machine)
+  │
+  ├─ bootstrap/scripts/init-vault-from-pass.sh
+  │     → writes vault.yml (gitignored)
+  │     → used by Ansible for DB provisioning on VPS hosts
+  │
+  └─ Ansible k8s-secrets role (Phase 8)
+        → creates Kubernetes Secret objects in the cluster
+        → robsond-secret, ghcr-pull-secret, ...
+```
+
+Nothing sensitive is committed to git. ArgoCD manages only non-sensitive manifests.
+See `docs/infra/SECRETS.md` for the full model, pass namespace structure, and Day-0 setup.
+
 ## IaC layer summary
 
 See `docs/infra/IAC-STRATEGY.md` for the full Ansible/Terraform boundary decision.
+See `docs/infra/SECRETS.md` for the secrets model.
 
 | Layer | Tool | Location |
 |-------|------|----------|

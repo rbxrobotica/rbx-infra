@@ -41,3 +41,14 @@
   serial: 1
   roles:
     - pdns
+
+# Phase 8: Bootstrap Kubernetes secrets from pass
+# Runs on localhost after k3s and all databases are provisioned.
+# Requires: pass unlocked, kubeconfig at ~/.kube/config-rbx
+# See docs/infra/SECRETS.md for prerequisites and pass namespace structure.
+- name: Bootstrap k8s secrets from pass
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  roles:
+    - k8s-secrets

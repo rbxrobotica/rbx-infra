@@ -1,0 +1,134 @@
+---
+# k8s-secrets: Bootstrap Kubernetes secrets from pass.
+#
+# Runs on localhost (operator machine) after the k3s cluster is up.
+# Requires: pass unlocked, ~/.kube/config-rbx present (from k3s-server role).
+#
+# Idempotent: uses --dry-run=client -o yaml | kubectl apply to avoid errors on re-run.
+# See docs/infra/SECRETS.md for the full secrets model and pass namespace structure.
+
+# ---------------------------------------------------------------------------
+# Preflight checks
+# ---------------------------------------------------------------------------
+
+- name: Check pass is available
+  command: which pass
+  changed_when: false
+  register: pass_check
+  failed_when: pass_check.rc != 0
+
+- name: Check kubectl is available
+  command: which kubectl
+  changed_when: false
+  register: kubectl_check
+  failed_when: kubectl_check.rc != 0
+
+- name: Check kubeconfig is present
+  stat:
+    path: "{{ kubeconfig_path }}"
+  register: kubeconfig_stat
+
+- name: Fail if kubeconfig is missing
+  fail:
+    msg: >
+      {{ kubeconfig_path }} not found.
+      Run the k3s-server role first to fetch the kubeconfig.
+  when: not kubeconfig_stat.stat.exists
+
+# ---------------------------------------------------------------------------
+# Read secrets from pass
+# ---------------------------------------------------------------------------
+
+- name: Read GHCR token from pass
+  command: pass show {{ pass_ghcr_token_key }}
+  changed_when: false
+  register: ghcr_token_result
+  no_log: true
+
+- name: Read robson-v2 DB password from pass
+  command: pass show {{ pass_robson_v2_db_password_key }}
+  changed_when: false
+  register: robson_v2_db_password_result
+  no_log: true
+
+- name: Try to read robson-v2 projection-tenant-id from pass
+  command: pass show {{ pass_robson_v2_tenant_id_key }}
+  changed_when: false
+  register: tenant_id_existing
+  failed_when: false
+  no_log: true
+
+- name: Generate and store new projection-tenant-id (first bootstrap only)
+  shell: |
+    set -e
+    NEW_UUID=$(cat /proc/sys/kernel/random/uuid)
+    printf '%s' "$NEW_UUID" | pass insert --echo {{ pass_robson_v2_tenant_id_key }}
+    echo "$NEW_UUID"
+  register: tenant_id_new
+  when: tenant_id_existing.rc != 0
+  no_log: true
+
+- name: Set tenant ID fact
+  set_fact:
+    _robson_v2_tenant_id: >-
+      {{
+        (tenant_id_existing.stdout | trim)
+        if tenant_id_existing.rc == 0
+        else (tenant_id_new.stdout | trim)
+      }}
+
+# ---------------------------------------------------------------------------
+# Ensure namespaces exist
+# ---------------------------------------------------------------------------
+
+- name: Ensure robson-v2 namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace robson-v2
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+# ---------------------------------------------------------------------------
+# robson-v2 secrets
+# ---------------------------------------------------------------------------
+
+- name: Create robsond-secret in robson-v2
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic robsond-secret \
+      --namespace robson-v2 \
+      --from-literal=database-url="postgresql://{{ paradedb_robson_v2_user }}:{{ robson_v2_db_password_result.stdout | trim }}@paradedb:5432/{{ paradedb_robson_v2_db }}" \
+      --from-literal=projection-tenant-id="{{ _robson_v2_tenant_id }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Create ghcr-pull-secret in robson-v2
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace robson-v2 \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="{{ ghcr_token_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Report bootstrap result
+  debug:
+    msg:
+      - "robson-v2 secrets bootstrapped successfully"
+      - "  robsond-secret: database-url + projection-tenant-id"
+      - "  ghcr-pull-secret: ghcr.io pull credentials"
+      - "Tenant ID (first bootstrap generates and stores in pass): {{ _robson_v2_tenant_id }}"
+  when: tenant_id_existing.rc != 0
+
+- name: Report bootstrap result (existing tenant)
+  debug:
+    msg:
+      - "robson-v2 secrets bootstrapped successfully (existing tenant)"
+      - "  robsond-secret: database-url + projection-tenant-id"
+      - "  ghcr-pull-secret: ghcr.io pull credentials"
+  when: tenant_id_existing.rc == 0

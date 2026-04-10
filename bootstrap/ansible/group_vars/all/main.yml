@@ -35,3 +35,17 @@ paradedb_truthmetal_user: "truthmetal"
 # PowerDNS database (jaguar — used by pdns-database role)
 pdns_db_name: "pdns"
 pdns_db_user: "pdns"
+
+# ---------------------------------------------------------------------------
+# Secrets management
+# ---------------------------------------------------------------------------
+# pass is the source of truth for all secrets.
+# vault.yml (gitignored, same directory) holds the actual values for Ansible.
+# Generate vault.yml before running ansible-playbook:
+#   bash bootstrap/scripts/init-vault-from-pass.sh
+#
+# Kubernetes secrets are created by the k8s-secrets role (Phase 8 in site.yml).
+# pass key paths used by k8s-secrets defaults are in:
+#   bootstrap/ansible/roles/k8s-secrets/defaults/main.yml
+#
+# Full documentation: docs/infra/SECRETS.md

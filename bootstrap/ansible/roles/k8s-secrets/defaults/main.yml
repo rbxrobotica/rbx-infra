@@ -1,0 +1,14 @@
+---
+# k8s-secrets role defaults
+# See docs/infra/SECRETS.md for the canonical pass namespace structure.
+
+# kubeconfig fetched by k3s-server role
+kubeconfig_path: "~/.kube/config-rbx"
+
+# GHCR username for image pulls (rbxrobotica org packages)
+ghcr_username: "ldamasio"
+
+# pass key paths
+pass_ghcr_token_key: "rbx/cluster/ghcr-token"
+pass_robson_v2_db_password_key: "rbx/robson-v2/db-password"
+pass_robson_v2_tenant_id_key: "rbx/robson-v2/projection-tenant-id"
