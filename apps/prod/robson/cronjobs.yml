@@ -23,7 +23,7 @@ spec:
         spec:
           containers:
             - name: stop-monitor
-              image: ldamasio/rbs-backend-monolith-prod:sha-d8c04e9
+              image: ldamasio/rbs-backend-monolith-prod:sha-62414e5
               imagePullPolicy: Always
               command:
                 - python
@@ -119,7 +119,7 @@ spec:
         spec:
           containers:
             - name: trailing-stop
-              image: ldamasio/rbs-backend-monolith-prod:sha-d8c04e9
+              image: ldamasio/rbs-backend-monolith-prod:sha-62414e5
               imagePullPolicy: Always
               command:
                 - python
@@ -215,7 +215,7 @@ spec:
         spec:
           containers:
             - name: pattern-scan
-              image: ldamasio/rbs-backend-monolith-prod:sha-d8c04e9
+              image: ldamasio/rbs-backend-monolith-prod:sha-62414e5
               imagePullPolicy: Always
               command:
                 - python
