@@ -23,17 +23,27 @@
   register: kubectl_check
   failed_when: kubectl_check.rc != 0
 
-- name: Check kubeconfig is present
-  stat:
-    path: "{{ kubeconfig_path }}"
-  register: kubeconfig_stat
+# ---------------------------------------------------------------------------
+# Populate kubeconfig from pass (pass is the source of truth)
+# ---------------------------------------------------------------------------
 
-- name: Fail if kubeconfig is missing
-  fail:
-    msg: >
-      {{ kubeconfig_path }} not found.
-      Run the k3s-server role first to fetch the kubeconfig.
-  when: not kubeconfig_stat.stat.exists
+- name: Ensure ~/.kube directory exists
+  file:
+    path: "{{ kubeconfig_path | dirname }}"
+    state: directory
+    mode: "0700"
+
+- name: Populate kubeconfig from pass
+  shell: pass show {{ pass_kubeconfig_key }} > {{ kubeconfig_path }}
+  args:
+    executable: /bin/bash
+  changed_when: false
+  no_log: true
+
+- name: Restrict kubeconfig permissions
+  file:
+    path: "{{ kubeconfig_path }}"
+    mode: "0600"
 
 # ---------------------------------------------------------------------------
 # Read secrets from pass
@@ -62,7 +72,7 @@
   shell: |
     set -e
     NEW_UUID=$(cat /proc/sys/kernel/random/uuid)
-    printf '%s' "$NEW_UUID" | pass insert --echo {{ pass_robson_v2_tenant_id_key }}
+    printf '%s' "$NEW_UUID" | pass insert --echo {{ pass_robson_v2_tenant_id_key }} >/dev/null 2>&1
     echo "$NEW_UUID"
   register: tenant_id_new
   when: tenant_id_existing.rc != 0

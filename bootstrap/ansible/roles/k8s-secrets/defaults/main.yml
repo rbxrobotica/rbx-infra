@@ -9,6 +9,7 @@ kubeconfig_path: "~/.kube/config-rbx"
 ghcr_username: "ldamasio"
 
 # pass key paths
+pass_kubeconfig_key: "rbx/cluster/kubeconfig"
 pass_ghcr_token_key: "rbx/cluster/ghcr-token"
 pass_robson_v2_db_password_key: "rbx/robson-v2/db-password"
 pass_robson_v2_tenant_id_key: "rbx/robson-v2/projection-tenant-id"

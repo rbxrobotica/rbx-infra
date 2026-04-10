@@ -22,19 +22,6 @@
   set_fact:
     k3s_token: "{{ k3s_token_raw.content | b64decode | trim }}"
 
-- name: Fetch kubeconfig
-  fetch:
-    src: /etc/rancher/k3s/k3s.yaml
-    dest: "~/.kube/config-rbx"
-    flat: yes
-
-- name: Fix kubeconfig server address (replace localhost with public IP)
-  delegate_to: localhost
-  replace:
-    path: "~/.kube/config-rbx"
-    regexp: "https://127.0.0.1:6443"
-    replace: "https://{{ k3s_server_ip }}:6443"
-
 - name: Enable and start k3s
   systemd:
     name: k3s

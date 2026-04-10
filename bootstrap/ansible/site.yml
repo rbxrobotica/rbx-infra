@@ -50,5 +50,6 @@
   hosts: localhost
   connection: local
   gather_facts: false
+  tags: k8s-secrets
   roles:
     - k8s-secrets
