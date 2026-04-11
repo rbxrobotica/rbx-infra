@@ -14,6 +14,7 @@ metadata:
     app.kubernetes.io/part-of: robson
 spec:
   schedule: "* * * * *"
+  suspend: true  # MIG-v3#1 2026-04-10: robsond assumes execution path
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
@@ -110,6 +111,7 @@ metadata:
     app.kubernetes.io/part-of: robson
 spec:
   schedule: "* * * * *"
+  suspend: true  # MIG-v3#1 2026-04-10: robsond assumes execution path
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
