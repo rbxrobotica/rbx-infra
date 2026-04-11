@@ -31,8 +31,9 @@ metadata:
     app.kubernetes.io/component: db-migrate
     app.kubernetes.io/part-of: robson
   annotations:
-    argocd.argoproj.io/hook: PreSync
-    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    # Hook annotations removed — run manually with kubectl apply
+    # argocd.argoproj.io/hook: PreSync
+    # argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
 spec:
   backoffLimit: 5
   template:
