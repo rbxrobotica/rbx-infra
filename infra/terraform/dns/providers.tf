@@ -14,6 +14,7 @@ terraform {
 }
 
 provider "powerdns" {
-  server_url = var.pdns_api_url
-  api_key    = var.pdns_api_key
+  # server_url and api_key are read from PDNS_SERVER_URL and PDNS_API_KEY env vars.
+  # Set them via scripts/dns-tofu-env.sh (reads PDNS_API_KEY from pass).
+  # Never hardcode credentials here or in terraform.tfvars.
 }

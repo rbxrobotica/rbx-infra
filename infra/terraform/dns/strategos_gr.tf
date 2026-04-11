@@ -6,7 +6,10 @@ resource "powerdns_zone" "strategos_gr" {
   kind    = "Master"
   account = ""
 
-  nameservers = []
+  # nameservers must match what PowerDNS has in state (set at zone creation).
+  # Actual NS records with TTL control are managed via powerdns_record below.
+  # Changing this attribute forces zone replacement — do not remove or reorder.
+  nameservers = ["ns1.rbxsystems.ch.", "ns2.rbxsystems.ch."]
 }
 
 # --- NS ---

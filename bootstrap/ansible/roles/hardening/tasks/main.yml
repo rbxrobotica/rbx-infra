@@ -66,6 +66,12 @@
   loop: "{{ groups['k3s_server'] | default([]) + groups['k3s_agents'] | default([]) }}"
   when: inventory_hostname not in groups.get('dns_servers', [])
 
+- name: Allow routed (FORWARD) traffic for k3s overlay networking
+  ufw:
+    default: allow
+    direction: routed
+  when: inventory_hostname not in groups.get('dns_servers', [])
+
 - name: Enable ufw
   ufw:
     state: enabled

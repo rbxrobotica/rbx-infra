@@ -1,17 +1,9 @@
 # PowerDNS API — reached via SSH tunnel to pantera
 # ssh -f -N -L 18081:127.0.0.1:8081 root@149.102.139.33
-
-variable "pdns_api_url" {
-  description = "PowerDNS API endpoint (via SSH tunnel to pantera)"
-  type        = string
-  default     = "http://127.0.0.1:18081"
-}
-
-variable "pdns_api_key" {
-  description = "PowerDNS API key (matches pdns_api_key in Ansible vault)"
-  type        = string
-  sensitive   = true
-}
+#
+# Credentials are NOT passed as Terraform variables.
+# The provider reads PDNS_SERVER_URL and PDNS_API_KEY directly from env.
+# Use scripts/dns-tofu-env.sh as the entrypoint for all tofu invocations.
 
 # Cluster ingress IP (tiger)
 variable "k3s_ingress_ip" {
