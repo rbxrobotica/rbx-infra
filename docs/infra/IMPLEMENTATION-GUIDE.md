@@ -409,13 +409,14 @@ In this order:
 
 1. ~~**Rotate pdns API key**~~ ✅ Done — key rotated and moved to `pass rbx/dns/pdns-api-key`
 2. ~~**Bootstrap k8s secrets**~~ ✅ Done — `k8s-secrets` role deployed and tested (2026-04-10)
-3. **Change strategos.gr NS** at .gr registrar to ns1/ns2.rbxsystems.ch
-4. **Configure Postmark** — create Sender Signatures for:
+3. ~~**MIG-v3#1: Promote robsond as primary runtime**~~ ✅ Done (2026-04-10) — Django execution CronJobs suspended, robsond sole execution path
+4. **Change strategos.gr NS** at .gr registrar to ns1/ns2.rbxsystems.ch
+5. **Configure Postmark** — create Sender Signatures for:
    - `rbxsystems.ch`
    - `tx.rbxsystems.ch`
    - `strategos.gr`
    - `tx.strategos.gr`
-5. **Add DKIM values** to `infra/terraform/dns/terraform.tfvars`
-6. **`~/.local/bin/tofu apply`** (tunnel must be open: `ssh -f -N -L 127.0.0.1:18081:127.0.0.1:8081 root@149.102.139.33`)
-7. **Validate email records:** SPF reachable, DKIM CNAME resolves, DMARC `p=none` in place
-8. Verify in Postmark: domain status should show SPF + DKIM confirmed
+6. **Add DKIM values** to `infra/terraform/dns/terraform.tfvars`
+7. **`~/.local/bin/tofu apply`** (tunnel must be open: `ssh -f -N -L 127.0.0.1:18081:127.0.0.1:8081 root@149.102.139.33`)
+8. **Validate email records:** SPF reachable, DKIM CNAME resolves, DMARC `p=none` in place
+9. Verify in Postmark: domain status should show SPF + DKIM confirmed
