@@ -1,0 +1,106 @@
+# Robsond Deployment (Production — MIG-v3#2)
+#
+# Single replica, Recreate strategy.
+# Moved from namespace robson-v2 to robson (ADR-v3-017).
+# robsond is the sole production runtime (MIG-v3#1).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: robsond
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: daemon
+    app.kubernetes.io/part-of: robson
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: robsond
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: robsond
+        app.kubernetes.io/component: daemon
+        app.kubernetes.io/part-of: robson
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: robsond
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+
+      containers:
+      - name: robsond
+        image: ghcr.io/rbxrobotica/robson-v2:sha-e128478e
+        imagePullPolicy: IfNotPresent
+
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+
+        envFrom:
+        - configMapRef:
+            name: robsond-config
+
+        env:
+        # Database (from secret)
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: robsond-secret
+              key: database-url
+        - name: PROJECTION_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: robsond-secret
+              key: projection-tenant-id
+
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+
+        # Liveness: is the process alive?
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        # Readiness: is the service ready?
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+
+        # Startup: allow extra time on first boot
+        startupProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 30
+
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30

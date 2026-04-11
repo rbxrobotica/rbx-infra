@@ -5,18 +5,23 @@ kind: Kustomization
 resources:
   # Namespace
   - namespace.yml
-  # Robson trading app
+  # Middleware
   - middleware-https.yml
+  # Frontend (React)
   - frontend-deploy.yml
   - frontend-svc.yml
-  - frontend-ingress.yml
-  - backend-deploy.yml
-  - backend-svc.yml
-  - backend-ingress.yml
+  # Robsond (Rust daemon — sole production runtime, MIG-v3#2)
+  - robsond-rbac.yml
+  - robsond-config.yml
+  - robsond-deploy.yml
+  - robsond-svc.yml
+  - robsond-db-migrate-job.yml
+  # Infrastructure
   - redis-deploy.yml
   - redis-svc.yml
   - paradedb-svc.yml
-  - cronjobs.yml
+  # Routing (Gateway API only — ADR-v3-018)
+  - httproutes.yml
 
 labels:
   - pairs:
