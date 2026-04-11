@@ -15,7 +15,8 @@ resources:
   - robsond-config.yml
   - robsond-deploy.yml
   - robsond-svc.yml
-  - robsond-db-migrate-job.yml
+  # robsond-db-migrate-job.yml: NOT in kustomization — PreSync hook cannot
+  # use ServiceAccount that doesn't exist yet. Run manually when needed.
   # Infrastructure
   - redis-deploy.yml
   - redis-svc.yml

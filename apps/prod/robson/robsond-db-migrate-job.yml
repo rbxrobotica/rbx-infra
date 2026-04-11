@@ -1,5 +1,9 @@
 # robsond DB bootstrap Job
 #
+# NOTE: Not managed by kustomization. Run manually when migrations are needed.
+# The ServiceAccount "robsond" must exist before running this job.
+# Apply with: kubectl apply -f robsond-db-migrate-job.yml
+#
 # Runs once at deploy time to:
 #   1. Apply all SQLx migrations (robsond db migrate)
 #   2. Seed the tenant/account rows (robsond db init --tenant-id $PROJECTION_TENANT_ID)
