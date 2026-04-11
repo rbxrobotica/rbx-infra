@@ -88,8 +88,8 @@ Secrets created per namespace:
 
 | Namespace | Secret name | Keys | pass source |
 |-----------|-------------|------|-------------|
-| `robson-v2` | `robsond-secret` | `database-url`, `projection-tenant-id` | `rbx/robson-v2/db-password`, `rbx/robson-v2/projection-tenant-id` |
-| `robson-v2` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
+| `robson` | `robsond-secret` | `database-url`, `projection-tenant-id` | `rbx/robson-v2/db-password`, `rbx/robson-v2/projection-tenant-id` |
+| `robson` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `monitoring` | `grafana-admin` | `admin-user`, `admin-password` | `rbx/monitoring/grafana-admin-password` |
 
 Run idempotently — safe to re-run after a cluster wipe.

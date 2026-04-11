@@ -319,8 +319,8 @@ Prerequisites:
 
 The role:
 1. Reads `rbx/cluster/kubeconfig` from pass → writes to `~/.kube/config-rbx` (0600)
-2. Creates `robson-v2/robsond-secret` (DATABASE_URL + PROJECTION_TENANT_ID)
-3. Creates `robson-v2/ghcr-pull-secret` (GHCR pull credentials)
+2. Creates `robson/robsond-secret` (DATABASE_URL + PROJECTION_TENANT_ID)
+3. Creates `robson/ghcr-pull-secret` (GHCR pull credentials)
 4. Creates `monitoring/grafana-admin` (Grafana admin password)
 5. Generates and stores `rbx/robson-v2/projection-tenant-id` in pass on first bootstrap
 
@@ -340,16 +340,16 @@ After this, `~/.kube/config-rbx` is derived from pass on every `k8s-secrets` rol
 | pass key | k8s secret | field |
 |----------|-----------|-------|
 | `rbx/cluster/kubeconfig` | — (local file only) | kubeconfig |
-| `rbx/cluster/ghcr-token` | `robson-v2/ghcr-pull-secret` | `.dockerconfigjson` |
-| `rbx/robson-v2/db-password` | `robson-v2/robsond-secret` | `database-url` |
-| `rbx/robson-v2/projection-tenant-id` | `robson-v2/robsond-secret` | `projection-tenant-id` |
+| `rbx/cluster/ghcr-token` | `robson/ghcr-pull-secret` | `.dockerconfigjson` |
+| `rbx/robson-v2/db-password` | `robson/robsond-secret` | `database-url` |
+| `rbx/robson-v2/projection-tenant-id` | `robson/robsond-secret` | `projection-tenant-id` |
 | `rbx/monitoring/grafana-admin-password` | `monitoring/grafana-admin` | `admin-password` |
 
 For secrets that need to be rotated without re-running Ansible, use kubectl directly:
 
 ```bash
 kubectl --kubeconfig ~/.kube/config-rbx create secret generic robsond-secret \
-  --namespace robson-v2 \
+  --namespace robson \
   --from-literal=database-url="$(pass rbx/robson-v2/db-password | ...)" \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
@@ -369,35 +369,36 @@ API_KEY="secretvalue" ./run.sh
 
 ---
 
-## 9. Robson v2 cluster state (as of 2026-04-10)
+## 9. Robson v2 cluster state (as of 2026-04-11)
 
-All MIG-v2.5 items are complete. robsond is running in production:
+All MIG-v2.5 + MIG-v3#1 items are complete. MIG-v3#2 in progress:
 
 | Item | State |
 |------|-------|
 | k3s cluster | tiger (control-plane) + altaica/sumatrae/jaguar (agents) |
-| robsond | `ghcr.io/rbxrobotica/robson-v2:sha-e128478e`, 1/1 Running, 0 restarts |
-| ArgoCD `robson-v2-prod` | Synced / Healthy |
+| robsond | `ghcr.io/rbxrobotica/robson-v2:sha-e128478e`, namespace `robson` (moved from `robson-v2`) |
+| ArgoCD `robson-prod` | Synced / Healthy (manages full stack) |
+| ArgoCD `robson-v2-prod` | Archived — pending manual deletion |
 | Migrations | 20240101000000–20240101000007 applied |
 | PostgreSQL | ParadeDB on jaguar, pool connected via `DATABASE_URL` in secret |
 | WebSocket | Reconnects on stream close (Binance closes periodically — normal) |
-| k8s secrets | `robsond-secret`, `ghcr-pull-secret` in `robson-v2`; `grafana-admin` in `monitoring` |
+| k8s secrets | `robsond-secret`, `ghcr-pull-secret` in `robson`; `grafana-admin` in `monitoring` |
 
 **Operational commands:**
 
 ```bash
 # Check daemon status
-kubectl --kubeconfig ~/.kube/config-rbx get pods -n robson-v2
-kubectl --kubeconfig ~/.kube/config-rbx logs -n robson-v2 deploy/robsond --tail=30
+kubectl --kubeconfig ~/.kube/config-rbx get pods -n robson
+kubectl --kubeconfig ~/.kube/config-rbx logs -n robson deploy/robsond --tail=30
 
 # Check migration state
-kubectl --kubeconfig ~/.kube/config-rbx exec -n robson-v2 deploy/robsond -- robsond db status
+kubectl --kubeconfig ~/.kube/config-rbx exec -n robson deploy/robsond -- robsond db status
 
 # Re-bootstrap secrets (after key rotation or cluster reinstall)
 ansible-playbook ansible/site.yml -i ansible/inventory/hosts.yml --tags k8s-secrets
 
 # Force ArgoCD sync
-kubectl --kubeconfig ~/.kube/config-rbx patch application -n argocd robson-v2-prod \
+kubectl --kubeconfig ~/.kube/config-rbx patch application -n argocd robson-prod \
   --type merge -p '{"operation":{"initiatedBy":{"username":"operator"},"sync":{"prune":true,"syncOptions":["CreateNamespace=true","RespectIgnoreDifferences=true"],"syncStrategy":{"hook":{}}}}}'
 ```
 
