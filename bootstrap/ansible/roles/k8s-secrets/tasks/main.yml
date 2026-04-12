@@ -119,7 +119,7 @@
   shell: |
     kubectl --kubeconfig {{ kubeconfig_path }} create secret generic robsond-secret \
       --namespace {{ robsond_namespace }} \
-      --from-literal=database-url="postgresql://{{ paradedb_robson_v2_user }}:{{ robson_v2_db_password_result.stdout | trim }}@paradedb:5432/{{ paradedb_robson_v2_db }}" \
+      --from-literal=database-url="postgresql://{{ paradedb_robson_v2_user }}:{{ robson_v2_db_password_result.stdout | trim }}@robson-paradedb:5432/{{ paradedb_robson_v2_db }}" \
       --from-literal=projection-tenant-id="{{ _robson_v2_tenant_id }}" \
       --from-literal=binance-api-key="{{ robson_v2_testnet_binance_api_key_result.stdout | trim }}" \
       --from-literal=binance-api-secret="{{ robson_v2_testnet_binance_api_secret_result.stdout | trim }}" \
