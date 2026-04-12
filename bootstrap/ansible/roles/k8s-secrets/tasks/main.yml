@@ -87,6 +87,18 @@
         else (tenant_id_new.stdout | trim)
       }}
 
+- name: Read robsond Binance testnet API key from pass
+  command: pass show {{ pass_robson_v2_testnet_binance_api_key }}
+  changed_when: false
+  register: robson_v2_testnet_binance_api_key_result
+  no_log: true
+
+- name: Read robsond Binance testnet API secret from pass
+  command: pass show {{ pass_robson_v2_testnet_binance_api_secret }}
+  changed_when: false
+  register: robson_v2_testnet_binance_api_secret_result
+  no_log: true
+
 # ---------------------------------------------------------------------------
 # Ensure namespace exists
 # ---------------------------------------------------------------------------
@@ -109,6 +121,8 @@
       --namespace {{ robsond_namespace }} \
       --from-literal=database-url="postgresql://{{ paradedb_robson_v2_user }}:{{ robson_v2_db_password_result.stdout | trim }}@paradedb:5432/{{ paradedb_robson_v2_db }}" \
       --from-literal=projection-tenant-id="{{ _robson_v2_tenant_id }}" \
+      --from-literal=binance-api-key="{{ robson_v2_testnet_binance_api_key_result.stdout | trim }}" \
+      --from-literal=binance-api-secret="{{ robson_v2_testnet_binance_api_secret_result.stdout | trim }}" \
       --dry-run=client -o yaml \
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   changed_when: true

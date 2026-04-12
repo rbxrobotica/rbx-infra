@@ -64,6 +64,17 @@ spec:
             secretKeyRef:
               name: robsond-secret
               key: projection-tenant-id
+        # Binance testnet credentials
+        - name: ROBSON_BINANCE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: robsond-secret
+              key: binance-api-key
+        - name: ROBSON_BINANCE_API_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: robsond-secret
+              key: binance-api-secret
 
         resources:
           requests:
