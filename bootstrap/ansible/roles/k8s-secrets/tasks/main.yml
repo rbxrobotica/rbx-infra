@@ -87,6 +87,15 @@
         else (tenant_id_new.stdout | trim)
       }}
 
+- name: Validate projection-tenant-id is a canonical UUID
+  assert:
+    that:
+      - _robson_v2_tenant_id | regex_search('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    fail_msg: >-
+      projection-tenant-id in pass ({{ pass_robson_v2_tenant_id_key }}) is not a canonical UUID.
+      Fix: pass insert {{ pass_robson_v2_tenant_id_key }} (provide a valid lowercase UUID,
+      e.g. output of: cat /proc/sys/kernel/random/uuid)
+
 - name: Read robsond Binance testnet API key from pass
   command: pass show {{ pass_robson_v2_testnet_binance_api_key }}
   changed_when: false

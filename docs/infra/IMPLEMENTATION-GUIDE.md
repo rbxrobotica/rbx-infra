@@ -345,14 +345,8 @@ After this, `~/.kube/config-rbx` is derived from pass on every `k8s-secrets` rol
 | `rbx/robson-v2/projection-tenant-id` | `robson/robsond-secret` | `projection-tenant-id` |
 | `rbx/monitoring/grafana-admin-password` | `monitoring/grafana-admin` | `admin-password` |
 
-For secrets that need to be rotated without re-running Ansible, use kubectl directly:
-
-```bash
-kubectl --kubeconfig ~/.kube/config-rbx create secret generic robsond-secret \
-  --namespace robson \
-  --from-literal=database-url="$(pass rbx/robson-v2/db-password | ...)" \
-  --dry-run=client -o yaml | kubectl apply -f -
-```
+To rotate any managed secret: update the value in pass, then run the k8s-secrets role.
+Never update cluster secrets directly with kubectl — that creates drift. See section 10.
 
 ### What NOT to do
 
@@ -401,6 +395,64 @@ ansible-playbook ansible/site.yml -i ansible/inventory/hosts.yml --tags k8s-secr
 kubectl --kubeconfig ~/.kube/config-rbx patch application -n argocd robson-prod \
   --type merge -p '{"operation":{"initiatedBy":{"username":"operator"},"sync":{"prune":true,"syncOptions":["CreateNamespace=true","RespectIgnoreDifferences=true"],"syncStrategy":{"hook":{}}}}}'
 ```
+
+---
+
+## 10. Secrets ownership and drift prevention
+
+### Ownership model
+
+| Layer | Role | Rule |
+|-------|------|------|
+| `pass` | Source of truth | All secret values live here. Never derive a secret from anything else. |
+| Ansible `k8s-secrets` role | Reconciliation layer | The only authorized writer of `Secret` objects to the cluster. |
+| Kubernetes cluster | Derived state | Cluster secrets are outputs, not inputs. They are correct only when the role last ran. |
+
+**Never create or modify a managed Kubernetes secret with `kubectl create secret` or `kubectl apply` directly.** Manual creation is the root cause of secret drift — the cluster ends up with a value that no playbook run ever produced, and it silently diverges from pass.
+
+### What "managed" means
+
+Any secret that appears in `bootstrap/ansible/roles/k8s-secrets/tasks/main.yml` is managed:
+
+- `robson/robsond-secret` (database-url, projection-tenant-id, binance-api-key, binance-api-secret)
+- `robson/ghcr-pull-secret`
+- `monitoring/grafana-admin`
+
+### Reconciliation command
+
+Whenever you suspect drift, after any secret rotation in pass, or after a cluster reinstall, run:
+
+```bash
+cd ~/apps/rbx-infra
+ansible-playbook bootstrap/ansible/site.yml \
+  -i bootstrap/ansible/inventory/hosts.yml \
+  --tags k8s-secrets
+```
+
+This is the reconciliation step. It:
+1. Reads every relevant secret from pass
+2. Validates values (e.g. UUID format for projection-tenant-id)
+3. Applies all managed secrets to the cluster via `--dry-run=client -o yaml | kubectl apply`
+
+Because it uses `kubectl apply`, it is safe to run at any time — it will overwrite stale manual values, repair drift, and converge the cluster to the pass state. It does not touch unmanaged secrets.
+
+### Pass as the fix target
+
+If a secret value is wrong, fix it in pass — not in the cluster directly:
+
+```bash
+# Wrong value in cluster — fix the source, then reconcile
+pass insert rbx/robson-v2/projection-tenant-id   # replace with correct UUID
+ansible-playbook bootstrap/ansible/site.yml -i bootstrap/ansible/inventory/hosts.yml --tags k8s-secrets
+```
+
+### Drift symptoms
+
+| Symptom | Likely cause | Fix |
+|---------|-------------|-----|
+| App fails UUID validation on startup | `projection-tenant-id` was manually created with invalid value | Re-run k8s-secrets role |
+| DB connection refused with wrong hostname | `database-url` points to stale host | Re-run k8s-secrets role |
+| Image pull fails | `ghcr-pull-secret` stale or token rotated | Rotate in pass, re-run k8s-secrets role |
 
 ---
 
