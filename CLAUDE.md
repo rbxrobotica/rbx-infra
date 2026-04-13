@@ -21,10 +21,25 @@ Application Repos (robson, strategos, thalamus)  →  rbx-infra (THIS REPO)  →
 | `gitops/app-of-apps/` | ArgoCD Applications (App of Apps pattern) |
 | `gitops/projects/` | ArgoCD AppProjects (multi-tenancy) |
 | `apps/prod/` | Production deployment manifests |
-| `apps/staging/` | Staging deployment manifests |
+| `apps/testnet/` | Testnet environment manifests (exchange-connected, synthetic capital) |
+| `apps/staging/` | Staging deployment manifests (shared, non-exchange) |
 | `platform/` | Cluster-wide services (ArgoCD, cert-manager, Istio) |
 | `core/` | Namespaces, RBAC, quotas |
 | `bootstrap/` | Ansible playbooks for cluster provisioning |
+
+### Environment tiers
+
+Environments are birth-time properties — a deployment is testnet or production from the moment
+it is defined in rbx-infra, not because of a flag toggled at runtime.
+
+| Tier | Path | Namespace | When to use |
+|------|------|-----------|-------------|
+| Production | `apps/prod/{app}/` | `{app}` | Live workloads |
+| Testnet | `apps/testnet/{app}/` | `{app}-testnet` | Exchange validation with synthetic capital |
+| Staging | `apps/staging/` | `staging` | Shared pre-production, non-exchange services |
+
+Currently active testnet environment: `robson-testnet` (Robson v3 on Binance testnet).
+See `docs/ROBSON-TESTNET-ENVIRONMENT.md` and `docs/adr/ADR-0003-robson-testnet-isolation.md`.
 
 ## Naming Conventions
 
@@ -55,6 +70,7 @@ All RBX products use **`ghcr.io/rbxrobotica/<product>`** (GitHub Container Regis
 4. **K9s for operations** - Primary cluster management tool
 5. **GHCR only** - No Docker Hub; all images at `ghcr.io/rbxrobotica/<product>`
 6. **No ServerSideApply** - Do NOT use `ServerSideApply=true` in ArgoCD Applications (see `docs/ARGOCD-BEST-PRACTICES.md`)
+7. **`ROBSON_BINANCE_USE_TESTNET` is forbidden in `apps/prod/`** - Its presence there is an operational incident requiring immediate removal. It may only appear in `apps/testnet/robson/robsond-config.yml`.
 
 ## Common Tasks
 

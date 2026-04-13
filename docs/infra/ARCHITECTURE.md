@@ -49,9 +49,41 @@ Zones served: `rbxsystems.ch`, `strategos.gr`.
 
 ### Application plane (ArgoCD + GitOps)
 
-All application manifests live in `apps/prod/` and `apps/staging/`.
+All application manifests live in `apps/prod/`, `apps/staging/`, and `apps/testnet/`.
 ArgoCD syncs from this repository to the k3s cluster.
 No direct `kubectl apply` in production.
+
+## Environment model
+
+rbx-infra recognizes three environment tiers:
+
+| Tier | Path | Namespace convention | Purpose |
+|------|------|---------------------|---------|
+| Production | `apps/prod/{app}/` | `{app}` | Live workloads |
+| Testnet | `apps/testnet/{app}/` | `{app}-testnet` | Exchange-connected validation with synthetic capital |
+| Staging | `apps/staging/` | `staging` | Shared pre-production for non-exchange services |
+
+Environments are **birth-time properties**, not runtime flags. A deployment artifact is testnet or production from the moment it is created in rbx-infra — not because of a flag toggled at runtime.
+
+### Robson v3 testnet environment
+
+The first and only active testnet environment is `robson-testnet`. It was established in April 2026 to validate Robson v3 against the Binance testnet exchange before committing real capital.
+
+Key properties:
+- Namespace: `robson-testnet`
+- Binance endpoint: `testnet.binance.vision` (enforced by `ROBSON_BINANCE_USE_TESTNET: "true"` in the ConfigMap)
+- Database: `robson_testnet` on the existing ParadeDB instance (separate logical database)
+- Projection stream key: `robson:testnet` (isolated from the production event stream)
+- ArgoCD Application: `robson-testnet` (separate from `robson-prod`, separate destination namespace)
+
+This is a concrete instance of namespace isolation, not a generic multi-environment framework. See `docs/ROBSON-TESTNET-ENVIRONMENT.md` for the full specification and `docs/adr/ADR-0003-robson-testnet-isolation.md` for the architectural decision.
+
+### Environment isolation rules
+
+1. An ArgoCD Application targeting `apps/testnet/{app}/` must have `destination.namespace: {app}-testnet`. Never `{app}`.
+2. A Secret in `{app}-testnet` namespace must be bootstrapped from `rbx/{app}-testnet/` pass paths. Never from `rbx/{app}/`.
+3. `ROBSON_BINANCE_USE_TESTNET` may only appear in `apps/testnet/robson/`. Its presence in `apps/prod/robson/` is an incident.
+4. The testnet and production ArgoCD Applications never share source paths.
 
 ## Domain portfolio
 
