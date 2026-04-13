@@ -1,0 +1,38 @@
+# Robsond ServiceAccount and RBAC (Testnet)
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: robsond
+  namespace: robson-testnet
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: daemon
+    app.kubernetes.io/part-of: robson
+    environment: testnet
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: robsond-role
+  namespace: robson-testnet
+rules:
+- apiGroups: [""]
+  resources: ["configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: robsond-rolebinding
+  namespace: robson-testnet
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: robsond-role
+subjects:
+- kind: ServiceAccount
+  name: robsond
+  namespace: robson-testnet

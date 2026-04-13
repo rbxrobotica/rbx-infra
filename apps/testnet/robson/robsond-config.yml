@@ -1,0 +1,35 @@
+# Robsond ConfigMap (Testnet)
+#
+# ROBSON_BINANCE_USE_TESTNET: "true" is the critical key.
+# Its absence means the daemon would call BinanceRestClient::new() (production endpoint)
+# with testnet credentials — a misconfigured but potentially dangerous state.
+# This key must NEVER appear in apps/prod/robson/robsond-config.yml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: robsond-config
+  namespace: robson-testnet
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: daemon
+    app.kubernetes.io/part-of: robson
+    environment: testnet
+data:
+  # Runtime environment
+  ROBSON_ENV: "testnet"
+  ROBSON_API_HOST: "0.0.0.0"
+  ROBSON_API_PORT: "8080"
+
+  # Exchange endpoint — CRITICAL: routes daemon to testnet.binance.vision
+  ROBSON_BINANCE_USE_TESTNET: "true"
+
+  # Position monitor: enabled for full behavioral validation in testnet
+  ROBSON_POSITION_MONITOR_ENABLED: "true"
+  ROBSON_POSITION_MONITOR_SYMBOLS: "BTCUSDT"
+
+  # Projection worker — isolated stream key, does not overlap with production (robson:daemon)
+  PROJECTION_STREAM_KEY: "robson:testnet"
+  PROJECTION_POLL_INTERVAL_MS: "500"
+
+  # Logging — debug verbosity appropriate for testnet
+  RUST_LOG: "robsond=debug,robson_engine=debug,robson_exec=debug,robson_store=debug"

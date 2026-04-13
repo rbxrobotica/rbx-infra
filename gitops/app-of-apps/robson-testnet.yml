@@ -1,0 +1,35 @@
+# ArgoCD Application: Robson Testnet
+# Source: apps/testnet/robson — entirely separate from apps/prod/robson.
+# Destination namespace: robson-testnet — must never be changed to robson.
+# ROBSON_BINANCE_USE_TESTNET=true is enforced by the ConfigMap in the source path.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: robson-testnet
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: robson-testnet
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: robson
+    environment: testnet
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/testnet/robson
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: robson-testnet
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true

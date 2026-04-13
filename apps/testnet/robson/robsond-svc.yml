@@ -1,0 +1,21 @@
+# Robsond Service (Testnet — ClusterIP)
+# No HTTPRoute or Ingress in Phase 1. External access via kubectl port-forward only.
+apiVersion: v1
+kind: Service
+metadata:
+  name: robsond
+  namespace: robson-testnet
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: daemon
+    app.kubernetes.io/part-of: robson
+    environment: testnet
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: robsond
+  ports:
+    - port: 8080
+      targetPort: 8080
+      protocol: TCP
+      name: http

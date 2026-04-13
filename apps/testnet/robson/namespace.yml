@@ -1,0 +1,12 @@
+# Namespace: robson-testnet
+# Managed by ArgoCD Application robson-testnet (apps/testnet/robson/).
+# sync-wave: -1 ensures the namespace exists before any other resource in this Application.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: robson-testnet
+  labels:
+    app.kubernetes.io/part-of: robson
+    environment: testnet
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

@@ -1,0 +1,33 @@
+# ParadeDB external service — database runs natively on jaguar (161.97.147.76)
+# This Service + Endpoints live in robson-testnet, pointing to the same physical host
+# as the production service but scoped to this namespace.
+# The robson_testnet database is a separate logical database on the same instance.
+# DNS within robson-testnet: robson-paradedb.robson-testnet.svc.cluster.local:5432
+# This avoids cross-namespace references to robson (production).
+apiVersion: v1
+kind: Service
+metadata:
+  name: robson-paradedb
+  namespace: robson-testnet
+  labels:
+    app.kubernetes.io/name: robson-paradedb
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: robson
+    environment: testnet
+spec:
+  ports:
+    - port: 5432
+      protocol: TCP
+      name: postgres
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: robson-paradedb
+  namespace: robson-testnet
+subsets:
+  - addresses:
+      - ip: 161.97.147.76
+    ports:
+      - port: 5432
+        name: postgres

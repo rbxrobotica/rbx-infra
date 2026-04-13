@@ -1,0 +1,22 @@
+# Kustomization for Robson Testnet
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Namespace (sync-wave: -1 — must exist before other resources)
+  - namespace.yml
+  # RBAC
+  - robsond-rbac.yml
+  # ConfigMap (includes ROBSON_BINANCE_USE_TESTNET: "true")
+  - robsond-config.yml
+  # Database external service (robson-testnet namespace — no cross-namespace refs)
+  - paradedb-svc.yml
+  # Daemon
+  - robsond-deploy.yml
+  - robsond-svc.yml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: robson
+      environment: testnet
+    includeSelectors: false
