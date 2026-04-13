@@ -150,6 +150,99 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# robson-testnet namespace secrets
+# Completely independent of the production block above.
+# Reads only from rbx/robson-testnet/ pass paths — never from rbx/robson-v2/.
+# See docs/ROBSON-TESTNET-ENVIRONMENT.md for the full specification.
+# ---------------------------------------------------------------------------
+
+- name: Read testnet Binance API key from pass
+  command: pass show {{ pass_robson_testnet_binance_api_key }}
+  changed_when: false
+  register: robson_testnet_binance_api_key_result
+  no_log: true
+
+- name: Read testnet Binance API secret from pass
+  command: pass show {{ pass_robson_testnet_binance_api_secret }}
+  changed_when: false
+  register: robson_testnet_binance_api_secret_result
+  no_log: true
+
+- name: Read testnet DB password from pass
+  command: pass show {{ pass_robson_testnet_db_password_key }}
+  changed_when: false
+  register: robson_testnet_db_password_result
+  no_log: true
+
+- name: Try to read testnet projection-tenant-id from pass
+  command: pass show {{ pass_robson_testnet_tenant_id_key }}
+  changed_when: false
+  register: testnet_tenant_id_existing
+  failed_when: false
+  no_log: true
+
+- name: Generate and store new testnet projection-tenant-id (first bootstrap only)
+  shell: |
+    set -e
+    NEW_UUID=$(cat /proc/sys/kernel/random/uuid)
+    printf '%s' "$NEW_UUID" | pass insert --echo {{ pass_robson_testnet_tenant_id_key }} >/dev/null 2>&1
+    echo "$NEW_UUID"
+  register: testnet_tenant_id_new
+  when: testnet_tenant_id_existing.rc != 0
+  no_log: true
+
+- name: Set testnet tenant ID fact
+  set_fact:
+    _robson_testnet_tenant_id: >-
+      {{
+        (testnet_tenant_id_existing.stdout | trim)
+        if testnet_tenant_id_existing.rc == 0
+        else (testnet_tenant_id_new.stdout | trim)
+      }}
+
+- name: Validate testnet projection-tenant-id is a canonical UUID
+  assert:
+    that:
+      - _robson_testnet_tenant_id | regex_search('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+    fail_msg: >-
+      testnet projection-tenant-id in pass ({{ pass_robson_testnet_tenant_id_key }}) is not a canonical UUID.
+      Fix: pass insert {{ pass_robson_testnet_tenant_id_key }} (provide a valid lowercase UUID,
+      e.g. output of: cat /proc/sys/kernel/random/uuid)
+
+- name: Ensure robson-testnet namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ robsond_testnet_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create robsond-testnet-secret in robson-testnet
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic robsond-testnet-secret \
+      --namespace {{ robsond_testnet_namespace }} \
+      --from-literal=database-url="postgresql://robson_testnet:{{ robson_testnet_db_password_result.stdout | trim }}@robson-paradedb.robson-testnet.svc.cluster.local:5432/robson_testnet" \
+      --from-literal=projection-tenant-id="{{ _robson_testnet_tenant_id }}" \
+      --from-literal=binance-api-key="{{ robson_testnet_binance_api_key_result.stdout | trim }}" \
+      --from-literal=binance-api-secret="{{ robson_testnet_binance_api_secret_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Create ghcr-pull-secret in robson-testnet
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace {{ robsond_testnet_namespace }} \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="{{ ghcr_token_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # monitoring namespace secrets (Grafana)
 # ---------------------------------------------------------------------------
 
