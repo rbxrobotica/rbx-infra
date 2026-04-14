@@ -29,6 +29,10 @@ paradedb_robson_user: "robson"
 paradedb_robson_v2_db: "robson_v2"
 paradedb_robson_v2_user: "robson_v2"
 
+# robson_testnet (testnet daemon — isolated from production robson_v2)
+paradedb_robson_testnet_db: "robson_testnet"
+paradedb_robson_testnet_user: "robson_testnet"
+
 paradedb_truthmetal_db: "truthmetal"
 paradedb_truthmetal_user: "truthmetal"
 
