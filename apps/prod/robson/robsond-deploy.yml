@@ -75,6 +75,12 @@ spec:
             secretKeyRef:
               name: robsond-secret
               key: binance-api-secret
+        # API bearer token (from secret)
+        - name: ROBSON_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: robsond-secret
+              key: api-token
 
         resources:
           requests:

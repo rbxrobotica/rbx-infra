@@ -108,6 +108,12 @@
   register: robson_v2_testnet_binance_api_secret_result
   no_log: true
 
+- name: Read robsond API token from pass
+  command: pass show {{ pass_robson_api_token_key }}
+  changed_when: false
+  register: robson_api_token_result
+  no_log: true
+
 # ---------------------------------------------------------------------------
 # Ensure namespace exists
 # ---------------------------------------------------------------------------
@@ -132,6 +138,7 @@
       --from-literal=projection-tenant-id="{{ _robson_v2_tenant_id }}" \
       --from-literal=binance-api-key="{{ robson_v2_testnet_binance_api_key_result.stdout | trim }}" \
       --from-literal=binance-api-secret="{{ robson_v2_testnet_binance_api_secret_result.stdout | trim }}" \
+      --from-literal=api-token="{{ robson_api_token_result.stdout | trim }}" \
       --dry-run=client -o yaml \
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   changed_when: true
@@ -209,6 +216,12 @@
       Fix: pass insert {{ pass_robson_testnet_tenant_id_key }} (provide a valid lowercase UUID,
       e.g. output of: cat /proc/sys/kernel/random/uuid)
 
+- name: Read robsond testnet API token from pass
+  command: pass show {{ pass_robson_testnet_api_token_key }}
+  changed_when: false
+  register: robson_testnet_api_token_result
+  no_log: true
+
 - name: Ensure robson-testnet namespace exists
   shell: >
     kubectl --kubeconfig {{ kubeconfig_path }}
@@ -225,6 +238,7 @@
       --from-literal=projection-tenant-id="{{ _robson_testnet_tenant_id }}" \
       --from-literal=binance-api-key="{{ robson_testnet_binance_api_key_result.stdout | trim }}" \
       --from-literal=binance-api-secret="{{ robson_testnet_binance_api_secret_result.stdout | trim }}" \
+      --from-literal=api-token="{{ robson_testnet_api_token_result.stdout | trim }}" \
       --dry-run=client -o yaml \
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   changed_when: true

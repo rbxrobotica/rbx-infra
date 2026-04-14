@@ -43,7 +43,7 @@ spec:
       containers:
       - name: robsond
         # Pin to explicit SHA. Replace sha-REPLACE_ME with the actual tag from GHCR.
-        image: ghcr.io/rbxrobotica/robson-v2:sha-REPLACE_ME
+        image: ghcr.io/rbxrobotica/robson-v2:sha-a9b90f97
         imagePullPolicy: IfNotPresent
 
         ports:
@@ -78,6 +78,12 @@ spec:
             secretKeyRef:
               name: robsond-testnet-secret
               key: binance-api-secret
+        # API bearer token (from secret)
+        - name: ROBSON_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: robsond-testnet-secret
+              key: api-token
 
         resources:
           requests:

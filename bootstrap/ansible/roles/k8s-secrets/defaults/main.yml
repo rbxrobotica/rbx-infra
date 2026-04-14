@@ -32,3 +32,7 @@ pass_robson_testnet_binance_api_key: "rbx/robson-testnet/binance-api-key"
 pass_robson_testnet_binance_api_secret: "rbx/robson-testnet/binance-api-secret"
 pass_robson_testnet_db_password_key: "rbx/robson-testnet/db-password"
 pass_robson_testnet_tenant_id_key: "rbx/robson-testnet/projection-tenant-id"
+
+# API bearer token for robsond HTTP API
+pass_robson_api_token_key: "rbx/robson/api-token"
+pass_robson_testnet_api_token_key: "rbx/robson-testnet/api-token"
