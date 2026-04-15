@@ -1,8 +1,8 @@
 # Robson v3 — Testnet Environment
 
-**Status:** Specified — pending implementation
+**Status:** Live — operational as of 2026-04-15
 **Date:** 2026-04-12
-**Revised:** 2026-04-12 — R1–R6 applied (namespace location, kustomization, RBAC, paradedb-svc, DB URL, Ansible block)
+**Revised:** 2026-04-15 — R7: deployed, ROBSON_ENV corrected to `production`, ROBSON_API_TOKEN wired, migration index conflicts resolved
 **Decision:** See `docs/adr/ADR-0003-robson-testnet-isolation.md`
 
 ---
@@ -88,7 +88,7 @@ The ConfigMap in `apps/testnet/robson/robsond-config.yml` must contain:
 
 | Key | Value | Reason |
 |-----|-------|--------|
-| `ROBSON_ENV` | `testnet` | Daemon environment identity |
+| `ROBSON_ENV` | `production` | Daemon only accepts `test`, `development`, `production`; exchange routing is controlled by `ROBSON_BINANCE_USE_TESTNET` |
 | `ROBSON_BINANCE_USE_TESTNET` | `"true"` | Activates `BinanceRestClient::testnet()` constructor |
 | `ROBSON_POSITION_MONITOR_ENABLED` | `"true"` | Enabled in testnet for full behavioral validation |
 | `PROJECTION_STREAM_KEY` | `robson:testnet` | Isolated event stream, does not overlap with production |
@@ -111,6 +111,9 @@ The secret in namespace `robson-testnet` must contain exactly these keys:
 | `binance-api-secret` | Binance testnet API secret | `rbx/robson-testnet/binance-api-secret` |
 | `database-url` | `postgresql://robson_testnet:{password}@robson-paradedb.robson-testnet.svc.cluster.local:5432/robson_testnet` | `rbx/robson-testnet/db-password` |
 | `projection-tenant-id` | UUID (distinct from production tenant) | `rbx/robson-testnet/projection-tenant-id` |
+| `api-token` | Bearer token for robsond HTTP API (`/arm`, `/signal`, etc.) | `rbx/robson-testnet/api-token` |
+
+**Note on `database-url` password:** The `db-password` must use only hex characters (`openssl rand -hex 32`). Base64-encoded passwords contain `/`, `+`, `=` which break URL parsing in the PostgreSQL client.
 
 The `database-url` uses `robson-paradedb.robson-testnet.svc.cluster.local` — the Service defined
 in `apps/testnet/robson/paradedb-svc.yml` within the testnet namespace. This avoids referencing

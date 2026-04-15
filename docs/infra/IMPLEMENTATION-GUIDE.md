@@ -363,20 +363,22 @@ API_KEY="secretvalue" ./run.sh
 
 ---
 
-## 9. Robson v2 cluster state (as of 2026-04-11)
+## 9. Robson v2 cluster state (as of 2026-04-15)
 
-All MIG-v2.5 + MIG-v3#1 items are complete. MIG-v3#2 in progress:
+MIG-v2.5 + MIG-v3#1 + MIG-v3#2 complete. Testnet operational. Pending: MIG-v3#3–#8 (deferred, do not block capital real).
 
 | Item | State |
 |------|-------|
 | k3s cluster | tiger (control-plane) + altaica/sumatrae/jaguar (agents) |
-| robsond | `ghcr.io/rbxrobotica/robson-v2:sha-e128478e`, namespace `robson` (moved from `robson-v2`) |
-| ArgoCD `robson-prod` | Synced / Healthy (manages full stack) |
-| ArgoCD `robson-v2-prod` | Archived — pending manual deletion |
-| Migrations | 20240101000000–20240101000007 applied |
+| robsond (prod) | `ghcr.io/rbxrobotica/robson-v2:sha-88242685`, namespace `robson`, ArgoCD Synced/Healthy |
+| robsond (testnet) | `ghcr.io/rbxrobotica/robson-v2:sha-88242685`, namespace `robson-testnet`, ArgoCD Synced/Healthy |
+| ArgoCD `robson-prod` | Synced / Healthy |
+| ArgoCD `robson-testnet` | Synced / Healthy |
+| ArgoCD `robson-v2-prod` | Deleted (2026-04-15, MIG-v3#1 complete) |
+| Migrations | 20240101000000–20240101000007 applied (prod + testnet) |
 | PostgreSQL | ParadeDB on jaguar, pool connected via `DATABASE_URL` in secret |
 | WebSocket | Reconnects on stream close (Binance closes periodically — normal) |
-| k8s secrets | `robsond-secret`, `ghcr-pull-secret` in `robson`; `grafana-admin` in `monitoring` |
+| k8s secrets | `robsond-secret` (+ `api-token`), `ghcr-pull-secret` in `robson`; `robsond-testnet-secret` (+ `api-token`), `ghcr-pull-secret` in `robson-testnet`; `grafana-admin` in `monitoring` |
 
 **Operational commands:**
 
