@@ -16,7 +16,7 @@ metadata:
     environment: testnet
 data:
   # Runtime environment
-  ROBSON_ENV: "testnet"
+  ROBSON_ENV: "production"
   ROBSON_API_HOST: "0.0.0.0"
   ROBSON_API_PORT: "8080"
 
