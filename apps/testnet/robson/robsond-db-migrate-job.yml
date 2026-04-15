@@ -1,0 +1,71 @@
+# robsond DB bootstrap Job (Testnet)
+#
+# NOTE: Not managed by kustomization. Run manually when migrations are needed.
+# The ServiceAccount "robsond" must exist before running this job.
+# Apply with: kubectl apply -f apps/testnet/robson/robsond-db-migrate-job.yml --kubeconfig ~/.kube/config-rbx
+#
+# Runs once at deploy time to:
+#   1. Apply all SQLx migrations (robsond db migrate)
+#   2. Seed the tenant/account rows (robsond db init --tenant-id $PROJECTION_TENANT_ID)
+#
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: robsond-db-migrate
+  namespace: robson-testnet
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: db-migrate
+    app.kubernetes.io/part-of: robson
+    environment: testnet
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: robsond
+        app.kubernetes.io/component: db-migrate
+        environment: testnet
+    spec:
+      serviceAccountName: robsond
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      restartPolicy: OnFailure
+
+      containers:
+      - name: db-migrate
+        image: ghcr.io/rbxrobotica/robson-v2:sha-a9b90f97
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "=== Running robsond db migrate ==="
+          robsond db migrate
+          echo "=== Running robsond db init ==="
+          robsond db init --tenant-id "${PROJECTION_TENANT_ID}"
+          echo "=== Bootstrap complete ==="
+
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: robsond-testnet-secret
+              key: database-url
+        - name: PROJECTION_TENANT_ID
+          valueFrom:
+            secretKeyRef:
+              name: robsond-testnet-secret
+              key: projection-tenant-id
+
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
+          limits:
+            cpu: "250m"
+            memory: "128Mi"
