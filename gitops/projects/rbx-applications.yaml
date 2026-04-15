@@ -36,6 +36,8 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: argos-radar
       server: https://kubernetes.default.svc
+    - namespace: robson-testnet
+      server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
