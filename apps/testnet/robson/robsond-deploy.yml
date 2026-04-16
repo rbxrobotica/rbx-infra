@@ -43,7 +43,7 @@ spec:
       containers:
       - name: robsond
         # Pin to explicit SHA. Replace sha-REPLACE_ME with the actual tag from GHCR.
-        image: ghcr.io/rbxrobotica/robson-v2:sha-88242685
+        image: ghcr.io/rbxrobotica/robson-v2:sha-0d14f040
         imagePullPolicy: IfNotPresent
 
         ports:
