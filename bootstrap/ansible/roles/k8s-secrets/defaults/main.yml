@@ -8,31 +8,25 @@ kubeconfig_path: "~/.kube/config-rbx"
 # GHCR username for image pulls (rbxrobotica org packages)
 ghcr_username: "ldamasio"
 
-# Namespace for robsond secrets (changed from robson-v2 in MIG-v3#2)
+# Namespace for robsond secrets
 robsond_namespace: "robson"
 
 # pass key paths
 pass_kubeconfig_key: "rbx/cluster/kubeconfig"
 pass_ghcr_token_key: "rbx/cluster/ghcr-token"
-pass_robson_v2_db_password_key: "rbx/robson-v2/db-password"
-pass_robson_v2_tenant_id_key: "rbx/robson-v2/projection-tenant-id"
 pass_grafana_admin_password_key: "rbx/monitoring/grafana-admin-password"
 
-# Production Binance credentials (rbx/robson-v2/ — real exchange keys)
-# NOTE: pass_robson_v2_testnet_* were previously used as an interim measure.
-# These variables retain the legacy name to avoid breaking the existing production task.
-# The actual pass paths below point to rbx/robson-v2-testnet/ (interim, pre-testnet-formalization).
-# TODO: when production migrates to real Binance keys, update paths to rbx/robson-v2/binance-api-key.
-pass_robson_v2_testnet_binance_api_key: "rbx/robson-v2-testnet/binance-api-key"
-pass_robson_v2_testnet_binance_api_secret: "rbx/robson-v2-testnet/binance-api-secret"
+# Production robson (namespace: robson)
+pass_robson_db_password_key: "rbx/robson/db-password"
+pass_robson_tenant_id_key: "rbx/robson/projection-tenant-id"
+pass_robson_binance_api_key: "rbx/robson/binance-api-key"
+pass_robson_binance_api_secret: "rbx/robson/binance-api-secret"
+pass_robson_api_token_key: "rbx/robson/api-token"
 
-# Testnet environment defaults (robson-testnet namespace)
+# Testnet robson (namespace: robson-testnet)
 robsond_testnet_namespace: "robson-testnet"
-pass_robson_testnet_binance_api_key: "rbx/robson-testnet/binance-api-key"
-pass_robson_testnet_binance_api_secret: "rbx/robson-testnet/binance-api-secret"
 pass_robson_testnet_db_password_key: "rbx/robson-testnet/db-password"
 pass_robson_testnet_tenant_id_key: "rbx/robson-testnet/projection-tenant-id"
-
-# API bearer token for robsond HTTP API
-pass_robson_api_token_key: "rbx/robson/api-token"
+pass_robson_testnet_binance_api_key: "rbx/robson-testnet/binance-api-key"
+pass_robson_testnet_binance_api_secret: "rbx/robson-testnet/binance-api-secret"
 pass_robson_testnet_api_token_key: "rbx/robson-testnet/api-token"

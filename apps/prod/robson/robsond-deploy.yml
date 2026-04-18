@@ -1,8 +1,7 @@
-# Robsond Deployment (Production — MIG-v3#2)
+# Robsond Deployment (Production)
 #
 # Single replica, Recreate strategy.
-# Moved from namespace robson-v2 to robson (ADR-v3-017).
-# robsond is the sole production runtime (MIG-v3#1).
+# robsond is the sole production runtime.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -64,7 +63,7 @@ spec:
             secretKeyRef:
               name: robsond-secret
               key: projection-tenant-id
-        # Binance testnet credentials
+        # Binance production credentials
         - name: ROBSON_BINANCE_API_KEY
           valueFrom:
             secretKeyRef:

@@ -20,7 +20,6 @@ echo "==> Reading secrets from pass..."
 
 # Read all required secrets upfront — fail fast if any are missing
 ROBSON_DB_PASS="$(pass show rbx/robson/db-password)"
-ROBSON_V2_DB_PASS="$(pass show rbx/robson-v2/db-password)"
 TRUTHMETAL_DB_PASS="$(pass show rbx/truthmetal/db-password)"
 ROBSON_TESTNET_DB_PASS="$(pass show rbx/robson-testnet/db-password)"
 PDNS_API_KEY="$(pass show rbx/dns/pdns-api-key)"
@@ -35,7 +34,6 @@ cat > "${VAULT_FILE}" << EOF
 
 # Application database passwords (jaguar)
 paradedb_robson_password: "${ROBSON_DB_PASS}"
-paradedb_robson_v2_password: "${ROBSON_V2_DB_PASS}"
 paradedb_truthmetal_password: "${TRUTHMETAL_DB_PASS}"
 paradedb_robson_testnet_password: "${ROBSON_TESTNET_DB_PASS}"
 

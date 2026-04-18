@@ -20,16 +20,11 @@ ssh_port: 22
 # Database names and users are non-sensitive (committed here)
 # Passwords live in group_vars/vault.yml (gitignored — never commit)
 
-# robson (Django v1 — existing, do not change)
+# robson (robsond production daemon — event-sourced)
 paradedb_robson_db: "robson"
 paradedb_robson_user: "robson"
 
-# robson_v2 (robsond daemon — event-sourced, separate from Django)
-# Keeps robsond's schema isolated from Django's ORM schema.
-paradedb_robson_v2_db: "robson_v2"
-paradedb_robson_v2_user: "robson_v2"
-
-# robson_testnet (testnet daemon — isolated from production robson_v2)
+# robson_testnet (testnet daemon — isolated from production robson)
 paradedb_robson_testnet_db: "robson_testnet"
 paradedb_robson_testnet_user: "robson_testnet"
 

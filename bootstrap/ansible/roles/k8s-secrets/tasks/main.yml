@@ -56,13 +56,13 @@
   no_log: true
 
 - name: Read robsond DB password from pass
-  command: pass show {{ pass_robson_v2_db_password_key }}
+  command: pass show {{ pass_robson_db_password_key }}
   changed_when: false
-  register: robson_v2_db_password_result
+  register: robson_db_password_result
   no_log: true
 
 - name: Try to read robsond projection-tenant-id from pass
-  command: pass show {{ pass_robson_v2_tenant_id_key }}
+  command: pass show {{ pass_robson_tenant_id_key }}
   changed_when: false
   register: tenant_id_existing
   failed_when: false
@@ -72,7 +72,7 @@
   shell: |
     set -e
     NEW_UUID=$(cat /proc/sys/kernel/random/uuid)
-    printf '%s' "$NEW_UUID" | pass insert --echo {{ pass_robson_v2_tenant_id_key }} >/dev/null 2>&1
+    printf '%s' "$NEW_UUID" | pass insert --echo {{ pass_robson_tenant_id_key }} >/dev/null 2>&1
     echo "$NEW_UUID"
   register: tenant_id_new
   when: tenant_id_existing.rc != 0
@@ -80,7 +80,7 @@
 
 - name: Set tenant ID fact
   set_fact:
-    _robson_v2_tenant_id: >-
+    _robson_tenant_id: >-
       {{
         (tenant_id_existing.stdout | trim)
         if tenant_id_existing.rc == 0
@@ -90,22 +90,22 @@
 - name: Validate projection-tenant-id is a canonical UUID
   assert:
     that:
-      - _robson_v2_tenant_id | regex_search('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
+      - _robson_tenant_id | regex_search('^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$')
     fail_msg: >-
-      projection-tenant-id in pass ({{ pass_robson_v2_tenant_id_key }}) is not a canonical UUID.
-      Fix: pass insert {{ pass_robson_v2_tenant_id_key }} (provide a valid lowercase UUID,
+      projection-tenant-id in pass ({{ pass_robson_tenant_id_key }}) is not a canonical UUID.
+      Fix: pass insert {{ pass_robson_tenant_id_key }} (provide a valid lowercase UUID,
       e.g. output of: cat /proc/sys/kernel/random/uuid)
 
-- name: Read robsond Binance testnet API key from pass
-  command: pass show {{ pass_robson_v2_testnet_binance_api_key }}
+- name: Read robsond Binance API key from pass
+  command: pass show {{ pass_robson_binance_api_key }}
   changed_when: false
-  register: robson_v2_testnet_binance_api_key_result
+  register: robson_binance_api_key_result
   no_log: true
 
-- name: Read robsond Binance testnet API secret from pass
-  command: pass show {{ pass_robson_v2_testnet_binance_api_secret }}
+- name: Read robsond Binance API secret from pass
+  command: pass show {{ pass_robson_binance_api_secret }}
   changed_when: false
-  register: robson_v2_testnet_binance_api_secret_result
+  register: robson_binance_api_secret_result
   no_log: true
 
 - name: Read robsond API token from pass
@@ -134,10 +134,10 @@
   shell: |
     kubectl --kubeconfig {{ kubeconfig_path }} create secret generic robsond-secret \
       --namespace {{ robsond_namespace }} \
-      --from-literal=database-url="postgresql://{{ paradedb_robson_v2_user }}:{{ robson_v2_db_password_result.stdout | trim }}@robson-paradedb:5432/{{ paradedb_robson_v2_db }}" \
-      --from-literal=projection-tenant-id="{{ _robson_v2_tenant_id }}" \
-      --from-literal=binance-api-key="{{ robson_v2_testnet_binance_api_key_result.stdout | trim }}" \
-      --from-literal=binance-api-secret="{{ robson_v2_testnet_binance_api_secret_result.stdout | trim }}" \
+      --from-literal=database-url="postgresql://{{ paradedb_robson_user }}:{{ robson_db_password_result.stdout | trim }}@robson-paradedb:5432/{{ paradedb_robson_db }}" \
+      --from-literal=projection-tenant-id="{{ _robson_tenant_id }}" \
+      --from-literal=binance-api-key="{{ robson_binance_api_key_result.stdout | trim }}" \
+      --from-literal=binance-api-secret="{{ robson_binance_api_secret_result.stdout | trim }}" \
       --from-literal=api-token="{{ robson_api_token_result.stdout | trim }}" \
       --dry-run=client -o yaml \
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
@@ -159,7 +159,7 @@
 # ---------------------------------------------------------------------------
 # robson-testnet namespace secrets
 # Completely independent of the production block above.
-# Reads only from rbx/robson-testnet/ pass paths — never from rbx/robson-v2/.
+# Reads only from rbx/robson-testnet/ pass paths — never from rbx/robson/.
 # See docs/ROBSON-TESTNET-ENVIRONMENT.md for the full specification.
 # ---------------------------------------------------------------------------
 
@@ -296,7 +296,7 @@
       - "  {{ robsond_namespace }}/robsond-secret: database-url + projection-tenant-id"
       - "  {{ robsond_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  monitoring/grafana-admin: Grafana admin credentials"
-      - "Tenant ID (new — stored in pass): {{ _robson_v2_tenant_id }}"
+      - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
 - name: Report bootstrap result (existing tenant)

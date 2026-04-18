@@ -12,8 +12,8 @@ No application should run its own database StatefulSet inside k3s.
 
 | Database | User | Application |
 |----------|------|-------------|
-| robson | robson | Robson v1 (Django) |
-| robson_v2 | robson_v2 | robsond (Rust daemon) |
+| robson | robson | robsond (Rust production daemon) |
+| robson_testnet | robson_testnet | robsond testnet daemon |
 | truthmetal | truthmetal | Truthmetal |
 | pdns | pdns | PowerDNS (used by pantera/ns1) |
 

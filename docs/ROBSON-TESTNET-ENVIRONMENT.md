@@ -142,8 +142,7 @@ The database must be created before first deployment. The Ansible bootstrap is t
 for this step (a one-time `CREATE DATABASE` and `GRANT` in the ParadeDB provisioning role or
 a standalone task). It is not created automatically by the daemon.
 
-The production database (`robson_v2` for the Rust daemon) must never be referenced
-in the testnet environment.
+The production database (`robson`) must never be referenced in the testnet environment.
 
 ### Projection stream key
 
@@ -161,7 +160,7 @@ from one would be visible to the other — which would corrupt projections.
 The testnet environment uses the same container image as production:
 
 ```
-ghcr.io/rbxrobotica/robson-v2:{sha-tag}
+ghcr.io/rbxrobotica/robson:{sha-tag}
 ```
 
 The SHA tag must be pinned explicitly. Never use `:latest` or any mutable tag.
@@ -249,7 +248,7 @@ Before deploying, verify these preconditions:
 - [ ] Testnet DB password exists in pass (`rbx/robson-testnet/db-password`)
 - [ ] `robson_testnet` database and user created on ParadeDB (`jaguar`)
 - [ ] Robson Rust code change for `ROBSON_BINANCE_USE_TESTNET` is merged and image is built
-- [ ] New image SHA is available in GHCR (`ghcr.io/rbxrobotica/robson-v2:{sha}`)
+- [ ] New image SHA is available in GHCR (`ghcr.io/rbxrobotica/robson:{sha}`)
 
 Deployment sequence:
 

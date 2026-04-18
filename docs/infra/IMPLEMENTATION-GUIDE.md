@@ -216,7 +216,7 @@ rbx/
   db/
     pdns-password             # PostgreSQL password for pdns@jaguar
     robson-password           # PostgreSQL password for robson@jaguar
-    robson-v2-password        # PostgreSQL password for robson_v2@jaguar
+    robson-password           # PostgreSQL password for robson@jaguar (robsond production)
     truthmetal-password       # PostgreSQL password for truthmetal@jaguar
   email/
     postmark-api-token        # Postmark account API token (domain setup, server mgmt)
@@ -322,7 +322,7 @@ The role:
 2. Creates `robson/robsond-secret` (DATABASE_URL + PROJECTION_TENANT_ID)
 3. Creates `robson/ghcr-pull-secret` (GHCR pull credentials)
 4. Creates `monitoring/grafana-admin` (Grafana admin password)
-5. Generates and stores `rbx/robson-v2/projection-tenant-id` in pass on first bootstrap
+5. Generates and stores `rbx/robson/projection-tenant-id` in pass on first bootstrap
 
 **Kubeconfig bootstrap** (one-time per cluster, after k3s is provisioned):
 
@@ -341,8 +341,11 @@ After this, `~/.kube/config-rbx` is derived from pass on every `k8s-secrets` rol
 |----------|-----------|-------|
 | `rbx/cluster/kubeconfig` | — (local file only) | kubeconfig |
 | `rbx/cluster/ghcr-token` | `robson/ghcr-pull-secret` | `.dockerconfigjson` |
-| `rbx/robson-v2/db-password` | `robson/robsond-secret` | `database-url` |
-| `rbx/robson-v2/projection-tenant-id` | `robson/robsond-secret` | `projection-tenant-id` |
+| `rbx/robson/db-password` | `robson/robsond-secret` | `database-url` |
+| `rbx/robson/projection-tenant-id` | `robson/robsond-secret` | `projection-tenant-id` |
+| `rbx/robson/binance-api-key` | `robson/robsond-secret` | `binance-api-key` |
+| `rbx/robson/binance-api-secret` | `robson/robsond-secret` | `binance-api-secret` |
+| `rbx/robson/api-token` | `robson/robsond-secret` | `api-token` |
 | `rbx/monitoring/grafana-admin-password` | `monitoring/grafana-admin` | `admin-password` |
 
 To rotate any managed secret: update the value in pass, then run the k8s-secrets role.
@@ -363,18 +366,15 @@ API_KEY="secretvalue" ./run.sh
 
 ---
 
-## 9. Robson v2 cluster state (as of 2026-04-15)
-
-MIG-v2.5 + MIG-v3#1 + MIG-v3#2 complete. Testnet operational. Pending: MIG-v3#3–#8 (deferred, do not block capital real).
+## 9. Robson cluster state (as of 2026-04-17)
 
 | Item | State |
 |------|-------|
 | k3s cluster | tiger (control-plane) + altaica/sumatrae/jaguar (agents) |
-| robsond (prod) | `ghcr.io/rbxrobotica/robson-v2:sha-88242685`, namespace `robson`, ArgoCD Synced/Healthy |
-| robsond (testnet) | `ghcr.io/rbxrobotica/robson-v2:sha-88242685`, namespace `robson-testnet`, ArgoCD Synced/Healthy |
+| robsond (prod) | namespace `robson`, ArgoCD Synced/Healthy |
+| robsond (testnet) | namespace `robson-testnet`, ArgoCD Synced/Healthy |
 | ArgoCD `robson-prod` | Synced / Healthy |
 | ArgoCD `robson-testnet` | Synced / Healthy |
-| ArgoCD `robson-v2-prod` | Deleted (2026-04-15, MIG-v3#1 complete) |
 | Migrations | 20240101000000–20240101000007 applied (prod + testnet) |
 | PostgreSQL | ParadeDB on jaguar, pool connected via `DATABASE_URL` in secret |
 | WebSocket | Reconnects on stream close (Binance closes periodically — normal) |
@@ -444,7 +444,7 @@ If a secret value is wrong, fix it in pass — not in the cluster directly:
 
 ```bash
 # Wrong value in cluster — fix the source, then reconcile
-pass insert rbx/robson-v2/projection-tenant-id   # replace with correct UUID
+pass insert rbx/robson/projection-tenant-id   # replace with correct UUID
 ansible-playbook bootstrap/ansible/site.yml -i bootstrap/ansible/inventory/hosts.yml --tags k8s-secrets
 ```
 

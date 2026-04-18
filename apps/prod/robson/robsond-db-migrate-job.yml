@@ -9,11 +9,11 @@
 #   2. Seed the tenant/account rows (robsond db init --tenant-id $PROJECTION_TENANT_ID)
 #
 # Prerequisites (run BEFORE first ArgoCD sync):
-#   1. Create the robson_v2 database via Ansible (paradedb role)
+#   1. Create the robson database via Ansible (paradedb role)
 #   2. Generate PROJECTION_TENANT_ID: uuidgen
 #   3. Create the secret:
 #        kubectl create secret generic robsond-secret -n robson \
-#          --from-literal=database-url="postgresql://robson_v2:<pass>@paradedb:5432/robson_v2" \
+#          --from-literal=database-url="postgresql://robson:<pass>@paradedb:5432/robson" \
 #          --from-literal=projection-tenant-id="<uuid>"
 #
 # After ArgoCD syncs this Job, inspect its logs to confirm:
