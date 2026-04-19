@@ -31,5 +31,11 @@ data:
   PROJECTION_STREAM_KEY: "robson:testnet"
   PROJECTION_POLL_INTERVAL_MS: "500"
 
+  # Technical stop policy (ADR-0024)
+  ROBSON_MIN_TECH_STOP_PCT: "1.0"
+  ROBSON_MAX_TECH_STOP_PCT: "10.0"
+  ROBSON_TECH_STOP_SUPPORT_N: "2"
+  ROBSON_TECH_STOP_LOOKBACK: "100"
+
   # Logging — debug verbosity appropriate for testnet
   RUST_LOG: "robsond=debug,robson_engine=debug,robson_exec=debug,robson_store=debug"
