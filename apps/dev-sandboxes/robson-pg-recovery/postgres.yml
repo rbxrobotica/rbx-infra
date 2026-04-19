@@ -1,0 +1,158 @@
+# Ephemeral PostgreSQL for robson-projector integration tests
+# Namespace is created dynamically by dev-sandbox.sh — not hardcoded here.
+# Uses emptyDir (no PVC) so the namespace can be deleted cleanly.
+#
+# sqlx::test requirements:
+#   - User must have CREATEDB privilege (creates/drops per-test databases)
+#   - Migrations in v2/migrations/ applied automatically by sqlx::test
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: robson-pg-sandbox
+  labels:
+    rbx.io/env: dev-sandbox
+    rbx.io/app: robson
+    rbx.io/component: postgres
+type: Opaque
+stringData:
+  POSTGRES_USER: robson
+  POSTGRES_PASSWORD: robson_dev
+  POSTGRES_DB: robson_v2
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: robson-pg-sandbox-init
+  labels:
+    rbx.io/env: dev-sandbox
+    rbx.io/app: robson
+    rbx.io/component: postgres
+data:
+  init.sql: |
+    -- sqlx::test creates and drops temporary databases per test run.
+    -- The user must hold CREATEDB.
+    ALTER USER robson CREATEDB;
+
+    -- Schemas needed by Robson projections
+    CREATE SCHEMA IF NOT EXISTS audit;
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
+    CREATE EXTENSION IF NOT EXISTS btree_gin;
+
+    SELECT 'Robson sandbox PostgreSQL initialized' AS status;
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: robson-pg-sandbox
+  labels:
+    rbx.io/env: dev-sandbox
+    rbx.io/app: robson
+    rbx.io/component: postgres
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: robson-pg-sandbox
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: robson-pg-sandbox
+  labels:
+    rbx.io/env: dev-sandbox
+    rbx.io/app: robson
+    rbx.io/component: postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: robson-pg-sandbox
+  template:
+    metadata:
+      labels:
+        app: robson-pg-sandbox
+        rbx.io/env: dev-sandbox
+        rbx.io/app: robson
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:16-alpine
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: robson-pg-sandbox
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: robson-pg-sandbox
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: robson-pg-sandbox
+              key: POSTGRES_DB
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        - name: init-scripts
+          mountPath: /docker-entrypoint-initdb.d
+          readOnly: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - robson
+            - -d
+            - robson_v2
+          initialDelaySeconds: 5
+          periodSeconds: 3
+          timeoutSeconds: 3
+          failureThreshold: 10
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - robson
+            - -d
+            - robson_v2
+          initialDelaySeconds: 15
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      volumes:
+      - name: postgres-data
+        emptyDir: {}
+      - name: init-scripts
+        configMap:
+          name: robson-pg-sandbox-init
+      securityContext:
+        fsGroup: 999
+        runAsUser: 999
+        runAsNonRoot: true
