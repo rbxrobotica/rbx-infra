@@ -5,7 +5,7 @@ rules:
   document-start: disable
   indentation: disable
   line-length:
-    max: 150
+    max: 200
     allow-non-breakable-words: true
     allow-non-breakable-inline-mappings: true
   truthy: disable
