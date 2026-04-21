@@ -29,4 +29,3 @@ spec:
                 name: rbx-catalog-console
                 port:
                   number: 80
-
