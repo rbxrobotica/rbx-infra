@@ -1,9 +1,9 @@
--- DEPRECATED: This file is no longer used.
--- Migration 20240101000000_initial_schema.sql covers the same schema.
--- Bootstrap is now handled by robsond-db-migrate-job.yml (PreSync ArgoCD hook).
--- DO NOT apply this file manually — it will conflict with SQLx migrations.
---
--- Kept for historical reference only. Safe to delete in a future cleanup.
+# DEPRECATED: This file is no longer used.
+# Migration 20240101000000_initial_schema.sql covers the same schema.
+# Bootstrap is now handled by robsond-db-migrate-job.yml (PreSync ArgoCD hook).
+# DO NOT apply this file manually — it will conflict with SQLx migrations.
+#
+# Kept for historical reference only. Safe to delete in a future cleanup.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -103,13 +103,13 @@ data:
     create unique INDEX idx_intents_idempotency ON intents(id, position_id);
     -- Trigger for updated_at
     CREATE OR REPLACE function update_updated_at_column()
-RETURNS TRIGGER AS $$
-BEGIN
- NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-CREATE TRIGGER positions_updated_at
-    before update on positions
-    for each row
-    EXECUTE FUNCTION update_updated_at_column();
+    RETURNS TRIGGER AS $$
+    BEGIN
+        NEW.updated_at = NOW();
+        RETURN NEW;
+    END;
+    $$ language 'plpgsql';
+        CREATE TRIGGER positions_updated_at
+            before update on positions
+            for each row
+            EXECUTE FUNCTION update_updated_at_column();
