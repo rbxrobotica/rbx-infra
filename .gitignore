@@ -47,3 +47,4 @@ build/
 *.tfvars
 !*.tfvars.example
 # .terraform.lock.hcl is intentionally committed (pins provider versions)
+.claude/

@@ -1,0 +1,76 @@
+# EP-006 Migration Job (Production)
+#
+# Applies migration 20240101000008_create_monthly_state.sql
+# Creates monthly_state table for MIG-v3#12
+#
+# CRITICAL: Database backup required before applying this migration.
+# Backup command: kubectl exec -n robson deployment/postgres-robson -- pg_dump -U robson robson > backup-$(date +%Y%m%d-%H%M%S).sql
+#
+# NOTE: One-time job. Delete after successful completion.
+# Apply with: kubectl apply -f apps/prod/robson/robsond-ep006-migrate-job.yml --kubeconfig ~/.kube/config-rbx
+#
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: robsond-ep006-migrate
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: db-migrate
+    app.kubernetes.io/part-of: robson
+    environment: production
+    migration: ep-006
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600  # Auto-cleanup after 1 hour
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: robsond
+        app.kubernetes.io/component: db-migrate
+        environment: production
+        migration: ep-006
+    spec:
+      serviceAccountName: robsond
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      restartPolicy: OnFailure
+
+      containers:
+      - name: ep006-migrate
+        image: ghcr.io/rbxrobotica/robson-v2:sha-c547fb33
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "=== EP-006 Migration: Create monthly_state table (PRODUCTION) ==="
+          echo "Target migration: 20240101000008_create_monthly_state.sql"
+          echo ""
+
+          echo "Running robsond db migrate..."
+          robsond db migrate
+
+          echo ""
+          echo "=== Migration command completed successfully ==="
+          echo "Verification: check _sqlx_migrations table and monthly_state table via psql client"
+          echo "=== EP-006 Migration Complete ==="
+
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: robsond-secret
+              key: database-url
+
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "64Mi"
+          limits:
+            cpu: "250m"
+            memory: "128Mi"
