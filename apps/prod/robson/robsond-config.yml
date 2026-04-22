@@ -26,7 +26,7 @@ data:
 
   # Position monitor: DISABLED for foundation deploy
   # Prevents safety net from detecting/executing on rogue positions
-  ROBSON_POSITION_MONITOR_ENABLED: "false"
+  ROBSON_POSITION_MONITOR_ENABLED: "true"
   ROBSON_POSITION_MONITOR_SYMBOLS: "BTCUSDT"
 
   # Projection worker
