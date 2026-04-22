@@ -21,6 +21,9 @@ data:
   # Logging
   RUST_LOG: "robsond=info,robson_engine=info,robson_exec=info,robson_store=info"
 
+  # Market data subscription (required by daemon)
+  ROBSON_MARKET_DATA_SYMBOLS: "BTCUSDT"
+
   # Position monitor: DISABLED for foundation deploy
   # Prevents safety net from detecting/executing on rogue positions
   ROBSON_POSITION_MONITOR_ENABLED: "false"

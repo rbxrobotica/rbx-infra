@@ -23,6 +23,9 @@ data:
   # Exchange endpoint — CRITICAL: routes daemon to testnet.binance.vision
   ROBSON_BINANCE_USE_TESTNET: "true"
 
+  # Market data subscription (required by daemon)
+  ROBSON_MARKET_DATA_SYMBOLS: "BTCUSDT"
+
   # Position monitor: enabled for full behavioral validation in testnet
   ROBSON_POSITION_MONITOR_ENABLED: "true"
   ROBSON_POSITION_MONITOR_SYMBOLS: "BTCUSDT"

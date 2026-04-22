@@ -1,0 +1,78 @@
+# EP-006 Verification Job (Testnet)
+#
+# Verifies that migration 20240101000008_create_monthly_state.sql was applied
+# Checks for monthly_state table existence
+#
+# NOTE: One-time verification job. Delete after use.
+# Apply with: kubectl apply -f apps/testnet/robson/robsond-ep006-verify-job.yml --kubeconfig ~/.kube/config-rbx
+#
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: robsond-ep006-verify
+  namespace: robson-testnet
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: db-verify
+    app.kubernetes.io/part-of: robson
+    environment: testnet
+    migration: ep-006
+spec:
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 3600  # Auto-cleanup after 1 hour
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: robsond
+        app.kubernetes.io/component: db-verify
+        environment: testnet
+        migration: ep-006
+    spec:
+      serviceAccountName: robsond
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      restartPolicy: OnFailure
+
+      containers:
+      - name: ep006-verify
+        image: postgres:16-alpine
+        imagePullPolicy: IfNotPresent
+        command:
+        - sh
+        - -c
+        - |
+          set -e
+          echo "=== EP-006 Verification ==="
+          echo "Checking for monthly_state table..."
+          echo ""
+
+          # Check _sqlx_migrations table for the migration
+          echo "1. Checking _sqlx_migrations table for migration 20240101000008..."
+          psql "${DATABASE_URL}" -c "SELECT version, description, installed_on FROM _sqlx_migrations WHERE version = 20240101000008;" || echo "Migration not found in _sqlx_migrations"
+
+          echo ""
+          echo "2. Describing monthly_state table structure..."
+          psql "${DATABASE_URL}" -c "\d monthly_state"
+
+          echo ""
+          echo "3. Checking table exists in information_schema..."
+          psql "${DATABASE_URL}" -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'monthly_state';"
+
+          echo ""
+          echo "=== EP-006 Verification Complete ==="
+
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: robsond-testnet-secret
+              key: database-url
+
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "32Mi"
+          limits:
+            cpu: "100m"
+            memory: "64Mi"
