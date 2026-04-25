@@ -136,3 +136,82 @@ See `docs/infra/SECRETS.md` for the secrets model.
 | DNS zones and records | Terraform | `infra/terraform/dns/` |
 | Application manifests | GitOps (ArgoCD) | `apps/` |
 | Platform services | GitOps (ArgoCD) | `platform/` |
+
+---
+
+## Cluster access
+
+The operator-issued kubeconfig lives at `~/.kube/config-rbx` on
+the workstation. All `kubectl` commands in this repo and its
+runbooks assume:
+
+```bash
+export KUBECONFIG=~/.kube/config-rbx
+```
+
+Do not commit kubeconfigs to git. New engineers receive a
+service-account kubeconfig from the operator on first day; see
+`docs/onboarding/ENGINEER-DAY-ONE.md`.
+
+---
+
+## Cluster baseline services
+
+These services run on every cluster regardless of tier:
+
+| Service | Namespace | Purpose | ClusterIssuer / IngressClass |
+|---------|-----------|---------|------------------------------|
+| ArgoCD | `argocd` | GitOps controller | n/a |
+| cert-manager | `cert-manager` | TLS issuance via Let's Encrypt | `letsencrypt-prod` |
+| Traefik | `kube-system` | Ingress controller | `traefik` |
+| external-secrets | `external-secrets-system` | Secret sync from external stores | n/a |
+| monitoring | `monitoring` | Prometheus/Grafana stack | n/a |
+
+Application Ingresses target `ingressClassName: traefik` and
+annotate `cert-manager.io/cluster-issuer: letsencrypt-prod` to
+get TLS automatically. See
+`docs/runbooks/CERT-MANAGER-DEBUG.md` for failure modes.
+
+**Gateway API note.** Some legacy manifests reference `HTTPRoute`
+(Gateway API) targeting a `robson-gateway` resource. That Gateway
+is not currently provisioned in production; routing in the
+cluster is Ingress-only today. The HTTPRoute migration is a
+follow-up, not a current state. Do not write new HTTPRoutes
+until the Gateway is provisioned and documented.
+
+---
+
+## Environment tiers
+
+| Tier | Path | Namespace pattern | Notes |
+|------|------|-------------------|-------|
+| Production | `apps/prod/<app>/` | `<app>` | Live workloads |
+| Testnet | `apps/testnet/<app>/` | `<app>-testnet` | Exchange-connected, synthetic capital |
+| Staging | `apps/staging/<app>/` | `staging` | Shared, non-exchange |
+| Dev sandbox | `apps/dev-sandboxes/<app>/` | `dev-<app>-<user>-<rand>` | Per-engineer ephemeral environments |
+
+Dev sandboxes are intentionally short-lived. They are the only
+place in the cluster where Postgres may run in a `StatefulSet`;
+see "Database constraint" below.
+
+---
+
+## Database constraint (non-negotiable)
+
+**PostgreSQL never runs inside the production k3s cluster.**
+ParadeDB, the PowerDNS backend, and any application database are
+hosted on dedicated VPS instances managed by Ansible
+(`bootstrap/ansible/`). The cluster is treated as fully ephemeral
+compute.
+
+The only exceptions:
+
+- Per-test ephemeral databases created by `sqlx::test` in Robson
+  CI runs (lifecycle measured in seconds).
+- Per-engineer dev sandboxes under `apps/dev-sandboxes/`
+  (lifecycle measured in days).
+
+This rule is operator policy, confirmed 2026-04-25 during the
+PDNS incident debugging. Production stateful data must survive
+cluster rebuild. See `docs/infra/DATABASE.md` for the canonical
+external-database pattern.
