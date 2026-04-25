@@ -7,22 +7,27 @@ resources:
   - namespace.yml
   # Middleware
   - middleware-https.yml
-  # Frontend (React)
-  - frontend-deploy.yml
-  - frontend-svc.yml
+  # Frontend v2 (SvelteKit) replaces legacy React frontend.
+  # Legacy files archived under apps/archived/robson-frontend-react/.
+  # Network model: Ingress (traefik) — Gateway API HTTPRoute migration
+  # deferred to FE-P3 follow-up; ADR-v3-018 deviation acknowledged.
+  # Image: ghcr.io/ldamasio/robson-frontend-v2 (deviation from rbx-infra
+  # standard ghcr.io/rbxrobotica/* — image exists and is public).
+  - robson-frontend-v2-deploy.yml
+  - robson-frontend-v2-svc.yml
+  - robson-frontend-v2-ingress.yml
   # Robsond (Rust daemon — sole production runtime, MIG-v3#2)
   - robsond-rbac.yml
   - robsond-config.yml
   - robsond-deploy.yml
   - robsond-svc.yml
+  - robsond-ingress.yml
   # robsond-db-migrate-job.yml: NOT in kustomization — PreSync hook cannot
   # use ServiceAccount that doesn't exist yet. Run manually when needed.
   # Infrastructure
   - redis-deploy.yml
   - redis-svc.yml
   - paradedb-svc.yml
-  # Routing (Gateway API only — ADR-v3-018)
-  - httproutes.yml
 
 labels:
   - pairs:
