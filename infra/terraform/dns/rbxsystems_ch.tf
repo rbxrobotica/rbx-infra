@@ -168,3 +168,12 @@ resource "powerdns_record" "grafana_rbxsystems_ch" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+# Robson Frontend v2 (en locale via host detection)
+resource "powerdns_record" "robson_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "robson.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
