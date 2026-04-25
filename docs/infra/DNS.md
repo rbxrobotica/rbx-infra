@@ -146,3 +146,18 @@ SPF and DMARC start in monitoring mode. Tighten after 2-4 weeks of clean reports
 | 3 | `-all` | `p=reject` | After confirmed clean delivery |
 
 Update records in the `.tf` files and run `terraform apply`.
+
+---
+
+## Troubleshooting
+
+When something breaks, do not improvise here — use the dedicated
+runbook:
+
+- `docs/runbooks/DNS-TROUBLESHOOTING.md` — symptom matrix, SSH
+  tunnel recovery, gpgsql password drift, AXFR replication lag.
+- `docs/incidents/INCIDENT-2026-04-25-PDNS-CRASHLOOP.md` — case
+  study from the FE-P1 launch where a vault password rotation
+  was not propagated to pantera's `pdns.conf`.
+
+Required reading before you operate DNS the first time.

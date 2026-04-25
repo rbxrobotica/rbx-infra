@@ -155,3 +155,68 @@ syncPolicy:
 - [ArgoCD Sync Options](https://argo-cd.readthedocs.io/en/stable/user-guide/sync-options/)
 - [Server-Side Apply](https://kubernetes.io/docs/reference/using-api/server-side-apply/)
 - [Ignore Differences](https://argo-cd.readthedocs.io/en/stable/user-guide/diffing/)
+
+---
+
+## Accessing the ArgoCD UI
+
+URL: <https://argocd.rbx.ia.br>
+
+User: `admin`
+
+Initial password retrieval (only valid until rotation):
+
+```bash
+KUBECONFIG=~/.kube/config-rbx \
+  kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath='{.data.password}' | base64 -d; echo
+```
+
+After first login the operator rotates the password and deletes
+`argocd-initial-admin-secret`. The rotated password lives in
+`pass`; ask the operator for the entry path.
+
+The UI is for **observing** state. All mutations go through git
+via ArgoCD GitOps. Do not use the UI to edit, sync-overrides, or
+force-create resources unless you are responding to an incident
+under operator direction.
+
+---
+
+## Debugging an Application that won't sync
+
+When you see `OutOfSync` or `Degraded`:
+
+```bash
+KUBECONFIG=~/.kube/config-rbx kubectl get app -n argocd
+KUBECONFIG=~/.kube/config-rbx kubectl describe app -n argocd <app-name>
+```
+
+Look for `conditions[*].message` and the `status.operationState`
+trace. The most common causes:
+
+- **CRD not yet installed.** Sync wave `-5` (CRDs) must complete
+  before `0` (apps). Check `kube-system` for missing CRDs.
+- **Resource conflict from a previous manual `kubectl apply`.**
+  Resource has an `app.kubernetes.io/managed-by: ...` annotation
+  that ArgoCD does not own. Resolution: remove the conflicting
+  annotation manually (one-time, document in incident log), then
+  refresh. See `docs/INCIDENT-2026-03-28-ARGOCD-OUTOFSYNC.md`.
+- **Image pull failure.** Pod stays `ImagePullBackOff`. Check
+  whether the image tag exists in GHCR and whether the package
+  is public (or has the right `imagePullSecret`).
+- **Health hook failing.** Some Applications include health
+  checks; describe the relevant Pod for hints.
+
+`syncPolicy.automated.selfHeal: true` will keep retrying. If you
+need to **stop** a retry loop temporarily (because something is
+genuinely wrong), set the Application to manual:
+
+```bash
+argocd app set <app-name> --sync-policy none
+# fix the underlying problem
+argocd app set <app-name> --sync-policy automated --auto-prune --self-heal
+```
+
+Restore automatic sync as soon as the problem is resolved. Don't
+leave an Application on manual mode silently.

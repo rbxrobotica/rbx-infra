@@ -126,3 +126,34 @@ Update `apps/prod/{app}/kustomization.yml` with new tag.
 | `strategos.gr` | Strategos product |
 | `rbxsystems.ch` | Swiss presence |
 | `leandrodamasio.*` | Personal branding |
+
+## Onboarding and Runbooks
+
+New engineers should read first:
+
+- `docs/onboarding/ENGINEER-DAY-ONE.md` — access matrix,
+  toolchain, first PR walkthrough.
+
+When something breaks:
+
+- `docs/runbooks/DNS-TROUBLESHOOTING.md` — PowerDNS, gpgsql,
+  AXFR. Read before operating DNS.
+- `docs/runbooks/CERT-MANAGER-DEBUG.md` — TLS challenges stuck
+  or failed.
+- `docs/incidents/` — case studies. Required context for the
+  runbooks above.
+
+Architectural reference:
+
+- `docs/infra/ARCHITECTURE.md` — three-plane model, cluster
+  baseline services, environment tiers, Postgres-external
+  constraint.
+- `docs/infra/DNS.md` — day-to-day DNS operations.
+
+## Postgres constraint (non-negotiable)
+
+PostgreSQL **never** runs inside the production k3s cluster.
+ParadeDB, the PowerDNS backend, and any application database use
+dedicated VPS instances managed by Ansible. The only exceptions
+are per-test ephemeral databases (`sqlx::test`) and per-engineer
+dev sandboxes (`apps/dev-sandboxes/`).
