@@ -1,0 +1,44 @@
+# Robson Frontend v2 Ingress
+# Dual-host: robson.rbx.ia.br (pt-BR) + robson.rbxsystems.ch (en)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: robson-frontend-v2
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robson-frontend-v2
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: robson
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: robson-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - robson.rbx.ia.br
+      secretName: robson-frontend-v2-rbx-ia-br-tls
+    - hosts:
+        - robson.rbxsystems.ch
+      secretName: robson-frontend-v2-rbxsystems-ch-tls
+  rules:
+    - host: robson.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: robson-frontend-v2
+                port:
+                  number: 80
+    - host: robson.rbxsystems.ch
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: robson-frontend-v2
+                port:
+                  number: 80

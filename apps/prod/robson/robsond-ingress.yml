@@ -1,0 +1,33 @@
+# Robsond API Ingress
+# Backend reachable from frontend at https://api.robson.rbx.ia.br.
+# CORS handled by robsond service itself (not via Traefik middleware).
+# FE-P1 B5 — public reachability.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: robsond
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: robson
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: robson-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - api.robson.rbx.ia.br
+      secretName: robsond-api-tls
+  rules:
+    - host: api.robson.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: robsond
+                port:
+                  number: 8080
