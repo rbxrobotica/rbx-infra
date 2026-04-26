@@ -1,0 +1,44 @@
+# Strategos UI Ingress
+# Dual-host: strategos.rbx.ia.br (pt-BR) + strategos.rbxsystems.ch (en)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: strategos-ui
+  namespace: strategos
+  labels:
+    app.kubernetes.io/name: strategos-ui
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: strategos
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: strategos-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - strategos.rbx.ia.br
+      secretName: strategos-ui-rbx-ia-br-tls
+    - hosts:
+        - strategos.rbxsystems.ch
+      secretName: strategos-ui-rbxsystems-ch-tls
+  rules:
+    - host: strategos.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: strategos-ui
+                port:
+                  number: 80
+    - host: strategos.rbxsystems.ch
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: strategos-ui
+                port:
+                  number: 80

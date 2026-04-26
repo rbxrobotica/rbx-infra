@@ -41,6 +41,7 @@ jobs:
           kubectl kustomize apps/prod/lda-prod >/dev/null
           kubectl kustomize apps/prod/rbx-catalog >/dev/null
           kubectl kustomize apps/prod/rbxsystems-ch >/dev/null
+          kubectl kustomize apps/prod/strategos >/dev/null
 
   validate-argocd:
     runs-on: ubuntu-latest

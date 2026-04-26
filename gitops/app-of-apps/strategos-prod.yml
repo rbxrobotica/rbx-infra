@@ -1,0 +1,30 @@
+# ArgoCD Application: Strategos Production
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: strategos-prod
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: strategos-prod
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: strategos
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/strategos
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: strategos
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -1,0 +1,19 @@
+# Strategos UI Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: strategos-ui
+  namespace: strategos
+  labels:
+    app.kubernetes.io/name: strategos-ui
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: strategos
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: strategos-ui
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
+      name: http

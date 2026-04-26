@@ -1,0 +1,10 @@
+# Namespace: strategos (Production)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: strategos
+  labels:
+    app.kubernetes.io/part-of: strategos
+    environment: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

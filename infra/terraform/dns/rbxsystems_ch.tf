@@ -177,3 +177,12 @@ resource "powerdns_record" "robson_rbxsystems_ch" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+# Strategos UI (en locale via host detection)
+resource "powerdns_record" "strategos_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "strategos.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}

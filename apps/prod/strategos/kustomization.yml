@@ -1,0 +1,16 @@
+# Kustomization for Strategos Production
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yml
+  - middleware-https.yml
+  - strategos-ui-deploy.yml
+  - strategos-ui-svc.yml
+  - strategos-ui-ingress.yml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: strategos
+      environment: production
+    includeSelectors: false
