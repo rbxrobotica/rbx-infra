@@ -39,7 +39,7 @@ spec:
 
       containers:
       - name: robsond
-        image: ghcr.io/rbxrobotica/robson-v2:sha-f680b688
+        image: ghcr.io/rbxrobotica/robson-v2:sha-f4ca25b6
         imagePullPolicy: IfNotPresent
 
         ports:
