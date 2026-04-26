@@ -20,6 +20,8 @@ spec:
         app.kubernetes.io/name: strategos-ui
         app.kubernetes.io/component: frontend
     spec:
+      imagePullSecrets:
+        - name: ghcr-ldamasio
       containers:
         - name: strategos-ui
           image: ghcr.io/ldamasio/strategos-ui:sha-68ea2c0

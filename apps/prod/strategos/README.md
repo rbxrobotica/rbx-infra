@@ -12,3 +12,7 @@ record is managed and pointed at the k3s ingress IP (`158.220.116.31`).
 
 The UI image is published by the `ldamasio/strategos-ui` GitHub Actions workflow
 as `ghcr.io/ldamasio/strategos-ui:sha-<short-sha>`.
+
+The container package is private because the source repository is private. The
+namespace needs an out-of-band `ghcr-ldamasio` `kubernetes.io/dockerconfigjson`
+secret with `read:packages` access. Do not commit that token to Git.
