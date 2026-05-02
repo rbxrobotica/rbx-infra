@@ -1,0 +1,7 @@
+---
+- import_tasks: docker.yml
+
+- import_tasks: mailcow.yml
+
+- import_tasks: firewall.yml
+  when: mailcow_open_firewall

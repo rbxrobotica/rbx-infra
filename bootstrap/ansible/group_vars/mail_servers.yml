@@ -1,0 +1,11 @@
+---
+# Mailcow stack configuration for institutional mail
+# Plan: docs/PLAN-mail-self-hosted.md
+
+mailcow_hostname: "mail.rbxsystems.ch"
+mailcow_timezone: "Europe/Zurich"
+
+# Domains served by this MTA (root domains only — tx.* stays at Postmark Inbound)
+mailcow_domains:
+  - rbxsystems.ch
+  - strategos.gr

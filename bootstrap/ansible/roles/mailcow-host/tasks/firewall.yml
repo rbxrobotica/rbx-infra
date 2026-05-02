@@ -1,0 +1,8 @@
+---
+- name: Open mail-relevant ports in ufw
+  ufw:
+    rule: allow
+    port: "{{ item.port }}"
+    proto: "{{ item.proto }}"
+    comment: "{{ item.comment }}"
+  loop: "{{ mailcow_public_ports }}"

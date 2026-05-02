@@ -1,0 +1,49 @@
+---
+- name: Ensure git is installed
+  apt:
+    name: git
+    state: present
+
+- name: Clone mailcow-dockerized
+  git:
+    repo: "{{ mailcow_repo_url }}"
+    dest: "{{ mailcow_install_dir }}"
+    version: "{{ mailcow_version }}"
+    update: no
+
+- name: Check if mailcow.conf exists
+  stat:
+    path: "{{ mailcow_install_dir }}/mailcow.conf"
+  register: mailcow_conf_stat
+
+- name: Generate mailcow.conf (first run only — non-interactive)
+  command: ./generate_config.sh
+  args:
+    chdir: "{{ mailcow_install_dir }}"
+  environment:
+    MAILCOW_HOSTNAME: "{{ mailcow_hostname }}"
+    MAILCOW_TZ: "{{ mailcow_timezone }}"
+  when: not mailcow_conf_stat.stat.exists
+
+- name: Tighten mailcow.conf permissions (contains generated secrets)
+  file:
+    path: "{{ mailcow_install_dir }}/mailcow.conf"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Pull Mailcow container images
+  command: docker compose pull
+  args:
+    chdir: "{{ mailcow_install_dir }}"
+  changed_when: false
+
+- name: Start Mailcow stack
+  command: docker compose up -d
+  args:
+    chdir: "{{ mailcow_install_dir }}"
+  register: mailcow_compose_up
+  changed_when: >
+    'Started' in mailcow_compose_up.stdout
+    or 'Created' in mailcow_compose_up.stdout
+    or 'Recreated' in mailcow_compose_up.stdout

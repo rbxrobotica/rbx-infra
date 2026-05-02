@@ -50,27 +50,27 @@
     rule: allow
     port: "80"
     proto: tcp
-  when: inventory_hostname not in groups.get('dns_servers', [])
+  when: inventory_hostname in (groups.get('k3s_server', []) + groups.get('k3s_agents', []))
 
 - name: Allow HTTPS (Traefik — k3s nodes only)
   ufw:
     rule: allow
     port: "443"
     proto: tcp
-  when: inventory_hostname not in groups.get('dns_servers', [])
+  when: inventory_hostname in (groups.get('k3s_server', []) + groups.get('k3s_agents', []))
 
 - name: Allow k3s internal communication between cluster nodes
   ufw:
     rule: allow
     src: "{{ hostvars[item].ansible_host }}"
   loop: "{{ groups['k3s_server'] | default([]) + groups['k3s_agents'] | default([]) }}"
-  when: inventory_hostname not in groups.get('dns_servers', [])
+  when: inventory_hostname in (groups.get('k3s_server', []) + groups.get('k3s_agents', []))
 
 - name: Allow routed (FORWARD) traffic for k3s overlay networking
   ufw:
     default: allow
     direction: routed
-  when: inventory_hostname not in groups.get('dns_servers', [])
+  when: inventory_hostname in (groups.get('k3s_server', []) + groups.get('k3s_agents', []))
 
 - name: Enable ufw
   ufw:

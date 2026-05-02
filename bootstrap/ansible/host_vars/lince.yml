@@ -1,0 +1,5 @@
+---
+# lince — institutional mail server (Mailcow stack)
+# See docs/PLAN-mail-self-hosted.md
+
+mailcow_hostname: "mail.rbxsystems.ch"
