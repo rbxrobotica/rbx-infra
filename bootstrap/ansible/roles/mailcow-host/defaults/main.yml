@@ -1,0 +1,41 @@
+---
+# Mailcow version: pinning is desirable in production but mailcow-dockerized
+# does not always cut tagged releases. Until a known-good tag is selected,
+# track upstream `master` with discipline (review before re-running git task).
+mailcow_version: "master"
+
+# Primary FQDN for the mail server. Must match PTR / TLS cert / HELO.
+mailcow_hostname: "mail.rbxsystems.ch"
+
+# Timezone for Mailcow containers.
+mailcow_timezone: "Europe/Zurich"
+
+# Where to install on the host.
+mailcow_install_dir: "/opt/mailcow-dockerized"
+mailcow_repo_url: "https://github.com/mailcow/mailcow-dockerized.git"
+
+# Public ports to open in ufw. Opened only after Mailcow is running so we
+# never expose ports without a listener. SSH (22) is already allowed by the
+# base hardening role.
+mailcow_public_ports:
+  - { port: 25,  proto: tcp, comment: "SMTP MX inbound" }
+  - { port: 80,  proto: tcp, comment: "HTTP (ACME http-01 + MTA-STS redirect)" }
+  - { port: 443, proto: tcp, comment: "HTTPS (Mailcow UI, MTA-STS, SOGo)" }
+  - { port: 465, proto: tcp, comment: "SMTPS submission" }
+  - { port: 587, proto: tcp, comment: "SMTP submission (STARTTLS)" }
+  - { port: 993, proto: tcp, comment: "IMAPS" }
+  - { port: 995, proto: tcp, comment: "POP3S" }
+
+# Open the mail ports in ufw at the end of the role. Disable to bring up
+# Mailcow internally without exposing it (useful during DNS/PTR setup).
+mailcow_open_firewall: true
+
+# Outbound relay through Postmark — Option B per docs/PLAN-mail-self-hosted.md.
+# The actual relay configuration runs in a separate task file (relay.yml,
+# pending Postmark Server Token in vault). Until then the local MTA cannot
+# send to remote MXes — inbound + GUI work, outbound from accounts does not.
+mailcow_relay_enabled: true
+mailcow_relay_host: "smtp.postmarkapp.com"
+mailcow_relay_port: 587
+# mailcow_relay_user / mailcow_relay_pass: must be defined in vault.yml
+# (Postmark Server Token, used as both SASL username and password)

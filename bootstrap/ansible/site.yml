@@ -42,7 +42,13 @@
   roles:
     - pdns
 
-# Phase 8: Bootstrap Kubernetes secrets from pass
+# Phase 8: Install mail server (Mailcow) on lince
+- name: Install mail server
+  hosts: mail_servers
+  roles:
+    - mailcow-host
+
+# Phase 9: Bootstrap Kubernetes secrets from pass
 # Runs on localhost after k3s and all databases are provisioned.
 # Requires: pass unlocked, kubeconfig at ~/.kube/config-rbx
 # See docs/infra/SECRETS.md for prerequisites and pass namespace structure.

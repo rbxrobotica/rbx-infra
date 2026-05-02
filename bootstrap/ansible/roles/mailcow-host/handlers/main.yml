@@ -1,0 +1,5 @@
+---
+- name: mailcow up
+  command: docker compose up -d
+  args:
+    chdir: "{{ mailcow_install_dir }}"
