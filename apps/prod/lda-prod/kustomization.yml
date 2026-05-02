@@ -15,4 +15,4 @@ commonLabels:
 
 images:
   - name: docker.io/ldamasio/lda-prod
-    newTag: sha-9d0cf5f
+    newTag: sha-55cfb94
