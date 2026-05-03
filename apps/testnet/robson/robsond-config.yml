@@ -24,11 +24,11 @@ data:
   ROBSON_BINANCE_USE_TESTNET: "true"
 
   # Market data subscription (required by daemon)
-  ROBSON_MARKET_DATA_SYMBOLS: "BTCUSDT"
+  ROBSON_MARKET_DATA_SYMBOLS: "BTCUSDT,ETHUSDT"
 
   # Position monitor: enabled for full behavioral validation in testnet
   ROBSON_POSITION_MONITOR_ENABLED: "true"
-  ROBSON_POSITION_MONITOR_SYMBOLS: "BTCUSDT"
+  ROBSON_POSITION_MONITOR_SYMBOLS: "BTCUSDT,ETHUSDT"
 
   # Projection worker — isolated stream key, does not overlap with production (robson:daemon)
   PROJECTION_STREAM_KEY: "robson:testnet"
