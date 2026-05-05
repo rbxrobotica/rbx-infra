@@ -1,10 +1,10 @@
-# robsond DB bootstrap Job
+# robsond DB migration Job
 #
-# NOTE: Not managed by kustomization. Run manually when migrations are needed.
-# The ServiceAccount "robsond" must exist before running this job.
-# Apply with: kubectl apply -f robsond-db-migrate-job.yml
+# Managed by ArgoCD as a Sync hook. It runs before the robsond Deployment wave
+# on every sync and is safe to re-run because `robsond db migrate` is
+# idempotent.
 #
-# Runs once at deploy time to:
+# Runs at deploy time to:
 #   1. Apply all SQLx migrations (robsond db migrate)
 #   2. Seed the tenant/account rows (robsond db init --tenant-id $PROJECTION_TENANT_ID)
 #
@@ -16,11 +16,8 @@
 #          --from-literal=database-url="postgresql://robson:<pass>@paradedb:5432/robson" \
 #          --from-literal=projection-tenant-id="<uuid>"
 #
-# After ArgoCD syncs this Job, inspect its logs to confirm:
-#   kubectl logs -n robson -l job-name=robsond-db-migrate
-#
-# The Job is restartPolicy=OnFailure so it retries on transient DB errors.
-# Once succeeded, ArgoCD will keep it in Completed state (not re-run).
+# If this Job fails, ArgoCD blocks the higher sync wave and the robsond
+# Deployment is not updated to an image that may require unapplied schema.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -31,9 +28,9 @@ metadata:
     app.kubernetes.io/component: db-migrate
     app.kubernetes.io/part-of: robson
   annotations:
-    # Hook annotations removed — run manually with kubectl apply
-    # argocd.argoproj.io/hook: PreSync
-    # argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   backoffLimit: 5
   template:
