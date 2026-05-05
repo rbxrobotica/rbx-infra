@@ -1,0 +1,204 @@
+---
+# ParadeDB: create application databases and grant runtime privileges on jaguar.
+# Runs ONLY on db_server group. Does NOT install ParadeDB itself.
+#
+# Idempotent: safe to re-run. CREATE IF NOT EXISTS semantics where supported,
+# and GRANTs are additive.
+#
+# The "GRANT ALL on existing tables" step fixes the production issue where
+# tables created by the postgres superuser during initial provisioning were
+# not accessible to the application runtime role.
+
+- name: Install python3-psycopg2 (required for Ansible postgresql modules)
+  apt:
+    name: python3-psycopg2
+    state: present
+
+# =============================================================================
+# Robson Production
+# =============================================================================
+
+- name: Create robson database
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: "{{ paradedb_robson_db }}"
+    encoding: UTF8
+    state: present
+
+- name: Create robson user
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ paradedb_robson_user }}"
+    password: "{{ paradedb_robson_password }}"
+    state: present
+
+- name: Grant robson database-level privileges
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_robson_db }}"
+    role: "{{ paradedb_robson_user }}"
+    type: database
+    privs: ALL
+    state: present
+
+- name: Grant robson CREATE,USAGE on public schema (PostgreSQL 15+)
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_robson_db }}"
+    role: "{{ paradedb_robson_user }}"
+    type: schema
+    objs: public
+    privs: CREATE,USAGE
+    state: present
+
+- name: Grant robson ALL on existing tables
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_robson_db }}"
+    role: "{{ paradedb_robson_user }}"
+    type: table
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present
+
+- name: Grant robson ALL on existing sequences
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_robson_db }}"
+    role: "{{ paradedb_robson_user }}"
+    type: sequence
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present
+
+# =============================================================================
+# Robson Testnet
+# =============================================================================
+
+- name: Create robson testnet database
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: "{{ paradedb_robson_testnet_db }}"
+    encoding: UTF8
+    state: present
+
+- name: Create robson testnet user
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ paradedb_robson_testnet_user }}"
+    password: "{{ paradedb_robson_testnet_password }}"
+    state: present
+
+- name: Grant robson testnet database-level privileges
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_robson_testnet_db }}"
+    role: "{{ paradedb_robson_testnet_user }}"
+    type: database
+    privs: ALL
+    state: present
+
+- name: Grant robson testnet CREATE,USAGE on public schema (PostgreSQL 15+)
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_robson_testnet_db }}"
+    role: "{{ paradedb_robson_testnet_user }}"
+    type: schema
+    objs: public
+    privs: CREATE,USAGE
+    state: present
+
+- name: Grant robson testnet ALL on existing tables
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_robson_testnet_db }}"
+    role: "{{ paradedb_robson_testnet_user }}"
+    type: table
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present
+
+- name: Grant robson testnet ALL on existing sequences
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_robson_testnet_db }}"
+    role: "{{ paradedb_robson_testnet_user }}"
+    type: sequence
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present
+
+# =============================================================================
+# Truthmetal
+# =============================================================================
+
+- name: Create truthmetal database
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: "{{ paradedb_truthmetal_db }}"
+    encoding: UTF8
+    state: present
+
+- name: Create truthmetal user
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ paradedb_truthmetal_user }}"
+    password: "{{ paradedb_truthmetal_password }}"
+    state: present
+
+- name: Grant truthmetal database-level privileges
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_truthmetal_db }}"
+    role: "{{ paradedb_truthmetal_user }}"
+    type: database
+    privs: ALL
+    state: present
+
+- name: Grant truthmetal CREATE,USAGE on public schema (PostgreSQL 15+)
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_truthmetal_db }}"
+    role: "{{ paradedb_truthmetal_user }}"
+    type: schema
+    objs: public
+    privs: CREATE,USAGE
+    state: present
+
+- name: Grant truthmetal ALL on existing tables
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_truthmetal_db }}"
+    role: "{{ paradedb_truthmetal_user }}"
+    type: table
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present
+
+- name: Grant truthmetal ALL on existing sequences
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_truthmetal_db }}"
+    role: "{{ paradedb_truthmetal_user }}"
+    type: sequence
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present
