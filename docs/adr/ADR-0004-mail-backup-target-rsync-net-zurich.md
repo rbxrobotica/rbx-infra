@@ -129,7 +129,23 @@ stack) and verifies:
 - Mailcow stack starts against the restored data
 - A small known mailbox (the test/`postmaster` account) opens and
   shows expected content
-- DKIM keys from MySQL match the public DNS records
+- The restored Mailcow configuration is internally consistent
+  (domain, mailbox, and alias counts match the IaC inventory; no
+  half-restored objects)
+- Outbound authentication is verified through a real delivered test
+  message and its Authentication-Results headers — not by comparing
+  internal Mailcow state against any DNS values
+
+The restore drill runbook **must distinguish Postmark-side DKIM /
+SPF / DMARC / Return-Path** (the relevant authentication path for
+current Phase-1 outbound, anchored in DNS CNAMEs and TXT records)
+**from any Mailcow-side DKIM state in MySQL** (dormant under
+Option B since outbound goes 100% through the Postmark relay, and
+not asserted in DNS). Comparing Mailcow's internal DKIM keys
+against Postmark's public CNAMEs would produce a false-negative
+drill result; the verification point is end-to-end delivery
+authentication observed at the recipient, not internal key
+equality.
 
 A drill that has not been run within 90 days invalidates the
 "production-grade" status of the mail stack, regardless of how well
