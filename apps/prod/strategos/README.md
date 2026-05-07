@@ -1,5 +1,16 @@
 # Strategos production
 
+Domain vocabulary, execution artifact names, events, RPC names, and migration
+semantics for Strategos are governed by the canonical contracts in
+`strategos-core/docs/architecture/`, especially:
+
+- `VOCABULARY-CONTRACT.md`
+- `EXECUTION-ARTIFACT-NAMING-CONTRACT.md`
+- `STRATEGOS-EXECUTION-INDEX.md`
+
+Deployment documentation in rbx-infra should reference those contracts instead
+of inventing new Strategos domain terms.
+
 Strategos UI is exposed through a dual-host Ingress:
 
 - `strategos.rbx.ia.br`
