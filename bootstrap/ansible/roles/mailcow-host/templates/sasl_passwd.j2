@@ -1,0 +1,3 @@
+{# Managed by Ansible (roles/mailcow-host) — DO NOT EDIT MANUALLY.
+   The Postmark Server Token is used as both SASL username and password. #}
+[{{ mailcow_relay_host }}]:{{ mailcow_relay_port }} {{ mailcow_relay_user }}:{{ mailcow_relay_pass }}

@@ -3,3 +3,8 @@
   command: docker compose up -d
   args:
     chdir: "{{ mailcow_install_dir }}"
+
+- name: restart postfix-mailcow
+  command: docker compose restart postfix-mailcow
+  args:
+    chdir: "{{ mailcow_install_dir }}"

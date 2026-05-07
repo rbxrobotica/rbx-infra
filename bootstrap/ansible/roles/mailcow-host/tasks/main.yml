@@ -1,7 +1,14 @@
 ---
 - import_tasks: docker.yml
+  tags: docker
 
 - import_tasks: mailcow.yml
+  tags: mailcow
+
+- import_tasks: relay.yml
+  when: mailcow_relay_enabled
+  tags: relay
 
 - import_tasks: firewall.yml
   when: mailcow_open_firewall
+  tags: firewall

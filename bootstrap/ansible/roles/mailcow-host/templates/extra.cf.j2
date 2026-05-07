@@ -1,0 +1,11 @@
+{# Managed by Ansible (roles/mailcow-host) — DO NOT EDIT MANUALLY #}
+myhostname = {{ mailcow_hostname }}
+
+# Outbound relay through Postmark — Option B per docs/PLAN-mail-self-hosted.md
+relayhost = [{{ mailcow_relay_host }}]:{{ mailcow_relay_port }}
+smtp_sasl_auth_enable = yes
+smtp_sasl_password_maps = hash:/opt/postfix/conf/sasl_passwd
+smtp_sasl_security_options = noanonymous
+smtp_sasl_tls_security_options = noanonymous
+smtp_use_tls = yes
+smtp_tls_security_level = encrypt

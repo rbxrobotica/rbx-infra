@@ -31,11 +31,14 @@ mailcow_public_ports:
 mailcow_open_firewall: true
 
 # Outbound relay through Postmark — Option B per docs/PLAN-mail-self-hosted.md.
-# The actual relay configuration runs in a separate task file (relay.yml,
-# pending Postmark Server Token in vault). Until then the local MTA cannot
-# send to remote MXes — inbound + GUI work, outbound from accounts does not.
+# Implemented in tasks/relay.yml. To reconfigure the relay alone:
+#   ansible-playbook --limit lince site.yml --tags relay
 mailcow_relay_enabled: true
 mailcow_relay_host: "smtp.postmarkapp.com"
 mailcow_relay_port: 587
-# mailcow_relay_user / mailcow_relay_pass: must be defined in vault.yml
-# (Postmark Server Token, used as both SASL username and password)
+# Postmark Server Token used as both SASL username and password. Sourced from
+# group_vars/all/vault.yml (var: postmark_server_token), which is rendered
+# from pass: rbx/postmark/rbx-institutional-server-token via
+# bootstrap/scripts/init-vault-from-pass.sh
+mailcow_relay_user: "{{ postmark_server_token }}"
+mailcow_relay_pass: "{{ postmark_server_token }}"

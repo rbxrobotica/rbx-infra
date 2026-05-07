@@ -1,0 +1,43 @@
+---
+# Postmark relay configuration for the Mailcow Postfix container.
+# Plan: docs/PLAN-mail-self-hosted.md (Option B — relay everything via Postmark:587)
+# Status:  docs/runbooks/MAIL-IMPLEMENTATION-STATUS.md
+#
+# The Postfix container in Mailcow mounts data/conf/postfix/ at /opt/postfix/conf/
+# inside the container, so postmap runs against the same file the host renders.
+
+- name: Assert relay credentials are defined
+  assert:
+    that:
+      - mailcow_relay_user is defined and mailcow_relay_user | length > 0
+      - mailcow_relay_pass is defined and mailcow_relay_pass | length > 0
+    fail_msg: >-
+      mailcow_relay_user / mailcow_relay_pass are empty. Run
+      bootstrap/scripts/init-vault-from-pass.sh to populate
+      postmark_server_token from pass.
+
+- name: Render Postfix extra.cf (relay + myhostname)
+  template:
+    src: extra.cf.j2
+    dest: "{{ mailcow_install_dir }}/data/conf/postfix/extra.cf"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart postfix-mailcow
+
+- name: Render Postfix SASL credentials for Postmark
+  template:
+    src: sasl_passwd.j2
+    dest: "{{ mailcow_install_dir }}/data/conf/postfix/sasl_passwd"
+    owner: root
+    group: root
+    mode: "0600"
+  register: sasl_passwd_rendered
+  no_log: true
+  notify: restart postfix-mailcow
+
+- name: Rebuild SASL hash database (postmap)
+  command: docker compose exec -T postfix-mailcow postmap /opt/postfix/conf/sasl_passwd
+  args:
+    chdir: "{{ mailcow_install_dir }}"
+  when: sasl_passwd_rendered.changed

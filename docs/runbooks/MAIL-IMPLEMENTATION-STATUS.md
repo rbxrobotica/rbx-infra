@@ -1,19 +1,30 @@
-# Mail Self-Hosting — Implementation Status & Next Steps
+# Mail Self-Hosting — Implementation Status & Operations
 
-> Self-contained runbook for continuing the institutional mail rollout.
+> Self-contained runbook for the institutional mail stack.
 > Read this together with [`docs/PLAN-mail-self-hosted.md`](../PLAN-mail-self-hosted.md)
 > (architectural plan) and the parent [`docs/PLAN-dns-email-architecture.md`](../PLAN-dns-email-architecture.md).
 >
-> Last updated: 2026-05-02
+> Last updated: 2026-05-07
 
 ---
 
 ## TL;DR — Where we are
 
 - VPS `lince` (Contabo) provisioned, hardened, SSH key-only.
-- Ansible role `mailcow-host` written and committed; play added to `site.yml`.
-- **Mailcow not yet installed.** Next step is a partial-mode bring-up (no Postmark relay yet).
-- Two operator actions are blocking full launch: (1) Postmark Server Token, (2) Contabo PTR ticket.
+- Mailcow stack live (~18 containers up, all healthy).
+- Postmark account approved; Sender Signature, DKIM, and Return-Path verified
+  (green) for both `rbxsystems.ch` and `strategos.gr`.
+- Postfix relay through Postmark `:587` configured and **codified in
+  `mailcow-host` role** (`tasks/relay.yml` + templates). Idempotent.
+- DNS cutover for both root domains has happened — MX points at
+  `mail.rbxsystems.ch`. SPF, DKIM, DMARC, MTA-STS, TLSRPT, and
+  pm-bounces records are live.
+- End-to-end empirical proof (2026-05-07): test from `noreply@rbxsystems.ch`
+  → `ldamasio@gmail.com` landed in Gmail Inbox with
+  `dkim=pass spf=pass dmarc=pass` and TLS 1.3 client→relay→recipient.
+
+The institutional mail send path is production-grade. Inbound delivery
+to mailboxes is the next operational step (provisioning + GUI work).
 
 ---
 
@@ -26,6 +37,8 @@
 | Redundancy | **Single MTA** (no backup MX, no HA pair) for Phase 1 | `PLAN-mail-self-hosted.md` §"Redundancy posture" |
 | Mail VPS name | `lince` | Big-cat naming convention (tiger/jaguar/pantera/eagle/altaica/sumatrae) |
 | Re-evaluation gate | 60-90 days post-launch — decide whether to stay on Option B or migrate | `PLAN-mail-self-hosted.md` §"Re-evaluation gate" |
+| Relay credentials | Postmark Server Token, used as both SASL username and password | Postmark docs |
+| Secrets boundary | Only the Server API Token is a secret (in `pass`); SPF / DKIM / Return-Path / DMARC are public DNS | This runbook |
 
 ---
 
@@ -37,171 +50,209 @@ lince:
   IPv6:     2a02:c207:2327:3864::1
   OS:       Ubuntu 24.04.4 LTS (initial hostname: vmi3273864)
   SSH:      key-only, root login, ~/.ssh/id_ed25519
-  PTR v4:   vmi3273864.contaboserver.net (default; pending ticket to change to mail.rbxsystems.ch)
-  PTR v6:   vmi3273864.contaboserver.net (default; pending ticket — see "Contabo PTR quirk" below)
+  PTR v4:   mail.rbxsystems.ch (set 2026-05-03 via Contabo ticket #16240192404)
+  PTR v6:   mail.rbxsystems.ch (set 2026-05-03 via Contabo ticket #16240192404)
   Group:    mail_servers (Ansible)
   Role:     mailcow-host
+  Compose project: mailcowdockerized (in /opt/mailcow-dockerized)
 ```
 
 ---
 
-## What's already done
+## Architecture, in one diagram
 
-### Repository changes
+```
+                    Outbound from RBX accounts (Phase 1)
 
-- `bootstrap/ansible/inventory/hosts.yml` — `mail_servers` group added with `lince`
-- `bootstrap/ansible/host_vars/lince.yml` — created with `mailcow_hostname`
-- `bootstrap/ansible/group_vars/mail_servers.yml` — created with domains list
-- `bootstrap/ansible/roles/hardening/tasks/main.yml` — refactored 4 conditionals from negative (`not in dns_servers`) to positive (`in (k3s_server + k3s_agents)`); semantically identical for existing groups, correctly excludes `mail_servers` from k3s rules
-- `bootstrap/ansible/roles/mailcow-host/` — full role created:
-  - `defaults/main.yml`
-  - `tasks/main.yml`, `tasks/docker.yml`, `tasks/mailcow.yml`, `tasks/firewall.yml`
-  - `handlers/main.yml`
-- `bootstrap/ansible/site.yml` — Phase 8 added: `Install mail server` play targeting `mail_servers`
-- `docs/PLAN-mail-self-hosted.md` — extension of parent plan, decisions documented
-- `docs/runbooks/MAIL-IMPLEMENTATION-STATUS.md` — this file
+  user@rbxsystems.ch
+        │ STARTTLS submission
+        ▼
+  ┌──────────────────────────┐         ┌─────────────────────┐
+  │  Mailcow / Postfix       │  587    │                     │
+  │  on lince (5.182.33.93)  │ ──────▶ │  smtp.postmarkapp   │
+  │  relayhost = postmark    │  TLS    │  .com               │
+  │  SASL: server token      │         │                     │
+  └──────────────────────────┘         └──────────┬──────────┘
+                                                   │
+                                                   ▼ DKIM-signed by
+                                            mta-NN-ord.mtasv.net
+                                                   │
+                                                   ▼
+                                              recipient MX
 
-### Operational state on lince
+                    Inbound to RBX accounts
 
-- Base hardening applied: `ufw` enabled (only port 22 v4+v6), SSH password auth disabled, `PermitRootLogin prohibit-password`, fail2ban active
-- Inbound port 25 confirmed open at Contabo network level (TCP RST on probe = no listener but path open)
+   sender@example
+        │
+        ▼
+  ┌────────────────────────────────────┐
+  │  MX: mail.rbxsystems.ch (lince:25) │
+  │  Mailcow Postfix → Dovecot         │
+  └────────────────────────────────────┘
+```
 
----
+Auth headers expected on outbound (verified 2026-05-07):
 
-## What's pending
-
-### Operator-blocking items
-
-1. **Create Postmark "RBX Institutional" server**
-   - URL: https://account.postmarkapp.com → Servers → Create Server
-   - Name: `RBX Institutional`
-   - Type: Transactional
-   - After creation → API Tokens tab → copy the **Server API Token**
-   - Store in `pass`: `pass insert rbx/postmark/rbx-institutional/server-token`
-   - **Do NOT paste the token in any chat or file outside `pass`/`vault.yml`**
-
-2. **Open Contabo support ticket for PTR**
-   - Reason: panel bug — "Add PTR Record For An IPv6 Address" form returns "We were unable to perform the request" for both compressed (`::1`) and expanded (`0000:0000:0000:0001`) IPv6 forms. IPv4 PTR is read-only in panel.
-   - Ticket text:
-     ```
-     Subject: Reverse DNS change request (IPv4 + IPv6)
-
-     Hello,
-
-     Please configure reverse DNS (PTR records) for the following addresses
-     on VPS 5.182.33.93 (vmi3273864):
-
-       IPv4: 5.182.33.93                    -> mail.rbxsystems.ch
-       IPv6: 2a02:c207:2327:3864::1         -> mail.rbxsystems.ch
-
-     I tried adding the IPv6 PTR via the panel ("Add PTR Record For An IPv6
-     Address" under DNS Management → Reverse DNS Management) but received
-     "We were unable to perform the request. Please retry or contact the
-     support" with both compressed and expanded IPv6 forms.
-
-     Use case: institutional mail server.
-
-     Thank you.
-     ```
-   - **Non-blocking**: Phase 1 launch can proceed with default Contabo PTR (`vmi3273864.contaboserver.net` is FCrDNS-valid). With Option B + Postmark relay, lince's rDNS is rarely consulted.
-
-### Implementation items (after the above)
-
-3. **Bring Mailcow up in partial mode** (no relay yet) — verifies Docker/Compose installation and Mailcow bootstrap on lince. See "Step-by-step execution" below.
-
-4. **Add Postmark relay configuration** — once token lands in `vault.yml`, write `tasks/relay.yml` in the `mailcow-host` role:
-   - Render `data/conf/postfix/extra.cf` with `relayhost = [smtp.postmarkapp.com]:587` etc.
-   - Render `data/conf/postfix/sasl_passwd` with the token (root-only mode 0600)
-   - Run `postmap` inside the container
-   - Restart `postfix-mailcow` service
-
-5. **Mailbox & alias provisioning** — write `tasks/domains.yml` using Mailcow's REST API (admin token from mailcow.conf or GUI). Alternative for Phase 1: provision manually via the Mailcow GUI.
-
-6. **DNS records on PowerDNS** — Phase 2 of the migration sequence in `PLAN-mail-self-hosted.md`:
-   - `mail.rbxsystems.ch` A `5.182.33.93`, AAAA `2a02:c207:2327:3864::1`
-   - `mta-sts.rbxsystems.ch` A/AAAA same
-   - `_mta-sts.rbxsystems.ch` TXT `"v=STSv1; id=2026050201"`
-   - `_smtp._tls.rbxsystems.ch` TXT `"v=TLSRPTv1; rua=mailto:tlsreports@rbxsystems.ch"`
-   - `autodiscover.rbxsystems.ch` CNAME `mail.rbxsystems.ch`
-   - `autoconfig.rbxsystems.ch` CNAME `mail.rbxsystems.ch`
-   - Same set for `strategos.gr`
-   - DKIM CNAMEs from Postmark for `pm._domainkey.{domain}` (Postmark gives the value after domain verification)
-   - Increment SOA serial after each batch
-   - Apply via `pdnsutil` on `pantera` (gpgsql backend, not zone files)
-
-7. **MX cutover** — Phase 4 of the plan. Lower TTL 24h before, then flip MX from `inbound.postmarkapp.com` to `mail.rbxsystems.ch` for root domains. `tx.*` MX stays at Postmark Inbound.
-
-8. **Backup configuration** — write `tasks/backup.yml`. **Open question**: off-site target. Plan recommends rsync.net but operator has not decided.
+- `dkim=pass header.i=@rbxsystems.ch` — RBX domain DKIM (selector is the
+  timestamp-based one Postmark generated, e.g. `20260503181522pm`)
+- `dkim=pass header.i=@pm.mtasv.net` — Postmark transit DKIM
+- `spf=pass smtp.mailfrom=pm_bounces@pm-bounces.rbxsystems.ch`
+- `dmarc=pass header.from=rbxsystems.ch` (alignment via DKIM)
 
 ---
 
-## Step-by-step execution: bring Mailcow up (partial mode)
+## Day-to-day operations
 
-This is the next concrete action. Run from a workstation with:
-- SSH access to lince via `~/.ssh/id_ed25519`
-- Ansible installed
-- Repo cloned at the standard location
+### Reconcile the relay (token rotation, config drift)
 
 ```bash
-cd /home/psyctl/apps/rbx-infra/bootstrap/ansible
-
-# 1. Smoke-test SSH via Ansible
-ansible -i inventory/hosts.yml lince -m ping
-
-# 2. Run the mail server play (will install Docker + Mailcow + open firewall)
-ansible-playbook -i inventory/hosts.yml --limit lince site.yml
-
-# 3. Verify on lince
-ssh -i ~/.ssh/id_ed25519 root@5.182.33.93 'cd /opt/mailcow-dockerized && docker compose ps'
-# Expected: ~15 containers, all "running" or "healthy"
-
-# 4. Verify firewall
-ssh -i ~/.ssh/id_ed25519 root@5.182.33.93 'ufw status numbered'
-# Expected: ports 22, 25, 80, 443, 465, 587, 993, 995 ALLOW
-
-# 5. Access GUI from local
-# Browser: https://5.182.33.93/  (self-signed cert warning — accept; real cert later)
-# Default admin login: admin / moohoo  ← CHANGE IMMEDIATELY in Mailcow → System → Admin
+cd /home/psyctl/apps/rbx-infra
+# 1. Pull latest token from pass into vault.yml
+bash bootstrap/scripts/init-vault-from-pass.sh
+# 2. Re-render extra.cf + sasl_passwd, postmap, restart postfix-mailcow
+ansible-playbook -i bootstrap/ansible/inventory/hosts.yml \
+  --limit lince \
+  bootstrap/ansible/site.yml \
+  --tags relay
 ```
 
-If `docker compose ps` shows containers in restart loops, check `docker compose logs --tail 100`. The most common first-run issue is host port 25 being held by Postfix on the host — Ubuntu 24.04 base is clean so this should not happen.
+The role is idempotent: with no token change it is a no-op (zero changed
+tasks). Restart of `postfix-mailcow` happens only if `extra.cf` or
+`sasl_passwd` change.
+
+### Send a one-off test from the host
+
+```bash
+ssh -i ~/.ssh/id_ed25519 root@5.182.33.93 \
+  'printf "From: noreply@rbxsystems.ch\nTo: <recipient>\nSubject: relay test\n\nbody\n" |
+   docker exec -i mailcowdockerized-postfix-mailcow-1 sendmail -f noreply@rbxsystems.ch <recipient>'
+
+# Tail the relay step
+ssh -i ~/.ssh/id_ed25519 root@5.182.33.93 \
+  'docker logs mailcowdockerized-postfix-mailcow-1 --since 1m 2>&1 |
+   grep -E "(relay=smtp.postmarkapp|status=)"'
+```
+
+A successful relay shows `status=sent (250 2.0.0 Ok: queued as <postmark-id>)`.
+
+### Inspect the queue
+
+```bash
+ssh -i ~/.ssh/id_ed25519 root@5.182.33.93 \
+  'docker exec mailcowdockerized-postfix-mailcow-1 mailq | tail -20'
+```
+
+### Check container health
+
+```bash
+ssh -i ~/.ssh/id_ed25519 root@5.182.33.93 \
+  'cd /opt/mailcow-dockerized && docker compose ps'
+```
+
+Expect ~18 containers, mostly `Up` / `(healthy)`. The `dovecot-mailcow`
+and `sogo-mailcow` containers do not expose a `healthy` status — `Up` is
+sufficient.
 
 ---
 
-## Verification checklist after partial-mode bring-up
+## Repository layout (what lives where)
 
-- [ ] All Mailcow containers healthy (`docker compose ps`)
-- [ ] GUI accessible at `https://5.182.33.93`
-- [ ] Mailcow admin password changed from default
-- [ ] Inbound port 25 listening (`ss -tlnp | grep :25` on lince)
-- [ ] `ufw status` shows mail ports allowed
-- [ ] No errors in `journalctl -u docker.service` last 5 minutes
-
-**Outbound is intentionally broken at this stage** (no relay configured). That gets fixed when the Postmark token lands.
+| Concern | Path |
+|---|---|
+| Mail role | `bootstrap/ansible/roles/mailcow-host/` |
+| Relay tasks | `roles/mailcow-host/tasks/relay.yml` |
+| Relay templates | `roles/mailcow-host/templates/{extra.cf.j2,sasl_passwd.j2}` |
+| Role defaults | `roles/mailcow-host/defaults/main.yml` |
+| Inventory | `bootstrap/ansible/inventory/hosts.yml` (`mail_servers` group) |
+| Host vars | `bootstrap/ansible/host_vars/lince.yml` |
+| Group vars | `bootstrap/ansible/group_vars/mail_servers.yml` |
+| Vault (gitignored) | `bootstrap/ansible/group_vars/all/vault.yml` |
+| Vault generator | `bootstrap/scripts/init-vault-from-pass.sh` |
+| Architectural plan | `docs/PLAN-mail-self-hosted.md` |
+| DNS context | `docs/PLAN-dns-email-architecture.md` |
 
 ---
 
-## Operator hand-list — items that need operator action
+## Pending operational items
 
-| # | Action | Where | When |
-|---|--------|-------|------|
-| 1 | Create Postmark "RBX Institutional" server, capture token to `pass` | Postmark dashboard | Before relay step |
-| 2 | Open Contabo ticket for PTR (text above) | my.contabo.com support | Anytime (non-blocking) |
-| 3 | Decide off-site backup target (rsync.net / Backblaze B2 / Storj / other) | — | Before backup step |
-| 4 | Decide on remaining open questions in `PLAN-mail-self-hosted.md` §"Open questions" | — | Before respective steps |
-| 5 | After IaC implementation: rotate exposed secrets — see "Security note" below | `pass` + re-run respective Ansible roles | High priority |
+### Provisioning (Mailcow GUI work, not IaC-managed yet)
+
+Mail aliases, mailboxes, and per-domain settings are currently provisioned
+manually through the Mailcow GUI at `https://mail.rbxsystems.ch/admin`.
+Codifying this through Mailcow's REST API is a Phase-2 IaC item — not
+blocking institutional sending.
+
+- [ ] Create canonical mailboxes/aliases (`noreply@`, `dmarc@`, `tlsreports@`,
+      operator inboxes) for `rbxsystems.ch`
+- [ ] Same set for `strategos.gr`
+- [ ] Decide whether to manage these via API (`tasks/domains.yml`) or
+      keep GUI-managed for Phase 1
+
+### Backup target decision
+
+Mailcow data lives on a single VPS. Pick an off-site target
+(rsync.net / Backblaze B2 / Storj / other) and write
+`tasks/backup.yml` for the `mailcow-host` role.
+
+---
+
+## Reference: why the auth headers work
+
+| Mechanism | Where | Value source | Gmail header value |
+|---|---|---|---|
+| SPF | DNS TXT on `rbxsystems.ch` | `v=spf1 include:spf.mtasv.net ~all` | `spf=pass smtp.mailfrom=pm_bounces@pm-bounces.rbxsystems.ch` |
+| DKIM (RBX) | DNS CNAME at `<selector>._domainkey.rbxsystems.ch` → `pm.mtasv.net` | Postmark generates per-domain selector | `dkim=pass header.i=@rbxsystems.ch` |
+| DKIM (transit) | always present, signed by Postmark itself | n/a | `dkim=pass header.i=@pm.mtasv.net` |
+| Return-Path | DNS CNAME at `pm-bounces.rbxsystems.ch` → `pm.mtasv.net` | Postmark dashboard "Return-Path" | bounces routed back to Postmark for tracking |
+| DMARC | DNS TXT at `_dmarc.rbxsystems.ch` | `v=DMARC1; p=none; rua=...` | `dmarc=pass (p=NONE) header.from=rbxsystems.ch` |
+| MTA-STS | DNS A on `mta-sts.rbxsystems.ch` + `_mta-sts` TXT + `https://mta-sts.../.well-known/mta-sts.txt` | served by lince | inbound senders enforce TLS |
+| TLSRPT | DNS TXT at `_smtp._tls.rbxsystems.ch` | `v=TLSRPTv1; rua=mailto:tlsreports@rbxsystems.ch` | aggregated TLS reports |
+
+Same set is mirrored for `strategos.gr` (verified green in Postmark).
 
 ---
 
 ## Contabo quirks (do not re-discover)
 
-1. **Reverse DNS Management panel is read-only for IPv4.** Only IPv6 PTRs can be added via the form, and even that fails with a generic 500 error in some cases (confirmed 2026-05-02 with both compressed and expanded IPv6 formats). Do not waste time — open a support ticket.
+1. **Reverse DNS Management panel does not work for our case.** IPv4 PTR
+   is read-only in the panel; the IPv6 PTR form returns a generic 500
+   ("We were unable to perform the request") for both compressed
+   (`::1`) and expanded (`0000:0000:0000:0001`) IPv6 forms (confirmed
+   2026-05-02). **Workaround: support ticket.** Reference template:
 
-2. **Default rDNS is FCrDNS-valid.** `vmi3273864.contaboserver.net` resolves forward to the same IP, so it does not break basic acceptance checks. With Option B (Postmark relay), the local MTA's rDNS is rarely consulted.
+   ```
+   Subject: Reverse DNS change request (IPv4 + IPv6)
 
-3. **Outbound port 25 is blocked by default.** This was confirmed earlier and is documented Contabo policy. With Option B (Postmark relay on port 587), this does not affect us.
+   Hello,
 
-4. **Inbound port 25 is open.** Verified via TCP probe 2026-05-02: `nc` returns "connection refused" (TCP RST), not timeout — meaning packets reach the host, just no listener yet.
+   Please configure reverse DNS (PTR records) for the following addresses
+   on VPS <ipv4> (<panel-hostname>):
+
+     IPv4: <ipv4>                         -> <desired-ptr>
+     IPv6: <ipv6>                         -> <desired-ptr>
+
+   The panel ("Add PTR Record For An IPv6 Address" under DNS Management →
+   Reverse DNS Management) returns "We were unable to perform the request"
+   for both compressed and expanded IPv6 forms. IPv4 PTR is read-only in
+   the panel.
+
+   Use case: institutional mail server.
+
+   Thank you.
+   ```
+
+   Concrete history:
+   - **2026-05-02** ticket opened for `5.182.33.93` / `2a02:c207:2327:3864::1`.
+   - **2026-05-03** Contabo Support (Ekaterina) confirmed both PTRs set
+     to `mail.rbxsystems.ch` (ticket `#16240192404`, INT-13812980).
+   - **2026-05-07** verified live via `dig +short -x` against both
+     local and Google (8.8.8.8) resolvers; FCrDNS round-trip clean.
+
+2. **Outbound port 25 is blocked by default.** Documented Contabo
+   policy. With Option B (Postmark relay on port 587), this does not
+   affect outbound delivery.
+
+3. **Inbound port 25 is open.** Verified 2026-05-02 by TCP probe.
 
 ---
 
@@ -211,11 +262,11 @@ During the conversation that produced this plan, two Ansible commands inadverten
 printed the contents of `bootstrap/ansible/group_vars/all/vault.yml` to the conversation
 transcript:
 
-- `cat bootstrap/ansible/group_vars/all/*.yml` (for inventory inspection)
+- `cat bootstrap/ansible/group_vars/all/*.yml`
 - `ansible-inventory --list` (without filtering)
 
 The following secrets appeared in the transcript and **should be rotated** as a
-precaution:
+precaution if not yet done:
 
 - `paradedb_robson_password`
 - `paradedb_truthmetal_password`
@@ -239,10 +290,6 @@ ansible-playbook -i inventory/hosts.yml --limit jaguar site.yml --tags pdns-data
 ansible-playbook -i inventory/hosts.yml --limit pantera,eagle site.yml --tags pdns
 ```
 
-Operational impact: short PowerDNS API key change is transparent. ParadeDB password
-change requires app restart on consumer side (robson, truthmetal in cluster). Schedule
-during low-traffic window if production traffic is active.
-
 ---
 
 ## Where to look for what
@@ -251,23 +298,23 @@ during low-traffic window if production traffic is active.
 |----------|------|
 | Architecture / why these decisions | `docs/PLAN-mail-self-hosted.md` |
 | DNS + Postmark broader context | `docs/PLAN-dns-email-architecture.md` |
-| Step-by-step migration sequence | `docs/PLAN-mail-self-hosted.md` §"Migration sequence" |
 | Mailcow Ansible role | `bootstrap/ansible/roles/mailcow-host/` |
 | Inventory & host-specific vars | `bootstrap/ansible/inventory/hosts.yml`, `bootstrap/ansible/host_vars/lince.yml` |
 | Group vars (mail-specific) | `bootstrap/ansible/group_vars/mail_servers.yml` |
+| Vault generation | `bootstrap/scripts/init-vault-from-pass.sh` |
 | Secrets convention | `docs/infra/SECRETS.md` |
-| ArgoCD / cluster patterns | `docs/ARGOCD-BEST-PRACTICES.md` (not used by mail role, but cluster context) |
 
 ---
 
 ## When this runbook becomes obsolete
 
-Delete or archive this file once:
+Archive (move to `docs/runbooks/archive/`) when:
 
-- Mailcow is in production handling inbound for `rbxsystems.ch` and `strategos.gr`
-- Postmark relay is configured and verified
-- DNS cutover has happened and external mail-tester score is ≥ 9/10
-- Backup job is running daily with off-site sync verified
+- Off-site backup job is running daily with sync verified
+- Mailbox / alias provisioning has been codified or formally accepted as
+  GUI-managed for the long term
+- A successor runbook covers ongoing mail-stack operations (incidents,
+  upgrades, re-keying)
 
-At that point the only living document should be `docs/PLAN-mail-self-hosted.md` (as the
-"why we did it this way" reference) and operational runbooks for incidents/maintenance.
+The architectural rationale will keep living in
+`docs/PLAN-mail-self-hosted.md` even after this runbook retires.

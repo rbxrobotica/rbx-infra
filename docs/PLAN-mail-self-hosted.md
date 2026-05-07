@@ -14,9 +14,14 @@
 - ✓ Base hardening applied (ufw, fail2ban, SSH key-only)
 - ✓ Ansible role `mailcow-host` written and committed (Docker, Mailcow bootstrap, firewall)
 - ✓ Inventory + group/host vars in place
-- ⧗ Mailcow not yet installed (waiting on Postmark Server Token)
-- ⧗ PTR change blocked by Contabo panel bug — ticket pending
-- ⧗ DNS records for `mail.*` not yet published on PowerDNS
+- ✓ Mailcow installed and running on lince (~18 containers up)
+- ✓ Postmark relay codified in `mailcow-host` role (`tasks/relay.yml` + templates) — verified idempotent 2026-05-07
+- ✓ PTR set to `mail.rbxsystems.ch` for both IPs (Contabo ticket #16240192404, applied 2026-05-03, verified 2026-05-07)
+- ✓ DNS records for `mail.*`, MTA-STS, TLSRPT, SPF, Return-Path, DMARC published on PowerDNS for both `rbxsystems.ch` and `strategos.gr`
+- ✓ Postmark Sender Signature + DKIM + Return-Path verified (green) for both domains
+- ✓ End-to-end auth verified: Gmail Inbox delivery with `dkim=pass spf=pass dmarc=pass` (2026-05-07)
+- ⧗ Mailbox / alias provisioning still GUI-managed (Phase-2 IaC item)
+- ⧗ Off-site backup target undecided
 
 ---
 
@@ -525,8 +530,8 @@ its own MySQL inside Docker — does NOT reuse paradedb).
 
 - [ ] Contabo VPS provisioned, IPv4 + IPv6 confirmed
 - [ ] Port 25 outbound unblock approved by Contabo
-- [ ] PTR for IPv4 set to `mail.rbxsystems.ch`
-- [ ] PTR for IPv6 set to `mail.rbxsystems.ch`
+- [x] PTR for IPv4 set to `mail.rbxsystems.ch` (Contabo ticket #16240192404, 2026-05-03)
+- [x] PTR for IPv6 set to `mail.rbxsystems.ch` (same ticket)
 - [ ] SSH access via ed25519 key confirmed (`ansible-playbook --check` passes hardening role)
 - [ ] Postmark "RBX Institutional" server created (already required by parent plan)
 - [ ] Postmark Server API Token available for the relay (in `pass`)
@@ -691,7 +696,7 @@ Before Phase 1 Step 1:
 - [x] VPS contracted, IPv4 (`5.182.33.93`) and IPv6 (`2a02:c207:2327:3864::1`) assigned
 - [x] Inbound port 25 reachability confirmed (Contabo open at network level — verified 2026-05-02)
 - [x] SSH public key bootstrapped, base hardening applied (verified 2026-05-02)
-- [ ] PTR set for both IPs to `mail.rbxsystems.ch` — non-blocking; Contabo default `vmi3273864.contaboserver.net` is FCrDNS-valid for Phase 1; ticket to be opened in parallel
+- [x] PTR set for both IPs to `mail.rbxsystems.ch` (Contabo ticket #16240192404, applied 2026-05-03, verified 2026-05-07)
 - [ ] `vault.yml` regenerated with: `mailcow_admin_password`, mailbox passwords, Postmark Server Token for relay
 - [ ] DNS for `mail.rbxsystems.ch` not yet added (Step 3 adds it)
 - [ ] Postmark "RBX Institutional" server confirmed configured (parent plan dep)
