@@ -202,3 +202,66 @@
     objs: ALL_IN_SCHEMA
     privs: ALL
     state: present
+
+# =============================================================================
+# llm-gateway (LiteLLM Proxy — experimental internal LLM Gateway)
+# =============================================================================
+
+- name: Create litellm database
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: "{{ paradedb_litellm_db }}"
+    encoding: UTF8
+    state: present
+
+- name: Create litellm user
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ paradedb_litellm_user }}"
+    password: "{{ paradedb_litellm_password }}"
+    state: present
+
+- name: Grant litellm database-level privileges
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_litellm_db }}"
+    role: "{{ paradedb_litellm_user }}"
+    type: database
+    privs: ALL
+    state: present
+
+- name: Grant litellm CREATE,USAGE on public schema (PostgreSQL 15+)
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_litellm_db }}"
+    role: "{{ paradedb_litellm_user }}"
+    type: schema
+    objs: public
+    privs: CREATE,USAGE
+    state: present
+
+- name: Grant litellm ALL on existing tables
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_litellm_db }}"
+    role: "{{ paradedb_litellm_user }}"
+    type: table
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present
+
+- name: Grant litellm ALL on existing sequences
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ paradedb_litellm_db }}"
+    role: "{{ paradedb_litellm_user }}"
+    type: sequence
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present

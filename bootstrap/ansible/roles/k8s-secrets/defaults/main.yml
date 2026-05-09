@@ -30,3 +30,11 @@ pass_robson_testnet_tenant_id_key: "rbx/robson-testnet/projection-tenant-id"
 pass_robson_testnet_binance_api_key: "rbx/robson-testnet/binance-api-key"
 pass_robson_testnet_binance_api_secret: "rbx/robson-testnet/binance-api-secret"
 pass_robson_testnet_api_token_key: "rbx/robson-testnet/api-token"
+
+# llm-gateway (namespace: llm-gateway — LiteLLM Proxy, experimental)
+llm_gateway_namespace: "llm-gateway"
+pass_llm_gateway_db_password_key: "rbx/llm-gateway/db-password"
+pass_llm_gateway_master_key: "rbx/llm-gateway/master-key"
+pass_llm_gateway_salt_key: "rbx/llm-gateway/salt-key"
+pass_llm_gateway_openai_api_key: "rbx/llm-gateway/openai-api-key"
+pass_llm_gateway_anthropic_api_key: "rbx/llm-gateway/anthropic-api-key"

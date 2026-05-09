@@ -111,14 +111,15 @@ It blocks external ingress explicitly. If an Ingress is added later, the Network
 
 Before ArgoCD syncs for the first time:
 
-- [ ] Ansible DB provisioning created `litellm` user + database on jaguar
+- [ ] Ansible DB provisioning created `litellm` user + database on jaguar (`paradedb` role)
 - [ ] Pass entries created under `rbx/llm-gateway/`:
+  - `db-password` (openssl rand -hex 32 — hex avoids URL-unsafe characters)
   - `master-key` (openssl rand -hex 32)
-  - `database-url` (postgresql://litellm:…@litellm-postgres:5432/litellm)
   - `salt-key` (openssl rand -hex 32)
   - `openai-api-key` (real key or placeholder)
   - `anthropic-api-key` (real key or placeholder)
-- [ ] Ansible `k8s-secrets` role updated to create `litellm-secrets` in namespace `llm-gateway`
+- [ ] `init-vault-from-pass.sh` updated to include `paradedb_litellm_password`
+- [ ] Ansible `k8s-secrets` role creates `litellm-secrets` in namespace `llm-gateway`
 - [ ] Image tag in `litellm-deploy.yml` **pinned to a known SHA or stable tag** (not a floating tag)
 - [ ] Confirm node architecture before deploy:
   `kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.nodeInfo.architecture}{"\n"}{end}'`

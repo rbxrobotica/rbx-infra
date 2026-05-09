@@ -15,6 +15,7 @@ No application should run its own database StatefulSet inside k3s.
 | robson | robson | robsond (Rust production daemon) |
 | robson_testnet | robson_testnet | robsond testnet daemon |
 | truthmetal | truthmetal | Truthmetal |
+| litellm | litellm | LLM Gateway (LiteLLM Proxy — experimental) |
 | pdns | pdns | PowerDNS (used by pantera/ns1) |
 
 ## Connection pattern for k8s apps

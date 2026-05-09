@@ -100,7 +100,11 @@ Stop `kubectl port-forward` with `Ctrl+C`. No cluster state is changed.
 Before any real traffic is sent:
 
 - [ ] Image tag in `litellm-deploy.yml` is pinned to a SHA or verified stable tag
-- [ ] Secret `litellm-secrets` exists in namespace `llm-gateway` (created via Ansible `k8s-secrets`)
+- [ ] Pass entries created under `rbx/llm-gateway/` (db-password, master-key, salt-key, provider keys)
+- [ ] `init-vault-from-pass.sh` run to regenerate `vault.yml` with `paradedb_litellm_password`
+- [ ] Ansible DB provisioning run (`--limit jaguar`) to create `litellm` user + database
+- [ ] Ansible `k8s-secrets` role run (`--tags k8s-secrets`) to create `litellm-secrets`
+- [ ] Secret `litellm-secrets` exists in namespace `llm-gateway`
 - [ ] Postgres user `litellm` and database `litellm` exist on jaguar
 - [ ] Service `litellm-postgres` exists in namespace `llm-gateway` (routes to jaguar via Endpoints)
 - [ ] No Ingress or public DNS record exists for this service
