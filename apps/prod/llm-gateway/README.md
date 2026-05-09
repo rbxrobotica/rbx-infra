@@ -44,6 +44,7 @@ Evaluate [LiteLLM Proxy](https://docs.litellm.ai/docs/proxy/configs) as a centra
 | `litellm-svc.yml` | ClusterIP service on port 4000 |
 | `litellm-config.yml` | ConfigMap with `proxy_config.yaml` (placeholders) |
 | `secrets.example.yml` | **Example only** — never synced by ArgoCD. Documental reference for secret structure. |
+| `postgres-svc.yml` | Service + Endpoints routing to external ParadeDB on jaguar |
 | `rbac.yml` | ServiceAccount only (no Role/RoleBinding; LiteLLM does not need K8s API access) |
 | `network-policy.yml` | Default-deny ingress from outside cluster |
 | `kustomization.yml` | Kustomize root (does NOT include `secrets.example.yml`) |
@@ -69,7 +70,11 @@ Per `docs/infra/ARCHITECTURE.md`:
 
 > **PostgreSQL never runs inside the production k3s cluster.**
 
-The connection string points to `jaguar` (ParadeDB host). The `litellm` database and user must be provisioned by Ansible before first deploy.
+The LiteLLM Proxy connects to a **local Service** (`litellm-postgres`) inside the `llm-gateway` namespace. This Service has no selector; instead, an `Endpoints` object explicitly routes traffic to jaguar (`161.97.147.76:5432`).
+
+This pattern keeps the app config decoupled from the external host IP and allows RBX to change the database location without touching the Deployment or Secret.
+
+The `litellm` database and user must be provisioned by Ansible on jaguar before first deploy.
 
 ### Recreate Strategy
 `strategy: Recreate` ensures only one pod is active at a time. This avoids:
@@ -109,7 +114,7 @@ Before ArgoCD syncs for the first time:
 - [ ] Ansible DB provisioning created `litellm` user + database on jaguar
 - [ ] Pass entries created under `rbx/llm-gateway/`:
   - `master-key` (openssl rand -hex 32)
-  - `database-url` (postgresql://litellm:…@jaguar:5432/litellm)
+  - `database-url` (postgresql://litellm:…@litellm-postgres:5432/litellm)
   - `salt-key` (openssl rand -hex 32)
   - `openai-api-key` (real key or placeholder)
   - `anthropic-api-key` (real key or placeholder)

@@ -102,6 +102,7 @@ Before any real traffic is sent:
 - [ ] Image tag in `litellm-deploy.yml` is pinned to a SHA or verified stable tag
 - [ ] Secret `litellm-secrets` exists in namespace `llm-gateway` (created via Ansible `k8s-secrets`)
 - [ ] Postgres user `litellm` and database `litellm` exist on jaguar
+- [ ] Service `litellm-postgres` exists in namespace `llm-gateway` (routes to jaguar via Endpoints)
 - [ ] No Ingress or public DNS record exists for this service
 - [ ] Validation steps 1–4 above pass
 
@@ -116,4 +117,4 @@ Before any real traffic is sent:
 | `Connection refused` on health | Container still starting | Wait for startup probe (max ~150s) |
 | `401 Unauthorized` | Wrong master key | Verify `LITELLM_MASTER_KEY` in secret |
 | Upstream 401 | Provider key is placeholder | Insert real key into pass and re-run Ansible |
-| DB connection error | Postgres user/db missing on jaguar | Run Ansible DB provisioning for `litellm` |
+| DB connection error | Postgres user/db missing on jaguar, or `litellm-postgres` Service missing | Run Ansible DB provisioning for `litellm`; verify `postgres-svc.yml` is synced |

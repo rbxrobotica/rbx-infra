@@ -12,6 +12,8 @@ resources:
   - rbac.yml
   # Config
   - litellm-config.yml
+  # Postgres external service (jaguar)
+  - postgres-svc.yml
   # Deployment
   - litellm-deploy.yml
   # Service (ClusterIP)
