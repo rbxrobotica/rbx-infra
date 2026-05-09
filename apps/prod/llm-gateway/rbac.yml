@@ -1,0 +1,16 @@
+# ServiceAccount for LiteLLM Proxy
+#
+# LiteLLM does NOT need Kubernetes API access. The kubelet injects
+# Secret values directly into container env vars.
+# We keep an explicit ServiceAccount for auditability but disable
+# token automount since no in-cluster API calls are made.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: litellm
+  namespace: llm-gateway
+  labels:
+    app.kubernetes.io/name: litellm
+    app.kubernetes.io/component: proxy
+    app.kubernetes.io/part-of: llm-gateway
+automountServiceAccountToken: false

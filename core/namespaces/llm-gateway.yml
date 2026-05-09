@@ -1,0 +1,12 @@
+# Namespace: llm-gateway
+# Purpose: Experimental LiteLLM Proxy as internal LLM Gateway
+# Status: Candidate — not yet production-critical
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: llm-gateway
+  labels:
+    app.kubernetes.io/part-of: llm-gateway
+    environment: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

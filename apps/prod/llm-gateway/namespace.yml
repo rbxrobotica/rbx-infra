@@ -1,0 +1,11 @@
+# Namespace reference for kustomization
+# Canonical definition lives in core/namespaces/llm-gateway.yml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: llm-gateway
+  labels:
+    app.kubernetes.io/part-of: llm-gateway
+    environment: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
