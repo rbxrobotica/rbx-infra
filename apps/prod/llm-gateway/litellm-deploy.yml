@@ -82,17 +82,25 @@ spec:
                   name: litellm-secrets
                   key: salt-key
 
-            # Provider API keys (placeholders)
-            - name: OPENAI_API_KEY
+            # Provider API keys — RBX initial strategy:
+            #   1. Groq (free tier, good for smoke tests)
+            #   2. GLM / Z.AI (ZhipuAI)
+            #   3. Kimi / Moonshot (paid, already contracted)
+            - name: GROQ_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: litellm-secrets
-                  key: openai-api-key
-            - name: ANTHROPIC_API_KEY
+                  key: groq-api-key
+            - name: ZAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: litellm-secrets
-                  key: anthropic-api-key
+                  key: zai-api-key
+            - name: MOONSHOT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: litellm-secrets
+                  key: moonshot-api-key
 
           volumeMounts:
             - name: config

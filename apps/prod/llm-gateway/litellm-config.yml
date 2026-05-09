@@ -1,5 +1,10 @@
 # LiteLLM Proxy ConfigMap
-# Minimal configuration with placeholder model aliases.
+# Provider strategy for RBX:
+#   1. Groq — first smoke-test provider (free tier available)
+#   2. GLM (Z.AI / ZhipuAI) — second provider
+#   3. Kimi (Moonshot) — third provider, already paid
+#   4. DeepSeek, Qwen, OpenAI, Anthropic — future candidates only
+#
 # Real provider keys are injected via Secret (never committed).
 # This ConfigMap mounts proxy_config.yaml into the container.
 apiVersion: v1
@@ -17,18 +22,40 @@ data:
     # Docs: https://docs.litellm.ai/docs/proxy/configs
 
     model_list:
-      # Placeholder aliases — replace with real models after secret bootstrap.
-      # Keys are read from environment variables (os.environ/KEY_NAME).
+      # Active providers — initial RBX strategy
 
-      - model_name: openai-gpt-4o-placeholder
+      - model_name: groq-test
         litellm_params:
-          model: openai/gpt-4o
-          api_key: "os.environ/OPENAI_API_KEY"
+          model: groq/llama-3.3-70b-versatile
+          api_key: "os.environ/GROQ_API_KEY"
 
-      - model_name: anthropic-claude-sonnet-placeholder
+      - model_name: glm-test
         litellm_params:
-          model: anthropic/claude-3-5-sonnet-20241022
-          api_key: "os.environ/ANTHROPIC_API_KEY"
+          model: zai/glm-4.7
+          api_key: "os.environ/ZAI_API_KEY"
+
+      - model_name: kimi-moonshot-test
+        litellm_params:
+          model: moonshot/moonshot-v1-8k
+          api_key: "os.environ/MOONSHOT_API_KEY"
+
+      # Future candidates — uncomment and add keys when ready:
+      # - model_name: deepseek-test
+      #   litellm_params:
+      #     model: deepseek/deepseek-chat
+      #     api_key: "os.environ/DEEPSEEK_API_KEY"
+      # - model_name: qwen-test
+      #   litellm_params:
+      #     model: dashscope/qwen-plus
+      #     api_key: "os.environ/DASHSCOPE_API_KEY"
+      # - model_name: openai-gpt-4o
+      #   litellm_params:
+      #     model: openai/gpt-4o
+      #     api_key: "os.environ/OPENAI_API_KEY"
+      # - model_name: anthropic-claude-sonnet
+      #   litellm_params:
+      #     model: anthropic/claude-3-5-sonnet-20241022
+      #     api_key: "os.environ/ANTHROPIC_API_KEY"
 
     # General settings
     general_settings:

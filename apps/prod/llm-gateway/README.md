@@ -82,9 +82,12 @@ The `litellm` database and user must be provisioned by Ansible on jaguar before 
 - DB migration races (LiteLLM auto-migrates on startup)
 
 ### Placeholder Model Aliases
-`proxy_config.yaml` defines two placeholder aliases (`openai-gpt-4o-placeholder`, `anthropic-claude-sonnet-placeholder`).
-These map to real upstream models but use placeholder API keys by default.
+`proxy_config.yaml` defines three active aliases (`groq-test`, `glm-test`, `kimi-moonshot-test`).
+These map to Groq, GLM (Z.AI) and Kimi (Moonshot) respectively.
 After real keys are injected into `pass` + secret, the aliases work without a config change.
+
+Future candidates (DeepSeek, Qwen, OpenAI, Anthropic) are commented out in the config
+and can be uncommented when the RBX team decides to evaluate them.
 
 ### Conservative Resources
 | | Value | Rationale |
@@ -116,8 +119,9 @@ Before ArgoCD syncs for the first time:
   - `db-password` (openssl rand -hex 32 — hex avoids URL-unsafe characters)
   - `master-key` (openssl rand -hex 32)
   - `salt-key` (openssl rand -hex 32)
-  - `openai-api-key` (real key or placeholder)
-  - `anthropic-api-key` (real key or placeholder)
+  - `groq-api-key` (real key or placeholder)
+  - `zai-api-key` (real key or placeholder)
+  - `moonshot-api-key` (real key or placeholder)
 - [ ] `init-vault-from-pass.sh` updated to include `paradedb_litellm_password`
 - [ ] Ansible `k8s-secrets` role creates `litellm-secrets` in namespace `llm-gateway`
 - [ ] Image tag in `litellm-deploy.yml` **pinned to a known SHA or stable tag** (not a floating tag)

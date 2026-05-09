@@ -42,8 +42,14 @@ rbx/
     db-password                 # PostgreSQL password for user `litellm` on jaguar — MUST be hex (openssl rand -hex 32)
     master-key                  # LiteLLM proxy master key — openssl rand -hex 32
     salt-key                    # LiteLLM DB encryption salt — openssl rand -hex 32
-    openai-api-key              # OpenAI API key (real or placeholder)
-    anthropic-api-key           # Anthropic API key (real or placeholder)
+    groq-api-key                # Groq API key (free tier available — good for smoke tests)
+    zai-api-key                 # Z.AI / ZhipuAI API key (GLM models)
+    moonshot-api-key            # Moonshot API key (Kimi models)
+    # Future candidates (not required for initial bootstrap):
+    # deepseek-api-key          # DeepSeek API key
+    # qwen-api-key              # DashScope / Qwen API key
+    # openai-api-key            # OpenAI API key
+    # anthropic-api-key         # Anthropic API key
   monitoring/
     grafana-admin-password      # Grafana admin UI password
   dns/

@@ -307,16 +307,22 @@
   register: llm_salt_key_result
   no_log: true
 
-- name: Read llm-gateway OpenAI API key from pass
-  command: pass show {{ pass_llm_gateway_openai_api_key }}
+- name: Read llm-gateway Groq API key from pass
+  command: pass show {{ pass_llm_gateway_groq_api_key }}
   changed_when: false
-  register: llm_openai_key_result
+  register: llm_groq_key_result
   no_log: true
 
-- name: Read llm-gateway Anthropic API key from pass
-  command: pass show {{ pass_llm_gateway_anthropic_api_key }}
+- name: Read llm-gateway Z.AI API key from pass
+  command: pass show {{ pass_llm_gateway_zai_api_key }}
   changed_when: false
-  register: llm_anthropic_key_result
+  register: llm_zai_key_result
+  no_log: true
+
+- name: Read llm-gateway Moonshot API key from pass
+  command: pass show {{ pass_llm_gateway_moonshot_api_key }}
+  changed_when: false
+  register: llm_moonshot_key_result
   no_log: true
 
 - name: Ensure llm-gateway namespace exists
@@ -334,8 +340,9 @@
       --from-literal=database-url="postgresql://{{ paradedb_litellm_user }}:{{ llm_db_password_result.stdout | trim }}@litellm-postgres:5432/{{ paradedb_litellm_db }}" \
       --from-literal=master-key="{{ llm_master_key_result.stdout | trim }}" \
       --from-literal=salt-key="{{ llm_salt_key_result.stdout | trim }}" \
-      --from-literal=openai-api-key="{{ llm_openai_key_result.stdout | trim }}" \
-      --from-literal=anthropic-api-key="{{ llm_anthropic_key_result.stdout | trim }}" \
+      --from-literal=groq-api-key="{{ llm_groq_key_result.stdout | trim }}" \
+      --from-literal=zai-api-key="{{ llm_zai_key_result.stdout | trim }}" \
+      --from-literal=moonshot-api-key="{{ llm_moonshot_key_result.stdout | trim }}" \
       --dry-run=client -o yaml \
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   changed_when: true

@@ -64,7 +64,7 @@ curl -s http://localhost:4000/v1/models \
   -H "Authorization: Bearer $(kubectl get secret -n llm-gateway litellm-secrets -o jsonpath='{.data.master-key}' | base64 -d)"
 ```
 
-Expected: JSON list containing `openai-gpt-4o-placeholder` and `anthropic-claude-sonnet-placeholder`.
+Expected: JSON list containing `groq-test`, `glm-test` and `kimi-moonshot-test`.
 
 > **Security note:** This reads the master key from the cluster secret. Do not share the bearer token.
 
@@ -80,7 +80,7 @@ curl -X POST http://localhost:4000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <MASTER_KEY>" \
   -d '{
-    "model": "openai-gpt-4o-placeholder",
+    "model": "groq-test",
     "messages": [{"role": "user", "content": "Say hello"}]
   }'
 ```
@@ -120,5 +120,6 @@ Before any real traffic is sent:
 | `CrashLoopBackOff` | Missing `litellm-secrets` | Bootstrap secrets via Ansible k8s-secrets role |
 | `Connection refused` on health | Container still starting | Wait for startup probe (max ~150s) |
 | `401 Unauthorized` | Wrong master key | Verify `LITELLM_MASTER_KEY` in secret |
-| Upstream 401 | Provider key is placeholder | Insert real key into pass and re-run Ansible |
+| Upstream 401 | Provider key is placeholder | Insert real Groq/Z.AI/Moonshot key into pass and re-run Ansible |
+| Upstream 429 | Groq rate limit (free tier: 30 RPM) | Reduce request rate or upgrade Groq plan |
 | DB connection error | Postgres user/db missing on jaguar, or `litellm-postgres` Service missing | Run Ansible DB provisioning for `litellm`; verify `postgres-svc.yml` is synced |
