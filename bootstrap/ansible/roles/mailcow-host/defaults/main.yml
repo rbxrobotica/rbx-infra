@@ -18,13 +18,27 @@ mailcow_repo_url: "https://github.com/mailcow/mailcow-dockerized.git"
 # never expose ports without a listener. SSH (22) is already allowed by the
 # base hardening role.
 mailcow_public_ports:
-  - { port: 25,  proto: tcp, comment: "SMTP MX inbound" }
-  - { port: 80,  proto: tcp, comment: "HTTP (ACME http-01 + MTA-STS redirect)" }
-  - { port: 443, proto: tcp, comment: "HTTPS (Mailcow UI, MTA-STS, SOGo)" }
-  - { port: 465, proto: tcp, comment: "SMTPS submission" }
-  - { port: 587, proto: tcp, comment: "SMTP submission (STARTTLS)" }
-  - { port: 993, proto: tcp, comment: "IMAPS" }
-  - { port: 995, proto: tcp, comment: "POP3S" }
+  - port: 25
+    proto: tcp
+    comment: "SMTP MX inbound"
+  - port: 80
+    proto: tcp
+    comment: "HTTP (ACME http-01 + MTA-STS redirect)"
+  - port: 443
+    proto: tcp
+    comment: "HTTPS (Mailcow UI, MTA-STS, SOGo)"
+  - port: 465
+    proto: tcp
+    comment: "SMTPS submission"
+  - port: 587
+    proto: tcp
+    comment: "SMTP submission (STARTTLS)"
+  - port: 993
+    proto: tcp
+    comment: "IMAPS"
+  - port: 995
+    proto: tcp
+    comment: "POP3S"
 
 # Open the mail ports in ufw at the end of the role. Disable to bring up
 # Mailcow internally without exposing it (useful during DNS/PTR setup).
