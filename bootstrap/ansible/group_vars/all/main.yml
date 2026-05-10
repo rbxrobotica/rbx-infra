@@ -31,6 +31,10 @@ paradedb_robson_testnet_user: "robson_testnet"
 paradedb_truthmetal_db: "truthmetal"
 paradedb_truthmetal_user: "truthmetal"
 
+# llm-gateway (LiteLLM Proxy — experimental internal LLM Gateway candidate)
+paradedb_litellm_db: "litellm"
+paradedb_litellm_user: "litellm"
+
 # PowerDNS database (jaguar — used by pdns-database role)
 pdns_db_name: "pdns"
 pdns_db_user: "pdns"

@@ -1,0 +1,30 @@
+# ArgoCD Application: llm-gateway
+# LiteLLM Proxy — experimental internal LLM Gateway candidate.
+# Deployed WITHOUT public Ingress in this revision.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llm-gateway
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: llm-gateway
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: llm-gateway
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/llm-gateway
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: llm-gateway
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      # ServerSideApply is forbidden per docs/ARGOCD-BEST-PRACTICES.md

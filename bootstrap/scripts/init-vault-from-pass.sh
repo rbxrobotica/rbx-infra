@@ -22,6 +22,7 @@ echo "==> Reading secrets from pass..."
 ROBSON_DB_PASS="$(pass show rbx/robson/db-password)"
 TRUTHMETAL_DB_PASS="$(pass show rbx/truthmetal/db-password)"
 ROBSON_TESTNET_DB_PASS="$(pass show rbx/robson-testnet/db-password)"
+LLM_GATEWAY_DB_PASS="$(pass show rbx/llm-gateway/db-password)"
 PDNS_API_KEY="$(pass show rbx/dns/pdns-api-key)"
 PDNS_DB_PASS="$(pass show rbx/dns/pdns-db-password)"
 POSTMARK_SERVER_TOKEN="$(pass show rbx/postmark/rbx-institutional-server-token)"
@@ -37,6 +38,7 @@ cat > "${VAULT_FILE}" << EOF
 paradedb_robson_password: "${ROBSON_DB_PASS}"
 paradedb_truthmetal_password: "${TRUTHMETAL_DB_PASS}"
 paradedb_robson_testnet_password: "${ROBSON_TESTNET_DB_PASS}"
+paradedb_litellm_password: "${LLM_GATEWAY_DB_PASS}"
 
 # PowerDNS database password (jaguar — pdns db)
 pdns_db_password: "${PDNS_DB_PASS}"

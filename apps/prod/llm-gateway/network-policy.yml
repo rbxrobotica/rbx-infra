@@ -1,0 +1,46 @@
+# Network Policy: llm-gateway
+# Deny all ingress by default except from cluster-internal sources.
+# Explicitly blocks public reachability until an Ingress is added.
+# This is a safety net for the experimental deployment.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: litellm-default-deny
+  namespace: llm-gateway
+  labels:
+    app.kubernetes.io/name: litellm
+    app.kubernetes.io/part-of: llm-gateway
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: litellm
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow cluster-internal traffic only (no external LoadBalancer/Ingress yet)
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 4000
+  egress:
+    # Allow DNS
+    # NOTE: Validate that your cluster DNS pods carry the label k8s-app=kube-dns
+    # and live in the namespace matched below. If your k3s setup uses a different
+    # label (e.g., app.kubernetes.io/name=coredns) or namespace, adjust this rule.
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow outbound to external LLM APIs and Postgres on jaguar
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 5432

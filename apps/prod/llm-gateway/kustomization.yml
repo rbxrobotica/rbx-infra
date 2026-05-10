@@ -1,0 +1,28 @@
+# Kustomization: llm-gateway (LiteLLM Proxy — Experimental)
+#
+# This application is a candidate for internal LLM Gateway.
+# It is NOT production-critical yet. Deploy with caution.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  # Namespace
+  - namespace.yml
+  # RBAC
+  - rbac.yml
+  # Config
+  - litellm-config.yml
+  # Postgres external service (jaguar)
+  - postgres-svc.yml
+  # Deployment
+  - litellm-deploy.yml
+  # Service (ClusterIP)
+  - litellm-svc.yml
+  # Network policy (deny external ingress)
+  - network-policy.yml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: llm-gateway
+      environment: production
+    includeSelectors: false

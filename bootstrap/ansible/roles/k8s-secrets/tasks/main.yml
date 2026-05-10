@@ -286,6 +286,69 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# llm-gateway namespace secrets (LiteLLM Proxy — experimental)
+# ---------------------------------------------------------------------------
+
+- name: Read llm-gateway DB password from pass
+  command: pass show {{ pass_llm_gateway_db_password_key }}
+  changed_when: false
+  register: llm_db_password_result
+  no_log: true
+
+- name: Read llm-gateway master key from pass
+  command: pass show {{ pass_llm_gateway_master_key }}
+  changed_when: false
+  register: llm_master_key_result
+  no_log: true
+
+- name: Read llm-gateway salt key from pass
+  command: pass show {{ pass_llm_gateway_salt_key }}
+  changed_when: false
+  register: llm_salt_key_result
+  no_log: true
+
+- name: Read llm-gateway Groq API key from pass
+  command: pass show {{ pass_llm_gateway_groq_api_key }}
+  changed_when: false
+  register: llm_groq_key_result
+  no_log: true
+
+- name: Read llm-gateway Z.AI API key from pass
+  command: pass show {{ pass_llm_gateway_zai_api_key }}
+  changed_when: false
+  register: llm_zai_key_result
+  no_log: true
+
+- name: Read llm-gateway Moonshot API key from pass
+  command: pass show {{ pass_llm_gateway_moonshot_api_key }}
+  changed_when: false
+  register: llm_moonshot_key_result
+  no_log: true
+
+- name: Ensure llm-gateway namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ llm_gateway_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create litellm-secrets in llm-gateway
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic litellm-secrets \
+      --namespace {{ llm_gateway_namespace }} \
+      --from-literal=database-url="postgresql://{{ paradedb_litellm_user }}:{{ llm_db_password_result.stdout | trim }}@litellm-postgres:5432/{{ paradedb_litellm_db }}" \
+      --from-literal=master-key="{{ llm_master_key_result.stdout | trim }}" \
+      --from-literal=salt-key="{{ llm_salt_key_result.stdout | trim }}" \
+      --from-literal=groq-api-key="{{ llm_groq_key_result.stdout | trim }}" \
+      --from-literal=zai-api-key="{{ llm_zai_key_result.stdout | trim }}" \
+      --from-literal=moonshot-api-key="{{ llm_moonshot_key_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
@@ -296,6 +359,7 @@
       - "  {{ robsond_namespace }}/robsond-secret: database-url + projection-tenant-id"
       - "  {{ robsond_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  monitoring/grafana-admin: Grafana admin credentials"
+      - "  {{ llm_gateway_namespace }}/litellm-secrets: database-url + master-key + salt-key + provider keys (experimental)"
       - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
@@ -306,4 +370,5 @@
       - "  {{ robsond_namespace }}/robsond-secret: database-url + projection-tenant-id"
       - "  {{ robsond_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  monitoring/grafana-admin: Grafana admin credentials"
+      - "  {{ llm_gateway_namespace }}/litellm-secrets: database-url + master-key + salt-key + provider keys (experimental)"
   when: tenant_id_existing.rc == 0
