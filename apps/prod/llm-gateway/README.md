@@ -114,22 +114,22 @@ It blocks external ingress explicitly. If an Ingress is added later, the Network
 
 Before ArgoCD syncs for the first time:
 
-- [ ] Ansible DB provisioning created `litellm` user + database on jaguar (`paradedb` role)
-- [ ] Pass entries created under `rbx/llm-gateway/`:
-  - `db-password` (openssl rand -hex 32 — hex avoids URL-unsafe characters)
-  - `master-key` (openssl rand -hex 32)
-  - `salt-key` (openssl rand -hex 32)
-  - `groq-api-key` (real key or placeholder)
-  - `zai-api-key` (real key or placeholder)
-  - `moonshot-api-key` (real key or placeholder)
-- [ ] `init-vault-from-pass.sh` updated to include `paradedb_litellm_password`
-- [ ] Ansible `k8s-secrets` role creates `litellm-secrets` in namespace `llm-gateway`
-- [ ] Image tag in `litellm-deploy.yml` **pinned to a known SHA or stable tag** (not a floating tag)
+- [x] Ansible DB provisioning created `litellm` user + database on jaguar (`paradedb` role) — P3A concluído (diagnóstico read-only, 0 tabelas = OK)
+- [x] Pass entries created under `rbx/llm-gateway/`:
+  - `db-password` ✅
+  - `master-key` ✅
+  - `salt-key` ✅
+  - `groq-api-key` ✅
+  - `zai-api-key` ✅
+  - `moonshot-api-key` ✅
+- [x] `init-vault-from-pass.sh` updated to include `paradedb_litellm_password` — N/A para P3B (role k8s-secrets lê direto do pass)
+- [x] Ansible `k8s-secrets` role creates `litellm-secrets` in namespace `llm-gateway` — P3B concluído
+- [x] Image tag in `litellm-deploy.yml` **pinned to a known SHA or stable tag** (not a floating tag) — `v1.83.14-stable@sha256:d6401…`
 - [ ] Confirm node architecture before deploy:
   `kubectl get nodes -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.nodeInfo.architecture}{"\n"}{end}'`
-- [ ] `gitops/projects/rbx-applications.yaml` includes `llm-gateway` destination
-- [ ] `core/namespaces/llm-gateway.yml` created
-- [ ] ArgoCD Application `llm-gateway.yml` created in `gitops/app-of-apps/`
+- [x] `gitops/projects/rbx-applications.yaml` includes `llm-gateway` destination — P3C concluído (drift corrigido via kubectl apply)
+- [x] `core/namespaces/llm-gateway.yml` created — gerenciado via kustomization do app
+- [x] ArgoCD Application `llm-gateway.yml` created in `gitops/app-of-apps/` — já existia, aguardando sync (P3D)
 
 The current LiteLLM image digest was validated for `amd64`. If any cluster node reports `arm64`, review whether this deployment should use the multi-arch digest instead of the amd64 digest before syncing ArgoCD.
 
