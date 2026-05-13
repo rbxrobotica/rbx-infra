@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: ghcr.io/ldamasio/robson-frontend-v2:sha-8fcc06a
+        image: ghcr.io/ldamasio/robson-frontend-v2:sha-1b8b8ed
         imagePullPolicy: Always
         ports:
         - containerPort: 8080
