@@ -12,7 +12,7 @@ metadata:
     app.kubernetes.io/component: daemon
     app.kubernetes.io/part-of: robson
 spec:
-  replicas: 0
+  replicas: 1
   strategy:
     type: Recreate
   selector:
