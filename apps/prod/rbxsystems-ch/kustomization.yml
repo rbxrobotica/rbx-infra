@@ -11,6 +11,7 @@ resources:
   - rbac-external-secrets.yml
   - secretstore-k8s.yml
   - externalsecret-s3.yml
+  - externalsecret-contact.yml
 
 commonLabels:
   app.kubernetes.io/part-of: rbxsystems-ch
