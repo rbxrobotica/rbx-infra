@@ -60,6 +60,18 @@ spec:
                 secretKeyRef:
                   name: contabo-s3-credentials
                   key: AWS_SECRET_ACCESS_KEY
+            - name: POSTMARK_SERVER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: POSTMARK_SERVER_TOKEN
+            - name: D360_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: D360_API_KEY
+            - name: NEXT_PUBLIC_WHATSAPP_NUMBER
+              value: "5511913734954"
           readinessProbe:
             httpGet:
               path: /
