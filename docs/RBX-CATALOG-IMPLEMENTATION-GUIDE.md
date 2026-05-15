@@ -1,5 +1,11 @@
 # RBX Catalog Implementation Guide
 
+**Canonical Eden + Catalog guide:** [`EDEN-CATALOG-IMPLEMENTATION-GUIDE.md`](EDEN-CATALOG-IMPLEMENTATION-GUIDE.md)
+
+This document remains the catalog-specific infrastructure guide. For the
+end-to-end product creation flow, Eden integration, ownership boundaries, and
+cross-repository CI/CD contract, use the canonical Eden + Catalog guide.
+
 **Last updated:** 2026-04-08
 **Scope:** `rbx-catalog-registry`, `rbx-catalog-api`, `rbx-catalog-console`, and RBX GitOps integration in `rbx-infra`
 
@@ -8,7 +14,9 @@
 - `rbx-catalog-api/docs/IMPLEMENTATION-GUIDE.md` — API architecture, endpoints, Docker build, CI/CD → rbx-infra
 - `rbx-catalog-console/docs/IMPLEMENTATION-GUIDE.md` — console architecture, build-time env, CI/CD → rbx-infra
 
-This document covers the full cross-system picture. Read it when you need to understand how the pieces fit together.
+This document covers the catalog deployment picture. Read
+`EDEN-CATALOG-IMPLEMENTATION-GUIDE.md` when you need the complete product
+creation and catalog visibility lifecycle.
 
 ---
 
@@ -26,11 +34,18 @@ The architectural philosophy is strict and must be preserved:
 
 The registry is canonical. The API is read-only over the registry. The console is a browser, not an editor.
 
-The current initial catalog entities are:
+The current catalog entities include:
 
 - `rbx-blog-publisher`
 - `robson-conversation`
 - `rbx-agent-loop`
+- `robson`
+- `strategos`
+- `thalamus`
+- `truthmetal`
+- `argos-radar`
+- `eden`
+- `rbx-market-briefing`
 
 The current production shape is:
 
