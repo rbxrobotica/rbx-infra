@@ -62,7 +62,7 @@ End-to-end flow:
 8. Eden commits and pushes `rbx-infra` to `main`.
 9. Eden commits and pushes `rbx-catalog-registry` to its current branch.
    For production visibility, run Eden from the registry branch that triggers
-   CI/CD. The current workflow watches `main`.
+   CI/CD. The current workflow watches `master`.
 10. Eden applies the Argo CD Application with `kubectl apply`.
 11. Argo CD syncs the product manifests from `rbx-infra`.
 12. The registry CI dispatches `registry-updated` to `rbx-catalog-api`.

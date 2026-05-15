@@ -278,14 +278,14 @@ File: `rbx-catalog-api/.github/workflows/deploy.yml`
 
 Triggers:
 
-- push to `main`
+- push to `master`
 - `repository_dispatch` event `registry-updated`
 - manual dispatch
 
 Flow:
 
 1. Check out API repo
-2. Resolve registry ref from event payload or default to `main`
+2. Resolve registry ref from event payload or default to `master`
 3. Check out `rbx-catalog-registry` into `registry/`
 4. Run API tests
 5. Build and push `ghcr.io/rbxrobotica/rbx-catalog-api`
@@ -300,7 +300,7 @@ File: `rbx-catalog-console/.github/workflows/deploy.yml`
 
 Triggers:
 
-- push to `main`
+- push to `master`
 - manual dispatch
 
 Flow:
@@ -319,7 +319,7 @@ File: `rbx-catalog-registry/.github/workflows/deploy.yml`
 
 Triggers:
 
-- push to `main` affecting `catalog/**` or `schemas/**`
+- push to `master` affecting `catalog/**` or `schemas/**`
 - manual dispatch
 
 Flow:
@@ -434,7 +434,7 @@ The deployment YAML uses those image names, and Kustomize rewrites them to the c
 ### A. API or console code change
 
 1. Make code changes in the relevant repo
-2. Push to `main`
+2. Push to `master`
 3. GitHub Actions builds and pushes a new GHCR image
 4. The workflow clones `rbx-infra`
 5. The workflow updates `apps/prod/rbx-catalog/kustomization.yml`
@@ -446,7 +446,7 @@ The deployment YAML uses those image names, and Kustomize rewrites them to the c
 ### B. Registry content change
 
 1. Update YAML or schema in `rbx-catalog-registry`
-2. Push to `main`
+2. Push to `master`
 3. Registry workflow dispatches `registry-updated` to `rbx-catalog-api`
 4. API workflow checks out the exact registry commit into `registry/`
 5. API image is rebuilt with that registry snapshot
@@ -584,7 +584,7 @@ This is acceptable only because the API is read-only and the catalog is not yet 
 2. Follow naming rules from `docs/naming-conventions.md`
 3. Use taxonomy values from `docs/taxonomy.md`
 4. Validate locally by running the API and fetching `/catalog/entities`
-5. Push to `rbx-catalog-registry/main`
+5. Push to `rbx-catalog-registry/master`
 6. The registry workflow will trigger the API rebuild and redeploy
 
 ### Evolve schema safely
