@@ -116,7 +116,7 @@ Update `apps/prod/{app}/kustomization.yml` with new tag.
 
 - [robson](https://github.com/ldamasio/robson) - Trading bot
 - [strategos](https://github.com/ldamasio/strategos) - Strategy platform
-- [thalamus](https://github.com/ldamasio/thalamus) - Analytics
+- [thalamus](https://github.com/ldamasio/thalamus) - Semantic control layer for AI traffic (control plane: policy, audit, validation, evaluation; not a gateway). See thalamus-core ADR-0001.
 
 ## Domain Portfolio
 

@@ -35,7 +35,7 @@ products:
     repo: https://github.com/ldamasio/thalamus
     owner: ldamasio
     created: 2026-03-24
-    description: ""
+    description: "Semantic control layer for AI traffic. Applies policy, context authorization, validation, audit, evaluation, and routing decisions before and after calls to LLMs, tools, MCP servers, and A2A agents. Control plane above a replaceable data plane (Agentgateway/LiteLLM). Not a gateway or proxy. See thalamus-core ADR-0001."
   - name: truthmetal
     type: api
     phase: seed

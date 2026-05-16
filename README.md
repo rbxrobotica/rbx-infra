@@ -143,7 +143,7 @@ argocd app list
 
 - [robson](https://github.com/ldamasio/robson) - Trading bot application
 - [strategos](https://github.com/ldamasio/strategos) - Strategy platform
-- [thalamus](https://github.com/ldamasio/thalamus) - Analytics service
+- [thalamus](https://github.com/ldamasio/thalamus) - Semantic control layer for AI traffic (policy, audit, validation, evaluation; control plane above the replaceable data plane). See thalamus-core ADR-0001.
 
 ## License
 

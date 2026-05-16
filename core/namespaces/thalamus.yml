@@ -1,3 +1,10 @@
+# Namespace: thalamus
+# Purpose: Thalamus, the semantic control layer for AI traffic (control plane).
+#          Applies policy, context authorization, validation, audit, evaluation,
+#          and routing decisions before/after calls to LLMs, tools, MCP, A2A.
+#          NOT a gateway/proxy: transport is the replaceable data plane
+#          (Agentgateway / the experimental LiteLLM in the llm-gateway ns).
+#          Canonical definition: thalamus-core ADR-0001 (2026-05-16).
 apiVersion: v1
 kind: Namespace
 metadata:
