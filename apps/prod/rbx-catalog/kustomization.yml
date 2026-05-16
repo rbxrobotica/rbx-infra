@@ -22,4 +22,4 @@ images:
   - name: ghcr.io/rbxrobotica/rbx-catalog-api
     newTag: sha-0000000
   - name: ghcr.io/rbxrobotica/rbx-catalog-console
-    newTag: sha-0000000
+    newTag: sha-e99c309
