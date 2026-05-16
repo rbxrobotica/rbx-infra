@@ -19,6 +19,8 @@ spec:
         app.kubernetes.io/name: rbx-catalog-api
         app.kubernetes.io/component: backend
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
