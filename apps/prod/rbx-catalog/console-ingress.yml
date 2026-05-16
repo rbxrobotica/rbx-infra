@@ -17,9 +17,20 @@ spec:
   tls:
     - hosts:
         - catalog.rbx.ia.br
+        - catalog.rbxsystems.ch
       secretName: rbx-catalog-console-tls
   rules:
     - host: catalog.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-catalog-console
+                port:
+                  number: 80
+    - host: catalog.rbxsystems.ch
       http:
         paths:
           - path: /
