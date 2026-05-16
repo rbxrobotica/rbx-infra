@@ -17,9 +17,20 @@ spec:
   tls:
     - hosts:
         - api.catalog.rbx.ia.br
+        - api.catalog.rbxsystems.ch
       secretName: rbx-catalog-api-tls
   rules:
     - host: api.catalog.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-catalog-api
+                port:
+                  number: 8080
+    - host: api.catalog.rbxsystems.ch
       http:
         paths:
           - path: /
