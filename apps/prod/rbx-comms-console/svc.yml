@@ -1,0 +1,17 @@
+# Service: rbx-comms-console
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-comms-console
+  namespace: rbx-comms
+  labels:
+    app.kubernetes.io/name: rbx-comms-console
+    app.kubernetes.io/part-of: rbx-comms
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rbx-comms-console
+  ports:
+    - port: 80
+      targetPort: 3000
+      name: http
