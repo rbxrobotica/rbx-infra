@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/rbxrobotica/rbx-comms:sha-179eb45
+          image: ghcr.io/rbxrobotica/rbx-comms:sha-5ffa1c4
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
