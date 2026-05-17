@@ -40,7 +40,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: console
-          image: ghcr.io/rbxrobotica/rbx-comms-console:latest
+          image: ghcr.io/rbxrobotica/rbx-comms-console:sha-ec537d1
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
