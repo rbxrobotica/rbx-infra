@@ -45,6 +45,11 @@ spec:
                   key: D360_API_KEY
             - name: WHATSAPP_NUMBER
               value: "5511913734954"
+            - name: ALTCHA_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: ALTCHA_SECRET
             - name: METRICS_ENABLED
               value: "true"
           readinessProbe:
