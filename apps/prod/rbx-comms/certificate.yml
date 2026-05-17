@@ -5,7 +5,6 @@ metadata:
   namespace: rbx-comms
 spec:
   dnsNames:
-    - comms.rbx.ia.br
     - comms.rbxsystems.ch
   issuerRef:
     group: cert-manager.io

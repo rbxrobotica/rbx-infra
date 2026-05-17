@@ -8,8 +8,8 @@ spec:
     - web
     - websecure
   routes:
-    # HTTP → HTTPS redirect for both hosts
-    - match: Host(`comms.rbx.ia.br`) || Host(`comms.rbxsystems.ch`)
+    # HTTP → HTTPS redirect
+    - match: Host(`comms.rbxsystems.ch`)
       kind: Rule
       priority: 1
       middlewares:
@@ -19,7 +19,7 @@ spec:
         - name: rbx-comms
           port: 80
     # HTTPS API traffic
-    - match: (Host(`comms.rbx.ia.br`) || Host(`comms.rbxsystems.ch`)) && PathPrefix(`/api`)
+    - match: Host(`comms.rbxsystems.ch`) && PathPrefix(`/api`)
       kind: Rule
       priority: 10
       services:
