@@ -6,6 +6,7 @@ metadata:
 spec:
   dnsNames:
     - comms.rbxsystems.ch
+    - comms.rbx.ia.br
   issuerRef:
     group: cert-manager.io
     kind: ClusterIssuer
