@@ -9,6 +9,7 @@ resources:
   - secretstore.yml
   - externalsecret.yml
   - externalsecret-contact.yml
+  - externalsecret-s3.yml
   - middleware.yml
   - certificate.yml
   - ingressroute.yml
