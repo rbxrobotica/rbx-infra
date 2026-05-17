@@ -6,7 +6,9 @@ namespace: rbx-comms
 resources:
   - namespace.yml
   - rbac-external-secrets.yml
+  - secretstore.yml
   - externalsecret.yml
+  - externalsecret-contact.yml
   - postgres-svc.yml
   - deploy.yml
   - svc.yml
