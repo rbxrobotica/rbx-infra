@@ -1,0 +1,17 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rbx-comms-tls
+  namespace: rbx-comms
+spec:
+  dnsNames:
+    - comms.rbx.ia.br
+    - comms.rbxsystems.ch
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: rbx-comms-tls
+  usages:
+    - digital signature
+    - key encipherment

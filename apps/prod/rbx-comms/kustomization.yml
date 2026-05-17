@@ -9,6 +9,9 @@ resources:
   - secretstore.yml
   - externalsecret.yml
   - externalsecret-contact.yml
+  - middleware.yml
+  - certificate.yml
+  - ingressroute.yml
   - postgres-svc.yml
   - deploy.yml
   - svc.yml

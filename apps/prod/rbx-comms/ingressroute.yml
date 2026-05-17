@@ -1,0 +1,29 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rbx-comms
+  namespace: rbx-comms
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    # HTTP → HTTPS redirect for both hosts
+    - match: Host(`comms.rbx.ia.br`) || Host(`comms.rbxsystems.ch`)
+      kind: Rule
+      priority: 1
+      middlewares:
+        - name: redirect-https
+          namespace: rbx-comms
+      services:
+        - name: rbx-comms
+          port: 80
+    # HTTPS API traffic
+    - match: (Host(`comms.rbx.ia.br`) || Host(`comms.rbxsystems.ch`)) && PathPrefix(`/api`)
+      kind: Rule
+      priority: 10
+      services:
+        - name: rbx-comms
+          port: 80
+  tls:
+    secretName: rbx-comms-tls
