@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: eden-portal-ingress
+  namespace: eden
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: eden-eden-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - eden.rbx.ia.br
+        - eden.rbxsystems.ch
+      secretName: eden-portal-tls
+  rules:
+    - host: eden.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: eden-portal
+                port:
+                  number: 80
+    - host: eden.rbxsystems.ch
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: eden-portal
+                port:
+                  number: 80

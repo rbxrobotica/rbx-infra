@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: eden-api
+  namespace: eden
+  labels:
+    app.kubernetes.io/name: eden-api
+    app.kubernetes.io/part-of: eden
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: eden-api
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP

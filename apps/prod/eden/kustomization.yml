@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yml
+  - middleware-https.yml
+  - externalsecret-s3.yml
+  - api-deploy.yml
+  - api-svc.yml
+  - api-ingress.yml
+  - portal-deploy.yml
+  - portal-svc.yml
+  - portal-ingress.yml
+
+images:
+  - name: ghcr.io/rbxrobotica/eden-api
+    newTag: latest
+  - name: ghcr.io/rbxrobotica/eden-portal
+    newTag: latest

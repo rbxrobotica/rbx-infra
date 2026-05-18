@@ -38,6 +38,8 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: llm-gateway
       server: https://kubernetes.default.svc
+    - namespace: eden
+      server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace

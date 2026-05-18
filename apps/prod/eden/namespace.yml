@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: eden
+  labels:
+    app.kubernetes.io/part-of: eden
+    environment: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
