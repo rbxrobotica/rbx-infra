@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - namespace.yml
   - middleware-https.yml
+  - secretstore.yml
   - externalsecret-s3.yml
   - api-deploy.yml
   - api-svc.yml
