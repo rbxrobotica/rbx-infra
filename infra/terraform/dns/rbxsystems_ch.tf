@@ -186,3 +186,21 @@ resource "powerdns_record" "strategos_rbxsystems_ch" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+# Eden IDP Portal
+resource "powerdns_record" "eden_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "eden.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
+# Eden IDP API
+resource "powerdns_record" "api_eden_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "api.eden.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
