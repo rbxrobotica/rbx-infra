@@ -15,6 +15,6 @@ resources:
 
 images:
   - name: ghcr.io/rbxrobotica/eden-api
-    newTag: latest
+    newTag: sha-b450fbb
   - name: ghcr.io/rbxrobotica/eden-portal
     newTag: latest
