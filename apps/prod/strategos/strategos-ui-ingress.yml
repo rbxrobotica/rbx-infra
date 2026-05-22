@@ -1,5 +1,5 @@
 # Strategos UI Ingress
-# Dual-host: strategos.rbx.ia.br (pt-BR) + strategos.rbxsystems.ch (en)
+# Hosts: strategos.rbx.ia.br (pt-BR) + strategos.rbxsystems.ch (en) + strategos.gr (product domain)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -21,6 +21,9 @@ spec:
     - hosts:
         - strategos.rbxsystems.ch
       secretName: strategos-ui-rbxsystems-ch-tls
+    - hosts:
+        - strategos.gr
+      secretName: strategos-ui-strategos-gr-tls
   rules:
     - host: strategos.rbx.ia.br
       http:
@@ -33,6 +36,16 @@ spec:
                 port:
                   number: 80
     - host: strategos.rbxsystems.ch
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: strategos-ui
+                port:
+                  number: 80
+    - host: strategos.gr
       http:
         paths:
           - path: /
