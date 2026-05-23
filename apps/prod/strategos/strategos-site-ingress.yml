@@ -1,12 +1,13 @@
-# Strategos UI Ingress
-# Hosts: strategos.rbx.ia.br (pt-BR) + strategos.rbxsystems.ch (en)
+# Strategos Site Ingress (product landing page)
+# Hosts: strategos.gr + www.strategos.gr
+# www: aguardando tofu apply para CNAME entrar em vigor.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: strategos-ui
+  name: strategos-site
   namespace: strategos
   labels:
-    app.kubernetes.io/name: strategos-ui
+    app.kubernetes.io/name: strategos-site
     app.kubernetes.io/component: frontend
     app.kubernetes.io/part-of: strategos
   annotations:
@@ -16,29 +17,31 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - strategos.rbx.ia.br
-      secretName: strategos-ui-rbx-ia-br-tls
+        - strategos.gr
+      secretName: strategos-site-strategos-gr-tls
+    # www: aguardando tofu apply para CNAME entrar em vigor.
     - hosts:
-        - strategos.rbxsystems.ch
-      secretName: strategos-ui-rbxsystems-ch-tls
+        - www.strategos.gr
+      secretName: strategos-site-www-strategos-gr-tls
   rules:
-    - host: strategos.rbx.ia.br
+    - host: strategos.gr
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: strategos-ui
+                name: strategos-site
                 port:
                   number: 80
-    - host: strategos.rbxsystems.ch
+    # www: aguardando tofu apply para CNAME entrar em vigor.
+    - host: www.strategos.gr
       http:
         paths:
           - path: /
             pathType: Prefix
             backend:
               service:
-                name: strategos-ui
+                name: strategos-site
                 port:
                   number: 80
