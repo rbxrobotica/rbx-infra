@@ -1,0 +1,31 @@
+# ArgoCD Application: RBX Console (operational console)
+# Hosts: console.rbx.ia.br / console.rbxsystems.ch — reserved per ADR-0004
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-console
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-console
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-console
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-console
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-console
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
