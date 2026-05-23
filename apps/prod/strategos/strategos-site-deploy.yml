@@ -23,8 +23,8 @@ spec:
         - name: ghcr-ldamasio
       containers:
         - name: strategos-site
-          image: ghcr.io/ldamasio/strategos-site:latest
-          imagePullPolicy: Always
+          image: ghcr.io/ldamasio/strategos-site:sha-68e4bce
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               name: http
