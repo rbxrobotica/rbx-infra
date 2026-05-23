@@ -138,6 +138,7 @@ Secrets created per namespace:
 | `robson` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `robson-testnet` | `robsond-testnet-secret` | `database-url`, `projection-tenant-id`, `binance-api-key`, `binance-api-secret`, `api-token` | `rbx/robson-testnet/*` |
 | `robson-testnet` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
+| `rbx-console` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `monitoring` | `grafana-admin` | `admin-user`, `admin-password` | `rbx/monitoring/grafana-admin-password` |
 
 Run idempotently — safe to re-run after a cluster wipe.

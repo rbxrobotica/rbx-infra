@@ -31,6 +31,10 @@ pass_robson_testnet_binance_api_key: "rbx/robson-testnet/binance-api-key"
 pass_robson_testnet_binance_api_secret: "rbx/robson-testnet/binance-api-secret"
 pass_robson_testnet_api_token_key: "rbx/robson-testnet/api-token"
 
+# rbx-console (namespace: rbx-console — operational console UI)
+# Only ghcr-pull-secret for now; no per-app runtime secrets in Phase 2.
+rbx_console_namespace: "rbx-console"
+
 # llm-gateway (namespace: llm-gateway — LiteLLM Proxy, experimental)
 llm_gateway_namespace: "llm-gateway"
 pass_llm_gateway_db_password_key: "rbx/llm-gateway/db-password"
