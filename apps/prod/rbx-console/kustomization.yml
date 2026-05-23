@@ -4,6 +4,7 @@ kind: Kustomization
 namespace: rbx-console
 resources:
   - namespace.yml
+  - middleware.yml
   - deploy.yml
   - svc.yml
   - certificate.yml
