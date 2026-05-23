@@ -8,6 +8,9 @@ resources:
   - strategos-ui-deploy.yml
   - strategos-ui-svc.yml
   - strategos-ui-ingress.yml
+  - strategos-site-deploy.yml
+  - strategos-site-svc.yml
+  - strategos-site-ingress.yml
 
 labels:
   - pairs:
