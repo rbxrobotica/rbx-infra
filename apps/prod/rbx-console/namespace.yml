@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-console
+  labels:
+    app.kubernetes.io/part-of: rbx-console
