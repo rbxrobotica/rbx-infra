@@ -1,0 +1,31 @@
+# ArgoCD Application: rbx-comms-console (communication operations UI)
+# Namespace: rbx-comms (shared with rbx-comms by design)
+# NOTE: This Application was previously absent from app-of-apps — gap fixed 2026-05-23.
+# After PR #10 (feat/phase1-comms-domain-relocation) is merged, ArgoCD will
+# auto-sync the host change from console.* to comms.*.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-comms-console
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-comms-console
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-comms
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-comms-console
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-comms
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

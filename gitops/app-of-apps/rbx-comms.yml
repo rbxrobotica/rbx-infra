@@ -1,0 +1,30 @@
+# ArgoCD Application: rbx-comms (communication backend API)
+# Namespace: rbx-comms
+# NOTE: This Application was previously absent from app-of-apps — gap fixed 2026-05-23.
+# rbx-comms and rbx-comms-console share the rbx-comms namespace by design.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-comms
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-comms
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-comms
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-comms
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-comms
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
