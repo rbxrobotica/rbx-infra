@@ -1,18 +1,19 @@
-# Certificate: console.rbxsystems.ch + console.rbx.ia.br
+# Certificate: comms.rbxsystems.ch + comms.rbx.ia.br
+# rbx.ia.br DNS: ação manual necessária — zona não está no módulo OpenTofu
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: rbx-comms-console-tls
+  name: rbx-comms-console-comms-tls
   namespace: rbx-comms
 spec:
   dnsNames:
-    - console.rbxsystems.ch
-    - console.rbx.ia.br
+    - comms.rbxsystems.ch
+    - comms.rbx.ia.br
   issuerRef:
     group: cert-manager.io
     kind: ClusterIssuer
     name: letsencrypt-prod
-  secretName: rbx-comms-console-tls
+  secretName: rbx-comms-console-comms-tls
   usages:
     - digital signature
     - key encipherment

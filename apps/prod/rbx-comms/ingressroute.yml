@@ -1,3 +1,5 @@
+# IngressRoute: rbx-comms API (api.comms.*)
+# rbx.ia.br DNS: ação manual necessária — zona não está no módulo OpenTofu
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -9,7 +11,7 @@ spec:
     - websecure
   routes:
     # HTTP → HTTPS redirect for both hosts
-    - match: Host(`comms.rbxsystems.ch`) || Host(`comms.rbx.ia.br`)
+    - match: Host(`api.comms.rbxsystems.ch`) || Host(`api.comms.rbx.ia.br`)
       kind: Rule
       priority: 1
       middlewares:
@@ -19,11 +21,11 @@ spec:
         - name: rbx-comms
           port: 80
     # HTTPS API traffic
-    - match: (Host(`comms.rbxsystems.ch`) || Host(`comms.rbx.ia.br`)) && PathPrefix(`/api`)
+    - match: Host(`api.comms.rbxsystems.ch`) || Host(`api.comms.rbx.ia.br`)
       kind: Rule
       priority: 10
       services:
         - name: rbx-comms
           port: 80
   tls:
-    secretName: rbx-comms-tls
+    secretName: rbx-comms-api-tls
