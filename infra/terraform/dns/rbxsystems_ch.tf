@@ -204,3 +204,23 @@ resource "powerdns_record" "api_eden_rbxsystems_ch" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+# --- Comms (Phase 1 domain relocation: ADR-0004) ---
+
+# rbx-comms-console UI
+resource "powerdns_record" "comms_rbxsystems_ch_a" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "comms.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
+# rbx-comms API
+resource "powerdns_record" "api_comms_rbxsystems_ch_a" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "api.comms.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
