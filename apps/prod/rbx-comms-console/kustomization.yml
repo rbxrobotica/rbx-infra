@@ -16,4 +16,4 @@ commonLabels:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-comms-console
-    newTag: sha-a1b25cb
+    newTag: sha-9dd99aa
