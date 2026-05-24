@@ -1,0 +1,17 @@
+# Kustomization for rbx-console (operational console)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rbx-console
+resources:
+  - namespace.yml
+  - middleware.yml
+  - deploy.yml
+  - svc.yml
+  - certificate.yml
+  - ingressroute.yml
+commonLabels:
+  app.kubernetes.io/part-of: rbx-console
+  environment: production
+images:
+  - name: ghcr.io/rbxrobotica/rbx-console
+    newTag: latest

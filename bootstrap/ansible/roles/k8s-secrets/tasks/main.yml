@@ -257,6 +257,32 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# rbx-console namespace secrets (operational console UI)
+# Only needs ghcr-pull-secret — the app itself has no runtime secrets in
+# Phase 2; future phases that consume APIs will add an app secret here.
+# ---------------------------------------------------------------------------
+
+- name: Ensure rbx-console namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ rbx_console_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in rbx-console
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace {{ rbx_console_namespace }} \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="{{ ghcr_token_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # monitoring namespace secrets (Grafana)
 # ---------------------------------------------------------------------------
 
