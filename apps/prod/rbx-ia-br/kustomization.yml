@@ -8,7 +8,6 @@ resources:
   - deploy.yml
   - svc.yml
   - ingress.yml
-  - secretstore-k8s.yml
   - rbac-external-secrets-reader.yml
 
 commonLabels:
