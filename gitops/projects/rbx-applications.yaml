@@ -22,6 +22,8 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: rbx-comms
       server: https://kubernetes.default.svc
+    - namespace: rbx-console
+      server: https://kubernetes.default.svc
     - namespace: rbxsystems-ch
       server: https://kubernetes.default.svc
     - namespace: staging
