@@ -19,9 +19,11 @@ spec:
         app.kubernetes.io/name: rbx-commerce
         app.kubernetes.io/component: api
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: api
-          image: ghcr.io/rbxrobotica/rbx-commerce:sha-d6dd068
+          image: ghcr.io/rbxrobotica/rbx-commerce:sha-70de4deaed30d79c2100f9418099d077ee845814
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
