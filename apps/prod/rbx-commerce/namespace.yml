@@ -1,0 +1,8 @@
+# Namespace: rbx-commerce
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-commerce
+  labels:
+    app.kubernetes.io/part-of: rbx-commerce
+    environment: production

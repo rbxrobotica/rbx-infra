@@ -224,3 +224,13 @@ resource "powerdns_record" "api_comms_rbxsystems_ch_a" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+# --- Commerce ---
+
+resource "powerdns_record" "commerce_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "commerce.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}

@@ -1,0 +1,15 @@
+# Service: rbx-commerce
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-commerce
+  namespace: rbx-commerce
+  labels:
+    app.kubernetes.io/name: rbx-commerce
+spec:
+  selector:
+    app.kubernetes.io/name: rbx-commerce
+  ports:
+    - port: 80
+      targetPort: 8080
+      name: http
