@@ -6,7 +6,7 @@
 kubeconfig_path: "~/.kube/config-rbx"
 
 # GHCR username for image pulls (rbxrobotica org packages)
-ghcr_username: "ldamasio"
+ghcr_username: "rbxrobotica"
 
 # Namespace for robsond secrets
 robsond_namespace: "robson"
