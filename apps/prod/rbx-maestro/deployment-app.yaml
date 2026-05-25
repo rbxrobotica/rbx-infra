@@ -19,7 +19,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: maestro
-          image: ghcr.io/rbxrobotica/rbx-maestro:sha-df4a4d18045536721505dca45adfd40f7de1f71e
+          image: ghcr.io/rbxrobotica/rbx-maestro:df4a4d18045536721505dca45adfd40f7de1f71e
           ports:
             - containerPort: 8080
           env:
