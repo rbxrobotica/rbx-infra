@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: ghcr.io/rbxrobotica/rbx-commerce:sha-placeholder
+          image: ghcr.io/rbxrobotica/rbx-commerce:sha-d6dd068
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
