@@ -1,0 +1,47 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rbx-maestro
+  namespace: rbx-maestro
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - agents.rbxsystems.ch
+        - maestro.rbxsystems.ch
+        - agents.rbx.ia.br
+      secretName: rbx-maestro-tls
+  rules:
+    - host: agents.rbxsystems.ch
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-maestro
+                port:
+                  number: 80
+    - host: maestro.rbxsystems.ch
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-maestro
+                port:
+                  number: 80
+    - host: agents.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-maestro
+                port:
+                  number: 80

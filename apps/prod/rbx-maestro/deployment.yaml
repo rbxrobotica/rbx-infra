@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-maestro
+  labels:
+    app.kubernetes.io/name: rbx-maestro
+    app.kubernetes.io/part-of: rbx-platform

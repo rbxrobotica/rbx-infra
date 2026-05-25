@@ -1,0 +1,38 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rbx-eden-system-creator
+  namespace: rbx-eden-system-creator
+  labels:
+    app.kubernetes.io/name: rbx-eden-system-creator
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: rbx-eden-system-creator-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - creator.rbx.ia.br
+        - creator.rbxsystems.ch
+      secretName: rbx-eden-system-creator-tls
+  rules:
+    - host: creator.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-eden-system-creator
+                port:
+                  number: 80
+    - host: creator.rbxsystems.ch
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-eden-system-creator
+                port:
+                  number: 80

@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-eden-system-creator
+  namespace: rbx-eden-system-creator
+  labels:
+    app.kubernetes.io/name: rbx-eden-system-creator
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: rbx-eden-system-creator
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-eden-system-creator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-eden-system-creator
+        app.kubernetes.io/component: backend
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+      - name: api
+        image: ghcr.io/rbxrobotica/rbx-eden-system-creator:sha-138a266bd0ae4732e9dd8cfc0c9e7ef765727db1
+        ports:
+        - containerPort: 3001
+          name: http
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "64Mi"
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: false
+          capabilities:
+            drop:
+              - ALL
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3001
+          initialDelaySeconds: 2
+          periodSeconds: 5
+        env:
+        - name: NODE_ENV
+          value: production
+        - name: PORT
+          value: "3001"
