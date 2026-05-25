@@ -1,0 +1,38 @@
+# Ingress: commerce.rbx.ia.br + commerce.rbxsystems.ch
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rbx-commerce
+  namespace: rbx-commerce
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - commerce.rbx.ia.br
+        - commerce.rbxsystems.ch
+      secretName: rbx-commerce-tls
+  rules:
+    - host: commerce.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce
+                port:
+                  number: 80
+    - host: commerce.rbxsystems.ch
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce
+                port:
+                  number: 80
