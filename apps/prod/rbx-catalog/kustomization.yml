@@ -20,6 +20,6 @@ labels:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-catalog-api
-    newTag: sha-b48e846
+    newTag: sha-8521d93
   - name: ghcr.io/rbxrobotica/rbx-catalog-console
     newTag: sha-259b446
