@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-data
+  namespace: rbx-data
+  labels:
+    app.kubernetes.io/name: rbx-data
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: rbx-data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-data
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-data
+        app.kubernetes.io/component: backend
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: NotIn
+                    values:
+                      - analytics
+      containers:
+        - name: api
+          image: ghcr.io/rbxrobotica/rbx-data:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: RBX_DATA_BIND
+              value: "0.0.0.0:8080"
+            - name: RBX_DATA_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-data-token
+                  key: token
+            - name: CONTABO_S3_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_ENDPOINT
+            - name: CONTABO_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: CONTABO_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: RBX_DATA_LAKE_BUCKET
+              value: "rbx-data-lake"
+            - name: RBX_DATA_WAREHOUSE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-data-warehouse
+                  key: dsn
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: 500m

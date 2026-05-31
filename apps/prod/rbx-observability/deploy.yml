@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-observability
+  namespace: rbx-observability
+  labels:
+    app.kubernetes.io/name: rbx-observability
+    app.kubernetes.io/component: backend
+    app.kubernetes.io/part-of: rbx-observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-observability
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-observability
+        app.kubernetes.io/component: backend
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: NotIn
+                    values:
+                      - analytics
+      containers:
+        - name: api
+          image: ghcr.io/rbxrobotica/rbx-observability:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: RBX_OBSERVABILITY_BIND
+              value: "0.0.0.0:8080"
+            - name: RBX_OBSERVABILITY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-observability-token
+                  key: token
+            - name: LANGFUSE_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-observability-langfuse
+                  key: LANGFUSE_HOST
+            - name: LANGFUSE_PUBLIC_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-observability-langfuse
+                  key: LANGFUSE_PUBLIC_KEY
+            - name: LANGFUSE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-observability-langfuse
+                  key: LANGFUSE_SECRET_KEY
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              memory: 128Mi
+              cpu: 100m
+            limits:
+              memory: 256Mi
+              cpu: 500m

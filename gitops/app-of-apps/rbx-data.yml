@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-data
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-data
+    app.kubernetes.io/part-of: rbx-data
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-data
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-data
+  # Manual sync until the container image is built+pushed and secrets exist in rbx-ia-br.
