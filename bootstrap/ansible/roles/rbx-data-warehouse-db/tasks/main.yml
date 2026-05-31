@@ -1,0 +1,46 @@
+---
+# Creates the rbx-data warehouse database and user on jaguar (Postgres).
+# Runs ONLY on db_server group. RBX keeps a single Postgres server;
+# the warehouse is a new DB inside it.
+
+- name: Install python3-psycopg2 (required for Ansible postgresql modules)
+  apt:
+    name: python3-psycopg2
+    state: present
+
+- name: Create rbx-data warehouse database
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: "{{ rbx_data_warehouse_db_name }}"
+    encoding: UTF8
+    state: present
+
+- name: Create rbx-data warehouse user
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ rbx_data_warehouse_db_user }}"
+    password: "{{ rbx_data_warehouse_db_password }}"
+    state: present
+
+- name: Grant rbx-data warehouse user privileges on warehouse database only
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ rbx_data_warehouse_db_name }}"
+    role: "{{ rbx_data_warehouse_db_user }}"
+    type: database
+    privs: ALL
+    state: present
+
+- name: Grant rbx-data warehouse user CREATE on public schema (PostgreSQL 15+ requires explicit grant)
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ rbx_data_warehouse_db_name }}"
+    role: "{{ rbx_data_warehouse_db_user }}"
+    type: schema
+    objs: public
+    privs: CREATE
+    state: present

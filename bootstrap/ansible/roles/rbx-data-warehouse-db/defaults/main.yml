@@ -1,0 +1,4 @@
+---
+rbx_data_warehouse_db_name: "rbx_data_warehouse"
+rbx_data_warehouse_db_user: "rbx_data"
+# rbx_data_warehouse_db_password: must be defined in vault.yml

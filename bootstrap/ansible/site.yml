@@ -29,26 +29,32 @@
   roles:
     - pdns-database
 
-# Phase 6: Harden DNS servers (DNS-specific firewall)
+# Phase 6: Create rbx-data warehouse database on jaguar
+- name: Setup rbx-data warehouse database
+  hosts: db_server
+  roles:
+    - rbx-data-warehouse-db
+
+# Phase 7: Harden DNS servers (DNS-specific firewall)
 - name: Harden DNS servers
   hosts: dns_servers
   roles:
     - dns-hardening
 
-# Phase 7: Deploy PowerDNS
+# Phase 8: Deploy PowerDNS
 - name: Deploy PowerDNS
   hosts: dns_servers
   serial: 1
   roles:
     - pdns
 
-# Phase 8: Install mail server (Mailcow) on lince
+# Phase 9: Install mail server (Mailcow) on lince
 - name: Install mail server
   hosts: mail_servers
   roles:
     - mailcow-host
 
-# Phase 9: Bootstrap Kubernetes secrets from pass
+# Phase 10: Bootstrap Kubernetes secrets from pass
 # Runs on localhost after k3s and all databases are provisioned.
 # Requires: pass unlocked, kubeconfig at ~/.kube/config-rbx
 # See docs/infra/SECRETS.md for prerequisites and pass namespace structure.
