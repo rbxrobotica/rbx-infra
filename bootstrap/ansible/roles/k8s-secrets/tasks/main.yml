@@ -55,6 +55,12 @@
   register: ghcr_token_result
   no_log: true
 
+- name: Read rbx-infra image updater git credentials from pass
+  command: pass show {{ pass_image_updater_git_credentials_key }}
+  changed_when: false
+  register: image_updater_git_credentials_result
+  no_log: true
+
 - name: Read robsond DB password from pass
   command: pass show {{ pass_robson_db_password_key }}
   changed_when: false
@@ -125,6 +131,44 @@
     --dry-run=client -o yaml
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   changed_when: false
+
+# ---------------------------------------------------------------------------
+# argocd namespace secrets (ArgoCD Image Updater)
+# ---------------------------------------------------------------------------
+
+- name: Ensure argocd namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ argocd_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create argocd-image-updater-ghcr in argocd
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry argocd-image-updater-ghcr \
+      --namespace {{ argocd_namespace }} \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="{{ ghcr_token_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Create argocd-image-updater-git-creds in argocd
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic argocd-image-updater-git-creds \
+      --namespace {{ argocd_namespace }} \
+      --from-literal=type="git" \
+      --from-literal=url="https://github.com/rbxrobotica/rbx-infra" \
+      --from-literal=username="x-access-token" \
+      --from-literal=password="{{ image_updater_git_credentials_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} label --local -f - argocd.argoproj.io/secret-type=repository -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
 
 # ---------------------------------------------------------------------------
 # robsond secrets (namespace robson — MIG-v3#2)
@@ -456,6 +500,8 @@
       - "k8s secrets bootstrapped successfully"
       - "  {{ robsond_namespace }}/robsond-secret: database-url + projection-tenant-id"
       - "  {{ robsond_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
+      - "  {{ argocd_namespace }}/argocd-image-updater-ghcr: ghcr.io read credentials for Image Updater"
+      - "  {{ argocd_namespace }}/argocd-image-updater-git-creds: rbx-infra write-back credentials for Image Updater"
       - "  monitoring/grafana-admin: Grafana admin credentials"
       - "  {{ llm_gateway_namespace }}/litellm-secrets: database-url + master-key + salt-key + provider keys (experimental)"
       - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
@@ -467,6 +513,8 @@
       - "k8s secrets bootstrapped successfully"
       - "  {{ robsond_namespace }}/robsond-secret: database-url + projection-tenant-id"
       - "  {{ robsond_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
+      - "  {{ argocd_namespace }}/argocd-image-updater-ghcr: ghcr.io read credentials for Image Updater"
+      - "  {{ argocd_namespace }}/argocd-image-updater-git-creds: rbx-infra write-back credentials for Image Updater"
       - "  monitoring/grafana-admin: Grafana admin credentials"
       - "  {{ llm_gateway_namespace }}/litellm-secrets: database-url + master-key + salt-key + provider keys (experimental)"
   when: tenant_id_existing.rc == 0

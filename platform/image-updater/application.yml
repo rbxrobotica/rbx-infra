@@ -1,0 +1,46 @@
+# ArgoCD Application: argocd-image-updater
+# Infra-owned image promotion for RBX product services.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-image-updater
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-image-updater
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/part-of: rbx-infra
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-9"
+spec:
+  project: rbx-platform
+
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argocd-image-updater
+    targetRevision: 1.2.1
+    helm:
+      values: |
+        config:
+          git.user: github-actions[bot]
+          git.email: 41898282+github-actions[bot]@users.noreply.github.com
+          log.level: info
+          registries:
+            - name: ghcr
+              prefix: ghcr.io
+              api_url: https://ghcr.io
+              ping: yes
+              credentials: pullsecret:argocd/argocd-image-updater-ghcr
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true

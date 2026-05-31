@@ -6,6 +6,14 @@ metadata:
   labels:
     app.kubernetes.io/name: rbx-observability
     app.kubernetes.io/part-of: rbx-observability
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: app=ghcr.io/rbxrobotica/rbx-observability
+    argocd-image-updater.argoproj.io/app.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/app.allow-tags: regexp:^sha-[0-9a-f]+$
+    argocd-image-updater.argoproj.io/app.kustomize.image-name: ghcr.io/rbxrobotica/rbx-observability
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: main
+    argocd-image-updater.argoproj.io/write-back-target: kustomization
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
