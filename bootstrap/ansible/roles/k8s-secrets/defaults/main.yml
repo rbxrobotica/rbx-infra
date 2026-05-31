@@ -8,12 +8,16 @@ kubeconfig_path: "~/.kube/config-rbx"
 # GHCR username for image pulls (rbxrobotica org packages)
 ghcr_username: "rbxrobotica"
 
+# Namespace for ArgoCD control-plane secrets
+argocd_namespace: "argocd"
+
 # Namespace for robsond secrets
 robsond_namespace: "robson"
 
 # pass key paths
 pass_kubeconfig_key: "rbx/cluster/kubeconfig"
 pass_ghcr_token_key: "rbx/cluster/ghcr-token"
+pass_image_updater_git_credentials_key: "rbx/github/rbx-infra-image-updater"
 pass_grafana_admin_password_key: "rbx/monitoring/grafana-admin-password"
 
 # Production robson (namespace: robson)
