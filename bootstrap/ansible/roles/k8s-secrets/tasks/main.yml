@@ -525,6 +525,119 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# langfuse namespace secrets
+# ---------------------------------------------------------------------------
+
+- name: Read Langfuse NextAuth secret from pass
+  command: pass show {{ pass_langfuse_nextauth_secret_key }}
+  changed_when: false
+  register: langfuse_nextauth_secret_result
+  no_log: true
+
+- name: Read Langfuse salt from pass
+  command: pass show {{ pass_langfuse_salt_key }}
+  changed_when: false
+  register: langfuse_salt_result
+  no_log: true
+
+- name: Read Langfuse encryption key from pass
+  command: pass show {{ pass_langfuse_encryption_key }}
+  changed_when: false
+  register: langfuse_encryption_key_result
+  no_log: true
+
+- name: Read Langfuse DB password from pass
+  command: pass show {{ pass_langfuse_db_password_key }}
+  changed_when: false
+  register: langfuse_db_password_result
+  no_log: true
+
+- name: Read Langfuse ClickHouse password from pass
+  command: pass show {{ pass_langfuse_clickhouse_password_key }}
+  changed_when: false
+  register: langfuse_clickhouse_password_result
+  no_log: true
+
+- name: Read Langfuse Redis password from pass
+  command: pass show {{ pass_langfuse_redis_password_key }}
+  changed_when: false
+  register: langfuse_redis_password_result
+  no_log: true
+
+- name: Read Contabo S3 access key from pass
+  command: pass show {{ pass_contabo_s3_access_key_key }}
+  changed_when: false
+  register: contabo_s3_access_key_result
+  no_log: true
+
+- name: Read Contabo S3 secret key from pass
+  command: pass show {{ pass_contabo_s3_secret_key_key }}
+  changed_when: false
+  register: contabo_s3_secret_key_result
+  no_log: true
+
+- name: Ensure langfuse namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ langfuse_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create langfuse-core secret in langfuse
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic langfuse-core \
+      --namespace {{ langfuse_namespace }} \
+      --from-literal=nextauth-secret="{{ langfuse_nextauth_secret_result.stdout | trim }}" \
+      --from-literal=salt="{{ langfuse_salt_result.stdout | trim }}" \
+      --from-literal=encryption-key="{{ langfuse_encryption_key_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Create langfuse-postgresql-auth secret in langfuse
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic langfuse-postgresql-auth \
+      --namespace {{ langfuse_namespace }} \
+      --from-literal=password="{{ langfuse_db_password_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Create langfuse-clickhouse-auth secret in langfuse
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic langfuse-clickhouse-auth \
+      --namespace {{ langfuse_namespace }} \
+      --from-literal=password="{{ langfuse_clickhouse_password_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Create langfuse-redis-auth secret in langfuse
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic langfuse-redis-auth \
+      --namespace {{ langfuse_namespace }} \
+      --from-literal=password="{{ langfuse_redis_password_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Create langfuse-s3-auth secret in langfuse
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic langfuse-s3-auth \
+      --namespace {{ langfuse_namespace }} \
+      --from-literal=accessKeyId="{{ contabo_s3_access_key_result.stdout | trim }}" \
+      --from-literal=secretAccessKey="{{ contabo_s3_secret_key_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # rbx-commerce namespace secrets
 # ---------------------------------------------------------------------------
 
@@ -615,6 +728,11 @@
       - "  {{ rbx_ia_br_namespace }}/rbx-observability-langfuse: LANGFUSE_HOST + LANGFUSE_PUBLIC_KEY + LANGFUSE_SECRET_KEY"
       - "  {{ rbx_ia_br_namespace }}/rbx-data-token: token"
       - "  {{ rbx_ia_br_namespace }}/rbx-data-warehouse: dsn"
+      - "  {{ langfuse_namespace }}/langfuse-core: NextAuth secret + salt + encryption key"
+      - "  {{ langfuse_namespace }}/langfuse-postgresql-auth: external Postgres password"
+      - "  {{ langfuse_namespace }}/langfuse-clickhouse-auth: ClickHouse password"
+      - "  {{ langfuse_namespace }}/langfuse-redis-auth: Redis password"
+      - "  {{ langfuse_namespace }}/langfuse-s3-auth: Contabo S3 credentials"
       - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
@@ -633,4 +751,9 @@
       - "  {{ rbx_ia_br_namespace }}/rbx-observability-langfuse: LANGFUSE_HOST + LANGFUSE_PUBLIC_KEY + LANGFUSE_SECRET_KEY"
       - "  {{ rbx_ia_br_namespace }}/rbx-data-token: token"
       - "  {{ rbx_ia_br_namespace }}/rbx-data-warehouse: dsn"
+      - "  {{ langfuse_namespace }}/langfuse-core: NextAuth secret + salt + encryption key"
+      - "  {{ langfuse_namespace }}/langfuse-postgresql-auth: external Postgres password"
+      - "  {{ langfuse_namespace }}/langfuse-clickhouse-auth: ClickHouse password"
+      - "  {{ langfuse_namespace }}/langfuse-redis-auth: Redis password"
+      - "  {{ langfuse_namespace }}/langfuse-s3-auth: Contabo S3 credentials"
   when: tenant_id_existing.rc == 0
