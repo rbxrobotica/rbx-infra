@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-memory
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-memory
+    app.kubernetes.io/part-of: rbx-memory
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-memory
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-memory
+  # Manual sync until the container image is built+pushed and secrets exist in rbx-ia-br.

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-observability
+  labels:
+    app.kubernetes.io/part-of: rbx-observability
+    environment: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

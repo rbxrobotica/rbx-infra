@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-observability
+  namespace: rbx-observability
+  labels:
+    app.kubernetes.io/name: rbx-observability
+    app.kubernetes.io/part-of: rbx-observability
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rbx-observability
+  ports:
+    - port: 80
+      targetPort: http
+      protocol: TCP
