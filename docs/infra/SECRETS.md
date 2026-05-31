@@ -38,6 +38,16 @@ rbx/
     api-token                   # Bearer token for robsond HTTP API — openssl rand -hex 32
   truthmetal/
     db-password                 # PostgreSQL password for user `truthmetal`
+  memory/
+    token                       # Bearer token for rbx-memory
+  observability/
+    token                       # Bearer token for rbx-observability
+    langfuse-host               # Langfuse host URL
+    langfuse-public-key         # Langfuse public key
+    langfuse-secret-key         # Langfuse secret key
+  data/
+    token                       # Bearer token for rbx-data
+    warehouse-dsn               # External warehouse DSN
   llm-gateway/
     db-password                 # PostgreSQL password for user `litellm` on jaguar — MUST be hex (openssl rand -hex 32)
     master-key                  # LiteLLM proxy master key — openssl rand -hex 32
@@ -139,7 +149,17 @@ Secrets created per namespace:
 | `robson-testnet` | `robsond-testnet-secret` | `database-url`, `projection-tenant-id`, `binance-api-key`, `binance-api-secret`, `api-token` | `rbx/robson-testnet/*` |
 | `robson-testnet` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `rbx-console` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
+| `rbx-ia-br` | `rbx-memory-token` | `token` | `rbx/memory/token` |
+| `rbx-ia-br` | `rbx-observability-token` | `token` | `rbx/observability/token` |
+| `rbx-ia-br` | `rbx-observability-langfuse` | `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` | `rbx/observability/langfuse-host`, `rbx/observability/langfuse-public-key`, `rbx/observability/langfuse-secret-key` |
+| `rbx-ia-br` | `rbx-data-token` | `token` | `rbx/data/token` |
+| `rbx-ia-br` | `rbx-data-warehouse` | `dsn` | `rbx/data/warehouse-dsn` |
 | `monitoring` | `grafana-admin` | `admin-user`, `admin-password` | `rbx/monitoring/grafana-admin-password` |
+
+`rbx-ia-br` is the central vault namespace read by the reorg services'
+ExternalSecrets through the `kubernetes-store` SecretStore. The
+`contabo-s3-credentials` secret in `rbx-ia-br` is pre-existing and reused by
+`rbx-memory` and `rbx-data`; this role does not provision or modify it.
 
 Run idempotently — safe to re-run after a cluster wipe.
 

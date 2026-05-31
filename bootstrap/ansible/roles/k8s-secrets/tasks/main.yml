@@ -327,6 +327,112 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# rbx-ia-br central vault — reorg services
+# ---------------------------------------------------------------------------
+
+- name: Ensure rbx-ia-br namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ rbx_ia_br_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Read rbx-memory token from pass
+  command: pass show {{ pass_rbx_memory_token_key }}
+  changed_when: false
+  register: rbx_memory_token_result
+  no_log: true
+
+- name: Read rbx-observability token from pass
+  command: pass show {{ pass_rbx_observability_token_key }}
+  changed_when: false
+  register: rbx_observability_token_result
+  no_log: true
+
+- name: Read rbx-observability Langfuse host from pass
+  command: pass show {{ pass_rbx_observability_langfuse_host_key }}
+  changed_when: false
+  register: rbx_observability_langfuse_host_result
+  no_log: true
+
+- name: Read rbx-observability Langfuse public key from pass
+  command: pass show {{ pass_rbx_observability_langfuse_public_key_key }}
+  changed_when: false
+  register: rbx_observability_langfuse_public_key_result
+  no_log: true
+
+- name: Read rbx-observability Langfuse secret key from pass
+  command: pass show {{ pass_rbx_observability_langfuse_secret_key_key }}
+  changed_when: false
+  register: rbx_observability_langfuse_secret_key_result
+  no_log: true
+
+- name: Read rbx-data token from pass
+  command: pass show {{ pass_rbx_data_token_key }}
+  changed_when: false
+  register: rbx_data_token_result
+  no_log: true
+
+- name: Read rbx-data warehouse DSN from pass
+  command: pass show {{ pass_rbx_data_warehouse_dsn_key }}
+  changed_when: false
+  register: rbx_data_warehouse_dsn_result
+  no_log: true
+
+- name: Create rbx-memory-token in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-memory-token \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=token="{{ rbx_memory_token_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Create rbx-observability-token in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-observability-token \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=token="{{ rbx_observability_token_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Create rbx-observability-langfuse in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-observability-langfuse \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=LANGFUSE_HOST="{{ rbx_observability_langfuse_host_result.stdout | trim }}" \
+      --from-literal=LANGFUSE_PUBLIC_KEY="{{ rbx_observability_langfuse_public_key_result.stdout | trim }}" \
+      --from-literal=LANGFUSE_SECRET_KEY="{{ rbx_observability_langfuse_secret_key_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Create rbx-data-token in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-data-token \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=token="{{ rbx_data_token_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+- name: Create rbx-data-warehouse in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-data-warehouse \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=dsn="{{ rbx_data_warehouse_dsn_result.stdout | trim }}" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # monitoring namespace secrets (Grafana)
 # ---------------------------------------------------------------------------
 
@@ -504,6 +610,11 @@
       - "  {{ argocd_namespace }}/argocd-image-updater-git-creds: rbx-infra write-back credentials for Image Updater"
       - "  monitoring/grafana-admin: Grafana admin credentials"
       - "  {{ llm_gateway_namespace }}/litellm-secrets: database-url + master-key + salt-key + provider keys (experimental)"
+      - "  {{ rbx_ia_br_namespace }}/rbx-memory-token: token"
+      - "  {{ rbx_ia_br_namespace }}/rbx-observability-token: token"
+      - "  {{ rbx_ia_br_namespace }}/rbx-observability-langfuse: LANGFUSE_HOST + LANGFUSE_PUBLIC_KEY + LANGFUSE_SECRET_KEY"
+      - "  {{ rbx_ia_br_namespace }}/rbx-data-token: token"
+      - "  {{ rbx_ia_br_namespace }}/rbx-data-warehouse: dsn"
       - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
@@ -517,4 +628,9 @@
       - "  {{ argocd_namespace }}/argocd-image-updater-git-creds: rbx-infra write-back credentials for Image Updater"
       - "  monitoring/grafana-admin: Grafana admin credentials"
       - "  {{ llm_gateway_namespace }}/litellm-secrets: database-url + master-key + salt-key + provider keys (experimental)"
+      - "  {{ rbx_ia_br_namespace }}/rbx-memory-token: token"
+      - "  {{ rbx_ia_br_namespace }}/rbx-observability-token: token"
+      - "  {{ rbx_ia_br_namespace }}/rbx-observability-langfuse: LANGFUSE_HOST + LANGFUSE_PUBLIC_KEY + LANGFUSE_SECRET_KEY"
+      - "  {{ rbx_ia_br_namespace }}/rbx-data-token: token"
+      - "  {{ rbx_ia_br_namespace }}/rbx-data-warehouse: dsn"
   when: tenant_id_existing.rc == 0

@@ -39,6 +39,16 @@ pass_robson_testnet_api_token_key: "rbx/robson-testnet/api-token"
 # Only ghcr-pull-secret for now; no per-app runtime secrets in Phase 2.
 rbx_console_namespace: "rbx-console"
 
+# rbx-ia-br (central vault namespace for reorg service ExternalSecrets)
+rbx_ia_br_namespace: "rbx-ia-br"
+pass_rbx_memory_token_key: "rbx/memory/token"
+pass_rbx_observability_token_key: "rbx/observability/token"
+pass_rbx_observability_langfuse_host_key: "rbx/observability/langfuse-host"
+pass_rbx_observability_langfuse_public_key_key: "rbx/observability/langfuse-public-key"
+pass_rbx_observability_langfuse_secret_key_key: "rbx/observability/langfuse-secret-key"
+pass_rbx_data_token_key: "rbx/data/token"
+pass_rbx_data_warehouse_dsn_key: "rbx/data/warehouse-dsn"
+
 # llm-gateway (namespace: llm-gateway — LiteLLM Proxy, experimental)
 llm_gateway_namespace: "llm-gateway"
 pass_llm_gateway_db_password_key: "rbx/llm-gateway/db-password"
