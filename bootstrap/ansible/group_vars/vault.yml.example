@@ -10,3 +10,4 @@
 paradedb_robson_password: "CHANGE_ME"
 paradedb_truthmetal_password: "CHANGE_ME"
 rbx_data_warehouse_db_password: "CHANGE_ME"
+langfuse_db_password: "CHANGE_ME"

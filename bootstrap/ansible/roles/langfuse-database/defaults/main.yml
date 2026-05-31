@@ -1,0 +1,4 @@
+---
+langfuse_db_name: "langfuse"
+langfuse_db_user: "langfuse"
+# langfuse_db_password: must be defined in vault.yml

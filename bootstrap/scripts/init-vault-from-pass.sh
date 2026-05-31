@@ -23,6 +23,7 @@ ROBSON_DB_PASS="$(pass show rbx/robson/db-password)"
 TRUTHMETAL_DB_PASS="$(pass show rbx/truthmetal/db-password)"
 ROBSON_TESTNET_DB_PASS="$(pass show rbx/robson-testnet/db-password)"
 LLM_GATEWAY_DB_PASS="$(pass show rbx/llm-gateway/db-password)"
+LANGFUSE_DB_PASS="$(pass show rbx/langfuse/db-password)"
 PDNS_API_KEY="$(pass show rbx/dns/pdns-api-key)"
 PDNS_DB_PASS="$(pass show rbx/dns/pdns-db-password)"
 RBX_DATA_WAREHOUSE_DB_PASS="$(pass show rbx/data/warehouse-db-password)"
@@ -46,6 +47,8 @@ pdns_db_password: "${PDNS_DB_PASS}"
 
 # rbx-data warehouse database password (jaguar — rbx_data_warehouse db)
 rbx_data_warehouse_db_password: "${RBX_DATA_WAREHOUSE_DB_PASS}"
+# Langfuse database password (jaguar — langfuse db)
+langfuse_db_password: "${LANGFUSE_DB_PASS}"
 
 # PowerDNS API key (primary only — local management)
 pdns_api_key: "${PDNS_API_KEY}"

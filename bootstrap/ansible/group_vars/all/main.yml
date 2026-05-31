@@ -39,6 +39,10 @@ paradedb_litellm_user: "litellm"
 pdns_db_name: "pdns"
 pdns_db_user: "pdns"
 
+# Langfuse database (jaguar — used by langfuse-database role)
+langfuse_db_name: "langfuse"
+langfuse_db_user: "langfuse"
+
 # ---------------------------------------------------------------------------
 # Secrets management
 # ---------------------------------------------------------------------------

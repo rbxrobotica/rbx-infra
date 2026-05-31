@@ -1,0 +1,125 @@
+# ArgoCD Application: Langfuse
+# Self-hosted Langfuse v3 stack. Manual sync only.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: langfuse
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: langfuse
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: langfuse
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://langfuse.github.io/langfuse-k8s
+    chart: langfuse
+    targetRevision: 1.5.31
+    helm:
+      releaseName: langfuse
+      values: |
+        langfuse:
+          salt:
+            secretKeyRef:
+              name: langfuse-core
+              key: salt
+          encryptionKey:
+            secretKeyRef:
+              name: langfuse-core
+              key: encryption-key
+          nextauth:
+            url: https://langfuse.rbx.ia.br
+            secret:
+              secretKeyRef:
+                name: langfuse-core
+                key: nextauth-secret
+          ingress:
+            enabled: true
+            className: traefik
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-prod
+              traefik.ingress.kubernetes.io/router.middlewares: langfuse-langfuse-redirect-https@kubernetescrd
+            hosts:
+              - host: langfuse.rbx.ia.br
+                paths:
+                  - path: /
+                    pathType: Prefix
+            tls:
+              enabled: true
+              secretName: langfuse-tls
+
+        postgresql:
+          deploy: false
+          host: 161.97.147.76
+          port: 5432
+          auth:
+            username: langfuse
+            existingSecret: langfuse-postgresql-auth
+            secretKeys:
+              userPasswordKey: password
+            database: langfuse
+
+        clickhouse:
+          deploy: true
+          auth:
+            existingSecret: langfuse-clickhouse-auth
+            existingSecretKey: password
+          shards: 1
+          replicaCount: 1
+          persistence:
+            enabled: true
+            size: 50Gi
+          zookeeper:
+            persistence:
+              enabled: true
+              size: 8Gi
+
+        redis:
+          deploy: true
+          auth:
+            existingSecret: langfuse-redis-auth
+            existingSecretPasswordKey: password
+          primary:
+            persistence:
+              enabled: true
+              size: 8Gi
+
+        s3:
+          deploy: false
+          storageProvider: s3
+          bucket: rbx-langfuse
+          region: eu2
+          endpoint: https://eu2.contabostorage.com
+          forcePathStyle: true
+          accessKeyId:
+            secretKeyRef:
+              name: langfuse-s3-auth
+              key: accessKeyId
+          secretAccessKey:
+            secretKeyRef:
+              name: langfuse-s3-auth
+              key: secretAccessKey
+
+        extraManifests:
+          - apiVersion: traefik.io/v1alpha1
+            kind: Middleware
+            metadata:
+              name: langfuse-redirect-https
+              namespace: langfuse
+            spec:
+              redirectScheme:
+                scheme: https
+                permanent: true
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: langfuse
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      # Manual sync: no automated prune/selfHeal for Langfuse.
+      # ServerSideApply is forbidden per docs/ARGOCD-BEST-PRACTICES.md.
