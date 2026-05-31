@@ -28,8 +28,8 @@ pass insert rbx/langfuse/salt
 pass insert rbx/langfuse/encryption-key
 pass insert rbx/langfuse/clickhouse-password
 pass insert rbx/langfuse/redis-password
-pass insert rbx/storage/contabo-access-key
-pass insert rbx/storage/contabo-secret-key
+pass insert rbx/s3/access-key
+pass insert rbx/s3/secret-key
 ```
 
 Generation guidance:
