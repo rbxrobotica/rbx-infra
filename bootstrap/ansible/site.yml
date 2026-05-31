@@ -32,11 +32,13 @@
 # Phase 6a: Create rbx-data warehouse database on jaguar
 - name: Setup rbx-data warehouse database
   hosts: db_server
+  tags: [databases, warehouse]
   roles:
     - rbx-data-warehouse-db
 # Phase 6b: Create Langfuse database on jaguar
 - name: Setup Langfuse database
   hosts: db_server
+  tags: [databases, langfuse]
   roles:
     - langfuse-database
 
