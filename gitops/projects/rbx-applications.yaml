@@ -11,6 +11,8 @@ spec:
   description: Product application deployments
   sourceRepos:
     - https://github.com/rbxrobotica/rbx-infra
+    # Langfuse self-hosted (rbx-observability trace backend) Helm chart repo.
+    - https://langfuse.github.io/langfuse-k8s
   destinations:
     - namespace: robson
       server: https://kubernetes.default.svc
@@ -49,6 +51,15 @@ spec:
     - namespace: rbx-eden-system-creator
       server: https://kubernetes.default.svc
     - namespace: rbx-maestro
+      server: https://kubernetes.default.svc
+    # Thalamus slim-down reorg services (ADR-0200/0300/0201) + Langfuse backend.
+    - namespace: langfuse
+      server: https://kubernetes.default.svc
+    - namespace: rbx-memory
+      server: https://kubernetes.default.svc
+    - namespace: rbx-observability
+      server: https://kubernetes.default.svc
+    - namespace: rbx-data
       server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ""
