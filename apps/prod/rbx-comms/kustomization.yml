@@ -16,3 +16,13 @@ resources:
   - postgres-svc.yml
   - deploy.yml
   - svc.yml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: rbx-comms
+      environment: production
+    includeSelectors: false
+
+images:
+  - name: ghcr.io/rbxrobotica/rbx-comms
+    newTag: sha-0000000

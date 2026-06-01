@@ -52,6 +52,20 @@ spec:
                   key: ALTCHA_SECRET
             - name: METRICS_ENABLED
               value: "true"
+            - name: WORKER_ENABLED
+              value: "true"
+            - name: D360_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: D360_WEBHOOK_SECRET
+                  optional: true
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-comms-secrets
+                  key: REDIS_URL
+                  optional: true
             - name: S3_ENDPOINT
               value: "https://eu2.contabostorage.com"
             - name: S3_BUCKET
@@ -66,6 +80,8 @@ spec:
                 secretKeyRef:
                   name: contabo-s3-credentials
                   key: AWS_SECRET_ACCESS_KEY
+            - name: S3_PUBLIC_URL
+              value: "https://rbx-comms-attachments.s3.eu2.contabostorage.com"
           readinessProbe:
             httpGet:
               path: /health

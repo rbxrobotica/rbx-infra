@@ -1,3 +1,4 @@
+# Namespace: rbx-comms
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -5,3 +6,5 @@ metadata:
   labels:
     app.kubernetes.io/part-of: rbx-comms
     environment: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

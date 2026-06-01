@@ -26,5 +26,8 @@ spec:
     namespace: rbx-comms
 
   syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
