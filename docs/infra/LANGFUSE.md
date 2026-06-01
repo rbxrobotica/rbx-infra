@@ -36,12 +36,12 @@ Generation guidance:
 
 | Key | Suggested generator |
 |-----|---------------------|
-| `rbx/langfuse/db-password` | `openssl rand -base64 24` |
-| `rbx/langfuse/nextauth-secret` | `openssl rand -base64 32` |
-| `rbx/langfuse/salt` | `openssl rand -base64 32` |
+| `rbx/langfuse/db-password` | `openssl rand -hex 32` |
+| `rbx/langfuse/nextauth-secret` | `openssl rand -hex 32` |
+| `rbx/langfuse/salt` | `openssl rand -hex 32` |
 | `rbx/langfuse/encryption-key` | `openssl rand -hex 32` |
-| `rbx/langfuse/clickhouse-password` | `openssl rand -base64 24` |
-| `rbx/langfuse/redis-password` | `openssl rand -base64 24` |
+| `rbx/langfuse/clickhouse-password` | `openssl rand -hex 32` |
+| `rbx/langfuse/redis-password` | `openssl rand -hex 32` |
 
 ## Provisioning Order
 
