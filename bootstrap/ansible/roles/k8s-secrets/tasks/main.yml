@@ -493,6 +493,79 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# Thalamus slim-down reorg service namespaces — image pull secrets.
+# The 3 services run private images from ghcr.io/rbxrobotica/*, so each
+# namespace needs ghcr-pull-secret (the app token secrets live in rbx-ia-br
+# and are copied in via ExternalSecret; the pull secret is separate).
+# ---------------------------------------------------------------------------
+
+- name: Ensure rbx-memory namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace rbx-memory
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in rbx-memory
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace rbx-memory \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+- name: Ensure rbx-observability namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace rbx-observability
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in rbx-observability
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace rbx-observability \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+- name: Ensure rbx-data namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace rbx-data
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in rbx-data
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace rbx-data \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # monitoring namespace secrets (Grafana)
 # ---------------------------------------------------------------------------
 
