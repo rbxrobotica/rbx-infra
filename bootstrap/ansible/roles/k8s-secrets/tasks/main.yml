@@ -350,21 +350,30 @@
   register: rbx_observability_token_result
   no_log: true
 
+# The Langfuse API keys only exist AFTER Langfuse is deployed and a project is
+# created in its UI (chicken-egg: rbx-observability needs Langfuse up first).
+# So these 3 reads are OPTIONAL — the playbook must still create every OTHER
+# secret (including the langfuse-stack secrets that bring Langfuse up) when the
+# observability keys are absent. The rbx-observability-langfuse secret below is
+# created only once all 3 keys exist (re-run the playbook post-deploy).
 - name: Read rbx-observability Langfuse host from pass
   command: pass show {{ pass_rbx_observability_langfuse_host_key }}
   changed_when: false
+  failed_when: false
   register: rbx_observability_langfuse_host_result
   no_log: true
 
 - name: Read rbx-observability Langfuse public key from pass
   command: pass show {{ pass_rbx_observability_langfuse_public_key_key }}
   changed_when: false
+  failed_when: false
   register: rbx_observability_langfuse_public_key_result
   no_log: true
 
 - name: Read rbx-observability Langfuse secret key from pass
   command: pass show {{ pass_rbx_observability_langfuse_secret_key_key }}
   changed_when: false
+  failed_when: false
   register: rbx_observability_langfuse_secret_key_result
   no_log: true
 
@@ -400,6 +409,10 @@
   changed_when: true
   no_log: true
 
+# Only create this secret once ALL 3 Langfuse keys exist in pass (rc == 0).
+# Before Langfuse is deployed + a project created, these keys are absent and the
+# reads above return non-zero — this task is then skipped, letting every other
+# secret be created so Langfuse itself can be brought up. Re-run post-deploy.
 - name: Create rbx-observability-langfuse in rbx-ia-br
   shell: |
     kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-observability-langfuse \
@@ -409,6 +422,10 @@
       --from-literal=LANGFUSE_SECRET_KEY="{{ rbx_observability_langfuse_secret_key_result.stdout | trim }}" \
       --dry-run=client -o yaml \
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  when:
+    - rbx_observability_langfuse_host_result.rc == 0
+    - rbx_observability_langfuse_public_key_result.rc == 0
+    - rbx_observability_langfuse_secret_key_result.rc == 0
   changed_when: true
   no_log: true
 
