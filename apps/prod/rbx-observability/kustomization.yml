@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - namespace.yml
   - secretstore.yml
+  - rbac-external-secrets.yml
   - externalsecret-token.yml
   - externalsecret-langfuse.yml
   - deploy.yml
