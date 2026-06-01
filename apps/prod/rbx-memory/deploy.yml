@@ -45,10 +45,10 @@ spec:
                   name: rbx-memory-token
                   key: token
             - name: CONTABO_S3_ENDPOINT
-              valueFrom:
-                secretKeyRef:
-                  name: contabo-s3-credentials
-                  key: AWS_ENDPOINT
+              # The S3 endpoint is non-secret config, not part of the credential
+              # secret (which holds only access/secret keys). Matches the value
+              # the Langfuse chart uses for the same Contabo bucket.
+              value: "https://eu2.contabostorage.com"
             - name: CONTABO_S3_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
