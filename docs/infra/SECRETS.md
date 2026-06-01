@@ -62,8 +62,8 @@ rbx/
     # anthropic-api-key         # Anthropic API key
   langfuse/
     db-password                 # PostgreSQL password for user `langfuse` on jaguar
-    nextauth-secret             # Langfuse NextAuth secret — openssl rand -base64 32
-    salt                        # Langfuse API key hashing salt — openssl rand -base64 32
+    nextauth-secret             # Langfuse NextAuth secret — openssl rand -hex 32
+    salt                        # Langfuse API key hashing salt — openssl rand -hex 32
     encryption-key              # Langfuse encryption key — openssl rand -hex 32
     clickhouse-password         # Bundled ClickHouse password
     redis-password              # Bundled Valkey/Redis password
@@ -116,25 +116,27 @@ gpg --gen-key   # or use existing key
 pass init <GPG_KEY_ID>
 
 # 2. Create required entries
-# Generate passwords with: openssl rand -base64 24
+# Generate passwords HEX-ONLY (no symbols): `openssl rand -hex 32`  — or  `pass generate -n <path> 32`
+# NEVER use `pass generate` (default symbol set) or base64: symbols like \ " ' / + =
+# break the YAML vault (\, ", ') and DSN/URL parsing (/, +, :, @). Hex is safe everywhere.
 
 pass insert rbx/cluster/ghcr-token          # GitHub PAT from github.com/settings/tokens
-pass insert rbx/robson/db-password          # openssl rand -base64 24
+pass insert rbx/robson/db-password          # openssl rand -hex 32
 pass insert rbx/robson/binance-api-key      # Binance production API key
 pass insert rbx/robson/binance-api-secret   # Binance production API secret
 pass insert rbx/robson/api-token            # openssl rand -hex 32
-pass insert rbx/truthmetal/db-password      # openssl rand -base64 24
-pass insert rbx/monitoring/grafana-admin-password  # openssl rand -base64 18
-pass insert rbx/dns/pdns-api-key                   # openssl rand -base64 24
-pass insert rbx/dns/pdns-db-password               # openssl rand -base64 24
-pass insert rbx/data/warehouse-db-password         # openssl rand -base64 24
+pass insert rbx/truthmetal/db-password      # openssl rand -hex 32
+pass insert rbx/monitoring/grafana-admin-password  # openssl rand -hex 32
+pass insert rbx/dns/pdns-api-key                   # openssl rand -hex 32
+pass insert rbx/dns/pdns-db-password               # openssl rand -hex 32
+pass insert rbx/data/warehouse-db-password         # openssl rand -hex 32
 pass insert rbx/data/warehouse-dsn                 # constructed as postgres://rbx_data:<password>@161.97.147.76:5432/rbx_data_warehouse
-pass insert rbx/langfuse/db-password               # openssl rand -base64 24
-pass insert rbx/langfuse/nextauth-secret           # openssl rand -base64 32
-pass insert rbx/langfuse/salt                      # openssl rand -base64 32
+pass insert rbx/langfuse/db-password               # openssl rand -hex 32
+pass insert rbx/langfuse/nextauth-secret           # openssl rand -hex 32
+pass insert rbx/langfuse/salt                      # openssl rand -hex 32
 pass insert rbx/langfuse/encryption-key            # openssl rand -hex 32
-pass insert rbx/langfuse/clickhouse-password       # openssl rand -base64 24
-pass insert rbx/langfuse/redis-password            # openssl rand -base64 24
+pass insert rbx/langfuse/clickhouse-password       # openssl rand -hex 32
+pass insert rbx/langfuse/redis-password            # openssl rand -hex 32
 pass insert rbx/s3/access-key         # Contabo S3 access key
 pass insert rbx/s3/secret-key         # Contabo S3 secret key
 
@@ -253,7 +255,7 @@ No manual `kubectl create secret` or `kubectl apply` needed after step 3.
 
 - The GPG private key used for pass is the root secret. Back it up offline (paper/hardware).
 - `vault.yml` is gitignored and ephemeral. Never commit it.
-- `pass` entries containing DB passwords should use `openssl rand -base64 24` (32 bytes entropy).
+- `pass` entries containing DB passwords should use `openssl rand -hex 32` (32 bytes entropy).
 - The `ghcr-token` PAT should have minimum required scopes: `read:packages` for pull secrets.
   CI/CD uses its own `GITOPS_TOKEN` (configured in GitHub repo secrets, not in pass).
 - `projection-tenant-id` is a stable UUID. Changing it on reinstall means the projection

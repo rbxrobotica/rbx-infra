@@ -44,3 +44,19 @@
     objs: public
     privs: CREATE
     state: present
+
+- name: Allow k3s nodes to connect to the rbx-data warehouse database only
+  lineinfile:
+    path: /etc/postgresql/16/main/pg_hba.conf
+    line: "host {{ rbx_data_warehouse_db_name }} {{ rbx_data_warehouse_db_user }} {{ hostvars[item].ansible_host }}/32 scram-sha-256"
+    insertafter: EOF
+  loop: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"
+  notify: restart postgresql
+
+- name: Allow firewall access from k3s nodes to Postgres
+  ufw:
+    rule: allow
+    port: "5432"
+    proto: tcp
+    src: "{{ hostvars[item].ansible_host }}"
+  loop: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"
