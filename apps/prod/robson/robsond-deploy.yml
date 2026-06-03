@@ -80,6 +80,11 @@ spec:
             secretKeyRef:
               name: robsond-secret
               key: api-token
+        # Funding saga feature gate (Spot→USDT→USDT-M). false → /funding/execute returns 503.
+        # Enables the money-moving execute path; the actual transfer is operator-gated by the
+        # type-to-confirm in the /funding UI. Set false to disable.
+        - name: FUNDING_ENABLED
+          value: "true"
 
         resources:
           requests:
