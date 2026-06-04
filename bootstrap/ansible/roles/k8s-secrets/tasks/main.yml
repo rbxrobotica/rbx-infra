@@ -167,6 +167,20 @@
   changed_when: true
   no_log: true
 
+- name: Create ghcr-pull-secret in rbx-identity
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace {{ rbx_identity_namespace }} \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
 - name: Create argocd-image-updater-git-creds in argocd
   shell: |
     kubectl --kubeconfig {{ kubeconfig_path }} create secret generic argocd-image-updater-git-creds \

@@ -214,6 +214,7 @@ Secrets created per namespace:
 | `langfuse` | `langfuse-clickhouse-auth` | `password` | `rbx/langfuse/clickhouse-password` |
 | `langfuse` | `langfuse-redis-auth` | `password` | `rbx/langfuse/redis-password` |
 | `langfuse` | `langfuse-s3-auth` | `accessKeyId`, `secretAccessKey` | `rbx/s3/access-key`, `rbx/s3/secret-key` |
+| `rbx-identity` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `rbx-identity` | `zitadel-masterkey` | `masterkey` | `rbx/zitadel/masterkey` |
 | `rbx-identity` | `zitadel-config` | `config-yaml` | `rbx/zitadel/db-password`, `rbx/zitadel/admin-password` |
 
