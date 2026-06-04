@@ -68,7 +68,7 @@ spec:
               Enabled: false
             Database:
               Postgres:
-                Host: zitadel-postgres
+                Host: 161.97.147.76
                 Port: 5432
                 Database: zitadel
                 MaxOpenConns: 20
@@ -88,32 +88,7 @@ spec:
             enabled: true
             command: "zitadel"
 
-        extraManifests:
-          - apiVersion: v1
-            kind: Service
-            metadata:
-              name: zitadel-postgres
-              namespace: rbx-identity
-              labels:
-                app.kubernetes.io/name: zitadel-postgres
-                app.kubernetes.io/component: database
-                app.kubernetes.io/part-of: rbx-identity
-            spec:
-              ports:
-                - port: 5432
-                  protocol: TCP
-                  name: postgres
-          - apiVersion: v1
-            kind: Endpoints
-            metadata:
-              name: zitadel-postgres
-              namespace: rbx-identity
-            subsets:
-              - addresses:
-                  - ip: 161.97.147.76
-                ports:
-                  - port: 5432
-                    name: postgres
+        extraManifests: []
 
   destination:
     server: https://kubernetes.default.svc
