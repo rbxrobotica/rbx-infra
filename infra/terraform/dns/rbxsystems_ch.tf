@@ -187,6 +187,15 @@ resource "powerdns_record" "strategos_rbxsystems_ch" {
   records = [var.k3s_ingress_ip]
 }
 
+# Auth host for RBX Identity / product-local session boundaries
+resource "powerdns_record" "auth_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "auth.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
 # Eden IDP Portal
 resource "powerdns_record" "eden_rbxsystems_ch" {
   zone    = powerdns_zone.rbxsystems_ch.name
