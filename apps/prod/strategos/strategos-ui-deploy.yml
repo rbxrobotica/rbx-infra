@@ -36,6 +36,8 @@ spec:
               value: 0.0.0.0
             - name: PORT
               value: "3000"
+            - name: RBX_SESSION_BFF_BASE_URL
+              value: https://auth.rbx.ia.br
           readinessProbe:
             httpGet:
               path: /healthz
