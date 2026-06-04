@@ -13,6 +13,8 @@ spec:
     - https://github.com/rbxrobotica/rbx-infra
     # Langfuse self-hosted (rbx-observability trace backend) Helm chart repo.
     - https://langfuse.github.io/langfuse-k8s
+    # ZITADEL self-hosted Helm chart repo for RBX Identity.
+    - https://charts.zitadel.com
   destinations:
     - namespace: robson
       server: https://kubernetes.default.svc
@@ -51,6 +53,8 @@ spec:
     - namespace: rbx-eden-system-creator
       server: https://kubernetes.default.svc
     - namespace: rbx-maestro
+      server: https://kubernetes.default.svc
+    - namespace: rbx-identity
       server: https://kubernetes.default.svc
     # Thalamus slim-down reorg services (ADR-0200/0300/0201) + Langfuse backend.
     - namespace: langfuse
