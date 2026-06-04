@@ -23,6 +23,15 @@
     password: "{{ zitadel_db_password }}"
     state: present
 
+- name: Create zitadel admin user
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ zitadel_admin_db_user }}"
+    password: "{{ zitadel_admin_db_password }}"
+    role_attr_flags: SUPERUSER
+    state: present
+
 - name: Grant zitadel database-level privileges
   become: yes
   become_user: postgres
@@ -70,6 +79,14 @@
   lineinfile:
     path: /etc/postgresql/16/main/pg_hba.conf
     line: "host {{ zitadel_db_name }} {{ zitadel_db_user }} {{ hostvars[item].ansible_host }}/32 scram-sha-256"
+    insertafter: EOF
+  loop: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"
+  notify: restart postgresql
+
+- name: Allow k3s nodes to connect to zitadel admin user only
+  lineinfile:
+    path: /etc/postgresql/16/main/pg_hba.conf
+    line: "host {{ zitadel_db_name }} {{ zitadel_admin_db_user }} {{ hostvars[item].ansible_host }}/32 scram-sha-256"
     insertafter: EOF
   loop: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"
   notify: restart postgresql

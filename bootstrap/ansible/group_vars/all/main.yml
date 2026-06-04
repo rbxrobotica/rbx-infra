@@ -46,6 +46,7 @@ langfuse_db_user: "langfuse"
 # ZITADEL database (jaguar — used by zitadel-database role)
 zitadel_db_name: "zitadel"
 zitadel_db_user: "zitadel"
+zitadel_admin_db_user: "zitadel_admin"
 
 # ---------------------------------------------------------------------------
 # Secrets management
