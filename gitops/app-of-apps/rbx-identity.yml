@@ -88,7 +88,134 @@ spec:
             enabled: true
             command: "zitadel"
 
-        extraManifests: []
+        extraManifests:
+          - apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: rbx-session-bff
+              namespace: rbx-identity
+              labels:
+                app.kubernetes.io/name: rbx-session-bff
+                app.kubernetes.io/component: session-bff
+                app.kubernetes.io/part-of: rbx-identity
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: rbx-session-bff
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: rbx-session-bff
+                    app.kubernetes.io/component: session-bff
+                    app.kubernetes.io/part-of: rbx-identity
+                spec:
+                  imagePullSecrets:
+                    - name: ghcr-pull-secret
+                  containers:
+                    - name: rbx-session-bff
+                      image: ghcr.io/ldamasio/rbx-session-bff:sha-b4eb88b
+                      imagePullPolicy: IfNotPresent
+                      ports:
+                        - containerPort: 8081
+                          name: http
+                      env:
+                        - name: RBX_IDENTITY_ISSUER
+                          value: https://auth.rbx.ia.br
+                        - name: RBX_SESSION_BFF_DISCOVER_OIDC
+                          value: "true"
+                        - name: RBX_SESSION_BFF_CLIENT_ID
+                          value: strategos-session-bff
+                        - name: RBX_SESSION_BFF_REDIRECT_URI
+                          value: https://strategos.rbx.ia.br/api/auth/callback
+                        - name: RBX_SESSION_BFF_BIND_ADDR
+                          value: 0.0.0.0:8081
+                      readinessProbe:
+                        httpGet:
+                          path: /healthz
+                          port: 8081
+                        initialDelaySeconds: 5
+                        periodSeconds: 5
+                        timeoutSeconds: 3
+                        failureThreshold: 3
+                      livenessProbe:
+                        httpGet:
+                          path: /healthz
+                          port: 8081
+                        initialDelaySeconds: 15
+                        periodSeconds: 10
+                        timeoutSeconds: 3
+                        failureThreshold: 3
+                      resources:
+                        requests:
+                          cpu: 50m
+                          memory: 128Mi
+                        limits:
+                          cpu: 500m
+                          memory: 512Mi
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        runAsNonRoot: true
+                        runAsUser: 1001
+                        capabilities:
+                          drop:
+                            - ALL
+
+          - apiVersion: v1
+            kind: Service
+            metadata:
+              name: rbx-session-bff
+              namespace: rbx-identity
+              labels:
+                app.kubernetes.io/name: rbx-session-bff
+                app.kubernetes.io/component: session-bff
+                app.kubernetes.io/part-of: rbx-identity
+            spec:
+              type: ClusterIP
+              selector:
+                app.kubernetes.io/name: rbx-session-bff
+              ports:
+                - name: http
+                  port: 8081
+                  targetPort: 8081
+
+          - apiVersion: networking.k8s.io/v1
+            kind: Ingress
+            metadata:
+              name: rbx-session-bff
+              namespace: rbx-identity
+              labels:
+                app.kubernetes.io/name: rbx-session-bff
+                app.kubernetes.io/component: session-bff
+                app.kubernetes.io/part-of: rbx-identity
+              annotations:
+                cert-manager.io/cluster-issuer: letsencrypt-prod
+                traefik.ingress.kubernetes.io/router.entrypoints: websecure
+                traefik.ingress.kubernetes.io/router.tls: "true"
+            spec:
+              ingressClassName: traefik
+              tls:
+                - secretName: zitadel-tls
+                  hosts:
+                    - auth.rbx.ia.br
+              rules:
+                - host: auth.rbx.ia.br
+                  http:
+                    paths:
+                      - path: /oidc
+                        pathType: Prefix
+                        backend:
+                          service:
+                            name: rbx-session-bff
+                            port:
+                              number: 8081
+                      - path: /me
+                        pathType: Prefix
+                        backend:
+                          service:
+                            name: rbx-session-bff
+                            port:
+                              number: 8081
 
   destination:
     server: https://kubernetes.default.svc
