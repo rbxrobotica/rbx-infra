@@ -1,0 +1,83 @@
+---
+# Creates the ZITADEL database and runtime user on jaguar (Postgres).
+# Runs ONLY on db_server group. Does NOT deploy ZITADEL itself.
+
+- name: Install python3-psycopg2 (required for Ansible postgresql modules)
+  apt:
+    name: python3-psycopg2
+    state: present
+
+- name: Create zitadel database
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: "{{ zitadel_db_name }}"
+    encoding: UTF8
+    state: present
+
+- name: Create zitadel user
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ zitadel_db_user }}"
+    password: "{{ zitadel_db_password }}"
+    state: present
+
+- name: Grant zitadel database-level privileges
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ zitadel_db_name }}"
+    role: "{{ zitadel_db_user }}"
+    type: database
+    privs: ALL
+    state: present
+
+- name: Grant zitadel CREATE,USAGE on public schema (PostgreSQL 15+)
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ zitadel_db_name }}"
+    role: "{{ zitadel_db_user }}"
+    type: schema
+    objs: public
+    privs: CREATE,USAGE
+    state: present
+
+- name: Grant zitadel ALL on existing tables
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ zitadel_db_name }}"
+    role: "{{ zitadel_db_user }}"
+    type: table
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present
+
+- name: Grant zitadel ALL on existing sequences
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ zitadel_db_name }}"
+    role: "{{ zitadel_db_user }}"
+    type: sequence
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present
+
+- name: Allow k3s nodes to connect to zitadel database only
+  lineinfile:
+    path: /etc/postgresql/16/main/pg_hba.conf
+    line: "host {{ zitadel_db_name }} {{ zitadel_db_user }} {{ hostvars[item].ansible_host }}/32 scram-sha-256"
+    insertafter: EOF
+  loop: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"
+  notify: restart postgresql
+
+- name: Allow firewall access from k3s nodes to Postgres
+  ufw:
+    rule: allow
+    port: "5432"
+    proto: tcp
+    src: "{{ hostvars[item].ansible_host }}"
+  loop: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"

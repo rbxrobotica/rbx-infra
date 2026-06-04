@@ -67,6 +67,9 @@ rbx/
     encryption-key              # Langfuse encryption key — openssl rand -hex 32
     clickhouse-password         # Bundled ClickHouse password
     redis-password              # Bundled Valkey/Redis password
+  zitadel/
+    masterkey                   # ZITADEL masterkey — openssl rand -hex 32
+    db-password                 # PostgreSQL password for user `zitadel` — openssl rand -hex 32
   storage/
     contabo-access-key          # Contabo object storage access key (S3-compatible)
     contabo-secret-key          # Contabo object storage secret key
@@ -137,6 +140,8 @@ pass insert rbx/langfuse/salt                      # openssl rand -hex 32
 pass insert rbx/langfuse/encryption-key            # openssl rand -hex 32
 pass insert rbx/langfuse/clickhouse-password       # openssl rand -hex 32
 pass insert rbx/langfuse/redis-password            # openssl rand -hex 32
+pass insert rbx/zitadel/masterkey                  # openssl rand -hex 32
+pass insert rbx/zitadel/db-password                # openssl rand -hex 32
 pass insert rbx/s3/access-key         # Contabo S3 access key
 pass insert rbx/s3/secret-key         # Contabo S3 secret key
 
@@ -207,6 +212,8 @@ Secrets created per namespace:
 | `langfuse` | `langfuse-clickhouse-auth` | `password` | `rbx/langfuse/clickhouse-password` |
 | `langfuse` | `langfuse-redis-auth` | `password` | `rbx/langfuse/redis-password` |
 | `langfuse` | `langfuse-s3-auth` | `accessKeyId`, `secretAccessKey` | `rbx/s3/access-key`, `rbx/s3/secret-key` |
+| `rbx-identity` | `zitadel-masterkey` | `masterkey` | `rbx/zitadel/masterkey` |
+| `rbx-identity` | `zitadel-env` | `ZITADEL_DATABASE_POSTGRES_HOST`, `ZITADEL_DATABASE_POSTGRES_PORT`, `ZITADEL_DATABASE_POSTGRES_DATABASE`, `ZITADEL_DATABASE_POSTGRES_USER_USERNAME`, `ZITADEL_DATABASE_POSTGRES_USER_PASSWORD`, `ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE`, `ZITADEL_EXTERNALDOMAIN`, `ZITADEL_EXTERNALPORT`, `ZITADEL_EXTERNALSECURE`, `ZITADEL_TLS_ENABLED` | `rbx/zitadel/db-password` |
 
 `rbx-ia-br` is the central vault namespace read by the reorg services'
 ExternalSecrets through the `kubernetes-store` SecretStore. The

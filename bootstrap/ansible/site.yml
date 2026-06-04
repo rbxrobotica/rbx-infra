@@ -42,6 +42,13 @@
   roles:
     - langfuse-database
 
+# Phase 6c: Create ZITADEL database on jaguar
+- name: Setup ZITADEL database
+  hosts: db_server
+  tags: [databases, zitadel]
+  roles:
+    - zitadel-database
+
 # Phase 7: Harden DNS servers (DNS-specific firewall)
 - name: Harden DNS servers
   hosts: dns_servers

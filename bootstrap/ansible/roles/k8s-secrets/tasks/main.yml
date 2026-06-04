@@ -793,6 +793,63 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# rbx-identity namespace secrets
+# ---------------------------------------------------------------------------
+
+- name: Read ZITADEL masterkey from pass
+  command: pass show {{ pass_zitadel_masterkey_key }}
+  changed_when: false
+  register: zitadel_masterkey_result
+  no_log: true
+
+- name: Read ZITADEL DB password from pass
+  command: pass show {{ pass_zitadel_db_password_key }}
+  changed_when: false
+  register: zitadel_db_password_result
+  no_log: true
+
+- name: Ensure rbx-identity namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ rbx_identity_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create zitadel-masterkey in rbx-identity
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic zitadel-masterkey \
+      --namespace {{ rbx_identity_namespace }} \
+      --from-literal=masterkey="$ZITADEL_MASTERKEY" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    ZITADEL_MASTERKEY: "{{ zitadel_masterkey_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+- name: Create zitadel-env in rbx-identity
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic zitadel-env \
+      --namespace {{ rbx_identity_namespace }} \
+      --from-literal=ZITADEL_DATABASE_POSTGRES_HOST=zitadel-postgres \
+      --from-literal=ZITADEL_DATABASE_POSTGRES_PORT=5432 \
+      --from-literal=ZITADEL_DATABASE_POSTGRES_DATABASE=zitadel \
+      --from-literal=ZITADEL_DATABASE_POSTGRES_USER_USERNAME=zitadel \
+      --from-literal=ZITADEL_DATABASE_POSTGRES_USER_PASSWORD="$ZITADEL_DB_PASSWORD" \
+      --from-literal=ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE=require \
+      --from-literal=ZITADEL_EXTERNALDOMAIN=auth.rbx.ia.br \
+      --from-literal=ZITADEL_EXTERNALPORT=443 \
+      --from-literal=ZITADEL_EXTERNALSECURE=true \
+      --from-literal=ZITADEL_TLS_ENABLED=false \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    ZITADEL_DB_PASSWORD: "{{ zitadel_db_password_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # rbx-commerce namespace secrets
 # ---------------------------------------------------------------------------
 
@@ -894,6 +951,8 @@
       - "  {{ langfuse_namespace }}/langfuse-clickhouse-auth: ClickHouse password"
       - "  {{ langfuse_namespace }}/langfuse-redis-auth: Redis password"
       - "  {{ langfuse_namespace }}/langfuse-s3-auth: Contabo S3 credentials"
+      - "  {{ rbx_identity_namespace }}/zitadel-masterkey: masterkey"
+      - "  {{ rbx_identity_namespace }}/zitadel-env: ZITADEL env vars + DB password"
       - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
@@ -917,4 +976,6 @@
       - "  {{ langfuse_namespace }}/langfuse-clickhouse-auth: ClickHouse password"
       - "  {{ langfuse_namespace }}/langfuse-redis-auth: Redis password"
       - "  {{ langfuse_namespace }}/langfuse-s3-auth: Contabo S3 credentials"
+      - "  {{ rbx_identity_namespace }}/zitadel-masterkey: masterkey"
+      - "  {{ rbx_identity_namespace }}/zitadel-env: ZITADEL env vars + DB password"
   when: tenant_id_existing.rc == 0

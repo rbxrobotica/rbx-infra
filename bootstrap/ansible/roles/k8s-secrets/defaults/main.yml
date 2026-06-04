@@ -68,3 +68,8 @@ pass_langfuse_clickhouse_password_key: "rbx/langfuse/clickhouse-password"
 pass_langfuse_redis_password_key: "rbx/langfuse/redis-password"
 pass_contabo_s3_access_key_key: "rbx/s3/access-key"
 pass_contabo_s3_secret_key_key: "rbx/s3/secret-key"
+
+# rbx-identity (namespace: rbx-identity — canonical auth / IdP)
+rbx_identity_namespace: "rbx-identity"
+pass_zitadel_masterkey_key: "rbx/zitadel/masterkey"
+pass_zitadel_db_password_key: "rbx/zitadel/db-password"

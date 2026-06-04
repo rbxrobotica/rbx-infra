@@ -1,0 +1,110 @@
+# ArgoCD Application: RBX Identity
+# Canonical identity provider for RBX production auth.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-identity
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-identity
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-identity
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://charts.zitadel.com
+    chart: zitadel
+    targetRevision: 9.34.0
+    helm:
+      releaseName: rbx-identity
+      values: |
+        replicaCount: 2
+
+        ingress:
+          enabled: true
+          className: traefik
+          annotations:
+            cert-manager.io/cluster-issuer: letsencrypt-prod
+            traefik.ingress.kubernetes.io/router.entrypoints: websecure
+            traefik.ingress.kubernetes.io/router.tls: "true"
+          hosts:
+            - host: auth.rbx.ia.br
+              paths:
+                - path: /
+                  pathType: Prefix
+          tls:
+            - secretName: zitadel-tls
+              hosts:
+                - auth.rbx.ia.br
+
+        login:
+          ingress:
+            enabled: true
+            className: traefik
+            annotations:
+              cert-manager.io/cluster-issuer: letsencrypt-prod
+              traefik.ingress.kubernetes.io/router.entrypoints: websecure
+              traefik.ingress.kubernetes.io/router.tls: "true"
+            hosts:
+              - host: auth.rbx.ia.br
+                paths:
+                  - path: /ui/v2/login
+                    pathType: Prefix
+            tls:
+              - secretName: zitadel-tls
+                hosts:
+                  - auth.rbx.ia.br
+
+        zitadel:
+          configmapConfig:
+            ExternalDomain: auth.rbx.ia.br
+            ExternalPort: 443
+            ExternalSecure: true
+            TLS:
+              Enabled: false
+          masterkeySecretName: zitadel-masterkey
+          initJob:
+            enabled: true
+            command: "zitadel"
+          envVarsSecret: zitadel-env
+
+        extraManifests:
+          - apiVersion: v1
+            kind: Service
+            metadata:
+              name: zitadel-postgres
+              namespace: rbx-identity
+              labels:
+                app.kubernetes.io/name: zitadel-postgres
+                app.kubernetes.io/component: database
+                app.kubernetes.io/part-of: rbx-identity
+            spec:
+              ports:
+                - port: 5432
+                  protocol: TCP
+                  name: postgres
+          - apiVersion: v1
+            kind: Endpoints
+            metadata:
+              name: zitadel-postgres
+              namespace: rbx-identity
+            subsets:
+              - addresses:
+                  - ip: 161.97.147.76
+                ports:
+                  - port: 5432
+                    name: postgres
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-identity
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
