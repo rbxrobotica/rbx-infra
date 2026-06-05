@@ -43,13 +43,13 @@ spec:
                   key: COMMS_API_URL
             # Payment provider configuration (ADR-0009)
             - name: ASAAS_ENV
-              value: "sandbox"
+              value: "production"
             - name: ASAAS_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: rbx-commerce-secrets
                   key: ASAAS_API_KEY
-                  optional: true
+                  optional: false
             - name: BTCPAY_URL
               value: "http://btcpay-server.btc-pay.svc.cluster.local:23001"
             - name: BTCPAY_API_KEY
