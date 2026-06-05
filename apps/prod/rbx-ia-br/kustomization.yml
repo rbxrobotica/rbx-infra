@@ -16,4 +16,4 @@ commonLabels:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-ia-br
-    newTag: sha-5562043
+    newTag: sha-e3fa86a
