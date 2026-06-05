@@ -1,0 +1,34 @@
+# Cross-namespace RBAC: lets the rbx-market-briefing external-secrets-reader
+# ServiceAccount read exactly the two remote secrets it needs from rbx-ia-br.
+#
+# Self-contained in this app dir (distinct object names) so it does not modify
+# apps/prod/rbx-ia-br/. The rbx-applications AppProject must permit this app to
+# manage namespaced resources in rbx-ia-br — see SLICE-007 session log.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: read-rbx-market-briefing-secrets
+  namespace: rbx-ia-br
+rules:
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames:
+      - contabo-s3-credentials
+      - rbx-market-briefing-llm
+    verbs: ["get"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: read-rbx-market-briefing-secrets
+  namespace: rbx-ia-br
+subjects:
+  - kind: ServiceAccount
+    name: external-secrets-reader
+    namespace: rbx-market-briefing
+roleRef:
+  kind: Role
+  name: read-rbx-market-briefing-secrets
+  apiGroup: rbac.authorization.k8s.io

@@ -1,0 +1,37 @@
+# Non-sensitive runtime config for rbx-market-briefing.
+# loadConfig() reads ${cwd}/config/config.yaml and resolves ${VAR} placeholders
+# from the process environment, so the real values arrive via env (see cronjob.yml).
+# This file only guarantees the config file exists in the container.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rbx-market-briefing-config
+  namespace: rbx-market-briefing
+data:
+  config.yaml: |
+    symbol: BTCUSDT
+    exchange: Binance USD-M Futures
+    timeframes:
+      - 1m
+      - 5m
+      - 15m
+      - 1h
+      - 4h
+      - 1d
+
+    llm:
+      base_url: ${LLM_BASE_URL}
+      api_key: ${LLM_API_KEY}
+      model: ${LLM_MODEL}
+      temperature: 0.2
+      max_tokens: 4000
+
+    s3:
+      endpoint: ${S3_ENDPOINT}
+      bucket: ${S3_BUCKET}
+      prefix: ${S3_PREFIX}
+      access_key_id: ${S3_ACCESS_KEY_ID}
+      secret_access_key: ${S3_SECRET_ACCESS_KEY}
+
+    output:
+      local_dir: ./out
