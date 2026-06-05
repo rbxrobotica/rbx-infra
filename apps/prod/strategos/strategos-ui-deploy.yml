@@ -24,7 +24,7 @@ spec:
         - name: ghcr-ldamasio
       containers:
         - name: strategos-ui
-          image: ghcr.io/ldamasio/strategos-ui:sha-2928c64
+          image: ghcr.io/ldamasio/strategos-ui:sha-24c0a67
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
