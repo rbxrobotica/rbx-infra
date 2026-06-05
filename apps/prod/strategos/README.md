@@ -20,7 +20,13 @@ The canonical authenticated Strategos entrypoint is `app.rbxsystems.ch/strategos
 per ADR-0014. These hosts exist as aliases/redirects until the Hub route is
 fully adopted.
 
+On the Hub host, `/strategos` routes to Strategos UI. `/api/auth/*` is also
+routed to Strategos UI on `app.rbxsystems.ch` so the product-local SvelteKit auth
+adapter can proxy login, callback, session, and logout to `rbx-session-bff`
+without exposing browser tokens.
+
 `strategos.rbxsystems.ch` is managed in `infra/terraform/dns/rbxsystems_ch.tf`.
+`app.rbxsystems.ch` is managed in the same zone file as the Hub entrypoint.
 The `rbx.ia.br` zone is currently documented as externally managed, so
 `strategos.rbx.ia.br` must be created where the existing `robson.rbx.ia.br`
 record is managed and pointed at the k3s ingress IP (`158.220.116.31`).

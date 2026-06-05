@@ -50,6 +50,12 @@ spec:
                   name: rbx-commerce-secrets
                   key: ASAAS_API_KEY
                   optional: false
+            - name: ASAAS_WEBHOOK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-secrets
+                  key: ASAAS_WEBHOOK_TOKEN
+                  optional: true
             - name: BTCPAY_URL
               value: "http://btcpay-server.btc-pay.svc.cluster.local:23001"
             - name: BTCPAY_API_KEY

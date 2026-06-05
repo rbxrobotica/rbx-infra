@@ -1,7 +1,9 @@
 # Strategos UI Ingress
+# Canonical authenticated Strategos route: app.rbxsystems.ch/strategos.
+# The same host also routes /api/auth/* to preserve the product-local
+# same-origin auth adapter used by the SvelteKit app.
 # Legacy aliases during Hub migration: strategos.rbx.ia.br (pt-BR) +
-# strategos.rbxsystems.ch (en)
-# Canonical authenticated Strategos route: app.rbxsystems.ch/strategos
+# strategos.rbxsystems.ch (en).
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -18,12 +20,32 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
+        - app.rbxsystems.ch
+      secretName: strategos-ui-app-rbxsystems-ch-tls
+    - hosts:
         - strategos.rbx.ia.br
       secretName: strategos-ui-rbx-ia-br-tls
     - hosts:
         - strategos.rbxsystems.ch
       secretName: strategos-ui-rbxsystems-ch-tls
   rules:
+    - host: app.rbxsystems.ch
+      http:
+        paths:
+          - path: /strategos
+            pathType: Prefix
+            backend:
+              service:
+                name: strategos-ui
+                port:
+                  number: 80
+          - path: /api/auth
+            pathType: Prefix
+            backend:
+              service:
+                name: strategos-ui
+                port:
+                  number: 80
     - host: strategos.rbx.ia.br
       http:
         paths:

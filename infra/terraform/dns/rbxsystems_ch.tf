@@ -180,6 +180,14 @@ resource "powerdns_record" "robson_rbxsystems_ch" {
 
 # Strategos UI legacy alias during Hub migration.
 # Canonical authenticated Strategos entrypoint: app.rbxsystems.ch/strategos
+resource "powerdns_record" "app_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "app.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
 resource "powerdns_record" "strategos_rbxsystems_ch" {
   zone    = powerdns_zone.rbxsystems_ch.name
   name    = "strategos.rbxsystems.ch."
