@@ -1,0 +1,25 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-market-briefing
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-market-briefing
+    app.kubernetes.io/part-of: rbx-market-briefing
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-market-briefing
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-market-briefing
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

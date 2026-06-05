@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-market-briefing
+  labels:
+    app.kubernetes.io/part-of: rbx-market-briefing
+    environment: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
