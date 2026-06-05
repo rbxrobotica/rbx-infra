@@ -178,7 +178,8 @@ resource "powerdns_record" "robson_rbxsystems_ch" {
   records = [var.k3s_ingress_ip]
 }
 
-# Strategos UI (en locale via host detection)
+# Strategos UI legacy alias during Hub migration.
+# Canonical authenticated Strategos entrypoint: app.rbxsystems.ch/strategos
 resource "powerdns_record" "strategos_rbxsystems_ch" {
   zone    = powerdns_zone.rbxsystems_ch.name
   name    = "strategos.rbxsystems.ch."
@@ -187,7 +188,7 @@ resource "powerdns_record" "strategos_rbxsystems_ch" {
   records = [var.k3s_ingress_ip]
 }
 
-# Auth host for RBX Identity / product-local session boundaries
+# Reserved secondary auth host. Primary auth remains auth.rbx.ia.br.
 resource "powerdns_record" "auth_rbxsystems_ch" {
   zone    = powerdns_zone.rbxsystems_ch.name
   name    = "auth.rbxsystems.ch."

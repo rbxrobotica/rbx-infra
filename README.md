@@ -93,7 +93,7 @@ rbx-infra/
 | Application | Repository | Domains |
 |-------------|------------|---------|
 | Robson | `ldamasio/robson` | `app.robson.rbx.ia.br`, `api.robson.rbx.ia.br` |
-| Strategos | `ldamasio/strategos` | `strategos.gr`, `strategos.rbx.ia.br` |
+| Strategos | `ldamasio/strategos` | `strategos.gr`, `app.rbxsystems.ch` |
 | Thalamus | `ldamasio/thalamus` | `thalamus.rbx.ia.br` |
 | Websites | `ldamasio/websites` | `rbxsystems.ch`, `rbx.ia.br` |
 
@@ -105,6 +105,9 @@ rbx-infra/
 | external-dns | DNS automation | Planned |
 | Istio Ambient | Service mesh | Active |
 | Gateway API | Ingress replacement | Active |
+
+Note: product-specific authenticated routes may live under the RBX Hub at
+`app.rbxsystems.ch/<product>`. Product domains remain the public brand surfaces.
 
 ## Quick Start
 

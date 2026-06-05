@@ -120,6 +120,8 @@ spec:
                         - containerPort: 8081
                           name: http
                       env:
+                        # Transitional Strategos callback during Hub migration.
+                        # Canonical target: app.rbxsystems.ch/strategos.
                         - name: RBX_IDENTITY_ISSUER
                           value: https://auth.rbx.ia.br
                         - name: RBX_SESSION_BFF_DISCOVER_OIDC

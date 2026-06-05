@@ -11,10 +11,14 @@ semantics for Strategos are governed by the canonical contracts in
 Deployment documentation in rbx-infra should reference those contracts instead
 of inventing new Strategos domain terms.
 
-Strategos UI is exposed through a dual-host Ingress:
+Strategos UI is exposed through transition aliases during the Hub migration:
 
 - `strategos.rbx.ia.br`
 - `strategos.rbxsystems.ch`
+
+The canonical authenticated Strategos entrypoint is `app.rbxsystems.ch/strategos`
+per ADR-0014. These hosts exist as aliases/redirects until the Hub route is
+fully adopted.
 
 `strategos.rbxsystems.ch` is managed in `infra/terraform/dns/rbxsystems_ch.tf`.
 The `rbx.ia.br` zone is currently documented as externally managed, so

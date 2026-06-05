@@ -1,5 +1,7 @@
 # Strategos UI Ingress
-# Hosts: strategos.rbx.ia.br (pt-BR) + strategos.rbxsystems.ch (en)
+# Legacy aliases during Hub migration: strategos.rbx.ia.br (pt-BR) +
+# strategos.rbxsystems.ch (en)
+# Canonical authenticated Strategos route: app.rbxsystems.ch/strategos
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
