@@ -41,6 +41,35 @@ spec:
                 secretKeyRef:
                   name: rbx-commerce-secrets
                   key: COMMS_API_URL
+            # Payment provider configuration (ADR-0009)
+            - name: ASAAS_ENV
+              value: "sandbox"
+            - name: ASAAS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-secrets
+                  key: ASAAS_API_KEY
+                  optional: true
+            - name: BTCPAY_URL
+              value: "http://btcpay-server.btc-pay.svc.cluster.local:23001"
+            - name: BTCPAY_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-secrets
+                  key: BTCPAY_API_KEY
+                  optional: true
+            - name: PAYREXX_INSTANCE
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-secrets
+                  key: PAYREXX_INSTANCE
+                  optional: true
+            - name: PAYREXX_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-secrets
+                  key: PAYREXX_API_KEY
+                  optional: true
           readinessProbe:
             httpGet:
               path: /health
