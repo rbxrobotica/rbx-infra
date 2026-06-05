@@ -114,7 +114,7 @@ spec:
                     - name: ghcr-pull-secret
                   containers:
                     - name: rbx-session-bff
-                      image: ghcr.io/ldamasio/rbx-session-bff:sha-b4eb88b
+                      image: ghcr.io/ldamasio/rbx-session-bff:sha-506d3ed
                       imagePullPolicy: IfNotPresent
                       ports:
                         - containerPort: 8081
