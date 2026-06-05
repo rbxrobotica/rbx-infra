@@ -61,11 +61,16 @@ spec:
             - "4000"
 
           env:
-            # Writable HOME so Prisma can create its engine cache (/tmp/.cache).
-            # The container is non-root (uid 1000) and would otherwise fail with
-            # PermissionError on '/.cache'. Backed by the `tmp` emptyDir below.
+            # Writable HOME (non-root uid 1000) for any runtime cache; backed by
+            # the `tmp` emptyDir below.
             - name: HOME
               value: "/tmp"
+            # Unbuffered stdout so logs stream during the slow (~4 min) cold
+            # import instead of being lost if the container is killed.
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: LITELLM_LOG
+              value: "INFO"
 
             # Master key — proxy will reject requests without this bearer token
             - name: LITELLM_MASTER_KEY
@@ -74,19 +79,10 @@ spec:
                   name: litellm-secrets
                   key: master-key
 
-            # External Postgres on jaguar
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: litellm-secrets
-                  key: database-url
-
-            # Salt key for encrypting DB-stored credentials
-            - name: LITELLM_SALT_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: litellm-secrets
-                  key: salt-key
+            # DB-less mode: no DATABASE_URL / LITELLM_SALT_KEY on purpose.
+            # LiteLLM runs as a stateless routing proxy (no Prisma), which
+            # sidesteps the wolfi query-engine failure. Restore both (and the
+            # config's database_url) when the DB-backed path is fixed.
 
             # Provider API keys — RBX initial strategy:
             #   1. Groq (free tier, good for smoke tests)
@@ -117,17 +113,17 @@ spec:
               mountPath: /tmp
 
           resources:
-            # LiteLLM v1.83 boots Prisma (engine generate + migrate deploy),
-            # which spikes well past 256Mi and was OOMKilled (exit 137).
+            # DB-less proxy, but LiteLLM's import graph alone needs ~1Gi+
+            # (256Mi/512Mi was OOMKilled mid-import → zero logs). 2Gi gives margin.
             requests:
               cpu: "250m"
-              memory: "1Gi"
+              memory: "512Mi"
             limits:
               cpu: "1"
               memory: "2Gi"
 
           # LiteLLM exposes /health/liveliness and /health/readiness
-          # Conservative timings to avoid premature restarts during DB migration.
+          # Conservative timings to avoid premature restarts during the slow cold start.
           livenessProbe:
             httpGet:
               path: /health/liveliness
@@ -147,12 +143,14 @@ spec:
             failureThreshold: 3
 
           startupProbe:
+            # LiteLLM's cold import takes ~4 min before binding :4000;
+            # 60 × 5s = 300s window prevents premature restart kills.
             httpGet:
               path: /health/liveliness
               port: 4000
             periodSeconds: 5
             timeoutSeconds: 5
-            failureThreshold: 30
+            failureThreshold: 60
 
           securityContext:
             allowPrivilegeEscalation: false

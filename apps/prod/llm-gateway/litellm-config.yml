@@ -60,8 +60,10 @@ data:
     # General settings
     general_settings:
       master_key: "os.environ/LITELLM_MASTER_KEY"
-      database_url: "os.environ/DATABASE_URL"
-      # Store virtual keys and spend in external Postgres
+      # DB-less mode: run as a stateless routing proxy authenticated by the
+      # master key. No database_url => no Prisma => avoids the wolfi/query-engine
+      # runtime failure. Virtual keys / spend tracking (DB-backed on jaguar) are
+      # deferred until the Prisma issue is resolved or Agentgateway replaces this.
       store_model_in_db: false
 
     # Litellm settings
