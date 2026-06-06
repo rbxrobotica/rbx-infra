@@ -39,6 +39,20 @@ spec:
                 name: strategos-ui
                 port:
                   number: 80
+          - path: /_app
+            pathType: Prefix
+            backend:
+              service:
+                name: strategos-ui
+                port:
+                  number: 80
+          - path: /strategos-mark.svg
+            pathType: Prefix
+            backend:
+              service:
+                name: strategos-ui
+                port:
+                  number: 80
           - path: /api/auth
             pathType: Prefix
             backend:
