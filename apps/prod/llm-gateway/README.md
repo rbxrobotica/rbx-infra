@@ -4,6 +4,13 @@
 **Criticality:** Non-critical. Safe to scale to zero or remove.
 **Exposure:** Internal only (ClusterIP). No Ingress in this revision.
 
+> **Current state (2026-06-06): running DB-LESS.** The DB-backed path described
+> below (Postgres on jaguar, virtual keys, spend tracking) is **disabled** — a
+> LiteLLM v1.83.14 (wolfi base) Prisma runtime query-engine bug blocked it, so
+> the proxy runs as a stateless router authenticated by the **master key**.
+> This is an **interim Phase-A** backend. See **[ADR-0007](../../../docs/adr/ADR-0007-llm-gateway-production-grade-promotion.md)**
+> and the **Roadmap** section below for the promotion path to production-grade.
+
 ---
 
 ## Purpose
@@ -132,6 +139,35 @@ Before ArgoCD syncs for the first time:
 - [x] ArgoCD Application `llm-gateway.yml` created in `gitops/app-of-apps/` — já existia, aguardando sync (P3D)
 
 The current LiteLLM image digest was validated for `amd64`. If any cluster node reports `arm64`, review whether this deployment should use the multi-arch digest instead of the amd64 digest before syncing ArgoCD.
+
+---
+
+## Roadmap: Promotion to production-grade
+
+Tracked by **[ADR-0007](../../../docs/adr/ADR-0007-llm-gateway-production-grade-promotion.md)**.
+This gateway is an **interim, non-governed, DB-less Phase-A** backend. The first
+paid product (`rbx-market-briefing`) consumes it today. To promote it to
+production-grade infrastructure, ALL of the following must hold:
+
+- [ ] **Stable image** — Prisma runtime engine starts cleanly (no
+      `NotConnectedError`); pin a non-wolfi/debian-based LiteLLM image or fix the
+      engine, then restore `DATABASE_URL` + `LITELLM_SALT_KEY` + config `database_url`.
+- [ ] **DB-backed identity** — per-product **virtual keys** (not the shared
+      master key), with **budgets**, **spend tracking**, and **per-key rate
+      limits**, on jaguar Postgres.
+- [ ] **Governed** — LLM traffic flows **through Thalamus** (`BackendPort`):
+      policy, audit, risk classification, pre/post-call validation (Phase C+ of
+      the Thalamus migration, not direct calls).
+- [ ] **Operational** — documented master-key/virtual-key rotation, defined
+      HA/SLO posture, production model aliases (drop the `-test` suffix).
+
+**Two candidate targets** (A-vs-B is a follow-up ADR):
+- **A — Harden LiteLLM**: debian image → re-enable DB → virtual keys → behind Thalamus.
+- **B — Agentgateway** (solo.io) as the unified MCP+A2A+LLM data plane under
+  Thalamus (strategic target, ADR-0008); LiteLLM is the interim it replaces.
+
+Until promoted, paid products run on shared-master-key, no-budget, no-governance
+LLM access — an explicit, tracked trade-off, not an accident.
 
 ---
 
