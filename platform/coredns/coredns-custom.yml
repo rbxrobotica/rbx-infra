@@ -1,0 +1,17 @@
+# CoreDNS custom zone forwards loaded by the k3s CoreDNS addon.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns-custom
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/name: coredns-custom
+    app.kubernetes.io/component: dns
+    app.kubernetes.io/part-of: rbx-infra
+data:
+  rbxsystems-ch.server: |
+    rbxsystems.ch:53 {
+        errors
+        cache 30
+        forward . 149.102.139.33 167.86.92.97
+    }
