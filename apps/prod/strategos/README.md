@@ -11,22 +11,26 @@ semantics for Strategos are governed by the canonical contracts in
 Deployment documentation in rbx-infra should reference those contracts instead
 of inventing new Strategos domain terms.
 
-Strategos UI is exposed through transition aliases during the Hub migration:
+Strategos UI is exposed through the Merovelis app host with legacy aliases during
+the migration:
 
+- `app.merovelis.com`
 - `strategos.rbx.ia.br`
 - `strategos.rbxsystems.ch`
 
-The canonical authenticated Strategos entrypoint is `app.rbxsystems.ch/strategos`
-per ADR-0014. These hosts exist as aliases/redirects until the Hub route is
-fully adopted.
+The canonical authenticated Strategos entrypoint is `app.merovelis.com/strategos`
+per the Merovelis border map. `app.rbxsystems.ch/strategos` remains the
+transition alias until the Merovelis route is fully adopted.
 
-On the Hub host, `/strategos` routes to Strategos UI. `/api/auth/*` is also
-routed to Strategos UI on `app.rbxsystems.ch` so the product-local SvelteKit auth
-adapter can proxy login, callback, session, and logout to `rbx-session-bff`
-without exposing browser tokens.
+On the app host, `/strategos` routes to Strategos UI. `/api/auth/*` is also
+routed to Strategos UI so the product-local SvelteKit auth adapter can proxy
+login, callback, session, and logout to `rbx-session-bff` without exposing
+browser tokens.
 
+`app.merovelis.com` and `auth.merovelis.com` are managed in
+`infra/terraform/dns/merovelis.com.tf`.
+`app.rbxsystems.ch` is kept in the `rbxsystems.ch` zone as a transition alias.
 `strategos.rbxsystems.ch` is managed in `infra/terraform/dns/rbxsystems_ch.tf`.
-`app.rbxsystems.ch` is managed in the same zone file as the Hub entrypoint.
 The `rbx.ia.br` zone is currently documented as externally managed, so
 `strategos.rbx.ia.br` must be created where the existing `robson.rbx.ia.br`
 record is managed and pointed at the k3s ingress IP (`158.220.116.31`).

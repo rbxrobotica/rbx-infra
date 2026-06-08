@@ -178,8 +178,8 @@ resource "powerdns_record" "robson_rbxsystems_ch" {
   records = [var.k3s_ingress_ip]
 }
 
-# Strategos UI legacy alias during Hub migration.
-# Canonical authenticated Strategos entrypoint: app.rbxsystems.ch/strategos
+# Strategos UI legacy alias during migration.
+# Canonical authenticated Strategos entrypoint: app.merovelis.com/strategos
 resource "powerdns_record" "app_rbxsystems_ch" {
   zone    = powerdns_zone.rbxsystems_ch.name
   name    = "app.rbxsystems.ch."
@@ -196,7 +196,7 @@ resource "powerdns_record" "strategos_rbxsystems_ch" {
   records = [var.k3s_ingress_ip]
 }
 
-# Reserved secondary auth host. Primary auth remains auth.rbx.ia.br.
+# Reserved legacy auth alias during migration. Canonical auth is auth.merovelis.com.
 resource "powerdns_record" "auth_rbxsystems_ch" {
   zone    = powerdns_zone.rbxsystems_ch.name
   name    = "auth.rbxsystems.ch."

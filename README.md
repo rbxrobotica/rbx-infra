@@ -93,7 +93,7 @@ rbx-infra/
 | Application | Repository | Domains |
 |-------------|------------|---------|
 | Robson | `ldamasio/robson` | `app.robson.rbx.ia.br`, `api.robson.rbx.ia.br` |
-| Strategos | `ldamasio/strategos` | `strategos.gr`, `app.rbxsystems.ch` |
+| Strategos | `ldamasio/strategos` | `strategos.gr`, `app.merovelis.com/strategos`, `app.rbxsystems.ch/strategos` |
 | Thalamus | `ldamasio/thalamus` | `thalamus.rbx.ia.br` |
 | Websites | `ldamasio/websites` | `rbxsystems.ch`, `rbx.ia.br` |
 
@@ -106,8 +106,9 @@ rbx-infra/
 | Istio Ambient | Service mesh | Active |
 | Gateway API | Ingress replacement | Active |
 
-Note: product-specific authenticated routes may live under the RBX Hub at
-`app.rbxsystems.ch/<product>`. Product domains remain the public brand surfaces.
+Note: product-specific authenticated routes may live under the Merovelis app
+host at `app.merovelis.com/<product>` with `app.rbxsystems.ch/<product>` as a
+transition alias. Product domains remain the public brand surfaces.
 
 ## Quick Start
 

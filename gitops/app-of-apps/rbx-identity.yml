@@ -31,14 +31,14 @@ spec:
             traefik.ingress.kubernetes.io/router.entrypoints: websecure
             traefik.ingress.kubernetes.io/router.tls: "true"
           hosts:
-            - host: auth.rbx.ia.br
+            - host: auth.merovelis.com
               paths:
                 - path: /
                   pathType: Prefix
           tls:
             - secretName: zitadel-tls
               hosts:
-                - auth.rbx.ia.br
+                - auth.merovelis.com
 
         login:
           ingress:
@@ -49,19 +49,19 @@ spec:
               traefik.ingress.kubernetes.io/router.entrypoints: websecure
               traefik.ingress.kubernetes.io/router.tls: "true"
             hosts:
-              - host: auth.rbx.ia.br
+              - host: auth.merovelis.com
                 paths:
                   - path: /ui/v2/login
                     pathType: Prefix
             tls:
               - secretName: zitadel-tls
                 hosts:
-                  - auth.rbx.ia.br
+                  - auth.merovelis.com
 
         zitadel:
           masterkeySecretName: zitadel-masterkey
           configmapConfig:
-            ExternalDomain: auth.rbx.ia.br
+            ExternalDomain: auth.merovelis.com
             ExternalPort: 443
             ExternalSecure: true
             TLS:
@@ -121,16 +121,16 @@ spec:
                           name: http
                       env:
                         # Strategos uses the canonical Hub entrypoint
-                        # app.rbxsystems.ch/strategos and same-origin auth
-                        # adapter routes under app.rbxsystems.ch/api/auth/*.
+                        # app.merovelis.com/strategos and same-origin auth
+                        # adapter routes under app.merovelis.com/api/auth/*.
                         - name: RBX_IDENTITY_ISSUER
-                          value: https://auth.rbx.ia.br
+                          value: https://auth.merovelis.com
                         - name: RBX_SESSION_BFF_DISCOVER_OIDC
                           value: "true"
                         - name: RBX_SESSION_BFF_CLIENT_ID
                           value: "375998031134195912"
                         - name: RBX_SESSION_BFF_REDIRECT_URI
-                          value: https://app.rbxsystems.ch/api/auth/callback
+                          value: https://app.merovelis.com/api/auth/callback
                         - name: RBX_SESSION_BFF_BIND_ADDR
                           value: 0.0.0.0:8081
                       readinessProbe:
@@ -200,9 +200,9 @@ spec:
               tls:
                 - secretName: zitadel-tls
                   hosts:
-                    - auth.rbx.ia.br
+                  - auth.merovelis.com
               rules:
-                - host: auth.rbx.ia.br
+                - host: auth.merovelis.com
                   http:
                     paths:
                       - path: /oidc

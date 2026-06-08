@@ -20,13 +20,14 @@ products:
     namespace: strategos
     domains:
       - strategos.gr
-      - app.rbxsystems.ch
+      - app.merovelis.com
       - api.strategos.gr
     repo: https://github.com/ldamasio/strategos
     owner: ldamasio
     created: 2026-03-24
     description: Strategic operating system — public brand at strategos.gr, with
-      authenticated access via app.rbxsystems.ch/strategos
+      authenticated access via app.merovelis.com/strategos and transition alias
+      app.rbxsystems.ch/strategos
   - name: thalamus
     type: api
     phase: seed
