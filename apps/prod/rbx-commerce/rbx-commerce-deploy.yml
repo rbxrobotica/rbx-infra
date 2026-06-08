@@ -23,7 +23,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: api
-          image: ghcr.io/rbxrobotica/rbx-commerce:sha-f8b163b39e941e67c4e3c705d0c89fdf7135e532
+          image: ghcr.io/rbxrobotica/rbx-commerce:sha-30f4b0409c21e1ff9a58d7c30a12ba37747698b0
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
