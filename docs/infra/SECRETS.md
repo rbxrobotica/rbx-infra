@@ -48,6 +48,8 @@ rbx/
   data/
     token                       # Bearer token for rbx-data
     warehouse-dsn               # External warehouse DSN
+  comms/
+    db-password                 # PostgreSQL password for user `rbx_comms` on jaguar — MUST be hex (openssl rand -hex 32). DATABASE_URL (the rbx-comms-secrets ExternalSecret source) is assembled from this by the k8s-secrets role.
   llm-gateway/
     db-password                 # PostgreSQL password for user `litellm` on jaguar — MUST be hex (openssl rand -hex 32)
     master-key                  # LiteLLM proxy master key — openssl rand -hex 32
@@ -135,6 +137,7 @@ pass insert rbx/dns/pdns-api-key                   # openssl rand -hex 32
 pass insert rbx/dns/pdns-db-password               # openssl rand -hex 32
 pass insert rbx/data/warehouse-db-password         # openssl rand -hex 32
 pass insert rbx/data/warehouse-dsn                 # constructed as postgres://rbx_data:<password>@161.97.147.76:5432/rbx_data_warehouse
+pass insert rbx/comms/db-password                  # openssl rand -hex 32 (user rbx_comms; DATABASE_URL is assembled from this by the k8s-secrets role)
 pass insert rbx/langfuse/db-password               # openssl rand -hex 32
 pass insert rbx/langfuse/nextauth-secret           # openssl rand -hex 32
 pass insert rbx/langfuse/salt                      # openssl rand -hex 32

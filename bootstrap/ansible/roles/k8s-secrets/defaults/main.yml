@@ -49,6 +49,17 @@ pass_rbx_observability_langfuse_secret_key_key: "rbx/observability/langfuse-secr
 pass_rbx_data_token_key: "rbx/data/token"
 pass_rbx_data_warehouse_dsn_key: "rbx/data/warehouse-dsn"
 
+# rbx-comms (central vault: source DATABASE_URL synced to the rbx-comms ns via
+# ExternalSecret). The DB is the in-cluster Service rbx-comms-postgres — a
+# ClusterIP with manual Endpoints -> jaguar 161.97.147.76:5432 (Postgres-external).
+# DATABASE_URL is assembled from the single password SoT below; it MUST be the
+# postgres:// URL form (golang-migrate rejects libpq keyword/DSN as "no scheme").
+pass_rbx_comms_db_password_key: "rbx/comms/db-password"
+rbx_comms_db_user: "rbx_comms"
+rbx_comms_db_host: "rbx-comms-postgres.rbx-comms.svc.cluster.local"
+rbx_comms_db_port: "5432"
+rbx_comms_db_name: "rbx_comms"
+
 # llm-gateway (namespace: llm-gateway — LiteLLM Proxy, experimental)
 llm_gateway_namespace: "llm-gateway"
 pass_llm_gateway_db_password_key: "rbx/llm-gateway/db-password"

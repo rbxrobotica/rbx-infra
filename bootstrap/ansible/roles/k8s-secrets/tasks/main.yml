@@ -434,6 +434,12 @@
   register: rbx_data_warehouse_dsn_result
   no_log: true
 
+- name: Read rbx-comms DB password from pass
+  command: pass show {{ pass_rbx_comms_db_password_key }}
+  changed_when: false
+  register: rbx_comms_db_password_result
+  no_log: true
+
 - name: Create rbx-memory-token in rbx-ia-br
   shell: |
     kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-memory-token \
@@ -503,6 +509,26 @@
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   environment:
     RBX_DATA_WAREHOUSE_DSN: "{{ rbx_data_warehouse_dsn_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+# rbx-comms DATABASE_URL is assembled here from the single password SoT
+# (pass rbx/comms/db-password) plus non-secret connection params from defaults.
+# It MUST be the postgres:// URL form — golang-migrate rejects libpq keyword/DSN
+# ("failed to parse scheme from database URL: no scheme") at app startup. Do NOT
+# add search_path/options to the URL: the `comms` schema is enforced server-side
+# via `ALTER ROLE rbx_comms SET search_path TO comms, public`. The password is
+# injected via the environment (never Jinja) and is hex-only per SECRETS.md, so
+# it is URL-safe.
+- name: Create rbx-comms-secrets in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-comms-secrets \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=DATABASE_URL="postgres://{{ rbx_comms_db_user }}:${RBX_COMMS_DB_PASSWORD}@{{ rbx_comms_db_host }}:{{ rbx_comms_db_port }}/{{ rbx_comms_db_name }}?sslmode=disable" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    RBX_COMMS_DB_PASSWORD: "{{ rbx_comms_db_password_result.stdout | trim }}"
   changed_when: true
   no_log: true
 
