@@ -1,0 +1,16 @@
+# Kustomization for Merovelis Production
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yml
+  - middleware-https.yml
+  - merovelis-site-deploy.yml
+  - merovelis-site-svc.yml
+  - merovelis-site-ingress.yml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: merovelis
+      environment: production
+    includeSelectors: false

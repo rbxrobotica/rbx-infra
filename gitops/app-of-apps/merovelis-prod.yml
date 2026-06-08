@@ -1,0 +1,30 @@
+# ArgoCD Application: Merovelis Production (public institutional site)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: merovelis-prod
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: merovelis-prod
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: merovelis
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/merovelis
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: merovelis
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

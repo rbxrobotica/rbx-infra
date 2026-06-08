@@ -1,0 +1,48 @@
+# Merovelis Site Ingress
+# Public institutional site at the merovelis.com root (and www alias).
+# DNS for merovelis.com / www.merovelis.com is codified in
+# infra/terraform/dns/merovelis.com.tf (root A + www CNAME -> k3s ingress).
+# Authenticated surfaces (app.merovelis.com, auth.merovelis.com) are owned
+# by other apps and are intentionally NOT routed here.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: merovelis-site
+  namespace: merovelis
+  labels:
+    app.kubernetes.io/name: merovelis-site
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: merovelis
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: merovelis-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - merovelis.com
+      secretName: merovelis-site-merovelis-com-tls
+    - hosts:
+        - www.merovelis.com
+      secretName: merovelis-site-www-merovelis-com-tls
+  rules:
+    - host: merovelis.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: merovelis-site
+                port:
+                  number: 80
+    - host: www.merovelis.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: merovelis-site
+                port:
+                  number: 80
