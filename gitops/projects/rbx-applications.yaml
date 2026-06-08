@@ -67,6 +67,9 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: rbx-market-briefing
       server: https://kubernetes.default.svc
+    # Merovelis public institutional site (merovelis.com).
+    - namespace: merovelis
+      server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
