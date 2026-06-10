@@ -13,6 +13,8 @@
 | sumatrae | 5.189.178.212 | 8GB | k3s agent | k3s_agents |
 | pantera | 149.102.139.33 | 4GB | ns1.rbxsystems.ch — DNS primary | dns_servers |
 | eagle | 167.86.92.97 | 4GB | ns2.rbxsystems.ch — DNS secondary | dns_servers |
+| lince | 5.182.33.93 | — | Mail server (Mailcow) | mail_servers |
+| corbetti | 13.140.148.30 | — | Agent Execution Workbench — devbox for coding agents | agent_workbench |
 
 **Decommissioned:** bengal (164.68.96.68) — removed 2026-04-07.
 **Reinstalling:** pantera + eagle — VPS images being reinstalled 2026-04-07, will rejoin as DNS-only nodes.
@@ -52,6 +54,34 @@ Zones served: `rbxsystems.ch`, `strategos.gr`.
 All application manifests live in `apps/prod/`, `apps/staging/`, and `apps/testnet/`.
 ArgoCD syncs from this repository to the k3s cluster.
 No direct `kubectl apply` in production.
+
+### Agent execution workbench (Corbetti)
+
+```
+corbetti — Agent Execution Workbench (outside all three planes)
+  devbox for coding agents: Claude Code, Codex, Kimi, GLM
+  git worktrees, agent runtimes, caches, local logs
+  produces patches, temporary branches, and PRs — GitHub is the source of truth
+```
+
+Corbetti is **not** part of the k3s cluster, the DNS plane, or the application
+plane. It is the initial Agent Execution Workbench defined by
+`rbx-governance` ADR-0500 (Agentic Workflow Execution Boundary), acquired
+June 2026. Boundaries:
+
+- Never holds production secrets; never a deploy target.
+- Workbench state is disposable — everything durable leaves as a branch, PR,
+  or published artifact.
+- Registered in the Ansible inventory (`agent_workbench` group) but
+  intentionally excluded from `site.yml` plays. Its baseline (hardening,
+  pull-based `rbx-agent-runner`, worktree isolation) arrives with the
+  agent-loop roadmap Phase 3 technical ADR, applied deliberately — a
+  silent `ufw reset` on the active devbox is not acceptable.
+- Future integration with the cluster (Argo Workflows mission lifecycle) is
+  pull-based: the cluster never opens connections into the workbench.
+
+See `rbx-governance/docs/adr/ADR-0500-agentic-workflow-execution-boundary.md`
+and `rbx-governance/docs/roadmaps/agent-loop-development-roadmap.md`.
 
 ## Environment model
 

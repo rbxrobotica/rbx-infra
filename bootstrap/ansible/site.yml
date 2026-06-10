@@ -1,7 +1,12 @@
 ---
 # Phase 1: Harden all nodes
+# agent_workbench (corbetti) is excluded: it is registered in the inventory
+# but not yet managed by this playbook. Its baseline (hardening, runner,
+# worktree isolation) is applied deliberately by the agent-loop Phase 3
+# work (rbx-governance ADR-0500), not implicitly by a site.yml run —
+# resetting ufw/sshd on the active devbox must be an explicit decision.
 - name: Harden all nodes
-  hosts: all
+  hosts: all:!agent_workbench
   roles:
     - hardening
 
