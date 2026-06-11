@@ -128,7 +128,7 @@ spec:
                         - name: RBX_SESSION_BFF_DISCOVER_OIDC
                           value: "true"
                         - name: RBX_SESSION_BFF_CLIENT_ID
-                          value: "375998031134195912"
+                          value: "376903619468855423"
                         - name: RBX_SESSION_BFF_REDIRECT_URI
                           value: https://app.merovelis.com/api/auth/callback
                         - name: RBX_SESSION_BFF_BIND_ADDR
