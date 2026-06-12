@@ -28,6 +28,11 @@ spec:
         # Namespaced controller: watches agent-missions only (ADR-0008 §2).
         singleNamespace: true
 
+        # No aggregate-to-view/edit/admin ClusterRoles: those labels would
+        # expand Kubernetes' built-in roles cluster-wide with Argo CRD access
+        # (ADR-0008 §4: no cluster-scope grants beyond the controller floor).
+        createAggregateRoles: false
+
         controller:
           extraArgs:
             - --managed-namespace=agent-missions
@@ -143,6 +148,72 @@ spec:
                     cpu: 10m
                     memory: 16Mi
                   type: Container
+          # Controller RBAC in the MANAGED namespace: with singleNamespace
+          # the chart only creates the controller Role in its own namespace,
+          # so the controller SA would have no permissions in agent-missions.
+          # This mirrors the upstream namespaced controller Role, minus the
+          # leader-election lease rules (leader election stays in the
+          # controller's own namespace).
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: Role
+            metadata:
+              name: argo-workflows-controller-managed
+              namespace: agent-missions
+              labels:
+                app.kubernetes.io/part-of: agent-loop
+            rules:
+              - apiGroups: [""]
+                resources: [pods]
+                verbs: [create, get, list, watch, update, patch, delete]
+              - apiGroups: [""]
+                resources: [pods/exec]
+                verbs: [create]
+              - apiGroups: [""]
+                resources: [configmaps, namespaces]
+                verbs: [get, watch, list]
+              - apiGroups: [""]
+                resources: [persistentvolumeclaims, persistentvolumeclaims/finalizers]
+                verbs: [create, update, delete, get]
+              - apiGroups: [argoproj.io]
+                resources: [workflows, workflows/finalizers, workflowtasksets, workflowtasksets/finalizers, workflowtasksets/status, workflowartifactgctasks]
+                verbs: [get, list, watch, update, patch, delete, create]
+              - apiGroups: [argoproj.io]
+                resources: [workflowtemplates, workflowtemplates/finalizers]
+                verbs: [get, list, watch]
+              - apiGroups: [argoproj.io]
+                resources: [workflowtaskresults, workflowtaskresults/finalizers]
+                verbs: [list, watch, deletecollection]
+              - apiGroups: [argoproj.io]
+                resources: [cronworkflows, cronworkflows/finalizers]
+                verbs: [get, list, watch, update, patch, delete]
+              - apiGroups: [""]
+                resources: [events]
+                verbs: [create, patch]
+              - apiGroups: [""]
+                resources: [serviceaccounts]
+                verbs: [get, list]
+              - apiGroups: [policy]
+                resources: [poddisruptionbudgets]
+                verbs: [create, get, delete]
+              - apiGroups: [""]
+                resourceNames: [argo-workflows-agent-ca-certificates]
+                resources: [secrets]
+                verbs: [get]
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: RoleBinding
+            metadata:
+              name: argo-workflows-controller-managed
+              namespace: agent-missions
+              labels:
+                app.kubernetes.io/part-of: agent-loop
+            roleRef:
+              apiGroup: rbac.authorization.k8s.io
+              kind: Role
+              name: argo-workflows-controller-managed
+            subjects:
+              - kind: ServiceAccount
+                name: argo-workflows-workflow-controller
+                namespace: argo-workflows
           - apiVersion: v1
             kind: ServiceAccount
             metadata:
