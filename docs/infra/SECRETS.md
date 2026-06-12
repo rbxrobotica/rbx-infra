@@ -220,6 +220,11 @@ Secrets created per namespace:
 | `rbx-ia-br` | `rbx-data-token` | `token` | `rbx/data/token` |
 | `rbx-ia-br` | `rbx-data-warehouse` | `dsn` | `rbx/data/warehouse-dsn` |
 | `rbx-ia-br` | `rbx-session-bff-commerce` | `RBX_COMMERCE_CLIENT_ID`, `RBX_COMMERCE_CLIENT_SECRET`, `RBX_COMMERCE_AUDIENCE` | `rbx/identity/session-bff-commerce/client-id`, `rbx/identity/session-bff-commerce/client-secret`, `rbx/identity/session-bff-commerce/audience` |
+
+Source of truth for these three values is the ZITADEL service-account client
+registration used by `rbx-session-bff` to read `rbx-commerce`. Create or
+rotate the client in the IdP, then copy the issued client ID, client secret,
+and API audience into `pass`.
 | `monitoring` | `grafana-admin` | `admin-user`, `admin-password` | `rbx/monitoring/grafana-admin-password` |
 | `langfuse` | `langfuse-core` | `nextauth-secret`, `salt`, `encryption-key` | `rbx/langfuse/nextauth-secret`, `rbx/langfuse/salt`, `rbx/langfuse/encryption-key` |
 | `langfuse` | `langfuse-postgresql-auth` | `password` | `rbx/langfuse/db-password` |
