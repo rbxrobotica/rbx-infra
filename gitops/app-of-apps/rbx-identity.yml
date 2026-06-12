@@ -196,7 +196,7 @@ spec:
                     - name: ghcr-pull-secret
                   containers:
                     - name: rbx-session-bff
-                      image: ghcr.io/ldamasio/rbx-session-bff:sha-c914772
+                      image: ghcr.io/rbxrobotica/rbx-session-bff:sha-216be3c
                       imagePullPolicy: IfNotPresent
                       ports:
                         - containerPort: 8081
@@ -284,7 +284,7 @@ spec:
                     - name: ghcr-pull-secret
                   containers:
                     - name: rbx-policy-gateway
-                      image: ghcr.io/ldamasio/rbx-policy-gateway:sha-bb647fc
+                      image: ghcr.io/rbxrobotica/rbx-policy-gateway:sha-216be3c
                       imagePullPolicy: IfNotPresent
                       ports:
                         - containerPort: 8083
