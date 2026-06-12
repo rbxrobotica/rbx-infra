@@ -62,7 +62,9 @@ applications, never syncs Git, never touches ArgoCD's namespaces.
 
 ### 3. Mission lifecycle WorkflowTemplates
 
-Five WorkflowTemplates, mirroring the Phase 1 state machine one-to-one. Every
+Five WorkflowTemplates covering every state and transition of the Phase 1
+machine, including the operational sub-state `paused` and the terminal
+`completed` close-out. Every
 step is a lifecycle operation — an HTTP call to rbx-maestro, a suspend node,
 or artifact bookkeeping. **No step runs a coding agent, an LLM call, or
 repository code.**
@@ -70,10 +72,10 @@ repository code.**
 | Template | Lifecycle segment | Mechanics |
 |---|---|---|
 | `mission-admission` | `designed → admitted` | POST contract to maestro admission API; schema validation happens in maestro (Phase 1 schema); on `E-*` rejection the workflow ends — fail-closed, no degraded path (P12). |
-| `mission-execution-lease` | `admitted → running` | Registers an execution lease in maestro; the Corbetti runner **pulls** the lease (ADR-0500: no inbound to the workbench). The workflow holds a timeout equal to the contract's `max_runtime` and watches the runner heartbeat via maestro; missed heartbeats or expiry transition the run to `stopped`. |
+| `mission-execution-lease` | `admitted → running ⇄ paused` | Registers an execution lease in maestro; the Corbetti runner **pulls** the lease (ADR-0500: no inbound to the workbench). The step polls lease state and the runner heartbeat via maestro. **`paused`** is a lease state in maestro (operator- or runner-set): while paused, the step keeps waiting but maestro stops accruing the `max_runtime` budget — the budget clock is maestro's; the workflow's own `activeDeadlineSeconds` is a hard outer bound set to `max_runtime` plus a bounded pause allowance. Missed heartbeats (while running) or budget expiry transition the run to `stopped`. |
 | `mission-artifact-collection` | `running → stopped/delivered` | Registers runner-published artifacts (log, patch, test_result, summary, …) in the maestro I/O Ledger (P10). The engine stores no artifact bodies beyond Argo's own step logs. |
 | `mission-gate-wait` | `delivered → approved\|rejected` | Argo `suspend` node; resumed only by a maestro callback after a human gate decision is recorded (`gate_decisions` / `approval_requests`). The engine never decides — it waits (P4). |
-| `mission-outcome` | terminal | Records `approved`, `rejected`, or `stopped` + `stop_reason` (nine canonical reasons) in maestro; triggers branch cleanup notification (P2) as a maestro event, not as a git operation by the engine. |
+| `mission-outcome` | `approved\|rejected\|stopped → completed` | Records `rejected` or `stopped` + `stop_reason` (nine canonical reasons) in maestro and ends. For `approved` missions it holds one final suspend node until maestro relays the **merge event** (GitHub webhook/poll — merge itself is human, P4, outside the engine), then records the terminal **`completed`** close-out: artifacts sealed (P10) and the branch-cleanup notification emitted (P2) as a maestro event, never as a git operation by the engine. |
 
 `risk_level: restricted` missions additionally require an `approved`
 pre-admission `approval_request` before `mission-admission` will submit
@@ -88,9 +90,17 @@ pre-admission `approval_request` before `mission-admission` will submit
   kube-apiserver.
 - No ClusterRole grants beyond what the namespaced controller strictly needs.
 - No access of any kind to product namespaces, `argocd`, or `kube-system`.
-- The only secret mounted into workflow pods is a maestro API token scoped to
-  mission lifecycle endpoints — a non-production credential issued for this
-  purpose (P5: no production secrets to agents or their orchestration).
+- **No static secret is mounted into workflow pods at all.** Authentication to
+  rbx-maestro uses a **projected ServiceAccount token** on `mission-runner-sa`:
+  audience-bound to `rbx-maestro`, short TTL (≤ 10 minutes), rotated
+  automatically by the kubelet, never stored as a `Secret` object. Maestro
+  validates it via the Kubernetes TokenReview API and authorizes exactly one
+  principal (`system:serviceaccount:agent-missions:mission-runner-sa`) on the
+  mission-lifecycle endpoints only — admission, lease, heartbeat, artifact
+  registration, gate status, outcome. Every other maestro endpoint rejects it.
+  P5 is satisfied by construction: there is no production credential in the
+  namespace to leak, and a stolen token is audience-bound, minutes-lived, and
+  scoped to lifecycle calls that all pass maestro's own gate engine.
 
 ### 5. ResourceQuota and NetworkPolicy
 
@@ -130,9 +140,11 @@ of Kubernetes API permissions on mission pods bound the failure modes to
 Rollout (each step its own PR, only after ratification): (1) namespaces +
 AppProject wiring + controller via app-of-apps; (2) WorkflowTemplates +
 RBAC + quotas + NetworkPolicies; (3) a no-op `evaluation-loop` mission
-end-to-end against maestro in staging before any real mission. Rollback at
-any step: delete the app-of-apps entry; nothing else in the cluster depends
-on these namespaces.
+end-to-end against maestro in staging before any real mission. Note that the
+root application auto-syncs `gitops/app-of-apps`, so **merging a manifest PR
+is the apply** — each rollout PR must be complete and safe at merge time
+(this docs-only ADR PR applies nothing). Rollback at any step: delete the
+app-of-apps entry; nothing else in the cluster depends on these namespaces.
 
 ## Alternatives considered
 
