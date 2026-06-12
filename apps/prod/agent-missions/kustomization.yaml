@@ -1,0 +1,9 @@
+# Agent Loop mission policies and lifecycle templates (ADR-0008 rollout 2/3).
+# Applied by the agent-missions Application (manual sync — the operator sync
+# in ArgoCD is the apply gate). Namespaces/quotas/RBAC come from rollout 1
+# (platform/argo-workflows/application.yml).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - networkpolicies.yml
+  - workflowtemplates.yml

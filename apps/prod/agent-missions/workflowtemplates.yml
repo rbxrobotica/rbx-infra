@@ -1,0 +1,370 @@
+# Mission lifecycle WorkflowTemplates (ADR-0008 §3).
+# Every step is a lifecycle operation: an HTTP call to rbx-maestro or a
+# poll-wait. No step runs a coding agent, an LLM call, or repository code.
+# Auth: projected ServiceAccount token (audience rbx-maestro, TTL 10 min),
+# read from the volume at call time — no static Secret (ADR-0008 §4).
+# Maestro lifecycle endpoints are the designed contract (Phase 1); they are
+# implemented in rbx-maestro before rollout step 3 exercises them in staging.
+#
+# Gate mechanics note: waits are implemented as POLLS against maestro
+# (pull model). A suspend+callback design would require maestro to write
+# to the kube-apiserver, which crosses the maestro boundary (it has and
+# must have no cluster permissions). See ADR-0008 §3 precision note.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-admission
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: admit
+  activeDeadlineSeconds: 600
+  volumes:
+    - name: maestro-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: rbx-maestro
+              expirationSeconds: 600
+              path: token
+  templates:
+    - name: admit
+      inputs:
+        parameters:
+          - name: mission-contract   # full contract JSON (schema-validated by maestro)
+      outputs:
+        parameters:
+          - name: mission-id
+            valueFrom:
+              path: /tmp/mission-id
+      container:
+        image: curlimages/curl:8.14.1
+        command: [sh, -ec]
+        args:
+          - |
+            # Fail-closed admission (P12): any E-* validation rejection or
+            # non-201 ends the mission here; there is no degraded path.
+            code=$(curl -sS -o /tmp/resp.json -w '%{http_code}' \
+              -X POST \
+              -H "Authorization: Bearer $(cat /var/run/secrets/maestro/token)" \
+              -H 'Content-Type: application/json' \
+              --data-binary '{{inputs.parameters.mission-contract}}' \
+              http://rbx-maestro.rbx-maestro.svc.cluster.local/api/v1/agent-loop/missions:admit)
+            cat /tmp/resp.json
+            [ "$code" = "201" ] || { echo "admission rejected (HTTP $code)"; exit 1; }
+            sed -n 's/.*"id":"\([^"]*\)".*/\1/p' /tmp/resp.json > /tmp/mission-id
+            [ -s /tmp/mission-id ] || { echo "no mission id in response"; exit 1; }
+        volumeMounts:
+          - name: maestro-token
+            mountPath: /var/run/secrets/maestro
+            readOnly: true
+        resources:
+          requests: { cpu: 10m, memory: 16Mi }
+          limits: { cpu: 100m, memory: 64Mi }
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-execution-lease
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: lease-and-watch
+  # Hard outer bound; the contract max_runtime budget (which stops accruing
+  # while the lease is paused) is enforced by maestro (ADR-0008 §3).
+  activeDeadlineSeconds: 86400
+  volumes:
+    - name: maestro-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: rbx-maestro
+              expirationSeconds: 600
+              path: token
+  templates:
+    - name: lease-and-watch
+      inputs:
+        parameters:
+          - name: mission-id
+      outputs:
+        parameters:
+          - name: lease-state    # stopped | delivered
+            valueFrom:
+              path: /tmp/lease-state
+      container:
+        image: curlimages/curl:8.14.1
+        command: [sh, -ec]
+        args:
+          - |
+            base=http://rbx-maestro.rbx-maestro.svc.cluster.local/api/v1/agent-loop
+            auth() { echo "Authorization: Bearer $(cat /var/run/secrets/maestro/token)"; }
+            # Register the lease; the Corbetti runner PULLS it from maestro
+            # (no inbound to the workbench, ADR-0500).
+            code=$(curl -sS -o /tmp/resp.json -w '%{http_code}' -X POST -H "$(auth)" \
+              "$base/missions/{{inputs.parameters.mission-id}}/lease")
+            [ "$code" = "201" ] || { cat /tmp/resp.json; echo "lease refused (HTTP $code)"; exit 1; }
+            # Watch lease state via maestro (runner heartbeat + pause/resume
+            # and budget enforcement all live in maestro).
+            while sleep 15; do
+              state=$(curl -sS -H "$(auth)" \
+                "$base/missions/{{inputs.parameters.mission-id}}/lease/status" \
+                | sed -n 's/.*"state":"\([^"]*\)".*/\1/p')
+              echo "lease state: ${state:-unknown}"
+              case "$state" in
+                stopped|delivered) echo "$state" > /tmp/lease-state; exit 0 ;;
+              esac
+            done
+        volumeMounts:
+          - name: maestro-token
+            mountPath: /var/run/secrets/maestro
+            readOnly: true
+        resources:
+          requests: { cpu: 10m, memory: 16Mi }
+          limits: { cpu: 100m, memory: 64Mi }
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-artifact-collection
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: collect
+  activeDeadlineSeconds: 600
+  volumes:
+    - name: maestro-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: rbx-maestro
+              expirationSeconds: 600
+              path: token
+  templates:
+    - name: collect
+      inputs:
+        parameters:
+          - name: mission-id
+      container:
+        image: curlimages/curl:8.14.1
+        command: [sh, -ec]
+        args:
+          - |
+            # Registers runner-published artifacts in the I/O Ledger (P10).
+            # The engine stores no artifact bodies (ADR-0500 fence).
+            code=$(curl -sS -o /tmp/resp.json -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer $(cat /var/run/secrets/maestro/token)" \
+              http://rbx-maestro.rbx-maestro.svc.cluster.local/api/v1/agent-loop/missions/{{inputs.parameters.mission-id}}/artifacts:collect)
+            cat /tmp/resp.json
+            [ "$code" = "200" ] || { echo "artifact collection failed (HTTP $code)"; exit 1; }
+        volumeMounts:
+          - name: maestro-token
+            mountPath: /var/run/secrets/maestro
+            readOnly: true
+        resources:
+          requests: { cpu: 10m, memory: 16Mi }
+          limits: { cpu: 100m, memory: 64Mi }
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-gate-wait
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: wait-for-gates
+  # Human gates have no SLA; generous outer bound (7 days), then the
+  # mission stops with human_decision_needed rather than waiting forever.
+  activeDeadlineSeconds: 604800
+  volumes:
+    - name: maestro-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: rbx-maestro
+              expirationSeconds: 600
+              path: token
+  templates:
+    - name: wait-for-gates
+      inputs:
+        parameters:
+          - name: mission-id
+      outputs:
+        parameters:
+          - name: decision    # approved | rejected
+            valueFrom:
+              path: /tmp/decision
+      container:
+        image: curlimages/curl:8.14.1
+        command: [sh, -ec]
+        args:
+          - |
+            # The engine never decides — it polls maestro for the recorded
+            # human gate decision (P4). All gates required by the contract
+            # (merge + domain-reinforced) must be recorded in maestro.
+            base=http://rbx-maestro.rbx-maestro.svc.cluster.local/api/v1/agent-loop
+            while sleep 30; do
+              d=$(curl -sS \
+                -H "Authorization: Bearer $(cat /var/run/secrets/maestro/token)" \
+                "$base/missions/{{inputs.parameters.mission-id}}/gates/status" \
+                | sed -n 's/.*"decision":"\([^"]*\)".*/\1/p')
+              echo "gate decision: ${d:-pending}"
+              case "$d" in
+                approved|rejected) echo "$d" > /tmp/decision; exit 0 ;;
+              esac
+            done
+        volumeMounts:
+          - name: maestro-token
+            mountPath: /var/run/secrets/maestro
+            readOnly: true
+        resources:
+          requests: { cpu: 10m, memory: 16Mi }
+          limits: { cpu: 100m, memory: 64Mi }
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-outcome
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: record-outcome
+  activeDeadlineSeconds: 604800
+  volumes:
+    - name: maestro-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: rbx-maestro
+              expirationSeconds: 600
+              path: token
+  templates:
+    - name: record-outcome
+      inputs:
+        parameters:
+          - name: mission-id
+          - name: decision    # approved | rejected | stopped
+      container:
+        image: curlimages/curl:8.14.1
+        command: [sh, -ec]
+        args:
+          - |
+            base=http://rbx-maestro.rbx-maestro.svc.cluster.local/api/v1/agent-loop
+            auth() { echo "Authorization: Bearer $(cat /var/run/secrets/maestro/token)"; }
+            d='{{inputs.parameters.decision}}'
+            if [ "$d" = "approved" ]; then
+              # Merge stays human (P4) and happens on GitHub. Poll maestro
+              # for the relayed merge event, then record terminal completed:
+              # artifacts sealed (P10), branch-cleanup notification emitted
+              # as a maestro event (P2) — never a git operation by the engine.
+              while sleep 30; do
+                m=$(curl -sS -H "$(auth)" \
+                  "$base/missions/{{inputs.parameters.mission-id}}/merge-event" \
+                  | sed -n 's/.*"merged":\(true\|false\).*/\1/p')
+                echo "merge event: ${m:-unknown}"
+                [ "$m" = "true" ] && break
+              done
+              d=completed
+            fi
+            code=$(curl -sS -o /tmp/resp.json -w '%{http_code}' -X POST -H "$(auth)" \
+              -H 'Content-Type: application/json' \
+              -d "{\"outcome\":\"$d\"}" \
+              "$base/missions/{{inputs.parameters.mission-id}}/outcome")
+            cat /tmp/resp.json
+            [ "$code" = "200" ] || { echo "outcome recording failed (HTTP $code)"; exit 1; }
+        volumeMounts:
+          - name: maestro-token
+            mountPath: /var/run/secrets/maestro
+            readOnly: true
+        resources:
+          requests: { cpu: 10m, memory: 16Mi }
+          limits: { cpu: 100m, memory: 64Mi }
+
+---
+# Composition: the full mission lifecycle as one workflow.
+# stop_reason taxonomy, pause budget accounting and gate bookkeeping are
+# maestro's (system of record, maestro ADR-0003); this DAG is disposable
+# operational state only (ADR-0500: not a governance registry).
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-lifecycle
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: lifecycle
+  arguments:
+    parameters:
+      - name: mission-contract
+  templates:
+    - name: lifecycle
+      inputs:
+        parameters:
+          - name: mission-contract
+      dag:
+        tasks:
+          - name: admit
+            templateRef: { name: mission-admission, template: admit }
+            arguments:
+              parameters:
+                - name: mission-contract
+                  value: "{{inputs.parameters.mission-contract}}"
+          - name: execute
+            depends: admit
+            templateRef: { name: mission-execution-lease, template: lease-and-watch }
+            arguments:
+              parameters:
+                - name: mission-id
+                  value: "{{tasks.admit.outputs.parameters.mission-id}}"
+          - name: collect-artifacts
+            depends: execute
+            templateRef: { name: mission-artifact-collection, template: collect }
+            arguments:
+              parameters:
+                - name: mission-id
+                  value: "{{tasks.admit.outputs.parameters.mission-id}}"
+          - name: gate-wait
+            # Only delivered missions reach human gates; a stopped mission
+            # goes straight to outcome with decision=stopped.
+            depends: collect-artifacts
+            when: "{{tasks.execute.outputs.parameters.lease-state}} == delivered"
+            templateRef: { name: mission-gate-wait, template: wait-for-gates }
+            arguments:
+              parameters:
+                - name: mission-id
+                  value: "{{tasks.admit.outputs.parameters.mission-id}}"
+          - name: outcome-gated
+            depends: gate-wait
+            templateRef: { name: mission-outcome, template: record-outcome }
+            arguments:
+              parameters:
+                - name: mission-id
+                  value: "{{tasks.admit.outputs.parameters.mission-id}}"
+                - name: decision
+                  value: "{{tasks.gate-wait.outputs.parameters.decision}}"
+          - name: outcome-stopped
+            depends: collect-artifacts
+            when: "{{tasks.execute.outputs.parameters.lease-state}} == stopped"
+            templateRef: { name: mission-outcome, template: record-outcome }
+            arguments:
+              parameters:
+                - name: mission-id
+                  value: "{{tasks.admit.outputs.parameters.mission-id}}"
+                - name: decision
+                  value: stopped

@@ -1,0 +1,142 @@
+# NetworkPolicies for the Agent Loop mission control plane (ADR-0008 §5).
+# Default-deny both directions in both namespaces; egress opened only to
+# cluster DNS, the rbx-maestro Service, and the kube-apiserver (the Argo
+# executor must write workflowtaskresults; the controller must watch the
+# managed namespace). k3s apiserver: ClusterIP 10.43.0.1:443, endpoint
+# 158.220.116.31:6443 (tiger, control-plane) — both forms allowed because
+# policy evaluation order vs DNAT differs by CNI.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-dns
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-rbx-maestro
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: rbx-maestro
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: rbx-maestro
+      ports:
+        - port: 8080
+          protocol: TCP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-egress-apiserver
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  podSelector: {}
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.43.0.1/32
+      ports:
+        - port: 443
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 158.220.116.31/32
+      ports:
+        - port: 6443
+          protocol: TCP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: argo-workflows
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-controller-egress
+  namespace: argo-workflows
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: argo-workflows-workflow-controller
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 10.43.0.1/32
+      ports:
+        - port: 443
+          protocol: TCP
+    - to:
+        - ipBlock:
+            cidr: 158.220.116.31/32
+      ports:
+        - port: 6443
+          protocol: TCP

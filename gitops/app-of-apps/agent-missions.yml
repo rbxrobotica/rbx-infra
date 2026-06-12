@@ -1,0 +1,35 @@
+# ArgoCD Application: agent-missions (Agent Loop policies + templates)
+# ADR-0008 rollout step 2 of 3: NetworkPolicies + mission WorkflowTemplates.
+# MANUAL SYNC ONLY: merge creates this Application object via the root app;
+# resources are applied only when the operator syncs it. Requires rollout 1
+# (argo-workflows app) to be synced first — the namespaces and the
+# WorkflowTemplate CRD come from there.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: agent-missions
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: agent-missions
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/part-of: agent-loop
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-platform
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/agent-missions
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: agent-missions
+
+  syncPolicy:
+    syncOptions:
+      # Manual sync: no automated prune/selfHeal — the operator sync IS the
+      # apply gate (ADR-0008 rollout). ServerSideApply is forbidden per
+      # docs/ARGOCD-BEST-PRACTICES.md.
+      - CreateNamespace=false
