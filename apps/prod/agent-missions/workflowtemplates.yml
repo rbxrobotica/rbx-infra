@@ -93,8 +93,8 @@ spec:
             mountPath: /var/run/secrets/maestro
             readOnly: true
         resources:
-          requests: { cpu: 10m, memory: 32Mi }
-          limits: { cpu: 100m, memory: 128Mi }
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 128Mi}
 
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -180,8 +180,8 @@ spec:
             mountPath: /var/run/secrets/maestro
             readOnly: true
         resources:
-          requests: { cpu: 10m, memory: 32Mi }
-          limits: { cpu: 100m, memory: 128Mi }
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 128Mi}
 
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -238,8 +238,8 @@ spec:
             mountPath: /var/run/secrets/maestro
             readOnly: true
         resources:
-          requests: { cpu: 10m, memory: 32Mi }
-          limits: { cpu: 100m, memory: 128Mi }
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 128Mi}
 
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -307,8 +307,8 @@ spec:
             mountPath: /var/run/secrets/maestro
             readOnly: true
         resources:
-          requests: { cpu: 10m, memory: 32Mi }
-          limits: { cpu: 100m, memory: 128Mi }
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 128Mi}
 
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -386,8 +386,8 @@ spec:
             mountPath: /var/run/secrets/maestro
             readOnly: true
         resources:
-          requests: { cpu: 10m, memory: 32Mi }
-          limits: { cpu: 100m, memory: 128Mi }
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 128Mi}
 
 ---
 # Composition: the full mission lifecycle as one workflow.
@@ -415,14 +415,14 @@ spec:
       dag:
         tasks:
           - name: admit
-            templateRef: { name: mission-admission, template: admit }
+            templateRef: {name: mission-admission, template: admit}
             arguments:
               parameters:
                 - name: mission-contract
                   value: "{{inputs.parameters.mission-contract}}"
           - name: execute
             depends: admit
-            templateRef: { name: mission-execution-lease, template: lease-and-watch }
+            templateRef: {name: mission-execution-lease, template: lease-and-watch}
             arguments:
               parameters:
                 - name: mission-id
@@ -431,7 +431,7 @@ spec:
                   value: "{{tasks.admit.outputs.parameters.outer-deadline-seconds}}"
           - name: collect-artifacts
             depends: execute
-            templateRef: { name: mission-artifact-collection, template: collect }
+            templateRef: {name: mission-artifact-collection, template: collect}
             arguments:
               parameters:
                 - name: mission-id
@@ -441,14 +441,14 @@ spec:
             # goes straight to outcome with decision=stopped.
             depends: collect-artifacts
             when: "{{tasks.execute.outputs.parameters.lease-state}} == delivered"
-            templateRef: { name: mission-gate-wait, template: wait-for-gates }
+            templateRef: {name: mission-gate-wait, template: wait-for-gates}
             arguments:
               parameters:
                 - name: mission-id
                   value: "{{tasks.admit.outputs.parameters.mission-id}}"
           - name: outcome-gated
             depends: gate-wait
-            templateRef: { name: mission-outcome, template: record-outcome }
+            templateRef: {name: mission-outcome, template: record-outcome}
             arguments:
               parameters:
                 - name: mission-id
@@ -458,7 +458,7 @@ spec:
           - name: outcome-stopped
             depends: collect-artifacts
             when: "{{tasks.execute.outputs.parameters.lease-state}} == stopped"
-            templateRef: { name: mission-outcome, template: record-outcome }
+            templateRef: {name: mission-outcome, template: record-outcome}
             arguments:
               parameters:
                 - name: mission-id
