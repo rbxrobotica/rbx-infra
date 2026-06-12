@@ -89,6 +89,88 @@ spec:
             command: "zitadel"
 
         extraManifests:
+          # The commerce entitlement gate uses a mirrored service-account secret
+          # from rbx-ia-br. The operator must provision the remote secret named
+          # rbx-session-bff-commerce with RBX_COMMERCE_CLIENT_ID,
+          # RBX_COMMERCE_CLIENT_SECRET, and RBX_COMMERCE_AUDIENCE.
+          - apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+              name: external-secrets-reader
+              namespace: rbx-identity
+
+          - apiVersion: external-secrets.io/v1
+            kind: SecretStore
+            metadata:
+              name: kubernetes-store
+              namespace: rbx-identity
+            spec:
+              provider:
+                kubernetes:
+                  auth:
+                    serviceAccount:
+                      name: external-secrets-reader
+                  remoteNamespace: rbx-ia-br
+                  server:
+                    caProvider:
+                      key: ca.crt
+                      name: kube-root-ca.crt
+                      type: ConfigMap
+                    url: https://kubernetes.default.svc.cluster.local
+
+          - apiVersion: external-secrets.io/v1
+            kind: ExternalSecret
+            metadata:
+              name: rbx-session-bff-commerce
+              namespace: rbx-identity
+            spec:
+              refreshInterval: 15m
+              secretStoreRef:
+                name: kubernetes-store
+                kind: SecretStore
+              target:
+                name: rbx-session-bff-commerce
+                creationPolicy: Owner
+              data:
+                - secretKey: RBX_COMMERCE_CLIENT_ID
+                  remoteRef:
+                    key: rbx-session-bff-commerce
+                    property: RBX_COMMERCE_CLIENT_ID
+                - secretKey: RBX_COMMERCE_CLIENT_SECRET
+                  remoteRef:
+                    key: rbx-session-bff-commerce
+                    property: RBX_COMMERCE_CLIENT_SECRET
+                - secretKey: RBX_COMMERCE_AUDIENCE
+                  remoteRef:
+                    key: rbx-session-bff-commerce
+                    property: RBX_COMMERCE_AUDIENCE
+
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: Role
+            metadata:
+              name: read-rbx-session-bff-commerce
+              namespace: rbx-ia-br
+            rules:
+              - apiGroups: [""]
+                resources: ["secrets"]
+                resourceNames:
+                  - rbx-session-bff-commerce
+                verbs: ["get"]
+
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: RoleBinding
+            metadata:
+              name: read-rbx-session-bff-commerce
+              namespace: rbx-ia-br
+            subjects:
+              - kind: ServiceAccount
+                name: external-secrets-reader
+                namespace: rbx-identity
+            roleRef:
+              kind: Role
+              name: read-rbx-session-bff-commerce
+              apiGroup: rbac.authorization.k8s.io
+
           - apiVersion: apps/v1
             kind: Deployment
             metadata:
@@ -114,11 +196,14 @@ spec:
                     - name: ghcr-pull-secret
                   containers:
                     - name: rbx-session-bff
-                      image: ghcr.io/ldamasio/rbx-session-bff:sha-506d3ed
+                      image: ghcr.io/ldamasio/rbx-session-bff:sha-c914772
                       imagePullPolicy: IfNotPresent
                       ports:
                         - containerPort: 8081
                           name: http
+                      envFrom:
+                        - secretRef:
+                            name: rbx-session-bff-commerce
                       env:
                         # Strategos uses the canonical Hub entrypoint
                         # app.merovelis.com/strategos and same-origin auth
@@ -133,6 +218,16 @@ spec:
                           value: https://app.merovelis.com/api/auth/callback
                         - name: RBX_SESSION_BFF_BIND_ADDR
                           value: 0.0.0.0:8081
+                        - name: RBX_COMMERCE_BASE_URL
+                          value: http://rbx-commerce.rbx-commerce.svc.cluster.local
+                        - name: RBX_COMMERCE_TOKEN_ENDPOINT
+                          value: https://auth.merovelis.com/oauth/v2/token
+                        - name: RBX_COMMERCE_SCOPES
+                          value: commerce:read
+                        - name: RBX_PRODUCT_KEY
+                          value: strategos
+                        - name: RBX_AUTHZ_GATEWAY_URL
+                          value: http://rbx-policy-gateway.rbx-identity.svc.cluster.local:8083
                       readinessProbe:
                         httpGet:
                           path: /healthz
@@ -163,6 +258,88 @@ spec:
                         capabilities:
                           drop:
                             - ALL
+
+          - apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: rbx-policy-gateway
+              namespace: rbx-identity
+              labels:
+                app.kubernetes.io/name: rbx-policy-gateway
+                app.kubernetes.io/component: policy-gateway
+                app.kubernetes.io/part-of: rbx-identity
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app.kubernetes.io/name: rbx-policy-gateway
+              template:
+                metadata:
+                  labels:
+                    app.kubernetes.io/name: rbx-policy-gateway
+                    app.kubernetes.io/component: policy-gateway
+                    app.kubernetes.io/part-of: rbx-identity
+                spec:
+                  imagePullSecrets:
+                    - name: ghcr-pull-secret
+                  containers:
+                    - name: rbx-policy-gateway
+                      image: ghcr.io/ldamasio/rbx-policy-gateway:sha-bb647fc
+                      imagePullPolicy: IfNotPresent
+                      ports:
+                        - containerPort: 8083
+                          name: http
+                      env:
+                        - name: RBX_POLICY_GATEWAY_BIND_ADDR
+                          value: 0.0.0.0:8083
+                      readinessProbe:
+                        httpGet:
+                          path: /healthz
+                          port: 8083
+                        initialDelaySeconds: 5
+                        periodSeconds: 5
+                        timeoutSeconds: 3
+                        failureThreshold: 3
+                      livenessProbe:
+                        httpGet:
+                          path: /healthz
+                          port: 8083
+                        initialDelaySeconds: 15
+                        periodSeconds: 10
+                        timeoutSeconds: 3
+                        failureThreshold: 3
+                      resources:
+                        requests:
+                          cpu: 25m
+                          memory: 64Mi
+                        limits:
+                          cpu: 250m
+                          memory: 256Mi
+                      securityContext:
+                        allowPrivilegeEscalation: false
+                        runAsNonRoot: true
+                        runAsUser: 1001
+                        capabilities:
+                          drop:
+                            - ALL
+
+          - apiVersion: v1
+            kind: Service
+            metadata:
+              name: rbx-policy-gateway
+              namespace: rbx-identity
+              labels:
+                app.kubernetes.io/name: rbx-policy-gateway
+                app.kubernetes.io/component: policy-gateway
+                app.kubernetes.io/part-of: rbx-identity
+            spec:
+              type: ClusterIP
+              selector:
+                app.kubernetes.io/name: rbx-policy-gateway
+              ports:
+                - name: http
+                  port: 8083
+                  targetPort: 8083
 
           - apiVersion: v1
             kind: Service
