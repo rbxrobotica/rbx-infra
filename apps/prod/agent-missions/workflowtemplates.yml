@@ -1,0 +1,467 @@
+# Mission lifecycle WorkflowTemplates (ADR-0008 §3).
+# Every step is a lifecycle operation: an HTTP call to rbx-maestro or a
+# poll-wait. No step runs a coding agent, an LLM call, or repository code.
+# Steps are python:3.12-alpine scripts using urllib + json (structured JSON
+# handling; the mission contract is passed via env, never interpolated into
+# a shell line). Auth: projected ServiceAccount token (audience rbx-maestro,
+# TTL 10 min), read from the volume at call time — no static Secret
+# (ADR-0008 §4). Maestro lifecycle endpoints are the designed contract
+# (Phase 1); they are implemented in rbx-maestro before rollout step 3
+# exercises them in staging.
+#
+# Gate mechanics note: waits are implemented as POLLS against maestro
+# (pull model). A suspend+callback design would require maestro to write
+# to the kube-apiserver, which crosses the maestro boundary (it has and
+# must have no cluster permissions). See ADR-0008 §3 precision note.
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-admission
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: admit
+  activeDeadlineSeconds: 600
+  volumes:
+    - name: maestro-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: rbx-maestro
+              expirationSeconds: 600
+              path: token
+  templates:
+    - name: admit
+      inputs:
+        parameters:
+          - name: mission-contract   # full contract JSON (schema-validated by maestro)
+      outputs:
+        parameters:
+          - name: mission-id
+            valueFrom:
+              path: /tmp/mission-id
+          - name: outer-deadline-seconds
+            # max_runtime (ISO 8601) + 25% pause allowance, from the contract
+            # itself — the execution outer bound is contract-driven (ADR §3).
+            valueFrom:
+              path: /tmp/outer-deadline-seconds
+      script:
+        image: python:3.12-alpine
+        command: [python3]
+        env:
+          - name: MISSION_CONTRACT
+            value: "{{inputs.parameters.mission-contract}}"
+        source: |
+          import json, os, re, sys, urllib.request, urllib.error
+          BASE = "http://rbx-maestro.rbx-maestro.svc.cluster.local/api/v1/agent-loop"
+          def token():
+              return open("/var/run/secrets/maestro/token").read().strip()
+          contract = json.loads(os.environ["MISSION_CONTRACT"])  # fail-closed on bad JSON
+          # Contract-driven outer bound: ISO 8601 duration -> seconds, +25%.
+          m = re.fullmatch(r"P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?",
+                           contract["max_runtime"])
+          if not m or not any(m.groups()):
+              print("invalid max_runtime duration"); sys.exit(1)
+          d, h, mi, s = (int(g or 0) for g in m.groups())
+          runtime = d*86400 + h*3600 + mi*60 + s
+          open("/tmp/outer-deadline-seconds", "w").write(str(int(runtime * 1.25)))
+          # Fail-closed admission (P12): any E-* rejection / non-201 ends the
+          # mission here; there is no degraded path.
+          req = urllib.request.Request(
+              f"{BASE}/missions:admit",
+              data=json.dumps(contract).encode(),
+              headers={"Authorization": f"Bearer {token()}",
+                       "Content-Type": "application/json"},
+              method="POST")
+          try:
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  body = json.load(r)
+                  code = r.status
+          except urllib.error.HTTPError as e:
+              print(f"admission rejected (HTTP {e.code}): {e.read().decode()[:2000]}")
+              sys.exit(1)
+          if code != 201 or not body.get("id"):
+              print(f"admission rejected (HTTP {code}): {json.dumps(body)[:2000]}")
+              sys.exit(1)
+          open("/tmp/mission-id", "w").write(body["id"])
+          print(f"admitted: {body['id']}")
+        volumeMounts:
+          - name: maestro-token
+            mountPath: /var/run/secrets/maestro
+            readOnly: true
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 128Mi}
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-execution-lease
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: lease-and-watch
+  volumes:
+    - name: maestro-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: rbx-maestro
+              expirationSeconds: 600
+              path: token
+  templates:
+    - name: lease-and-watch
+      inputs:
+        parameters:
+          - name: mission-id
+          - name: outer-deadline-seconds
+      # Contract-driven hard outer bound (max_runtime + pause allowance,
+      # computed at admission). The fine-grained budget — which stops
+      # accruing while the lease is paused — is enforced by maestro; if
+      # this outer bound fires first, maestro's lease expiry transitions
+      # the mission to stopped on the registry side (ADR-0008 §3).
+      activeDeadlineSeconds: "{{inputs.parameters.outer-deadline-seconds}}"
+      outputs:
+        parameters:
+          - name: lease-state    # stopped | delivered
+            valueFrom:
+              path: /tmp/lease-state
+      script:
+        image: python:3.12-alpine
+        command: [python3]
+        env:
+          - name: MISSION_ID
+            value: "{{inputs.parameters.mission-id}}"
+        source: |
+          import json, os, sys, time, urllib.request, urllib.error
+          BASE = "http://rbx-maestro.rbx-maestro.svc.cluster.local/api/v1/agent-loop"
+          MID = os.environ["MISSION_ID"]
+          def token():
+              return open("/var/run/secrets/maestro/token").read().strip()
+          def call(path, method="GET", payload=None):
+              req = urllib.request.Request(
+                  f"{BASE}{path}",
+                  data=json.dumps(payload).encode() if payload is not None else None,
+                  headers={"Authorization": f"Bearer {token()}",
+                           "Content-Type": "application/json"},
+                  method=method)
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return r.status, json.load(r)
+          # Register the lease; the Corbetti runner PULLS it from maestro
+          # (no inbound to the workbench, ADR-0500).
+          try:
+              code, body = call(f"/missions/{MID}/lease", "POST", {})
+          except urllib.error.HTTPError as e:
+              print(f"lease refused (HTTP {e.code}): {e.read().decode()[:2000]}")
+              sys.exit(1)
+          if code != 201:
+              print(f"lease refused (HTTP {code})"); sys.exit(1)
+          # Watch lease state via maestro (runner heartbeat, pause/resume and
+          # budget enforcement all live in maestro).
+          while True:
+              time.sleep(15)
+              try:
+                  _, body = call(f"/missions/{MID}/lease/status")
+              except Exception as e:
+                  print(f"status poll error (transient): {e}"); continue
+              state = body.get("state", "unknown")
+              print(f"lease state: {state}")
+              if state in ("stopped", "delivered"):
+                  open("/tmp/lease-state", "w").write(state)
+                  sys.exit(0)
+        volumeMounts:
+          - name: maestro-token
+            mountPath: /var/run/secrets/maestro
+            readOnly: true
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 128Mi}
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-artifact-collection
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: collect
+  activeDeadlineSeconds: 600
+  volumes:
+    - name: maestro-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: rbx-maestro
+              expirationSeconds: 600
+              path: token
+  templates:
+    - name: collect
+      inputs:
+        parameters:
+          - name: mission-id
+      script:
+        image: python:3.12-alpine
+        command: [python3]
+        env:
+          - name: MISSION_ID
+            value: "{{inputs.parameters.mission-id}}"
+        source: |
+          import json, os, sys, urllib.request, urllib.error
+          BASE = "http://rbx-maestro.rbx-maestro.svc.cluster.local/api/v1/agent-loop"
+          MID = os.environ["MISSION_ID"]
+          # Registers runner-published artifacts in the I/O Ledger (P10).
+          # The engine stores no artifact bodies (ADR-0500 fence).
+          req = urllib.request.Request(
+              f"{BASE}/missions/{MID}/artifacts:collect",
+              data=b"{}",
+              headers={"Authorization": "Bearer " + open("/var/run/secrets/maestro/token").read().strip(),
+                       "Content-Type": "application/json"},
+              method="POST")
+          try:
+              with urllib.request.urlopen(req, timeout=60) as r:
+                  print(f"artifact collection: HTTP {r.status}")
+                  sys.exit(0 if r.status == 200 else 1)
+          except urllib.error.HTTPError as e:
+              print(f"artifact collection failed (HTTP {e.code}): {e.read().decode()[:2000]}")
+              sys.exit(1)
+        volumeMounts:
+          - name: maestro-token
+            mountPath: /var/run/secrets/maestro
+            readOnly: true
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 128Mi}
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-gate-wait
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: wait-for-gates
+  # Human gates have no SLA; generous outer bound (7 days). On expiry the
+  # workflow fails and maestro records stopped/human_decision_needed on its
+  # side rather than waiting forever.
+  activeDeadlineSeconds: 604800
+  volumes:
+    - name: maestro-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: rbx-maestro
+              expirationSeconds: 600
+              path: token
+  templates:
+    - name: wait-for-gates
+      inputs:
+        parameters:
+          - name: mission-id
+      outputs:
+        parameters:
+          - name: decision    # approved | rejected
+            valueFrom:
+              path: /tmp/decision
+      script:
+        image: python:3.12-alpine
+        command: [python3]
+        env:
+          - name: MISSION_ID
+            value: "{{inputs.parameters.mission-id}}"
+        source: |
+          import json, os, sys, time, urllib.request
+          BASE = "http://rbx-maestro.rbx-maestro.svc.cluster.local/api/v1/agent-loop"
+          MID = os.environ["MISSION_ID"]
+          # The engine never decides — it polls maestro for the recorded
+          # human gate decision (P4). All gates required by the contract
+          # (merge + domain-reinforced) must be recorded in maestro.
+          while True:
+              time.sleep(30)
+              try:
+                  req = urllib.request.Request(
+                      f"{BASE}/missions/{MID}/gates/status",
+                      headers={"Authorization": "Bearer " + open("/var/run/secrets/maestro/token").read().strip()})
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      body = json.load(r)
+              except Exception as e:
+                  print(f"gate poll error (transient): {e}"); continue
+              d = body.get("decision", "pending")
+              print(f"gate decision: {d}")
+              if d in ("approved", "rejected"):
+                  open("/tmp/decision", "w").write(d)
+                  sys.exit(0)
+        volumeMounts:
+          - name: maestro-token
+            mountPath: /var/run/secrets/maestro
+            readOnly: true
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 128Mi}
+
+---
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-outcome
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: record-outcome
+  activeDeadlineSeconds: 604800
+  volumes:
+    - name: maestro-token
+      projected:
+        sources:
+          - serviceAccountToken:
+              audience: rbx-maestro
+              expirationSeconds: 600
+              path: token
+  templates:
+    - name: record-outcome
+      inputs:
+        parameters:
+          - name: mission-id
+          - name: decision    # approved | rejected | stopped
+      script:
+        image: python:3.12-alpine
+        command: [python3]
+        env:
+          - name: MISSION_ID
+            value: "{{inputs.parameters.mission-id}}"
+          - name: DECISION
+            value: "{{inputs.parameters.decision}}"
+        source: |
+          import json, os, sys, time, urllib.request, urllib.error
+          BASE = "http://rbx-maestro.rbx-maestro.svc.cluster.local/api/v1/agent-loop"
+          MID = os.environ["MISSION_ID"]
+          d = os.environ["DECISION"]
+          def hdrs():
+              return {"Authorization": "Bearer " + open("/var/run/secrets/maestro/token").read().strip(),
+                      "Content-Type": "application/json"}
+          if d == "approved":
+              # Merge stays human (P4) and happens on GitHub. Poll maestro for
+              # the relayed merge event, then record terminal completed:
+              # artifacts sealed (P10), branch-cleanup notification emitted as
+              # a maestro event (P2) — never a git operation by the engine.
+              while True:
+                  time.sleep(30)
+                  try:
+                      req = urllib.request.Request(
+                          f"{BASE}/missions/{MID}/merge-event", headers=hdrs())
+                      with urllib.request.urlopen(req, timeout=30) as r:
+                          merged = json.load(r).get("merged", False)
+                  except Exception as e:
+                      print(f"merge-event poll error (transient): {e}"); continue
+                  print(f"merge event: {merged}")
+                  if merged:
+                      break
+              d = "completed"
+          req = urllib.request.Request(
+              f"{BASE}/missions/{MID}/outcome",
+              data=json.dumps({"outcome": d}).encode(),
+              headers=hdrs(), method="POST")
+          try:
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  print(f"outcome '{d}' recorded: HTTP {r.status}")
+                  sys.exit(0 if r.status == 200 else 1)
+          except urllib.error.HTTPError as e:
+              print(f"outcome recording failed (HTTP {e.code}): {e.read().decode()[:2000]}")
+              sys.exit(1)
+        volumeMounts:
+          - name: maestro-token
+            mountPath: /var/run/secrets/maestro
+            readOnly: true
+        resources:
+          requests: {cpu: 10m, memory: 32Mi}
+          limits: {cpu: 100m, memory: 128Mi}
+
+---
+# Composition: the full mission lifecycle as one workflow.
+# stop_reason taxonomy, pause budget accounting and gate bookkeeping are
+# maestro's (system of record, maestro ADR-0003); this DAG is disposable
+# operational state only (ADR-0500: not a governance registry).
+apiVersion: argoproj.io/v1alpha1
+kind: WorkflowTemplate
+metadata:
+  name: mission-lifecycle
+  namespace: agent-missions
+  labels:
+    app.kubernetes.io/part-of: agent-loop
+spec:
+  serviceAccountName: mission-runner-sa
+  entrypoint: lifecycle
+  arguments:
+    parameters:
+      - name: mission-contract
+  templates:
+    - name: lifecycle
+      inputs:
+        parameters:
+          - name: mission-contract
+      dag:
+        tasks:
+          - name: admit
+            templateRef: {name: mission-admission, template: admit}
+            arguments:
+              parameters:
+                - name: mission-contract
+                  value: "{{inputs.parameters.mission-contract}}"
+          - name: execute
+            depends: admit
+            templateRef: {name: mission-execution-lease, template: lease-and-watch}
+            arguments:
+              parameters:
+                - name: mission-id
+                  value: "{{tasks.admit.outputs.parameters.mission-id}}"
+                - name: outer-deadline-seconds
+                  value: "{{tasks.admit.outputs.parameters.outer-deadline-seconds}}"
+          - name: collect-artifacts
+            depends: execute
+            templateRef: {name: mission-artifact-collection, template: collect}
+            arguments:
+              parameters:
+                - name: mission-id
+                  value: "{{tasks.admit.outputs.parameters.mission-id}}"
+          - name: gate-wait
+            # Only delivered missions reach human gates; a stopped mission
+            # goes straight to outcome with decision=stopped.
+            depends: collect-artifacts
+            when: "{{tasks.execute.outputs.parameters.lease-state}} == delivered"
+            templateRef: {name: mission-gate-wait, template: wait-for-gates}
+            arguments:
+              parameters:
+                - name: mission-id
+                  value: "{{tasks.admit.outputs.parameters.mission-id}}"
+          - name: outcome-gated
+            depends: gate-wait
+            templateRef: {name: mission-outcome, template: record-outcome}
+            arguments:
+              parameters:
+                - name: mission-id
+                  value: "{{tasks.admit.outputs.parameters.mission-id}}"
+                - name: decision
+                  value: "{{tasks.gate-wait.outputs.parameters.decision}}"
+          - name: outcome-stopped
+            depends: collect-artifacts
+            when: "{{tasks.execute.outputs.parameters.lease-state}} == stopped"
+            templateRef: {name: mission-outcome, template: record-outcome}
+            arguments:
+              parameters:
+                - name: mission-id
+                  value: "{{tasks.admit.outputs.parameters.mission-id}}"
+                - name: decision
+                  value: stopped
