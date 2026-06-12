@@ -48,6 +48,11 @@ rbx/
   data/
     token                       # Bearer token for rbx-data
     warehouse-dsn               # External warehouse DSN
+  identity/
+    session-bff-commerce/
+      client-id                 # OAuth client ID for rbx-session-bff commerce access
+      client-secret             # OAuth client secret for rbx-session-bff commerce access
+      audience                  # Audience for the commerce service token
   comms/
     db-password                 # PostgreSQL password for user `rbx_comms` on jaguar — MUST be hex (openssl rand -hex 32). DATABASE_URL (the rbx-comms-secrets ExternalSecret source) is assembled from this by the k8s-secrets role.
   llm-gateway/
@@ -138,6 +143,9 @@ pass insert rbx/dns/pdns-db-password               # openssl rand -hex 32
 pass insert rbx/data/warehouse-db-password         # openssl rand -hex 32
 pass insert rbx/data/warehouse-dsn                 # constructed as postgres://rbx_data:<password>@161.97.147.76:5432/rbx_data_warehouse
 pass insert rbx/comms/db-password                  # openssl rand -hex 32 (user rbx_comms; DATABASE_URL is assembled from this by the k8s-secrets role)
+pass insert rbx/identity/session-bff-commerce/client-id
+pass insert rbx/identity/session-bff-commerce/client-secret
+pass insert rbx/identity/session-bff-commerce/audience
 pass insert rbx/langfuse/db-password               # openssl rand -hex 32
 pass insert rbx/langfuse/nextauth-secret           # openssl rand -hex 32
 pass insert rbx/langfuse/salt                      # openssl rand -hex 32
@@ -211,6 +219,7 @@ Secrets created per namespace:
 | `rbx-ia-br` | `rbx-observability-langfuse` | `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` | `rbx/observability/langfuse-host`, `rbx/observability/langfuse-public-key`, `rbx/observability/langfuse-secret-key` |
 | `rbx-ia-br` | `rbx-data-token` | `token` | `rbx/data/token` |
 | `rbx-ia-br` | `rbx-data-warehouse` | `dsn` | `rbx/data/warehouse-dsn` |
+| `rbx-ia-br` | `rbx-session-bff-commerce` | `RBX_COMMERCE_CLIENT_ID`, `RBX_COMMERCE_CLIENT_SECRET`, `RBX_COMMERCE_AUDIENCE` | `rbx/identity/session-bff-commerce/client-id`, `rbx/identity/session-bff-commerce/client-secret`, `rbx/identity/session-bff-commerce/audience` |
 | `monitoring` | `grafana-admin` | `admin-user`, `admin-password` | `rbx/monitoring/grafana-admin-password` |
 | `langfuse` | `langfuse-core` | `nextauth-secret`, `salt`, `encryption-key` | `rbx/langfuse/nextauth-secret`, `rbx/langfuse/salt`, `rbx/langfuse/encryption-key` |
 | `langfuse` | `langfuse-postgresql-auth` | `password` | `rbx/langfuse/db-password` |

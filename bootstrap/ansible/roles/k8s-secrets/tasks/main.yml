@@ -434,6 +434,24 @@
   register: rbx_data_warehouse_dsn_result
   no_log: true
 
+- name: Read rbx-session-bff commerce client ID from pass
+  command: pass show {{ pass_rbx_session_bff_commerce_client_id_key }}
+  changed_when: false
+  register: rbx_session_bff_commerce_client_id_result
+  no_log: true
+
+- name: Read rbx-session-bff commerce client secret from pass
+  command: pass show {{ pass_rbx_session_bff_commerce_client_secret_key }}
+  changed_when: false
+  register: rbx_session_bff_commerce_client_secret_result
+  no_log: true
+
+- name: Read rbx-session-bff commerce audience from pass
+  command: pass show {{ pass_rbx_session_bff_commerce_audience_key }}
+  changed_when: false
+  register: rbx_session_bff_commerce_audience_result
+  no_log: true
+
 - name: Read rbx-comms DB password from pass
   command: pass show {{ pass_rbx_comms_db_password_key }}
   changed_when: false
@@ -509,6 +527,22 @@
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   environment:
     RBX_DATA_WAREHOUSE_DSN: "{{ rbx_data_warehouse_dsn_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+- name: Create rbx-session-bff-commerce in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-session-bff-commerce \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=RBX_COMMERCE_CLIENT_ID="$RBX_COMMERCE_CLIENT_ID" \
+      --from-literal=RBX_COMMERCE_CLIENT_SECRET="$RBX_COMMERCE_CLIENT_SECRET" \
+      --from-literal=RBX_COMMERCE_AUDIENCE="$RBX_COMMERCE_AUDIENCE" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    RBX_COMMERCE_CLIENT_ID: "{{ rbx_session_bff_commerce_client_id_result.stdout | trim }}"
+    RBX_COMMERCE_CLIENT_SECRET: "{{ rbx_session_bff_commerce_client_secret_result.stdout | trim }}"
+    RBX_COMMERCE_AUDIENCE: "{{ rbx_session_bff_commerce_audience_result.stdout | trim }}"
   changed_when: true
   no_log: true
 
