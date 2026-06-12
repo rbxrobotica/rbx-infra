@@ -86,8 +86,12 @@ pre-admission `approval_request` before `mission-admission` will submit
 - One ServiceAccount per concern: `workflow-controller` (namespaced controller
   permissions per upstream chart, scoped to `agent-missions`), and
   `mission-runner-sa` for workflow pods with **no Kubernetes API permissions
-  at all** — lifecycle steps talk to rbx-maestro over HTTP, not to the
-  kube-apiserver.
+  beyond the Argo executor floor** — a single Role granting `create`/`patch`
+  on `workflowtaskresults` (`argoproj.io`), which the executor requires to
+  report step results. No core-API access of any kind; lifecycle steps talk
+  to rbx-maestro over HTTP, not to the kube-apiserver. *(Precision added in
+  rollout step 1 after verifying the upstream chart: the executor cannot run
+  with literally zero permissions.)*
 - No ClusterRole grants beyond what the namespaced controller strictly needs.
 - No access of any kind to product namespaces, `argocd`, or `kube-system`.
 - **No static secret is mounted into workflow pods at all.** Authentication to

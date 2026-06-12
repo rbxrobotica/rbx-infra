@@ -1,0 +1,189 @@
+# ArgoCD Application: Argo Workflows (Agent Loop mission control plane)
+# ADR-0008 rollout step 1 of 3: namespaces + controller.
+# MANUAL SYNC ONLY: the platform app creates this Application object on merge,
+# but resources are applied only when the operator syncs it (the human apply
+# gate the ADR requires). WorkflowTemplates, NetworkPolicies and the staging
+# no-op mission come in rollout steps 2 and 3.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argo-workflows
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argo-workflows
+    app.kubernetes.io/component: platform
+    app.kubernetes.io/part-of: agent-loop
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-platform
+
+  source:
+    repoURL: https://argoproj.github.io/argo-helm
+    chart: argo-workflows
+    targetRevision: 1.0.15
+    helm:
+      releaseName: argo-workflows
+      values: |
+        # Namespaced controller: watches agent-missions only (ADR-0008 §2).
+        singleNamespace: true
+
+        controller:
+          extraArgs:
+            - --managed-namespace=agent-missions
+          # No ClusterWorkflowTemplates: keeps the install free of a
+          # controller ClusterRoleBinding (ADR-0008 §4).
+          clusterWorkflowTemplates:
+            enabled: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+        # No UI in rollout step 1; revisit behind internal access only
+        # (never a public Ingress) if operations need it (ADR-0008 §2).
+        server:
+          enabled: false
+
+        # Executor identity for mission lifecycle pods (ADR-0008 §4):
+        # the ONLY Kubernetes API permission is the Argo executor floor —
+        # create/patch workflowtaskresults (argoproj.io) so steps can report
+        # results. No core-API access, no Secret objects. Authentication to
+        # rbx-maestro uses the projected ServiceAccount token (audience-bound,
+        # short TTL), wired in the WorkflowTemplates of rollout step 2.
+        # Namespace + quotas applied here so they ride the same manual-sync
+        # gate; canonical definitions live in core/namespaces/ (llm-gateway
+        # precedent). The argo-workflows namespace itself comes from
+        # CreateNamespace=true; its quota is applied below.
+        extraObjects:
+          - apiVersion: v1
+            kind: Namespace
+            metadata:
+              name: agent-missions
+              labels:
+                name: agent-missions
+                purpose: agent-loop-lifecycle
+                app.kubernetes.io/part-of: agent-loop
+              annotations:
+                argocd.argoproj.io/sync-wave: "-1"
+          - apiVersion: v1
+            kind: ResourceQuota
+            metadata:
+              name: agent-missions-quota
+              namespace: agent-missions
+            spec:
+              hard:
+                requests.cpu: "1"
+                requests.memory: 1Gi
+                limits.cpu: "2"
+                limits.memory: 2Gi
+                persistentvolumeclaims: "0"
+                requests.storage: "0"
+                services: "0"
+                pods: "20"
+                secrets: "5"
+          - apiVersion: v1
+            kind: LimitRange
+            metadata:
+              name: agent-missions-limit-range
+              namespace: agent-missions
+            spec:
+              limits:
+                - default:
+                    cpu: 200m
+                    memory: 256Mi
+                  defaultRequest:
+                    cpu: 50m
+                    memory: 64Mi
+                  max:
+                    cpu: 500m
+                    memory: 512Mi
+                  min:
+                    cpu: 10m
+                    memory: 16Mi
+                  type: Container
+          - apiVersion: v1
+            kind: ResourceQuota
+            metadata:
+              name: argo-workflows-quota
+              namespace: argo-workflows
+            spec:
+              hard:
+                requests.cpu: "1"
+                requests.memory: 1Gi
+                limits.cpu: "2"
+                limits.memory: 2Gi
+                persistentvolumeclaims: "0"
+                services: "5"
+                pods: "10"
+                secrets: "10"
+          # LimitRange injects default requests/limits so chart hook pods
+          # (the crd-install Job ships without resources) are not rejected
+          # by the ResourceQuota above.
+          - apiVersion: v1
+            kind: LimitRange
+            metadata:
+              name: argo-workflows-limit-range
+              namespace: argo-workflows
+            spec:
+              limits:
+                - default:
+                    cpu: 200m
+                    memory: 256Mi
+                  defaultRequest:
+                    cpu: 50m
+                    memory: 64Mi
+                  max:
+                    cpu: 500m
+                    memory: 512Mi
+                  min:
+                    cpu: 10m
+                    memory: 16Mi
+                  type: Container
+          - apiVersion: v1
+            kind: ServiceAccount
+            metadata:
+              name: mission-runner-sa
+              namespace: agent-missions
+              labels:
+                app.kubernetes.io/part-of: agent-loop
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: Role
+            metadata:
+              name: mission-runner-executor
+              namespace: agent-missions
+              labels:
+                app.kubernetes.io/part-of: agent-loop
+            rules:
+              - apiGroups: ["argoproj.io"]
+                resources: ["workflowtaskresults"]
+                verbs: ["create", "patch"]
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: RoleBinding
+            metadata:
+              name: mission-runner-executor
+              namespace: agent-missions
+              labels:
+                app.kubernetes.io/part-of: agent-loop
+            roleRef:
+              apiGroup: rbac.authorization.k8s.io
+              kind: Role
+              name: mission-runner-executor
+            subjects:
+              - kind: ServiceAccount
+                name: mission-runner-sa
+                namespace: agent-missions
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argo-workflows
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+      # Manual sync: no automated prune/selfHeal — the operator sync IS the
+      # apply gate (ADR-0008 rollout). ServerSideApply is forbidden per
+      # docs/ARGOCD-BEST-PRACTICES.md.

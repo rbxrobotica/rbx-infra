@@ -1,0 +1,57 @@
+# Namespace: argo-workflows
+# Purpose: Argo Workflows controller (namespaced install, managed-namespace
+#          mode watching agent-missions only; argo-server disabled)
+# ADR-0008: Argo Workflows as the Agent Loop mission control plane
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: argo-workflows
+  labels:
+    name: argo-workflows
+    purpose: agent-loop-lifecycle
+    app.kubernetes.io/part-of: agent-loop
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: argo-workflows-quota
+  namespace: argo-workflows
+spec:
+  hard:
+    requests.cpu: "1"
+    requests.memory: 1Gi
+    limits.cpu: "2"
+    limits.memory: 2Gi
+    persistentvolumeclaims: "0"
+    services: "5"
+    pods: "10"
+    secrets: "10"
+
+---
+# LimitRange injects default requests/limits so chart hook pods (e.g. the
+# crd-install Job, which ships without resources) are not rejected by the
+# ResourceQuota above.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: argo-workflows-limit-range
+  namespace: argo-workflows
+spec:
+  limits:
+  - default:
+      cpu: 200m
+      memory: 256Mi
+    defaultRequest:
+      cpu: 50m
+      memory: 64Mi
+    max:
+      cpu: 500m
+      memory: 512Mi
+    min:
+      cpu: 10m
+      memory: 16Mi
+    type: Container
