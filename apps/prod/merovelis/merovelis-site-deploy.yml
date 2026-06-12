@@ -25,7 +25,7 @@ spec:
       containers:
         - name: merovelis-site
           # Immutable sha tag published by ldamasio/merovelis-site CI.
-          image: ghcr.io/ldamasio/merovelis-site:sha-051df55
+          image: ghcr.io/ldamasio/merovelis-site:sha-24989aa
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
