@@ -1,0 +1,8 @@
+# Namespace: rbx-commerce-sandbox
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-commerce-sandbox
+  labels:
+    app.kubernetes.io/part-of: rbx-commerce
+    environment: sandbox

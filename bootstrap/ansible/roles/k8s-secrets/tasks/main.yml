@@ -566,6 +566,66 @@
   changed_when: true
   no_log: true
 
+# rbx-commerce sandbox secrets are assembled here from isolated pass entries.
+# The sandbox uses a separate logical database and its own Asaas credentials,
+# but keeps the same comms endpoint contract as prod.
+- name: Read rbx-commerce sandbox DB password from pass
+  command: pass show {{ pass_rbx_commerce_sandbox_db_password_key }}
+  changed_when: false
+  register: rbx_commerce_sandbox_db_password_result
+  no_log: true
+
+- name: Read rbx-commerce sandbox Asaas API key from pass
+  command: pass show {{ pass_rbx_commerce_sandbox_asaas_api_key_key }}
+  changed_when: false
+  register: rbx_commerce_sandbox_asaas_api_key_result
+  no_log: true
+
+- name: Read rbx-commerce sandbox Asaas webhook token from pass
+  command: pass show {{ pass_rbx_commerce_sandbox_asaas_webhook_token_key }}
+  changed_when: false
+  register: rbx_commerce_sandbox_asaas_webhook_token_result
+  no_log: true
+
+- name: Ensure rbx-commerce-sandbox namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ rbx_commerce_sandbox_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in rbx-commerce-sandbox
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace {{ rbx_commerce_sandbox_namespace }} \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+- name: Create rbx-commerce-sandbox-secrets in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-commerce-sandbox-secrets \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=DATABASE_URL="postgres://{{ rbx_commerce_sandbox_db_user }}:${RBX_COMMERCE_SANDBOX_DB_PASSWORD}@{{ rbx_commerce_sandbox_db_host }}:{{ rbx_commerce_sandbox_db_port }}/{{ rbx_commerce_sandbox_db_name }}?sslmode=disable" \
+      --from-literal=COMMS_API_URL="http://rbx-comms.rbx-comms.svc.cluster.local" \
+      --from-literal=ASAAS_API_KEY="$RBX_COMMERCE_SANDBOX_ASAAS_API_KEY" \
+      --from-literal=ASAAS_WEBHOOK_TOKEN="$RBX_COMMERCE_SANDBOX_ASAAS_WEBHOOK_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    RBX_COMMERCE_SANDBOX_DB_PASSWORD: "{{ rbx_commerce_sandbox_db_password_result.stdout | trim | urlencode }}"
+    RBX_COMMERCE_SANDBOX_ASAAS_API_KEY: "{{ rbx_commerce_sandbox_asaas_api_key_result.stdout | trim }}"
+    RBX_COMMERCE_SANDBOX_ASAAS_WEBHOOK_TOKEN: "{{ rbx_commerce_sandbox_asaas_webhook_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
 # ---------------------------------------------------------------------------
 # Thalamus slim-down reorg service namespaces — image pull secrets.
 # The 3 services run private images from ghcr.io/rbxrobotica/*, so each

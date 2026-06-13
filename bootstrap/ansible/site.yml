@@ -40,14 +40,21 @@
   tags: [databases, warehouse]
   roles:
     - rbx-data-warehouse-db
-# Phase 6b: Create Langfuse database on jaguar
+
+# Phase 6b: Create rbx-commerce sandbox database on jaguar
+- name: Setup rbx-commerce sandbox database
+  hosts: db_server
+  tags: [databases, commerce-sandbox]
+  roles:
+    - commerce-sandbox-db
+# Phase 6c: Create Langfuse database on jaguar
 - name: Setup Langfuse database
   hosts: db_server
   tags: [databases, langfuse]
   roles:
     - langfuse-database
 
-# Phase 6c: Create ZITADEL database on jaguar
+# Phase 6d: Create ZITADEL database on jaguar
 - name: Setup ZITADEL database
   hosts: db_server
   tags: [databases, zitadel]

@@ -1,0 +1,30 @@
+# Commerce sandbox external database service — database runs on jaguar (161.97.147.76)
+# This service stays namespaced to rbx-commerce-sandbox and points at a separate
+# logical database on the same physical Postgres host.
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-commerce-postgres
+  namespace: rbx-commerce-sandbox
+  labels:
+    app.kubernetes.io/name: rbx-commerce-postgres
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: rbx-commerce
+    environment: sandbox
+spec:
+  ports:
+    - port: 5432
+      protocol: TCP
+      name: postgres
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: rbx-commerce-postgres
+  namespace: rbx-commerce-sandbox
+subsets:
+  - addresses:
+      - ip: 161.97.147.76
+    ports:
+      - port: 5432
+        name: postgres

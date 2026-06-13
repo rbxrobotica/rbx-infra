@@ -35,6 +35,12 @@ paradedb_truthmetal_user: "truthmetal"
 paradedb_litellm_db: "litellm"
 paradedb_litellm_user: "litellm"
 
+# rbx-commerce sandbox (separate logical DB for sandbox validation)
+rbx_commerce_sandbox_db_name: "rbx_commerce_sandbox"
+rbx_commerce_sandbox_db_user: "rbx_commerce_sandbox"
+rbx_commerce_sandbox_db_host: "rbx-commerce-postgres.rbx-commerce-sandbox.svc.cluster.local"
+rbx_commerce_sandbox_db_port: "5432"
+
 # PowerDNS database (jaguar — used by pdns-database role)
 pdns_db_name: "pdns"
 pdns_db_user: "pdns"

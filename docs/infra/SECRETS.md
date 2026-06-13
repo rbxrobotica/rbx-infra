@@ -143,6 +143,9 @@ pass insert rbx/dns/pdns-db-password               # openssl rand -hex 32
 pass insert rbx/data/warehouse-db-password         # openssl rand -hex 32
 pass insert rbx/data/warehouse-dsn                 # constructed as postgres://rbx_data:<password>@161.97.147.76:5432/rbx_data_warehouse
 pass insert rbx/comms/db-password                  # openssl rand -hex 32 (user rbx_comms; DATABASE_URL is assembled from this by the k8s-secrets role)
+pass insert rbx/commerce-sandbox/db-password       # openssl rand -hex 32
+pass insert rbx/commerce-sandbox/asaas-api-key     # sandbox API key from Asaas
+pass insert rbx/commerce-sandbox/asaas-api-webhook-token # sandbox webhook token from Asaas
 pass insert rbx/identity/session-bff-commerce/client-id
 pass insert rbx/identity/session-bff-commerce/client-secret
 pass insert rbx/identity/session-bff-commerce/audience
@@ -220,11 +223,13 @@ Secrets created per namespace:
 | `rbx-ia-br` | `rbx-data-token` | `token` | `rbx/data/token` |
 | `rbx-ia-br` | `rbx-data-warehouse` | `dsn` | `rbx/data/warehouse-dsn` |
 | `rbx-ia-br` | `rbx-session-bff-commerce` | `RBX_COMMERCE_CLIENT_ID`, `RBX_COMMERCE_CLIENT_SECRET`, `RBX_COMMERCE_AUDIENCE` | `rbx/identity/session-bff-commerce/client-id`, `rbx/identity/session-bff-commerce/client-secret`, `rbx/identity/session-bff-commerce/audience` |
+| `rbx-ia-br` | `rbx-commerce-sandbox-secrets` | `DATABASE_URL`, `COMMS_API_URL`, `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` | `rbx/commerce-sandbox/db-password`, `rbx/commerce-sandbox/asaas-api-key`, `rbx/commerce-sandbox/asaas-api-webhook-token` |
 
 Source of truth for these three values is the ZITADEL service-account client
 registration used by `rbx-session-bff` to read `rbx-commerce`. Create or
 rotate the client in the IdP, then copy the issued client ID, client secret,
 and API audience into `pass`.
+
 | `monitoring` | `grafana-admin` | `admin-user`, `admin-password` | `rbx/monitoring/grafana-admin-password` |
 | `langfuse` | `langfuse-core` | `nextauth-secret`, `salt`, `encryption-key` | `rbx/langfuse/nextauth-secret`, `rbx/langfuse/salt`, `rbx/langfuse/encryption-key` |
 | `langfuse` | `langfuse-postgresql-auth` | `password` | `rbx/langfuse/db-password` |
@@ -241,6 +246,11 @@ ExternalSecrets through the `kubernetes-store` SecretStore. The
 `rbx-memory` and `rbx-data`; this role does not provision or modify it.
 
 Run idempotently — safe to re-run after a cluster wipe.
+
+**Sandbox validation note:** do not reuse `rbx/identity/session-bff-commerce/*`
+for a sandbox commerce surface. Sandbox validation should get its own service
+credentials and its own `pass` namespace, alongside a separate K8s secret and
+deployment overlay. The prod commerce path stays pinned to the live values.
 
 **Isolation invariant:** The `k8s-secrets` role must have two independent task blocks — one for production (`robson` namespace, reads `rbx/robson/`) and one for testnet (`robson-testnet` namespace, reads `rbx/robson-testnet/`). These blocks must never share pass key references. See `docs/ROBSON-TESTNET-ENVIRONMENT.md` for the full Ansible task specification.
 

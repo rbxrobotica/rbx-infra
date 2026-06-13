@@ -63,6 +63,12 @@ rbx_comms_db_host: "rbx-comms-postgres.rbx-comms.svc.cluster.local"
 rbx_comms_db_port: "5432"
 rbx_comms_db_name: "rbx_comms"
 
+# rbx-commerce sandbox (namespace: rbx-commerce-sandbox — isolated validation)
+rbx_commerce_sandbox_namespace: "rbx-commerce-sandbox"
+pass_rbx_commerce_sandbox_db_password_key: "rbx/commerce-sandbox/db-password"
+pass_rbx_commerce_sandbox_asaas_api_key_key: "rbx/commerce-sandbox/asaas-api-key"
+pass_rbx_commerce_sandbox_asaas_webhook_token_key: "rbx/commerce-sandbox/asaas-api-webhook-token"
+
 # llm-gateway (namespace: llm-gateway — LiteLLM Proxy, experimental)
 llm_gateway_namespace: "llm-gateway"
 pass_llm_gateway_db_password_key: "rbx/llm-gateway/db-password"

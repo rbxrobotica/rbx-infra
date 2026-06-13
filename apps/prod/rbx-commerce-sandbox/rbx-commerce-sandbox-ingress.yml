@@ -1,0 +1,27 @@
+# Ingress: commerce-sandbox.rbx.ia.br
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rbx-commerce-sandbox
+  namespace: rbx-commerce-sandbox
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - commerce-sandbox.rbx.ia.br
+      secretName: rbx-commerce-sandbox-tls
+  rules:
+    - host: commerce-sandbox.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce-sandbox
+                port:
+                  number: 80
