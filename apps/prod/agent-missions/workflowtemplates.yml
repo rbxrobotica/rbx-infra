@@ -448,6 +448,7 @@ spec:
                   value: "{{tasks.admit.outputs.parameters.mission-id}}"
           - name: outcome-gated
             depends: gate-wait
+            when: "{{tasks.execute.outputs.parameters.lease-state}} == delivered"
             templateRef: {name: mission-outcome, template: record-outcome}
             arguments:
               parameters:
