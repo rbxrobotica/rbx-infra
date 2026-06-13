@@ -7,6 +7,12 @@ metadata:
     app.kubernetes.io/name: rbx-maestro
 spec:
   replicas: 1
+  # Recreate: maestro deploys carry DB migrations in initContainers; the old
+  # binary must never overlap a post-migration schema (Codex finding, PR #41).
+  # Seconds of downtime per rollout is the right trade for an internal
+  # control-plane service with replicas: 1.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: rbx-maestro
