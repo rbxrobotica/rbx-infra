@@ -1,0 +1,10 @@
+---
+# Corbetti agent workbench — non-sensitive config (ADR-0009 Phase 3)
+ansible_user: psyctl
+ansible_ssh_private_key_file: ~/.ssh/id_ed25519
+
+# Maestro public endpoint (Corbetti is external, not in-cluster)
+maestro_url: "https://agents.rbx.ia.br/api/v1/agent-loop"
+
+# Logical runner identifier sent as X-Runner-Id on every lease poll
+runner_id: "corbetti-01"

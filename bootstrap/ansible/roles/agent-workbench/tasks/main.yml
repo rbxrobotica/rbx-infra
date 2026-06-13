@@ -1,0 +1,25 @@
+---
+# agent-workbench role — baseline for Corbetti (ADR-0009 Phase 3)
+# Requires: agent_loop_runner_key (group_vars/agent_workbench/vault.yml)
+#           maestro_url            (group_vars/agent_workbench/main.yml)
+#           runner_id              (group_vars/agent_workbench/main.yml)
+
+- name: Create rbx workspace directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0700"
+  loop:
+    - "{{ ansible_env.HOME }}/rbx"
+    - "{{ ansible_env.HOME }}/rbx/worktrees"
+    - "{{ ansible_env.HOME }}/rbx/repos"
+    - "{{ ansible_env.HOME }}/rbx/runner"
+
+- name: Write runner env file
+  copy:
+    dest: "{{ ansible_env.HOME }}/rbx/runner/.env"
+    mode: "0600"
+    content: |
+      AGENT_LOOP_RUNNER_KEY={{ agent_loop_runner_key }}
+      MAESTRO_URL={{ maestro_url }}
+      RUNNER_ID={{ runner_id }}
