@@ -15,11 +15,53 @@ spec:
       labels:
         app.kubernetes.io/name: rbx-maestro
     spec:
+      serviceAccountName: rbx-maestro
       imagePullSecrets:
         - name: ghcr-pull-secret
+      # Run pending DB migrations before the app starts. Migrations ship
+      # inside the app image (/app/migrations); golang-migrate applies them.
+      # Required for maestro migration 002 (canonical mission statuses +
+      # agent-loop tables) — the new binary cannot serve against the old
+      # schema (mission_runs gains stop_reason/mission_code/merged_at).
+      initContainers:
+        - name: copy-migrations
+          image: ghcr.io/rbxrobotica/rbx-maestro:sha-a6e099e82e6c049927f114b2f97b052466e36d6a
+          command: ["sh", "-ec", "cp /app/migrations/* /m/"]
+          volumeMounts:
+            - name: migrations
+              mountPath: /m
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+        - name: migrate
+          image: docker.io/migrate/migrate:v4.18.1
+          args: ["-path", "/m", "-database", "$(DATABASE_URL)", "up"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-maestro-db
+                  key: url
+          volumeMounts:
+            - name: migrations
+              mountPath: /m
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+      volumes:
+        - name: migrations
+          emptyDir: {}
       containers:
         - name: maestro
-          image: ghcr.io/rbxrobotica/rbx-maestro:df4a4d18045536721505dca45adfd40f7de1f71e
+          image: ghcr.io/rbxrobotica/rbx-maestro:sha-a6e099e82e6c049927f114b2f97b052466e36d6a
           ports:
             - containerPort: 8080
           env:
@@ -30,6 +72,11 @@ spec:
                   key: url
             - name: PORT
               value: "8080"
+            # Agent-loop surface auth (maestro PR #4): Kubernetes
+            # TokenReview, audience rbx-maestro, allowlisted subject
+            # mission-runner-sa (rbx-infra ADR-0008 §4).
+            - name: AGENT_LOOP_AUTH
+              value: "token-review"
           resources:
             requests:
               cpu: 100m
