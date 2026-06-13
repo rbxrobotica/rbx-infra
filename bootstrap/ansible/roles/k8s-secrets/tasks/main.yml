@@ -611,9 +611,14 @@
 
 - name: Create rbx-commerce-sandbox-secrets in rbx-ia-br
   shell: |
+    _db_user="{{ rbx_commerce_sandbox_db_user }}"
+    _db_host="{{ rbx_commerce_sandbox_db_host }}"
+    _db_port="{{ rbx_commerce_sandbox_db_port }}"
+    _db_name="{{ rbx_commerce_sandbox_db_name }}"
+    _db_url="postgres://${_db_user}:${RBX_COMMERCE_SANDBOX_DB_PASSWORD}@${_db_host}:${_db_port}/${_db_name}?sslmode=disable"
     kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-commerce-sandbox-secrets \
       --namespace {{ rbx_ia_br_namespace }} \
-      --from-literal=DATABASE_URL="postgres://{{ rbx_commerce_sandbox_db_user }}:${RBX_COMMERCE_SANDBOX_DB_PASSWORD}@{{ rbx_commerce_sandbox_db_host }}:{{ rbx_commerce_sandbox_db_port }}/{{ rbx_commerce_sandbox_db_name }}?sslmode=disable" \
+      --from-literal=DATABASE_URL="${_db_url}" \
       --from-literal=COMMS_API_URL="http://rbx-comms.rbx-comms.svc.cluster.local" \
       --from-literal=ASAAS_API_KEY="$RBX_COMMERCE_SANDBOX_ASAAS_API_KEY" \
       --from-literal=ASAAS_WEBHOOK_TOKEN="$RBX_COMMERCE_SANDBOX_ASAAS_WEBHOOK_TOKEN" \
