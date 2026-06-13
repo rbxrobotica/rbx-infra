@@ -1,0 +1,33 @@
+# ArgoCD Application: rbx-projects
+# Manages cluster-wide AppProject resources under gitops/projects/.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-projects
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-projects
+    app.kubernetes.io/component: gitops
+    app.kubernetes.io/part-of: rbx-infra
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  project: rbx-platform
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: gitops/projects
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
