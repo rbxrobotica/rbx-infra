@@ -1,0 +1,21 @@
+# TokenReview delegation for rbx-maestro (agent-loop surface, ADR-0008 §4).
+# Lives on the platform side: the rbx-applications AppProject forbids
+# cluster-scoped resources, and rbx-platform is the project that owns
+# cluster-wide RBAC. system:auth-delegator grants exactly tokenreviews/
+# subjectaccessreviews create — nothing else. Applied by the auto-syncing
+# platform app (RBAC only; no workload).
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: rbx-maestro-auth-delegator
+  labels:
+    app.kubernetes.io/name: rbx-maestro
+    app.kubernetes.io/part-of: agent-loop
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+  - kind: ServiceAccount
+    name: rbx-maestro
+    namespace: rbx-maestro
