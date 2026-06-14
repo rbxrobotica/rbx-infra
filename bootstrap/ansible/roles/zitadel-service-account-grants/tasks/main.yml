@@ -1,0 +1,102 @@
+---
+# Ensure the commerce service-account grant exists in ZITADEL.
+
+- name: Read commerce service-account client ID from rbx-ia-br
+  shell: >
+    kubectl --kubeconfig {{ zitadel_kubeconfig_path }} get secret
+    {{ zitadel_commerce_service_account_secret_name }}
+    --namespace {{ zitadel_commerce_service_account_namespace }}
+    -o jsonpath={.data.RBX_COMMERCE_CLIENT_ID}
+  changed_when: false
+  register: zitadel_commerce_service_account_username_raw
+
+- name: Read commerce service-account audience from rbx-ia-br
+  shell: >
+    kubectl --kubeconfig {{ zitadel_kubeconfig_path }} get secret
+    {{ zitadel_commerce_service_account_secret_name }}
+    --namespace {{ zitadel_commerce_service_account_namespace }}
+    -o jsonpath={.data.RBX_COMMERCE_AUDIENCE}
+  changed_when: false
+  register: zitadel_commerce_service_account_audience_raw
+  no_log: true
+
+- name: Read ZITADEL login-client PAT from rbx-identity
+  shell: >
+    kubectl --kubeconfig {{ zitadel_kubeconfig_path }} get secret
+    {{ zitadel_login_client_secret_name }}
+    --namespace {{ zitadel_login_client_secret_namespace }}
+    -o jsonpath={.data.pat}
+  changed_when: false
+  register: zitadel_login_client_pat_raw
+  no_log: true
+
+- name: Decode service-account metadata
+  set_fact:
+    zitadel_commerce_service_account_username: "{{ zitadel_commerce_service_account_username_raw.stdout | b64decode | trim }}"
+    zitadel_commerce_project_audience: "{{ zitadel_commerce_service_account_audience_raw.stdout | b64decode | trim }}"
+    zitadel_login_client_pat: "{{ zitadel_login_client_pat_raw.stdout | b64decode | trim }}"
+  no_log: true
+
+- name: Derive commerce project ID from audience
+  set_fact:
+    zitadel_commerce_project_id: >-
+      {{
+        (zitadel_commerce_project_audience.split(':')[6]
+         if zitadel_commerce_project_audience.startswith(zitadel_commerce_project_audience_prefix)
+         and zitadel_commerce_project_audience.split(':') | length >= 8
+         else '')
+      }}
+  no_log: true
+
+- name: Fail when commerce project ID could not be derived
+  fail:
+    msg: >-
+      Could not derive the commerce project ID from the configured audience.
+      Expected format: urn:zitadel:iam:org:project:id:<project_id>:aud
+  when: zitadel_commerce_project_id | length == 0
+
+- name: Search ZITADEL users
+  uri:
+    url: "{{ zitadel_management_base_url }}/management/v1/users/_search"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ zitadel_login_client_pat }}"
+    body_format: json
+    body: {}
+    return_content: true
+    status_code: 200
+  register: zitadel_users_search_result
+
+- name: Resolve commerce service-account user ID
+  set_fact:
+    zitadel_commerce_service_account_user_id: >-
+      {{
+        (zitadel_users_search_result.json.result
+         | selectattr('userName', 'equalto', zitadel_commerce_service_account_username)
+         | map(attribute='id')
+         | list
+         | first)
+        | default('')
+      }}
+
+- name: Fail when commerce service-account user is missing
+  fail:
+    msg: >-
+      ZITADEL service account {{ zitadel_commerce_service_account_username }}
+      was not found. Create the machine user before ensuring the project grant.
+  when: zitadel_commerce_service_account_user_id | length == 0
+
+- name: Ensure commerce service-account grant exists
+  uri:
+    url: "{{ zitadel_management_base_url }}/management/v1/users/{{ zitadel_commerce_service_account_user_id }}/grants"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ zitadel_login_client_pat }}"
+    body_format: json
+    body:
+      projectId: "{{ zitadel_commerce_project_id }}"
+      roleKeys: []
+    return_content: true
+    status_code: [200, 409]
+  register: zitadel_commerce_grant_result
+  no_log: true

@@ -92,7 +92,8 @@ spec:
           # The commerce entitlement gate uses a mirrored service-account secret
           # from rbx-ia-br. The operator must provision the remote secret named
           # rbx-session-bff-commerce with RBX_COMMERCE_CLIENT_ID,
-          # RBX_COMMERCE_CLIENT_SECRET, and RBX_COMMERCE_AUDIENCE.
+          # RBX_COMMERCE_CLIENT_SECRET, RBX_COMMERCE_MACHINE_KEY_JSON, and
+          # RBX_COMMERCE_AUDIENCE.
           - apiVersion: v1
             kind: ServiceAccount
             metadata:
@@ -140,6 +141,10 @@ spec:
                   remoteRef:
                     key: rbx-session-bff-commerce
                     property: RBX_COMMERCE_CLIENT_SECRET
+                - secretKey: RBX_COMMERCE_MACHINE_KEY_JSON
+                  remoteRef:
+                    key: rbx-session-bff-commerce
+                    property: RBX_COMMERCE_MACHINE_KEY_JSON
                 - secretKey: RBX_COMMERCE_AUDIENCE
                   remoteRef:
                     key: rbx-session-bff-commerce

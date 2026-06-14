@@ -446,6 +446,12 @@
   register: rbx_session_bff_commerce_client_secret_result
   no_log: true
 
+- name: Read rbx-session-bff commerce machine key JSON from pass
+  command: pass show {{ pass_rbx_session_bff_commerce_machine_key_json_key }}
+  changed_when: false
+  register: rbx_session_bff_commerce_machine_key_json_result
+  no_log: true
+
 - name: Read rbx-session-bff commerce audience from pass
   command: pass show {{ pass_rbx_session_bff_commerce_audience_key }}
   changed_when: false
@@ -536,12 +542,14 @@
       --namespace {{ rbx_ia_br_namespace }} \
       --from-literal=RBX_COMMERCE_CLIENT_ID="$RBX_COMMERCE_CLIENT_ID" \
       --from-literal=RBX_COMMERCE_CLIENT_SECRET="$RBX_COMMERCE_CLIENT_SECRET" \
+      --from-literal=RBX_COMMERCE_MACHINE_KEY_JSON="$RBX_COMMERCE_MACHINE_KEY_JSON" \
       --from-literal=RBX_COMMERCE_AUDIENCE="$RBX_COMMERCE_AUDIENCE" \
       --dry-run=client -o yaml \
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   environment:
     RBX_COMMERCE_CLIENT_ID: "{{ rbx_session_bff_commerce_client_id_result.stdout | trim }}"
     RBX_COMMERCE_CLIENT_SECRET: "{{ rbx_session_bff_commerce_client_secret_result.stdout | trim }}"
+    RBX_COMMERCE_MACHINE_KEY_JSON: "{{ rbx_session_bff_commerce_machine_key_json_result.stdout | trim }}"
     RBX_COMMERCE_AUDIENCE: "{{ rbx_session_bff_commerce_audience_result.stdout | trim }}"
   changed_when: true
   no_log: true

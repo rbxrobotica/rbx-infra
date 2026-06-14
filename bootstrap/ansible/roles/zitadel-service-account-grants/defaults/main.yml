@@ -1,0 +1,10 @@
+---
+# Default settings for ZITADEL service-account grant bootstrap.
+
+zitadel_management_base_url: "https://auth.merovelis.com"
+zitadel_kubeconfig_path: "~/.kube/config-rbx"
+zitadel_commerce_service_account_namespace: "rbx-ia-br"
+zitadel_commerce_service_account_secret_name: "rbx-session-bff-commerce"
+zitadel_login_client_secret_namespace: "rbx-identity"
+zitadel_login_client_secret_name: "login-client"
+zitadel_commerce_project_audience_prefix: "urn:zitadel:iam:org:project:id:"

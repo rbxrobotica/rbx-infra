@@ -92,6 +92,15 @@
   roles:
     - k8s-secrets
 
+# Phase 10b: Ensure ZITADEL service-account grants for product-edge service tokens
+- name: Ensure ZITADEL service-account grants
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tags: zitadel-service-account-grants
+  roles:
+    - zitadel-service-account-grants
+
 # Phase 11: Bootstrap agent workbench (Corbetti) — ADR-0009 Phase 3
 # Sets up workspace directories and the runner .env file on Corbetti.
 # Deliberately separate from Phase 1 hardening — ufw/sshd changes on the

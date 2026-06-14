@@ -222,13 +222,13 @@ Secrets created per namespace:
 | `rbx-ia-br` | `rbx-observability-langfuse` | `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` | `rbx/observability/langfuse-host`, `rbx/observability/langfuse-public-key`, `rbx/observability/langfuse-secret-key` |
 | `rbx-ia-br` | `rbx-data-token` | `token` | `rbx/data/token` |
 | `rbx-ia-br` | `rbx-data-warehouse` | `dsn` | `rbx/data/warehouse-dsn` |
-| `rbx-ia-br` | `rbx-session-bff-commerce` | `RBX_COMMERCE_CLIENT_ID`, `RBX_COMMERCE_CLIENT_SECRET`, `RBX_COMMERCE_AUDIENCE` | `rbx/identity/session-bff-commerce/client-id`, `rbx/identity/session-bff-commerce/client-secret`, `rbx/identity/session-bff-commerce/audience` |
+| `rbx-ia-br` | `rbx-session-bff-commerce` | `RBX_COMMERCE_CLIENT_ID`, `RBX_COMMERCE_CLIENT_SECRET`, `RBX_COMMERCE_MACHINE_KEY_JSON`, `RBX_COMMERCE_AUDIENCE` | `rbx/identity/session-bff-commerce/client-id`, `rbx/identity/session-bff-commerce/client-secret`, `rbx/identity/session-bff-commerce/machine-key-json`, `rbx/identity/session-bff-commerce/audience` |
 | `rbx-ia-br` | `rbx-commerce-sandbox-secrets` | `DATABASE_URL`, `COMMS_API_URL`, `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` | `rbx/commerce-sandbox/db-password`, `rbx/commerce-sandbox/asaas-api-key`, `rbx/commerce-sandbox/asaas-api-webhook-token` |
 
-Source of truth for these three values is the ZITADEL service-account client
-registration used by `rbx-session-bff` to read `rbx-commerce`. Create or
-rotate the client in the IdP, then copy the issued client ID, client secret,
-and API audience into `pass`.
+Source of truth for these values is the ZITADEL service-account registration
+used by `rbx-session-bff` to read `rbx-commerce`. Create or rotate the machine
+user in the IdP, then copy the issued client ID, client secret, machine-key JSON
+blob, and API audience into `pass`.
 
 | `monitoring` | `grafana-admin` | `admin-user`, `admin-password` | `rbx/monitoring/grafana-admin-password` |
 | `langfuse` | `langfuse-core` | `nextauth-secret`, `salt`, `encryption-key` | `rbx/langfuse/nextauth-secret`, `rbx/langfuse/salt`, `rbx/langfuse/encryption-key` |
@@ -239,6 +239,12 @@ and API audience into `pass`.
 | `rbx-identity` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `rbx-identity` | `zitadel-masterkey` | `masterkey` | `rbx/zitadel/masterkey` |
 | `rbx-identity` | `zitadel-config` | `config-yaml` | `rbx/zitadel/db-password`, `rbx/zitadel/admin-password` |
+
+The commerce service account is not just a Kubernetes secret. The matching
+ZITADEL project grant is bootstrapped by the `zitadel-service-account-grants`
+Ansible role after ZITADEL is live, and the machine key JSON is consumed by
+`rbx-service-auth` to mint a private-key JWT for `rbx-session-bff-commerce`
+without manual console work.
 
 `rbx-ia-br` is the central vault namespace read by the reorg services'
 ExternalSecrets through the `kubernetes-store` SecretStore. The
