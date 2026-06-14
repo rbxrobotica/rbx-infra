@@ -1,0 +1,17 @@
+[Unit]
+Description=RBX Agent Runner (Corbetti-01 Workbench)
+Documentation=https://github.com/rbxrobotica/rbx-infra/blob/main/docs/adr/ADR-0009-agent-loop-corbetti-runner.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=%h/rbx/runner/rbx-agent-runner.sh
+Restart=always
+RestartSec=15s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rbx-agent-runner
+
+[Install]
+WantedBy=default.target
