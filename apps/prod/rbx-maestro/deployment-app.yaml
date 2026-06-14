@@ -83,6 +83,14 @@ spec:
             # mission-runner-sa (rbx-infra ADR-0008 §4).
             - name: AGENT_LOOP_AUTH
               value: "token-review"
+            # Workbench runner surface auth (ADR-0009): static key used by
+            # Corbetti to poll GET /leases/next. Sourced from ESO-synced
+            # Secret corbetti-runner-key (rbx-ia-br → rbx-maestro namespace).
+            - name: AGENT_LOOP_RUNNER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: corbetti-runner-key
+                  key: runner-key
           resources:
             requests:
               cpu: 100m

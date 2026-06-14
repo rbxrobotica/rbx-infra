@@ -33,6 +33,7 @@ docs/structure.txt
 bootstrap/ansible/*.log
 bootstrap/ansible/group_vars/vault.yml
 bootstrap/ansible/group_vars/all/vault.yml
+bootstrap/ansible/group_vars/agent_workbench/vault.yml
 
 # K9s
 *.log
