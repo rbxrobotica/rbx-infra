@@ -120,7 +120,7 @@ execute_mission() {
 
   # ── isolated worktree ────────────────────────────────────────────────────
   rm -rf "${worktree}"
-  git -C "${repo_dir}" worktree add "${worktree}" "origin/${base_branch}" \
+  git -C "${repo_dir}" worktree add "${worktree}" "${base_branch}" \
     >>"${log_file}" 2>&1
 
   # ── select agent ─────────────────────────────────────────────────────────
@@ -144,8 +144,14 @@ execute_mission() {
   log "Running ${agent_cmd} (timeout=${timeout_s}s)"
   if ! (
     cd "${worktree}"
-    timeout "${timeout_s}" "${agent_cmd}" --print "${prompt}" \
-      >>"${log_file}" 2>&1
+    if [[ "${agent_cmd}" == "claude" ]]; then
+      timeout "${timeout_s}" claude --print \
+        --model "${CLAUDE_MODEL:-claude-haiku-4-5-20251001}" "${prompt}" \
+        >>"${log_file}" 2>&1
+    else
+      timeout "${timeout_s}" "${agent_cmd}" --print "${prompt}" \
+        >>"${log_file}" 2>&1
+    fi
   ); then
     exit_code=$?
     if [[ ${exit_code} -eq 124 ]]; then

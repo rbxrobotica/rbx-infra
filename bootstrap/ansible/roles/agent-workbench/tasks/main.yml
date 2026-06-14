@@ -26,6 +26,7 @@
       MAESTRO_URL={{ maestro_url }}
       RUNNER_ID={{ runner_id }}
       GITHUB_PAT={{ github_pat }}
+      CLAUDE_MODEL={{ claude_model | default('claude-haiku-4-5-20251001') }}
 
 - name: Deploy runner script
   copy:
