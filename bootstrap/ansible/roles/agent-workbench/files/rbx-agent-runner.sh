@@ -19,8 +19,8 @@ LOG_DIR="${HOME}/rbx/logs"
 WORKTREE_DIR="${HOME}/rbx/worktrees"
 REPOS_DIR="${HOME}/rbx/repos"
 
-# Devbox tools take precedence (claude, codex, gh, etc.)
-export PATH="${HOME}/.local/bin:${HOME}/rbx/.devbox/nix/profile/default/bin:${HOME}/rbx/.devbox/npm-global/bin:${PATH}"
+# rbx/bin (glm wrapper), devbox tools, kimi cli
+export PATH="${HOME}/rbx/bin:${HOME}/.local/bin:${HOME}/rbx/.devbox/nix/profile/default/bin:${HOME}/rbx/.devbox/npm-global/bin:${PATH}"
 
 # GitHub HTTPS auth via GH_TOKEN → git credential helper
 export GH_TOKEN="${GITHUB_PAT}"
@@ -77,9 +77,16 @@ report_stop() {
 }
 
 report_delivered() {
-  local code="$1"
-  if echo '{"state":"delivered"}' | maestro_post "/missions/${code}/lease/state"; then
-    log "DELIVERED ${code}"
+  local code="$1" input_tok="${2:-}" output_tok="${3:-}"
+  local payload
+  if [[ -n "${input_tok}" && -n "${output_tok}" ]]; then
+    payload=$(printf '{"state":"delivered","input_tokens":%s,"output_tokens":%s}' \
+      "${input_tok}" "${output_tok}")
+  else
+    payload='{"state":"delivered"}'
+  fi
+  if printf '%s' "${payload}" | maestro_post "/missions/${code}/lease/state"; then
+    log "DELIVERED ${code} (in=${input_tok:-?} out=${output_tok:-?})"
   else
     log "WARN failed to report delivered for ${code}"
   fi
@@ -136,11 +143,38 @@ execute_mission() {
   git -C "${repo_dir}" worktree add "${worktree}" "${base_branch}" \
     >>"${log_file}" 2>&1
 
-  # ── select agent ─────────────────────────────────────────────────────────
-  local agent_cmd
-  case "${mtype}" in
-    bugfix-loop)  agent_cmd="codex" ;;
-    *)            agent_cmd="claude" ;;  # evaluation-loop, feature-loop, etc.
+  # ── select executor (Phase 5: executor field overrides mtype heuristic) ──
+  local executor
+  executor=$(printf '%s' "${contract_json}" | jq -r '.executor // "claude-haiku"')
+
+  local agent_cmd agent_model captures_tokens=false
+  case "${executor}" in
+    claude-haiku)
+      agent_cmd="claude"
+      agent_model="${CLAUDE_MODEL:-claude-haiku-4-5-20251001}"
+      captures_tokens=true
+      ;;
+    claude-sonnet)
+      agent_cmd="claude"
+      agent_model="${CLAUDE_SONNET_MODEL:-claude-sonnet-4-5-20251001}"
+      captures_tokens=true
+      ;;
+    glm)
+      agent_cmd="glm"
+      agent_model="glm-4.7"
+      captures_tokens=true
+      ;;
+    kimi)
+      agent_cmd="kimi"
+      agent_model="k2.7"
+      captures_tokens=false
+      ;;
+    *)
+      log "WARN unknown executor '${executor}', falling back to claude-haiku"
+      agent_cmd="claude"
+      agent_model="${CLAUDE_MODEL:-claude-haiku-4-5-20251001}"
+      captures_tokens=true
+      ;;
   esac
 
   # ── build prompt ─────────────────────────────────────────────────────────
@@ -154,17 +188,26 @@ execute_mission() {
 
   # ── execute with timeout ─────────────────────────────────────────────────
   local exit_code=0 stop_reason="success_criteria_met"
-  log "Running ${agent_cmd} (timeout=${timeout_s}s)"
+  log "Running ${agent_cmd} executor=${executor} model=${agent_model} (timeout=${timeout_s}s)"
   if ! (
     cd "${worktree}"
-    if [[ "${agent_cmd}" == "claude" ]]; then
-      timeout "${timeout_s}" claude --print \
-        --model "${CLAUDE_MODEL:-claude-haiku-4-5-20251001}" "${prompt}" \
-        >>"${log_file}" 2>&1
-    else
-      timeout "${timeout_s}" "${agent_cmd}" --print "${prompt}" \
-        >>"${log_file}" 2>&1
-    fi
+    case "${agent_cmd}" in
+      claude|glm)
+        # stream-json captures token usage in the final result line
+        timeout "${timeout_s}" "${agent_cmd}" --print \
+          --output-format stream-json \
+          --model "${agent_model}" "${prompt}" \
+          >>"${log_file}" 2>&1
+        ;;
+      kimi)
+        timeout "${timeout_s}" kimi --print "${prompt}" \
+          >>"${log_file}" 2>&1
+        ;;
+      *)
+        timeout "${timeout_s}" "${agent_cmd}" --print "${prompt}" \
+          >>"${log_file}" 2>&1
+        ;;
+    esac
   ); then
     exit_code=$?
     if [[ ${exit_code} -eq 124 ]]; then
@@ -174,12 +217,23 @@ execute_mission() {
     fi
   fi
 
+  # ── extract token usage from stream-json result line ─────────────────────
+  local input_tok="" output_tok=""
+  if [[ "${captures_tokens}" == "true" && ${exit_code} -eq 0 ]]; then
+    local result_line
+    result_line=$(grep '"type":"result"' "${log_file}" | tail -1 || true)
+    if [[ -n "${result_line}" ]]; then
+      input_tok=$(printf '%s' "${result_line}" | jq -r '.usage.input_tokens // empty' 2>/dev/null || true)
+      output_tok=$(printf '%s' "${result_line}" | jq -r '.usage.output_tokens // empty' 2>/dev/null || true)
+    fi
+  fi
+
   # ── collect artifacts (ledger) ───────────────────────────────────────────
   echo '{}' | maestro_post "/missions/${code}/artifacts:collect"
 
   # ── report terminal state ────────────────────────────────────────────────
   if [[ ${exit_code} -eq 0 ]]; then
-    report_delivered "${code}"
+    report_delivered "${code}" "${input_tok}" "${output_tok}"
   else
     report_stop "${code}" "${stop_reason}"
   fi

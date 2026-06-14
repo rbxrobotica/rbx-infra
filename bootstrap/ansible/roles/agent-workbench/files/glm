@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# glm — ZhipuAI GLM executor via z.ai Anthropic-compatible API (Phase 5)
+# Key file: ~/rbx/runner/.zai_key (written by Ansible, mode 0600)
+# Model mapping: Opus/Sonnet → glm-4.7, Haiku → glm-4.5-air
+set -euo pipefail
+KEY_FILE="${HOME}/rbx/runner/.zai_key"
+if [[ ! -f "${KEY_FILE}" ]]; then
+  printf 'glm: key file %s not found\n' "${KEY_FILE}" >&2
+  exit 1
+fi
+exec env \
+  ANTHROPIC_AUTH_TOKEN="$(< "${KEY_FILE}")" \
+  ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic" \
+  ANTHROPIC_DEFAULT_OPUS_MODEL="glm-4.7" \
+  ANTHROPIC_DEFAULT_SONNET_MODEL="glm-4.7" \
+  ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-4.5-air" \
+  API_TIMEOUT_MS="3000000" \
+  claude "$@"

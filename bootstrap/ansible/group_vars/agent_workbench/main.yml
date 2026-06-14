@@ -8,3 +8,7 @@ maestro_url: "https://agents.rbx.ia.br/api/v1/agent-loop"
 
 # Logical runner identifier sent as X-Runner-Id on every lease poll
 runner_id: "corbetti-01"
+
+# Claude model overrides (Phase 5 multi-model runner)
+claude_model: "claude-haiku-4-5-20251001"
+claude_sonnet_model: "claude-sonnet-4-5-20251001"

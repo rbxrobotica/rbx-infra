@@ -2,6 +2,7 @@
 # agent-workbench role — baseline for Corbetti (ADR-0009 Phase 3)
 # Requires: agent_loop_runner_key (group_vars/agent_workbench/vault.yml)
 #           github_pat             (group_vars/agent_workbench/vault.yml)
+#           zai_api_key            (group_vars/agent_workbench/vault.yml)  ← Phase 5
 #           maestro_url            (group_vars/agent_workbench/main.yml)
 #           runner_id              (group_vars/agent_workbench/main.yml)
 
@@ -12,6 +13,7 @@
     mode: "0700"
   loop:
     - "{{ ansible_env.HOME }}/rbx"
+    - "{{ ansible_env.HOME }}/rbx/bin"
     - "{{ ansible_env.HOME }}/rbx/worktrees"
     - "{{ ansible_env.HOME }}/rbx/repos"
     - "{{ ansible_env.HOME }}/rbx/runner"
@@ -27,6 +29,24 @@
       RUNNER_ID={{ runner_id }}
       GITHUB_PAT={{ github_pat }}
       CLAUDE_MODEL={{ claude_model | default('claude-haiku-4-5-20251001') }}
+      CLAUDE_SONNET_MODEL={{ claude_sonnet_model | default('claude-sonnet-4-5-20251001') }}
+
+- name: Write ZAI API key file (GLM executor, Phase 5)
+  copy:
+    dest: "{{ ansible_env.HOME }}/rbx/runner/.zai_key"
+    content: "{{ zai_api_key }}"
+    mode: "0600"
+
+- name: Deploy GLM wrapper script
+  copy:
+    src: glm
+    dest: "{{ ansible_env.HOME }}/rbx/bin/glm"
+    mode: "0750"
+
+- name: Install Kimi Code CLI (Phase 5)
+  shell: curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash
+  args:
+    creates: "{{ ansible_env.HOME }}/.local/bin/kimi"
 
 - name: Deploy runner script
   copy:
