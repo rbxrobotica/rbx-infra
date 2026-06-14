@@ -91,6 +91,13 @@ spec:
                 secretKeyRef:
                   name: corbetti-runner-key
                   key: runner-key
+            # Éden portal dashboard surface auth (Phase 4): static key used
+            # by eden-api to proxy read requests to the dashboard endpoints.
+            - name: MAESTRO_DASHBOARD_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: maestro-dashboard-key
+                  key: key
           resources:
             requests:
               cpu: 100m
