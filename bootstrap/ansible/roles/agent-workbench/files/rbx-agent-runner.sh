@@ -43,33 +43,46 @@ poll_next() {
 
 maestro_post() {
   local path="$1"
-  curl -sf -XPOST \
+  local http_code
+  http_code=$(curl -sf -XPOST \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${AGENT_LOOP_RUNNER_KEY}" \
     -H "X-Runner-Id: ${RUNNER_ID}" \
     -d @- \
-    "${MAESTRO_URL}${path}" >/dev/null 2>&1 || true
+    -w '\n%{http_code}' \
+    "${MAESTRO_URL}${path}")
+  if [[ "${http_code}" != 2[0-9][0-9][0-9] ]]; then
+    log "WARN maestro POST ${path} returned HTTP ${http_code}"
+    return 1
+  fi
+  return 0
 }
 
 heartbeat_loop() {
   local code="$1"
   while true; do
     sleep "${HEARTBEAT_INTERVAL_S}"
-    echo '{}' | maestro_post "/missions/${code}/lease/heartbeat"
+    echo '{}' | maestro_post "/missions/${code}/lease/heartbeat" || true
   done
 }
 
 report_stop() {
   local code="$1" reason="$2"
-  printf '{"state":"stopped","stop_reason":"%s"}' "${reason}" \
-    | maestro_post "/missions/${code}/lease/state"
-  log "STOP ${code}: ${reason}"
+  if printf '{"state":"stopped","stop_reason":"%s"}' "${reason}" \
+    | maestro_post "/missions/${code}/lease/state"; then
+    log "STOP ${code}: ${reason}"
+  else
+    log "WARN failed to report stop for ${code}: ${reason}"
+  fi
 }
 
 report_delivered() {
   local code="$1"
-  echo '{"state":"delivered"}' | maestro_post "/missions/${code}/lease/state"
-  log "DELIVERED ${code}"
+  if echo '{"state":"delivered"}' | maestro_post "/missions/${code}/lease/state"; then
+    log "DELIVERED ${code}"
+  else
+    log "WARN failed to report delivered for ${code}"
+  fi
 }
 
 # ── mission execution ────────────────────────────────────────────────────────
