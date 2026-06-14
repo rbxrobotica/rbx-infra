@@ -1,6 +1,7 @@
 ---
 # agent-workbench role — baseline for Corbetti (ADR-0009 Phase 3)
 # Requires: agent_loop_runner_key (group_vars/agent_workbench/vault.yml)
+#           github_pat             (group_vars/agent_workbench/vault.yml)
 #           maestro_url            (group_vars/agent_workbench/main.yml)
 #           runner_id              (group_vars/agent_workbench/main.yml)
 
@@ -14,6 +15,7 @@
     - "{{ ansible_env.HOME }}/rbx/worktrees"
     - "{{ ansible_env.HOME }}/rbx/repos"
     - "{{ ansible_env.HOME }}/rbx/runner"
+    - "{{ ansible_env.HOME }}/rbx/logs"
 
 - name: Write runner env file
   copy:
@@ -23,3 +25,34 @@
       AGENT_LOOP_RUNNER_KEY={{ agent_loop_runner_key }}
       MAESTRO_URL={{ maestro_url }}
       RUNNER_ID={{ runner_id }}
+      GITHUB_PAT={{ github_pat }}
+
+- name: Deploy runner script
+  copy:
+    src: rbx-agent-runner.sh
+    dest: "{{ ansible_env.HOME }}/rbx/runner/rbx-agent-runner.sh"
+    mode: "0750"
+
+- name: Create systemd user service directory
+  file:
+    path: "{{ ansible_env.HOME }}/.config/systemd/user"
+    state: directory
+    mode: "0755"
+
+- name: Deploy systemd user service
+  copy:
+    src: rbx-agent-runner.service
+    dest: "{{ ansible_env.HOME }}/.config/systemd/user/rbx-agent-runner.service"
+    mode: "0644"
+
+- name: Enable lingering (service survives logout)
+  command: loginctl enable-linger {{ ansible_user }}
+  changed_when: false
+
+- name: Enable and start agent runner service
+  systemd:
+    name: rbx-agent-runner.service
+    state: started
+    enabled: true
+    scope: user
+    daemon_reload: true
