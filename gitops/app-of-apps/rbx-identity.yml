@@ -223,7 +223,7 @@ spec:
                         - name: RBX_COMMERCE_TOKEN_ENDPOINT
                           value: https://auth.merovelis.com/oauth/v2/token
                         - name: RBX_COMMERCE_SCOPES
-                          value: commerce:read
+                          value: openid service:commerce.read
                         - name: RBX_PRODUCT_KEY
                           value: strategos
                         - name: RBX_AUTHZ_GATEWAY_URL
