@@ -1,8 +1,8 @@
 # Image Promotion
 
-RBX application repositories build and push images to GHCR. Production promotion is owned by `rbx-infra`: ArgoCD Image Updater watches the relevant GHCR repositories, detects new immutable `sha-*` tags, and writes the promoted tag into the service Kustomization in this repository.
+RBX application repositories build and push images to GHCR. Promotion is owned by `rbx-infra`: ArgoCD Image Updater watches the relevant GHCR repositories, detects new immutable `sha-*` tags, and writes the promoted tag into the service Kustomization in this repository.
 
-The production ArgoCD Applications remain manual-sync. Image Updater only changes Git. An operator still reviews ArgoCD state and syncs the Application to deploy.
+Production ArgoCD Applications remain manual-sync. Sandbox applications can be automated end to end when the risk is acceptable. In both cases, Image Updater only changes Git; the cluster converges from Git, not from a direct cluster mutation.
 
 ## Flow
 
@@ -14,11 +14,12 @@ The production ArgoCD Applications remain manual-sync. Image Updater only change
 
 ## Applications
 
-The three Image Updater-managed Applications are:
+The Image Updater-managed Applications are:
 
 - `rbx-memory` -> `ghcr.io/rbxrobotica/rbx-memory`
 - `rbx-observability` -> `ghcr.io/rbxrobotica/rbx-observability`
 - `rbx-data` -> `ghcr.io/rbxrobotica/rbx-data`
+- `rbx-commerce-sandbox` -> `ghcr.io/rbxrobotica/rbx-commerce`
 
 Each Application uses these annotations:
 
@@ -49,6 +50,6 @@ The Application annotation uses `write-back-method: git`, so Image Updater reuse
 
 ## Review Options
 
-The current model writes the promotion commit directly to `main`, while deployment remains manual because the service Applications do not enable automated sync.
+The current model writes the promotion commit directly to `main`. Production deployment remains manual because the service Applications do not enable automated sync. Sandbox deployment keeps automated sync enabled so the new image lands after the Git change reconciles.
 
 For stricter review, Image Updater can instead write to a promotion branch and open a pull request before `main` changes. A GitHub App is preferable long-term to a deploy key or PAT because its permissions, installation scope, and rotation can be managed centrally.
