@@ -6,6 +6,7 @@ resources:
   - middleware-https.yml
   - secretstore.yml
   - externalsecret-s3.yml
+  - externalsecret-maestro-dashboard.yml
   - api-deploy.yml
   - api-svc.yml
   - api-ingress.yml

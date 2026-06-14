@@ -56,6 +56,13 @@ spec:
                 secretKeyRef:
                   name: contabo-s3-credentials
                   key: AWS_SECRET_ACCESS_KEY
+            - name: MAESTRO_URL
+              value: "http://rbx-maestro.rbx-maestro.svc.cluster.local"
+            - name: MAESTRO_DASHBOARD_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: eden-maestro-dashboard-key
+                  key: key
           readinessProbe:
             httpGet:
               path: /api/health
