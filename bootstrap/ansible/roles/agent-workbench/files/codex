@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+# codex — OpenAI Codex CLI wrapper that injects the devbox PATH (Phase 5)
+# node lives in devbox, not in the default SSH PATH.
+set -euo pipefail
+export PATH="${HOME}/rbx/.devbox/nix/profile/default/bin:${HOME}/rbx/.devbox/npm-global/bin:${PATH}"
+exec "${HOME}/rbx/.devbox/npm-global/bin/codex" "$@"

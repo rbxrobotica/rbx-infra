@@ -55,6 +55,12 @@
   args:
     creates: "{{ ansible_env.HOME }}/rbx/.devbox/npm-global/bin/codex"
 
+- name: Deploy Codex wrapper script (devbox PATH shim)
+  copy:
+    src: codex
+    dest: "{{ ansible_env.HOME }}/rbx/bin/codex"
+    mode: "0750"
+
 - name: Deploy runner script
   copy:
     src: rbx-agent-runner.sh
