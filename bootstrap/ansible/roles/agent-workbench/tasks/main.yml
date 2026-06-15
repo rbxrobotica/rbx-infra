@@ -18,6 +18,9 @@
     - "{{ ansible_env.HOME }}/rbx/repos"
     - "{{ ansible_env.HOME }}/rbx/runner"
     - "{{ ansible_env.HOME }}/rbx/logs"
+    - "{{ ansible_env.HOME }}/.local/bin"
+    - "{{ ansible_env.HOME }}/.lean-ctx"
+    - "{{ ansible_env.HOME }}/.claude/hooks"
 
 - name: Write runner env file
   copy:
@@ -43,10 +46,77 @@
     dest: "{{ ansible_env.HOME }}/rbx/bin/glm"
     mode: "0750"
 
+- name: Install rtk (token-optimized CLI proxy, Phase 5)
+  copy:
+    src: /home/psyctl/.local/bin/rtk
+    dest: "{{ ansible_env.HOME }}/.local/bin/rtk"
+    mode: "0755"
+
+- name: Install lean-ctx (context runtime MCP server, Phase 5)
+  copy:
+    src: /home/psyctl/.local/bin/lean-ctx
+    dest: "{{ ansible_env.HOME }}/.local/bin/lean-ctx"
+    mode: "0755"
+
+- name: Write lean-ctx config (privacy-restricted: no telemetry contribution)
+  copy:
+    src: lean-ctx-config.toml
+    dest: "{{ ansible_env.HOME }}/.lean-ctx/config.toml"
+    mode: "0600"
+    force: false
+
+- name: Deploy rtk-rewrite hook for Claude Code
+  copy:
+    src: rtk-rewrite.sh
+    dest: "{{ ansible_env.HOME }}/.claude/hooks/rtk-rewrite.sh"
+    mode: "0750"
+
+- name: Write Claude Code settings (hooks + lean-ctx MCP permissions)
+  copy:
+    src: claude-settings.json
+    dest: "{{ ansible_env.HOME }}/.claude/settings.json"
+    mode: "0644"
+    force: true
+
+- name: Register lean-ctx MCP in ~/.claude.json (merge, preserves existing state)
+  shell: |
+    python3 - <<'PYEOF'
+    import json, os
+    home = os.path.expanduser('~')
+    path = os.path.join(home, '.claude.json')
+    try:
+        with open(path) as f:
+            config = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        config = {}
+    entry = {
+        'command': os.path.join(home, '.local', 'bin', 'lean-ctx'),
+        'env': {'LEAN_CTX_DATA_DIR': os.path.join(home, '.lean-ctx')}
+    }
+    config.setdefault('mcpServers', {})['lean-ctx'] = entry
+    with open(path, 'w') as f:
+        json.dump(config, f, indent=2)
+    print('lean-ctx registered in ~/.claude.json')
+    PYEOF
+  register: claude_mcp_result
+  changed_when: true
+
+- name: Register lean-ctx MCP with Codex
+  shell: |
+    export PATH="{{ ansible_env.HOME }}/rbx/bin:{{ ansible_env.HOME }}/rbx/.devbox/nix/profile/default/bin:{{ ansible_env.HOME }}/rbx/.devbox/npm-global/bin:${PATH}"
+    if codex mcp list 2>/dev/null | grep -q 'lean-ctx'; then
+      echo 'already registered'
+    else
+      codex mcp add lean-ctx -- "{{ ansible_env.HOME }}/.local/bin/lean-ctx"
+      echo 'registered'
+    fi
+  register: codex_mcp_result
+  changed_when: "'registered' == codex_mcp_result.stdout | trim"
+
 - name: Install Kimi Code CLI (Phase 5)
   shell: curl -fsSL https://code.kimi.com/kimi-code/install.sh | bash
   args:
-    creates: "{{ ansible_env.HOME }}/.local/bin/kimi"
+    creates: "{{ ansible_env.HOME }}/.kimi-code/bin/kimi"
 
 - name: Install OpenAI Codex CLI (Phase 5)
   shell: |

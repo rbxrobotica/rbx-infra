@@ -19,8 +19,8 @@ LOG_DIR="${HOME}/rbx/logs"
 WORKTREE_DIR="${HOME}/rbx/worktrees"
 REPOS_DIR="${HOME}/rbx/repos"
 
-# rbx/bin (glm wrapper), devbox tools, kimi cli
-export PATH="${HOME}/rbx/bin:${HOME}/.local/bin:${HOME}/rbx/.devbox/nix/profile/default/bin:${HOME}/rbx/.devbox/npm-global/bin:${PATH}"
+# rbx/bin (glm/codex wrappers), rtk/lean-ctx, kimi-code cli, devbox tools
+export PATH="${HOME}/rbx/bin:${HOME}/.local/bin:${HOME}/.kimi-code/bin:${HOME}/rbx/.devbox/nix/profile/default/bin:${HOME}/rbx/.devbox/npm-global/bin:${PATH}"
 
 # GitHub HTTPS auth via GH_TOKEN → git credential helper
 export GH_TOKEN="${GITHUB_PAT}"
@@ -205,7 +205,7 @@ execute_mission() {
           >>"${log_file}" 2>&1
         ;;
       kimi)
-        timeout "${timeout_s}" kimi --print "${prompt}" \
+        timeout "${timeout_s}" kimi -p "${prompt}" \
           >>"${log_file}" 2>&1
         ;;
       codex)

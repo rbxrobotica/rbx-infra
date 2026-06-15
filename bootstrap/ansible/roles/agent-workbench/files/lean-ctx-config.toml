@@ -1,0 +1,21 @@
+ultra_compact = false
+tee_mode = "failures"
+output_density = "normal"
+compression_level = "standard"
+update_check_disabled = true
+savings_footer = "never"
+
+[cloud]
+contribute_enabled = false
+
+[autonomy]
+enabled = true
+auto_preload = true
+auto_dedup = true
+auto_related = true
+auto_consolidate = true
+silent_preload = true
+
+[secret_detection]
+enabled = true
+redact = false

@@ -1,0 +1,73 @@
+{
+  "theme": "dark",
+  "model": "haiku",
+  "permissions": {
+    "allow": [
+      "mcp__lean-ctx__ctx_read",
+      "mcp__lean-ctx__ctx_search",
+      "mcp__lean-ctx__ctx_tree",
+      "mcp__lean-ctx__ctx_overview",
+      "mcp__lean-ctx__ctx_shell",
+      "mcp__lean-ctx__ctx_edit",
+      "mcp__lean-ctx__ctx_compress",
+      "mcp__lean-ctx__ctx_session",
+      "mcp__lean-ctx__ctx_knowledge",
+      "mcp__lean-ctx__ctx_graph",
+      "mcp__lean-ctx__ctx_provider"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {"type": "command", "command": "lean-ctx hook observe"}
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {"type": "command", "command": "/home/psyctl/.claude/hooks/rtk-rewrite.sh"}
+        ]
+      },
+      {
+        "matcher": "Bash|bash",
+        "hooks": [
+          {"type": "command", "command": "lean-ctx hook rewrite"}
+        ]
+      },
+      {
+        "matcher": "Read|read|ReadFile|read_file|View|view|Grep|grep|Search|search|ListFiles|list_files",
+        "hooks": [
+          {"type": "command", "command": "lean-ctx hook redirect"}
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {"type": "command", "command": "lean-ctx hook observe"}
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {"type": "command", "command": "lean-ctx hook observe"}
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {"type": "command", "command": "lean-ctx hook observe"}
+        ]
+      }
+    ]
+  }
+}
