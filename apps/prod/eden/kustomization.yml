@@ -18,4 +18,4 @@ images:
   - name: ghcr.io/rbxrobotica/eden-api
     newTag: sha-0833e5d
   - name: ghcr.io/rbxrobotica/eden-portal
-    newTag: sha-a038bc0
+    newTag: sha-0833e5d
