@@ -58,7 +58,7 @@
     dest: "{{ ansible_env.HOME }}/.local/bin/lean-ctx"
     mode: "0755"
 
-- name: Write lean-ctx config (privacy-restricted: no telemetry contribution)
+- name: "Write lean-ctx config (privacy-restricted, no telemetry contribution)"
   copy:
     src: lean-ctx-config.toml
     dest: "{{ ansible_env.HOME }}/.lean-ctx/config.toml"
