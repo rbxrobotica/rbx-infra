@@ -31,7 +31,7 @@ spec:
       # schema (mission_runs gains stop_reason/mission_code/merged_at).
       initContainers:
         - name: copy-migrations
-          image: ghcr.io/rbxrobotica/rbx-maestro:sha-7a937746200b62ebca43cc8910535822dcc4f60e
+          image: ghcr.io/rbxrobotica/rbx-maestro:sha-8128a4d9836cf15f16e09016b25c15c6f54f1e01
           command: ["sh", "-ec", "cp /app/migrations/* /m/"]
           volumeMounts:
             - name: migrations
@@ -67,7 +67,7 @@ spec:
           emptyDir: {}
       containers:
         - name: maestro
-          image: ghcr.io/rbxrobotica/rbx-maestro:sha-7a937746200b62ebca43cc8910535822dcc4f60e
+          image: ghcr.io/rbxrobotica/rbx-maestro:sha-8128a4d9836cf15f16e09016b25c15c6f54f1e01
           ports:
             - containerPort: 8080
           env:
