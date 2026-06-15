@@ -48,6 +48,12 @@
   args:
     creates: "{{ ansible_env.HOME }}/.local/bin/kimi"
 
+- name: Install OpenAI Codex CLI (Phase 5)
+  community.general.npm:
+    name: "@openai/codex"
+    global: true
+    state: present
+
 - name: Deploy runner script
   copy:
     src: rbx-agent-runner.sh

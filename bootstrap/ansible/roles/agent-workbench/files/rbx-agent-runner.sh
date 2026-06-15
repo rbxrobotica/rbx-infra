@@ -169,6 +169,11 @@ execute_mission() {
       agent_model="k2.7"
       captures_tokens=false
       ;;
+    codex)
+      agent_cmd="codex"
+      agent_model="o4-mini"
+      captures_tokens=false
+      ;;
     *)
       log "WARN unknown executor '${executor}', falling back to claude-haiku"
       agent_cmd="claude"
@@ -201,6 +206,10 @@ execute_mission() {
         ;;
       kimi)
         timeout "${timeout_s}" kimi --print "${prompt}" \
+          >>"${log_file}" 2>&1
+        ;;
+      codex)
+        timeout "${timeout_s}" codex --approval-mode full-auto --quiet "${prompt}" \
           >>"${log_file}" 2>&1
         ;;
       *)
