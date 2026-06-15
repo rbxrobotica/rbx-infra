@@ -136,6 +136,7 @@
     src: rbx-agent-runner.sh
     dest: "{{ ansible_env.HOME }}/rbx/runner/rbx-agent-runner.sh"
     mode: "0750"
+  notify: Restart agent runner
 
 - name: Create systemd user service directory
   file:

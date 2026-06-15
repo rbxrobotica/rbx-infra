@@ -1,0 +1,7 @@
+---
+- name: Restart agent runner
+  systemd:
+    name: rbx-agent-runner.service
+    state: restarted
+    scope: user
+    daemon_reload: true

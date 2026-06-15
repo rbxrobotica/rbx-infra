@@ -43,15 +43,16 @@ poll_next() {
 
 maestro_post() {
   local path="$1"
-  local http_code
-  http_code=$(curl -sf -XPOST \
+  local raw http_code
+  raw=$(curl -sf -XPOST \
     -H "Content-Type: application/json" \
     -H "Authorization: Bearer ${AGENT_LOOP_RUNNER_KEY}" \
     -H "X-Runner-Id: ${RUNNER_ID}" \
     -d @- \
     -w '\n%{http_code}' \
-    "${MAESTRO_URL}${path}")
-  if [[ "${http_code}" != 2[0-9][0-9][0-9] ]]; then
+    "${MAESTRO_URL}${path}" 2>/dev/null || printf '\n000')
+  http_code=$(printf '%s' "${raw}" | tail -1)
+  if [[ "${http_code}" != 2[0-9][0-9] ]]; then
     log "WARN maestro POST ${path} returned HTTP ${http_code}"
     return 1
   fi
