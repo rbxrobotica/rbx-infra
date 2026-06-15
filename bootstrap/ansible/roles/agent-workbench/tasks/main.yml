@@ -49,10 +49,11 @@
     creates: "{{ ansible_env.HOME }}/.local/bin/kimi"
 
 - name: Install OpenAI Codex CLI (Phase 5)
-  community.general.npm:
-    name: "@openai/codex"
-    global: true
-    state: present
+  shell: |
+    export PATH="${HOME}/rbx/.devbox/nix/profile/default/bin:${HOME}/rbx/.devbox/npm-global/bin:${PATH}"
+    npm install -g @openai/codex
+  args:
+    creates: "{{ ansible_env.HOME }}/rbx/.devbox/npm-global/bin/codex"
 
 - name: Deploy runner script
   copy:
