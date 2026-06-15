@@ -34,6 +34,7 @@ RBX_DATA_WAREHOUSE_DB_PASS="$(pass show rbx/data/warehouse-db-password)"
 POSTMARK_SERVER_TOKEN="$(pass show rbx/postmark/rbx-institutional-server-token)"
 CORBETTI_RUNNER_KEY="$(pass show rbx/corbetti/maestro-runner-key)"
 CORBETTI_GITHUB_PAT="$(pass show rbx/corbetti/github-pat)"
+CORBETTI_ZAI_API_KEY="$(pass show rbx/corbetti/zai-api-key)"
 
 echo "==> Writing vault.yml (gitignored)..."
 
@@ -80,6 +81,9 @@ agent_loop_runner_key: "${CORBETTI_RUNNER_KEY}"
 
 # Corbetti GitHub PAT — HTTPS git clone for mission repos
 github_pat: "${CORBETTI_GITHUB_PAT}"
+
+# ZhipuAI (z.ai) API key — GLM executor via Anthropic-compatible API (Phase 5)
+zai_api_key: "${CORBETTI_ZAI_API_KEY}"
 EOF
 
 echo "==> vault.yml written to ${VAULT_FILE}"
