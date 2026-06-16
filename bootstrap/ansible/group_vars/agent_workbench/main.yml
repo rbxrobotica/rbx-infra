@@ -11,4 +11,4 @@ runner_id: "corbetti-01"
 
 # Claude model overrides (Phase 5 multi-model runner)
 claude_model: "claude-haiku-4-5-20251001"
-claude_sonnet_model: "sonnet"  # alias always resolves to the latest Sonnet snapshot; the dated id 4-5-20251001 returned model_not_found (404) once retired
+claude_sonnet_model: "claude-sonnet-4-6"  # explicit current snapshot; the older dated id 4-5-20251001 returned model_not_found (404) once retired
