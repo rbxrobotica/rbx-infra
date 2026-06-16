@@ -195,13 +195,20 @@ execute_mission() {
   # ── execute with timeout ─────────────────────────────────────────────────
   local exit_code=0 stop_reason="success_criteria_met"
   log "Running ${agent_cmd} executor=${executor} model=${agent_model} (timeout=${timeout_s}s)"
-  if ! (
+  # NOTE: `exit_code=$?` must be captured via `|| exit_code=$?`, never inside
+  # `if ! (cmd); then exit_code=$?; fi` — the `!` negation means `$?` inside
+  # the then-branch is the if-condition's own status (always 0), not cmd's.
+  # That bug previously made every mission report DELIVERED regardless of
+  # whether the agent actually succeeded.
+  (
     cd "${worktree}"
     case "${agent_cmd}" in
       claude|glm)
-        # stream-json captures token usage in the final result line
+        # stream-json captures token usage in the final result line.
+        # --verbose is required by current claude CLI when combining
+        # --print with --output-format stream-json.
         timeout "${timeout_s}" "${agent_cmd}" --print \
-          --output-format stream-json \
+          --output-format stream-json --verbose \
           --model "${agent_model}" "${prompt}" \
           >>"${log_file}" 2>&1
         ;;
@@ -210,7 +217,19 @@ execute_mission() {
           >>"${log_file}" 2>&1
         ;;
       codex)
-        timeout "${timeout_s}" codex --approval-mode full-auto --quiet "${prompt}" \
+        # `codex exec` is the non-interactive subcommand; bare `codex` always
+        # drops into the interactive TUI regardless of flags, which is what
+        # caused it to block on an approval prompt previously.
+        # --dangerously-bypass-approvals-and-sandbox: codex's bundled
+        # bubblewrap sandbox fallback can't actually grant writes on this
+        # VPS (no native bubblewrap installed), so -s workspace-write
+        # silently blocks every file write. This flag is intended for
+        # environments that are already externally sandboxed, which
+        # applies here (per-mission git worktree, scoped GitHub PAT, no
+        # prod secrets) — the other 4 executors run with no internal
+        # sandbox at all, so this brings codex to parity, not above it.
+        timeout "${timeout_s}" codex exec --dangerously-bypass-approvals-and-sandbox \
+          --skip-git-repo-check "${prompt}" \
           >>"${log_file}" 2>&1
         ;;
       *)
@@ -218,8 +237,8 @@ execute_mission() {
           >>"${log_file}" 2>&1
         ;;
     esac
-  ); then
-    exit_code=$?
+  ) || exit_code=$?
+  if [[ ${exit_code} -ne 0 ]]; then
     if [[ ${exit_code} -eq 124 ]]; then
       stop_reason="time_limit_reached"
     else

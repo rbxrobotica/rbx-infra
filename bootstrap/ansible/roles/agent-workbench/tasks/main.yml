@@ -33,6 +33,7 @@
       GITHUB_PAT={{ github_pat }}
       CLAUDE_MODEL={{ claude_model | default('claude-haiku-4-5-20251001') }}
       CLAUDE_SONNET_MODEL={{ claude_sonnet_model | default('claude-sonnet-4-5-20251001') }}
+  notify: Restart agent runner
 
 - name: Write ZAI API key file (GLM executor, Phase 5)
   copy:
