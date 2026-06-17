@@ -201,7 +201,7 @@ spec:
                     - name: ghcr-pull-secret
                   containers:
                     - name: rbx-session-bff
-                      image: ghcr.io/rbxrobotica/rbx-session-bff:sha-f837626
+                      image: ghcr.io/rbxrobotica/rbx-session-bff:sha-52c9442
                       imagePullPolicy: IfNotPresent
                       ports:
                         - containerPort: 8081
