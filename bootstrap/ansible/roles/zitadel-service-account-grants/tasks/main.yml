@@ -30,11 +30,22 @@
   register: zitadel_login_client_pat_raw
   no_log: true
 
+- name: Read ZITADEL admin PAT from rbx-identity
+  shell: >
+    kubectl --kubeconfig {{ zitadel_kubeconfig_path }} get secret
+    {{ zitadel_admin_pat_secret_name }}
+    --namespace {{ zitadel_admin_pat_secret_namespace }}
+    -o jsonpath={.data.pat}
+  changed_when: false
+  register: zitadel_admin_pat_raw
+  no_log: true
+
 - name: Decode service-account metadata
   set_fact:
     zitadel_commerce_service_account_username: "{{ zitadel_commerce_service_account_username_raw.stdout | b64decode | trim }}"
     zitadel_commerce_project_audience: "{{ zitadel_commerce_service_account_audience_raw.stdout | b64decode | trim }}"
     zitadel_login_client_pat: "{{ zitadel_login_client_pat_raw.stdout | b64decode | trim }}"
+    zitadel_admin_pat: "{{ zitadel_admin_pat_raw.stdout | b64decode | trim }}"
   no_log: true
 
 - name: Derive commerce project ID from audience
@@ -99,4 +110,38 @@
     return_content: true
     status_code: [200, 409]
   register: zitadel_commerce_grant_result
+  no_log: true
+
+- name: Ensure Strategos token exchange grant type is enabled
+  uri:
+    url: "{{ zitadel_management_base_url }}/management/v1/projects/{{ zitadel_commerce_project_id }}/apps/{{ zitadel_token_exchange_oidc_app_id }}/oidc_config"
+    method: PUT
+    headers:
+      Authorization: "Bearer {{ zitadel_admin_pat }}"
+    body_format: json
+    body:
+      redirectUris: "{{ zitadel_token_exchange_redirect_uris }}"
+      responseTypes:
+        - OIDC_RESPONSE_TYPE_CODE
+      grantTypes:
+        - OIDC_GRANT_TYPE_AUTHORIZATION_CODE
+        - OIDC_GRANT_TYPE_TOKEN_EXCHANGE
+      appType: OIDC_APP_TYPE_USER_AGENT
+      authMethodType: OIDC_AUTH_METHOD_TYPE_NONE
+      postLogoutRedirectUris: "{{ zitadel_token_exchange_post_logout_redirect_uris }}"
+      version: OIDC_VERSION_1_0
+      devMode: false
+      accessTokenType: OIDC_TOKEN_TYPE_BEARER
+      accessTokenRoleAssertion: false
+      idTokenRoleAssertion: false
+      idTokenUserinfoAssertion: false
+      clockSkew: 0s
+      skipNativeAppSuccessPage: false
+    return_content: true
+    status_code: [200, 400]
+  register: zitadel_token_exchange_app_result
+  failed_when: >-
+    zitadel_token_exchange_app_result.status == 400
+    and ('No changes' not in (zitadel_token_exchange_app_result.content | default('')))
+  changed_when: zitadel_token_exchange_app_result.status == 200
   no_log: true
