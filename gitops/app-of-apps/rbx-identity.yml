@@ -201,7 +201,7 @@ spec:
                     - name: ghcr-pull-secret
                   containers:
                     - name: rbx-session-bff
-                      image: ghcr.io/rbxrobotica/rbx-session-bff:sha-7017ef7
+                      image: ghcr.io/rbxrobotica/rbx-session-bff:sha-70577f0
                       imagePullPolicy: IfNotPresent
                       ports:
                         - containerPort: 8081
@@ -229,6 +229,8 @@ spec:
                           value: https://auth.merovelis.com/oauth/v2/token
                         - name: RBX_COMMERCE_SCOPES
                           value: openid service:commerce.read
+                        - name: RBX_COMMERCE_TOKEN_EXCHANGE_CLIENT_ID
+                          value: "376903619468855423"
                         - name: RBX_PRODUCT_KEY
                           value: strategos
                         - name: RBX_AUTHZ_GATEWAY_URL
