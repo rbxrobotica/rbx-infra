@@ -234,7 +234,7 @@ spec:
                         - name: RBX_PRODUCT_KEY
                           value: strategos
                         - name: RBX_AUTHZ_GATEWAY_URL
-                          value: http://rbx-policy-gateway.rbx-identity.svc.cluster.local:8083
+                          value: http://rbx-policy-gateway.rbx-identity.svc.cluster.local:8083/authorize
                       readinessProbe:
                         httpGet:
                           path: /healthz
