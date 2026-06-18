@@ -291,7 +291,7 @@ spec:
                     - name: ghcr-pull-secret
                   containers:
                     - name: rbx-policy-gateway
-                      image: ghcr.io/rbxrobotica/rbx-policy-gateway:sha-a0dd671
+                      image: ghcr.io/rbxrobotica/rbx-policy-gateway:sha-74a9202218ba31de96046b464fdb309243a0b75a
                       imagePullPolicy: IfNotPresent
                       ports:
                         - containerPort: 8083
