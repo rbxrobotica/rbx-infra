@@ -82,6 +82,11 @@ spec:
                   key: AWS_SECRET_ACCESS_KEY
             - name: S3_PUBLIC_URL
               value: "https://rbx-comms-attachments.s3.eu2.contabostorage.com"
+            - name: COMMS_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: COMMS_SERVICE_KEY
           readinessProbe:
             httpGet:
               path: /health
