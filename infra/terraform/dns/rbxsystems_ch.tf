@@ -80,7 +80,10 @@ resource "powerdns_record" "rbxsystems_ch_mx" {
   name    = "rbxsystems.ch."
   type    = "MX"
   ttl     = 3600
-  records = ["10 inbound.postmarkapp.com."]
+  # MX points to the Mailcow server (lince, 5.182.33.93) so inbound @rbxsystems.ch
+  # lands in the mailboxes (readable via SOGo). Outbound still relays via Postmark.
+  # See docs/runbooks/DNS-TROUBLESHOOTING.md and PLAN-dns-email-architecture.md.
+  records = ["10 mail.rbxsystems.ch."]
 }
 
 resource "powerdns_record" "rbxsystems_ch_spf" {

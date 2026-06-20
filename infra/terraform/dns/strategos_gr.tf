@@ -47,7 +47,9 @@ resource "powerdns_record" "strategos_gr_mx" {
   name    = "strategos.gr."
   type    = "MX"
   ttl     = 3600
-  records = ["10 inbound.postmarkapp.com."]
+  # MX points to the Mailcow server. Codified to match live DNS (was previously
+  # flipped manually) so tofu no longer reports drift on this record.
+  records = ["10 mail.rbxsystems.ch."]
 }
 
 resource "powerdns_record" "strategos_gr_spf" {
