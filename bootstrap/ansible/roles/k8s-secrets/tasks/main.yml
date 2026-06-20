@@ -1078,6 +1078,51 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# rbx-market-briefing namespace secrets (daily BTC briefing CronJob)
+#
+# Two secrets needed:
+#   rbx-market-briefing-llm  in rbx-ia-br — LLM_API_KEY (llm-gateway master key)
+#   ghcr-pull-secret         in rbx-market-briefing — image pull credentials
+#
+# LLM_API_KEY re-uses the llm-gateway master key already read into
+# llm_master_key_result — no additional pass read required.
+# ---------------------------------------------------------------------------
+
+- name: Ensure rbx-market-briefing namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ rbx_market_briefing_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create rbx-market-briefing-llm in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-market-briefing-llm \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=LLM_API_KEY="$LLM_API_KEY" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    LLM_API_KEY: "{{ llm_master_key_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+- name: Create ghcr-pull-secret in rbx-market-briefing
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace {{ rbx_market_briefing_namespace }} \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
@@ -1104,6 +1149,8 @@
       - "  {{ langfuse_namespace }}/langfuse-s3-auth: Contabo S3 credentials"
       - "  {{ rbx_identity_namespace }}/zitadel-masterkey: masterkey"
       - "  {{ rbx_identity_namespace }}/zitadel-config: ZITADEL Postgres passwords"
+      - "  {{ rbx_ia_br_namespace }}/rbx-market-briefing-llm: LLM_API_KEY (llm-gateway master key)"
+      - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
@@ -1130,4 +1177,6 @@
       - "  {{ langfuse_namespace }}/langfuse-s3-auth: Contabo S3 credentials"
       - "  {{ rbx_identity_namespace }}/zitadel-masterkey: masterkey"
       - "  {{ rbx_identity_namespace }}/zitadel-config: ZITADEL Postgres passwords"
+      - "  {{ rbx_ia_br_namespace }}/rbx-market-briefing-llm: LLM_API_KEY (llm-gateway master key)"
+      - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
   when: tenant_id_existing.rc == 0

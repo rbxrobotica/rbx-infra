@@ -95,3 +95,8 @@ rbx_identity_namespace: "rbx-identity"
 pass_zitadel_masterkey_key: "rbx/zitadel/masterkey"
 pass_zitadel_db_password_key: "rbx/zitadel/db-password"
 pass_zitadel_admin_password_key: "rbx/zitadel/admin-password"
+
+# rbx-market-briefing (namespace: rbx-market-briefing — daily BTC briefing CronJob)
+rbx_market_briefing_namespace: "rbx-market-briefing"
+# LLM_API_KEY re-uses the llm-gateway master key (pass_llm_gateway_master_key).
+# No separate pass entry needed — the master key is already read for litellm-secrets.
