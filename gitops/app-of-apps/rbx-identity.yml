@@ -228,7 +228,7 @@ spec:
                         - name: RBX_COMMERCE_TOKEN_ENDPOINT
                           value: https://auth.merovelis.com/oauth/v2/token
                         - name: RBX_COMMERCE_SCOPES
-                          value: openid service:commerce.read
+                          value: openid service:commerce.read service:commerce.entitlement.claim
                         - name: RBX_COMMERCE_TOKEN_EXCHANGE_CLIENT_ID
                           value: "376903619468855423"
                         - name: RBX_PRODUCT_KEY
