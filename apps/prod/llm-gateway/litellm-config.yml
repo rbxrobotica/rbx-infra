@@ -31,7 +31,7 @@ data:
 
       - model_name: glm-test
         litellm_params:
-          model: zai/glm-4.7
+          model: zai/glm-5.2
           api_key: "os.environ/ZAI_API_KEY"
 
       - model_name: kimi-moonshot-test

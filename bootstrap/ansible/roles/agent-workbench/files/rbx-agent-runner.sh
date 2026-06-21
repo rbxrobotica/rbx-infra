@@ -162,7 +162,7 @@ execute_mission() {
       ;;
     glm)
       agent_cmd="glm"
-      agent_model="glm-4.7"
+      agent_model="glm-5.2"
       captures_tokens=true
       ;;
     kimi)
