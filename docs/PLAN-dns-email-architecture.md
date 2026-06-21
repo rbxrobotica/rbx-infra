@@ -282,7 +282,11 @@ ns2             AAAA    2a02:c207:2252:7581::1
 www             CNAME   rbxsystems.ch.
 
 ; Email — root domain (institutional)
-@               MX      10  inbound.postmarkapp.com.
+; Inbound via Mailcow (mail.rbxsystems.ch, lince 5.182.33.93) so replies reach the
+; ceo@/contact@ webmail. Postmark Option A (MX=inbound.postmarkapp.com) was tried
+; and reverted 2026-06-19: with the rbx-comms inbound webhook unconfigured it
+; orphaned all inbound. Postmark stays the outbound relay + tx.* bounce host.
+@               MX      10  mail.rbxsystems.ch.
 @               TXT     "v=spf1 include:spf.mtasv.net ~all"
 _dmarc          TXT     "v=DMARC1; p=none; rua=mailto:dmarc@rbxsystems.ch; fo=1"
 pm._domainkey   CNAME   ; VALUE PROVIDED BY POSTMARK AFTER SETUP
@@ -322,8 +326,8 @@ $TTL 3600
 @               A       158.220.116.31
 www             CNAME   strategos.gr.
 
-; Email — root domain
-@               MX      10  inbound.postmarkapp.com.
+; Email — root domain. Inbound via Mailcow (mail.rbxsystems.ch), same as rbxsystems.ch.
+@               MX      10  mail.rbxsystems.ch.
 @               TXT     "v=spf1 include:spf.mtasv.net ~all"
 _dmarc          TXT     "v=DMARC1; p=none; rua=mailto:dmarc@rbxsystems.ch; fo=1"
 pm._domainkey   CNAME   ; VALUE PROVIDED BY POSTMARK AFTER SETUP
