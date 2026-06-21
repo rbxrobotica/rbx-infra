@@ -62,6 +62,8 @@ spec:
                   bun src/index.ts run --date "${BRIEFING_DATE}" --mode daily --llm
                   echo "[rbx-market-briefing] publishing briefing for ${BRIEFING_DATE}"
                   bun src/index.ts publish --date "${BRIEFING_DATE}"
+                  echo "[rbx-market-briefing] delivering briefing for ${BRIEFING_DATE}"
+                  bun src/index.ts deliver --date "${BRIEFING_DATE}"
                   echo "[rbx-market-briefing] done for ${BRIEFING_DATE}"
               envFrom:
                 - secretRef:
@@ -80,6 +82,10 @@ spec:
                   value: "rbx-content"
                 - name: S3_PREFIX
                   value: "robson/market-briefings"
+                - name: COMMS_BASE_URL
+                  value: "http://rbx-comms.rbx-comms.svc.cluster.local:8080"
+                # COMMERCE_BASE_URL intentionally absent until GAP-B is implemented in rbx-commerce.
+                # To test manually: set STUB_PHONES=+5511999999999 via kubectl set env.
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
