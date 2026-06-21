@@ -31,7 +31,8 @@ data:
 
       - model_name: glm-test
         litellm_params:
-          model: zai/glm-5.2
+          model: anthropic/glm-5.2
+          api_base: https://api.z.ai/api/anthropic  # subscription path (Anthropic-compat); zai/ PaaS endpoint has no resource package (code 1113)
           api_key: "os.environ/ZAI_API_KEY"
 
       - model_name: kimi-moonshot-test
