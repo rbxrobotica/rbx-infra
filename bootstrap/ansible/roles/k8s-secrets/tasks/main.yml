@@ -458,6 +458,18 @@
   register: rbx_session_bff_commerce_audience_result
   no_log: true
 
+- name: Read rbx-console Users & Access identity service key from pass
+  command: pass show {{ pass_rbx_console_users_access_identity_service_key_key }}
+  changed_when: false
+  register: rbx_console_users_access_identity_service_key_result
+  no_log: true
+
+- name: Read rbx-console Users & Access tenant ID from pass
+  command: pass show {{ pass_rbx_console_users_access_tenant_id_key }}
+  changed_when: false
+  register: rbx_console_users_access_tenant_id_result
+  no_log: true
+
 - name: Read rbx-comms DB password from pass
   command: pass show {{ pass_rbx_comms_db_password_key }}
   changed_when: false
@@ -551,6 +563,20 @@
     RBX_COMMERCE_CLIENT_SECRET: "{{ rbx_session_bff_commerce_client_secret_result.stdout | trim }}"
     RBX_COMMERCE_MACHINE_KEY_JSON: "{{ rbx_session_bff_commerce_machine_key_json_result.stdout | trim }}"
     RBX_COMMERCE_AUDIENCE: "{{ rbx_session_bff_commerce_audience_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+- name: Create rbx-console-users-access in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-console-users-access \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=RBX_IDENTITY_USERS_ACCESS_SERVICE_KEY="$RBX_IDENTITY_USERS_ACCESS_SERVICE_KEY" \
+      --from-literal=RBX_COMMERCE_USERS_ACCESS_TENANT_ID="$RBX_COMMERCE_USERS_ACCESS_TENANT_ID" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    RBX_IDENTITY_USERS_ACCESS_SERVICE_KEY: "{{ rbx_console_users_access_identity_service_key_result.stdout | trim }}"
+    RBX_COMMERCE_USERS_ACCESS_TENANT_ID: "{{ rbx_console_users_access_tenant_id_result.stdout | trim }}"
   changed_when: true
   no_log: true
 

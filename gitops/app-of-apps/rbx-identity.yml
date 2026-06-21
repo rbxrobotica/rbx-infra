@@ -150,6 +150,25 @@ spec:
                     key: rbx-session-bff-commerce
                     property: RBX_COMMERCE_AUDIENCE
 
+          - apiVersion: external-secrets.io/v1
+            kind: ExternalSecret
+            metadata:
+              name: rbx-session-bff-users-access
+              namespace: rbx-identity
+            spec:
+              refreshInterval: 15m
+              secretStoreRef:
+                name: kubernetes-store
+                kind: SecretStore
+              target:
+                name: rbx-session-bff-users-access
+                creationPolicy: Owner
+              data:
+                - secretKey: RBX_USERS_ACCESS_SERVICE_KEY
+                  remoteRef:
+                    key: rbx-console-users-access
+                    property: RBX_IDENTITY_USERS_ACCESS_SERVICE_KEY
+
           - apiVersion: rbac.authorization.k8s.io/v1
             kind: Role
             metadata:
@@ -174,6 +193,32 @@ spec:
             roleRef:
               kind: Role
               name: read-rbx-session-bff-commerce
+              apiGroup: rbac.authorization.k8s.io
+
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: Role
+            metadata:
+              name: read-rbx-console-users-access
+              namespace: rbx-ia-br
+            rules:
+              - apiGroups: [""]
+                resources: ["secrets"]
+                resourceNames:
+                  - rbx-console-users-access
+                verbs: ["get"]
+
+          - apiVersion: rbac.authorization.k8s.io/v1
+            kind: RoleBinding
+            metadata:
+              name: read-rbx-console-users-access
+              namespace: rbx-ia-br
+            subjects:
+              - kind: ServiceAccount
+                name: external-secrets-reader
+                namespace: rbx-identity
+            roleRef:
+              kind: Role
+              name: read-rbx-console-users-access
               apiGroup: rbac.authorization.k8s.io
 
           - apiVersion: apps/v1
@@ -201,7 +246,7 @@ spec:
                     - name: ghcr-pull-secret
                   containers:
                     - name: rbx-session-bff
-                      image: ghcr.io/rbxrobotica/rbx-session-bff:sha-70577f0
+                      image: ghcr.io/rbxrobotica/rbx-session-bff:sha-05c9219
                       imagePullPolicy: IfNotPresent
                       ports:
                         - containerPort: 8081
@@ -209,6 +254,8 @@ spec:
                       envFrom:
                         - secretRef:
                             name: rbx-session-bff-commerce
+                        - secretRef:
+                            name: rbx-session-bff-users-access
                       env:
                         # Strategos uses the canonical Hub entrypoint
                         # app.merovelis.com/strategos and same-origin auth

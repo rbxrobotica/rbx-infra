@@ -217,6 +217,7 @@ Secrets created per namespace:
 | `robson-testnet` | `robsond-testnet-secret` | `database-url`, `projection-tenant-id`, `binance-api-key`, `binance-api-secret`, `api-token` | `rbx/robson-testnet/*` |
 | `robson-testnet` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `rbx-console` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
+| `rbx-console` | `rbx-console-users-access` | `RBX_IDENTITY_USERS_ACCESS_SERVICE_KEY`, `RBX_COMMERCE_USERS_ACCESS_SERVICE_KEY`, `RBX_COMMERCE_USERS_ACCESS_TENANT_ID` | `rbx/console/users-access/identity-service-key`, `rbx-commerce-secrets.COMMERCE_SERVICE_KEY`, `rbx/console/users-access/tenant-id` |
 | `rbx-ia-br` | `rbx-memory-token` | `token` | `rbx/memory/token` |
 | `rbx-ia-br` | `rbx-observability-token` | `token` | `rbx/observability/token` |
 | `rbx-ia-br` | `rbx-observability-langfuse` | `LANGFUSE_HOST`, `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` | `rbx/observability/langfuse-host`, `rbx/observability/langfuse-public-key`, `rbx/observability/langfuse-secret-key` |
@@ -229,6 +230,12 @@ Source of truth for these values is the ZITADEL service-account registration
 used by `rbx-session-bff` to read `rbx-commerce`. Create or rotate the machine
 user in the IdP, then copy the issued client ID, client secret, machine-key JSON
 blob, and API audience into `pass`.
+
+`rbx-console-users-access` is the read-only bridge for the Console Users & Access
+surface. The identity service key is shared with `rbx-session-bff` as
+`RBX_USERS_ACCESS_SERVICE_KEY`; the Commerce service key is synced from the
+existing `rbx-commerce-secrets.COMMERCE_SERVICE_KEY`; and tenant ID is stored in
+`pass` as a non-secret boundary value to keep tenant selection server-side.
 
 | `monitoring` | `grafana-admin` | `admin-user`, `admin-password` | `rbx/monitoring/grafana-admin-password` |
 | `langfuse` | `langfuse-core` | `nextauth-secret`, `salt`, `encryption-key` | `rbx/langfuse/nextauth-secret`, `rbx/langfuse/salt`, `rbx/langfuse/encryption-key` |
