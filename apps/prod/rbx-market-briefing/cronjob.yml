@@ -83,7 +83,7 @@ spec:
                 - name: S3_PREFIX
                   value: "robson/market-briefings"
                 - name: COMMS_BASE_URL
-                  value: "http://rbx-comms.rbx-comms.svc.cluster.local:8080"
+                  value: "http://rbx-comms.rbx-comms.svc.cluster.local"
                 # COMMERCE_BASE_URL intentionally absent until GAP-B is implemented in rbx-commerce.
                 # To test manually: set STUB_PHONES=+5511999999999 via kubectl set env.
               securityContext:
