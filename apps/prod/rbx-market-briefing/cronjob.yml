@@ -86,9 +86,6 @@ spec:
                   value: "http://rbx-comms.rbx-comms.svc.cluster.local"
                 - name: COMMERCE_BASE_URL
                   value: "http://rbx-commerce.rbx-commerce.svc.cluster.local"
-                # TODO: remove after first real subscriber with plan_id=briefing-btc + phone in leads
-                - name: STUB_PHONES
-                  value: "+5511958474618"
               securityContext:
                 allowPrivilegeEscalation: false
                 readOnlyRootFilesystem: true
