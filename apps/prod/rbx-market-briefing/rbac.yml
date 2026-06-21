@@ -15,6 +15,7 @@ rules:
     resourceNames:
       - contabo-s3-credentials
       - rbx-market-briefing-llm
+      - rbx-contact-secrets
     verbs: ["get"]
 
 ---
