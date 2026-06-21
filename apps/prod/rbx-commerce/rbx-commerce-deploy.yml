@@ -76,6 +76,11 @@ spec:
                   name: rbx-commerce-secrets
                   key: PAYREXX_API_KEY
                   optional: true
+            - name: COMMERCE_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-secrets
+                  key: COMMERCE_SERVICE_KEY
           readinessProbe:
             httpGet:
               path: /health
