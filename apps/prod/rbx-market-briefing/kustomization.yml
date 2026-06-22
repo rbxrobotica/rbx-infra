@@ -12,4 +12,4 @@ resources:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-market-briefing
-    newTag: sha-1e01442
+    newTag: sha-18dde24
