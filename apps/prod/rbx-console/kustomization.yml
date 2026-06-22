@@ -4,6 +4,9 @@ kind: Kustomization
 namespace: rbx-console
 resources:
   - namespace.yml
+  - rbac-external-secrets.yml
+  - secretstore.yml
+  - externalsecret-users-access.yml
   - middleware.yml
   - deploy.yml
   - svc.yml
@@ -14,4 +17,4 @@ commonLabels:
   environment: production
 images:
   - name: ghcr.io/rbxrobotica/rbx-console
-    newTag: latest
+    newTag: sha-c2338c3

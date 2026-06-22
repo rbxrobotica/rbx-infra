@@ -50,6 +50,27 @@ spec:
               value: "3000"
             - name: NODE_ENV
               value: "production"
+            - name: RBX_CONSOLE_USERS_ACCESS_SOURCE
+              value: owner-systems
+            - name: RBX_IDENTITY_USERS_ACCESS_BASE_URL
+              value: http://rbx-session-bff.rbx-identity.svc.cluster.local:8081
+            - name: RBX_COMMERCE_USERS_ACCESS_BASE_URL
+              value: http://rbx-commerce.rbx-commerce.svc.cluster.local
+            - name: RBX_IDENTITY_USERS_ACCESS_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-console-users-access
+                  key: RBX_IDENTITY_USERS_ACCESS_SERVICE_KEY
+            - name: RBX_COMMERCE_USERS_ACCESS_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-console-users-access
+                  key: RBX_COMMERCE_USERS_ACCESS_SERVICE_KEY
+            - name: RBX_COMMERCE_USERS_ACCESS_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-console-users-access
+                  key: RBX_COMMERCE_USERS_ACCESS_TENANT_ID
           readinessProbe:
             httpGet:
               path: /healthz

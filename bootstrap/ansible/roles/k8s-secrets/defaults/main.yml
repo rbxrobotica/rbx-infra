@@ -36,8 +36,9 @@ pass_robson_testnet_binance_api_secret: "rbx/robson-testnet/binance-api-secret"
 pass_robson_testnet_api_token_key: "rbx/robson-testnet/api-token"
 
 # rbx-console (namespace: rbx-console — operational console UI)
-# Only ghcr-pull-secret for now; no per-app runtime secrets in Phase 2.
 rbx_console_namespace: "rbx-console"
+pass_rbx_console_users_access_identity_service_key_key: "rbx/console/users-access/identity-service-key"
+pass_rbx_console_users_access_tenant_id_key: "rbx/console/users-access/tenant-id"
 
 # rbx-ia-br (central vault namespace for reorg service ExternalSecrets)
 rbx_ia_br_namespace: "rbx-ia-br"
