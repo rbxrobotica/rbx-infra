@@ -100,3 +100,17 @@ pass_zitadel_admin_password_key: "rbx/zitadel/admin-password"
 rbx_market_briefing_namespace: "rbx-market-briefing"
 # LLM_API_KEY re-uses the llm-gateway master key (pass_llm_gateway_master_key).
 # No separate pass entry needed — the master key is already read for litellm-secrets.
+
+# rbx-contact-secrets (in rbx-ia-br — feeds rbx-contact ExternalSecrets)
+pass_altcha_hmac_secret_key: "rbx/altcha/hmac-secret"
+pass_comms_service_api_key: "rbx/comms/service-api-key"
+pass_d360_api_key: "rbx/d360/api-key"
+pass_postmark_server_token_key: "rbx/postmark/rbx-institutional-server-token"
+
+# rbx-commerce-secrets (in rbx-ia-br — feeds rbx-commerce ExternalSecrets)
+# DATABASE_URL re-uses rbx/comms/db-password (shared postgres, commerce schema).
+# COMMS_API_URL is a static cluster-internal address — not stored in pass.
+pass_rbx_commerce_asaas_api_key: "rbx/commerce/asaas-api-key"
+pass_rbx_commerce_asaas_webhook_token: "rbx/commerce/asaas-webhook-token"
+pass_rbx_commerce_service_key: "rbx/commerce/service-key"
+rbx_commerce_comms_api_url: "http://rbx-comms.rbx-comms.svc.cluster.local"

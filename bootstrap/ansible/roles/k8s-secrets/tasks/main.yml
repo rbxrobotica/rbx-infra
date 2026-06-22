@@ -1123,6 +1123,96 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# rbx-contact-secrets in rbx-ia-br
+# Feeds ExternalSecrets in rbx-contact namespace (D360, Postmark, Altcha, Comms).
+# ---------------------------------------------------------------------------
+
+- name: Read Altcha HMAC secret from pass
+  command: pass show {{ pass_altcha_hmac_secret_key }}
+  changed_when: false
+  register: altcha_hmac_secret_result
+  no_log: true
+
+- name: Read comms service API key from pass
+  command: pass show {{ pass_comms_service_api_key }}
+  changed_when: false
+  register: comms_service_api_key_result
+  no_log: true
+
+- name: Read D360 API key from pass
+  command: pass show {{ pass_d360_api_key }}
+  changed_when: false
+  register: d360_api_key_result
+  no_log: true
+
+- name: Read Postmark server token from pass
+  command: pass show {{ pass_postmark_server_token_key }}
+  changed_when: false
+  register: postmark_server_token_result
+  no_log: true
+
+- name: Create rbx-contact-secrets in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-contact-secrets \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=ALTCHA_SECRET="$ALTCHA_SECRET" \
+      --from-literal=COMMS_SERVICE_KEY="$COMMS_SERVICE_KEY" \
+      --from-literal=D360_API_KEY="$D360_API_KEY" \
+      --from-literal=POSTMARK_SERVER_TOKEN="$POSTMARK_SERVER_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    ALTCHA_SECRET: "{{ altcha_hmac_secret_result.stdout | trim }}"
+    COMMS_SERVICE_KEY: "{{ comms_service_api_key_result.stdout | trim }}"
+    D360_API_KEY: "{{ d360_api_key_result.stdout | trim }}"
+    POSTMARK_SERVER_TOKEN: "{{ postmark_server_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
+# rbx-commerce-secrets in rbx-ia-br
+# Feeds ExternalSecrets in rbx-commerce namespace (Asaas, DB, service key).
+# DATABASE_URL reuses rbx/comms/db-password (shared postgres, commerce schema).
+# ---------------------------------------------------------------------------
+
+- name: Read rbx-commerce Asaas API key from pass
+  command: pass show {{ pass_rbx_commerce_asaas_api_key }}
+  changed_when: false
+  register: rbx_commerce_asaas_api_key_result
+  no_log: true
+
+- name: Read rbx-commerce Asaas webhook token from pass
+  command: pass show {{ pass_rbx_commerce_asaas_webhook_token }}
+  changed_when: false
+  register: rbx_commerce_asaas_webhook_token_result
+  no_log: true
+
+- name: Read rbx-commerce service key from pass
+  command: pass show {{ pass_rbx_commerce_service_key }}
+  changed_when: false
+  register: rbx_commerce_service_key_result
+  no_log: true
+
+- name: Create rbx-commerce-secrets in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-commerce-secrets \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=DATABASE_URL="postgres://{{ rbx_comms_db_user }}:${RBX_COMMS_DB_PASSWORD}@{{ rbx_comms_db_host }}:{{ rbx_comms_db_port }}/{{ rbx_comms_db_name }}?sslmode=disable" \
+      --from-literal=COMMS_API_URL="{{ rbx_commerce_comms_api_url }}" \
+      --from-literal=ASAAS_API_KEY="$ASAAS_API_KEY" \
+      --from-literal=ASAAS_WEBHOOK_TOKEN="$ASAAS_WEBHOOK_TOKEN" \
+      --from-literal=COMMERCE_SERVICE_KEY="$COMMERCE_SERVICE_KEY" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    RBX_COMMS_DB_PASSWORD: "{{ rbx_comms_db_password_result.stdout | trim }}"
+    ASAAS_API_KEY: "{{ rbx_commerce_asaas_api_key_result.stdout | trim }}"
+    ASAAS_WEBHOOK_TOKEN: "{{ rbx_commerce_asaas_webhook_token_result.stdout | trim }}"
+    COMMERCE_SERVICE_KEY: "{{ rbx_commerce_service_key_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
@@ -1151,6 +1241,8 @@
       - "  {{ rbx_identity_namespace }}/zitadel-config: ZITADEL Postgres passwords"
       - "  {{ rbx_ia_br_namespace }}/rbx-market-briefing-llm: LLM_API_KEY (llm-gateway master key)"
       - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
+      - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
+      - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY"
       - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
@@ -1179,4 +1271,6 @@
       - "  {{ rbx_identity_namespace }}/zitadel-config: ZITADEL Postgres passwords"
       - "  {{ rbx_ia_br_namespace }}/rbx-market-briefing-llm: LLM_API_KEY (llm-gateway master key)"
       - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
+      - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
+      - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY"
   when: tenant_id_existing.rc == 0
