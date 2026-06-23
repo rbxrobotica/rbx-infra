@@ -68,26 +68,31 @@ heartbeat_loop() {
 }
 
 report_stop() {
-  local code="$1" reason="$2"
-  if printf '{"state":"stopped","stop_reason":"%s"}' "${reason}" \
+  local code="$1" reason="$2" vstatus="${3:-}" vexit="${4:-}"
+  local verify_json=""
+  [[ -n "${vstatus}" ]] && verify_json+=",\"verify_status\":\"${vstatus}\""
+  [[ -n "${vexit}" ]] && verify_json+=",\"verify_exit_code\":${vexit}"
+  if printf '{"state":"stopped","stop_reason":"%s"%s}' "${reason}" "${verify_json}" \
     | maestro_post "/missions/${code}/lease/state"; then
-    log "STOP ${code}: ${reason}"
+    log "STOP ${code}: ${reason} (verify=${vstatus:-n/a})"
   else
     log "WARN failed to report stop for ${code}: ${reason}"
   fi
 }
 
 report_delivered() {
-  local code="$1" input_tok="${2:-}" output_tok="${3:-}"
-  local payload
+  local code="$1" input_tok="${2:-}" output_tok="${3:-}" vstatus="${4:-}" vexit="${5:-}"
+  local payload verify_json=""
+  [[ -n "${vstatus}" ]] && verify_json+=",\"verify_status\":\"${vstatus}\""
+  [[ -n "${vexit}" ]] && verify_json+=",\"verify_exit_code\":${vexit}"
   if [[ -n "${input_tok}" && -n "${output_tok}" ]]; then
-    payload=$(printf '{"state":"delivered","input_tokens":%s,"output_tokens":%s}' \
-      "${input_tok}" "${output_tok}")
+    payload=$(printf '{"state":"delivered","input_tokens":%s,"output_tokens":%s%s}' \
+      "${input_tok}" "${output_tok}" "${verify_json}")
   else
-    payload='{"state":"delivered"}'
+    payload=$(printf '{"state":"delivered"%s}' "${verify_json}")
   fi
   if printf '%s' "${payload}" | maestro_post "/missions/${code}/lease/state"; then
-    log "DELIVERED ${code} (in=${input_tok:-?} out=${output_tok:-?})"
+    log "DELIVERED ${code} (in=${input_tok:-?} out=${output_tok:-?} verify=${vstatus:-n/a})"
   else
     log "WARN failed to report delivered for ${code}"
   fi
@@ -183,14 +188,29 @@ execute_mission() {
       ;;
   esac
 
-  # ── build prompt ─────────────────────────────────────────────────────────
-  local prompt
-  prompt="$(printf 'Mission %s\nType: %s\nObjective: %s\n\nAllowed paths: %s\nForbidden paths: %s\n\nSuccess criteria:\n%s' \
-    "${code}" "${mtype}" "${objective}" \
-    "$(printf '%s' "${contract_json}" | jq -r '.allowed_paths[]? // "all" ' | tr '\n' ' ')" \
-    "$(printf '%s' "${contract_json}" | jq -r '.forbidden_paths[]? // "none"' | tr '\n' ' ')" \
-    "$(printf '%s' "${contract_json}" | jq -r '.success_criteria[]? // ""' | tr '\n' '\n  ')" \
-  )"
+  # ── build prompt (ADR-0019: done_criteria + verify_command) ───────────────
+  # done_criteria is canonical post-C1; // success_criteria keeps pre-C1
+  # contracts readable until they age out of the registry.
+  local prompt done_bullets verify_cmd_for_prompt
+  done_bullets=$(printf '%s' "${contract_json}" \
+    | jq -r '(.done_criteria // .success_criteria // [])[]?' | sed 's/^/  - /')
+  verify_cmd_for_prompt=$(printf '%s' "${contract_json}" | jq -r '.verify_command // ""')
+  prompt="Mission ${code}
+Type: ${mtype}
+Objective: ${objective}
+
+Allowed paths: $(printf '%s' "${contract_json}" | jq -r '.allowed_paths[]? // "all"' | tr '\n' ' ')
+Forbidden paths: $(printf '%s' "${contract_json}" | jq -r '.forbidden_paths[]? // "none"' | tr '\n' ' ')
+
+Done criteria (machine-checkable success target — your changes MUST satisfy these):
+${done_bullets}
+"
+  if [[ -n "${verify_cmd_for_prompt}" ]]; then
+    prompt+="
+Verify command (the runner executes this to prove done; it MUST exit 0):
+  ${verify_cmd_for_prompt}
+"
+  fi
 
   # ── execute with timeout ─────────────────────────────────────────────────
   local exit_code=0 stop_reason="success_criteria_met"
@@ -257,14 +277,41 @@ execute_mission() {
     fi
   fi
 
+  # ── verify gate (ADR-0019): done is provable iff verify_command exits 0 ──
+  # Runs only after the executor itself succeeded and only when the contract
+  # declares verify_command (code-producing loops). verify_status stays
+  # "not_run" otherwise, preserving the legacy executor-exit-code gate for
+  # read-only loops and pre-C1 contracts. On failure the mission STOPS
+  # (persistent_failure) for plan revision — no delivered, no PR.
+  local verify_status="not_run" verify_exit_code=0 verify_cmd
+  verify_cmd=$(printf '%s' "${contract_json}" | jq -r '.verify_command // empty')
+  if [[ ${exit_code} -eq 0 && -n "${verify_cmd}" ]]; then
+    log "VERIFY ${code}: ${verify_cmd}"
+    {
+      echo "--- verify_command: ${verify_cmd} --- $(ts)"
+    } >> "${log_file}"
+    ( cd "${worktree}" && timeout "${timeout_s}" bash -c "${verify_cmd}" ) \
+      >>"${log_file}" 2>&1 || verify_exit_code=$?
+    if [[ ${verify_exit_code} -eq 0 ]]; then
+      verify_status="passed"
+    else
+      verify_status="failed"
+      stop_reason="persistent_failure"
+    fi
+  fi
+
   # ── collect artifacts (ledger) ───────────────────────────────────────────
   echo '{}' | maestro_post "/missions/${code}/artifacts:collect"
 
-  # ── report terminal state ────────────────────────────────────────────────
-  if [[ ${exit_code} -eq 0 ]]; then
-    report_delivered "${code}" "${input_tok}" "${output_tok}"
+  # ── report terminal state (ADR-0019: delivered only when verify passes) ──
+  local report_vexit=""
+  if [[ "${verify_status}" != "not_run" ]]; then
+    report_vexit="${verify_exit_code}"
+  fi
+  if [[ ${exit_code} -eq 0 && "${verify_status}" != "failed" ]]; then
+    report_delivered "${code}" "${input_tok}" "${output_tok}" "${verify_status}" "${report_vexit}"
   else
-    report_stop "${code}" "${stop_reason}"
+    report_stop "${code}" "${stop_reason}" "${verify_status}" "${report_vexit}"
   fi
 
   # ── cleanup worktree ─────────────────────────────────────────────────────
