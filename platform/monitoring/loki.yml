@@ -82,9 +82,11 @@ spec:
           replicas: 0
 
         # chunks-cache default requests 9830Mi — exceeds all nodes (~7.75 GiB each).
-        # Not needed in SingleBinary mode; disable to avoid permanent Pending.
+        # Not needed in SingleBinary mode; set replicas:0 (enabled:false alone does not
+        # remove the StatefulSet in chart v6.18.0).
         chunksCache:
           enabled: false
+          replicas: 0
 
         # Disable gateway — Promtail and Grafana connect to loki service directly
         gateway:
