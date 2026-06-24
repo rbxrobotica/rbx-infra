@@ -1,29 +1,55 @@
 ---
+- name: Create /etc/rancher/k3s directory
+  file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: "0755"
+
+- name: Write k3s config.yaml from template
+  template:
+    src: k3s-config.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: "0600"
+  notify: restart k3s
+
+- name: Write audit policy
+  copy:
+    src: audit-policy.yaml
+    dest: /etc/rancher/k3s/audit-policy.yaml
+    mode: "0644"
+  notify: restart k3s
+
 - name: Install k3s server
   shell: |
-    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - server \
-      --tls-san {{ k3s_server_ip }} \
-      --node-name {{ inventory_hostname }} \
-      --write-kubeconfig-mode 644
+    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - server
   args:
     creates: /usr/local/bin/k3s
 
-- name: Wait for k3s to be ready
-  wait_for:
-    path: /var/lib/rancher/k3s/server/node-token
-    timeout: 120
-
-- name: Fetch k3s node token
-  slurp:
-    src: /var/lib/rancher/k3s/server/node-token
-  register: k3s_token_raw
-
-- name: Set k3s token fact for agents
-  set_fact:
-    k3s_token: "{{ k3s_token_raw.content | b64decode | trim }}"
+- name: Create k3s server logs directory
+  file:
+    path: /var/lib/rancher/k3s/server/logs
+    state: directory
+    mode: "0750"
 
 - name: Enable and start k3s
   systemd:
     name: k3s
     enabled: yes
     state: started
+
+- name: Wait for k3s node-token (init server only)
+  wait_for:
+    path: /var/lib/rancher/k3s/server/node-token
+    timeout: 120
+  when: k3s_cluster_init | default(false)
+
+- name: Fetch k3s node-token (init server only)
+  slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  register: k3s_token_raw
+  when: k3s_cluster_init | default(false)
+
+- name: Set k3s_token fact (init server only)
+  set_fact:
+    k3s_token: "{{ k3s_token_raw.content | b64decode | trim }}"
+  when: k3s_cluster_init | default(false)

@@ -11,8 +11,11 @@
     - hardening
 
 # Phase 2: Install k3s control-plane
+# serial: 1 ensures tiger (cluster-init) runs first so its node-token is
+# available in hostvars before altaica/sumatrae render their join config.
 - name: Install k3s server
   hosts: k3s_server
+  serial: 1
   roles:
     - k3s-server
 
