@@ -19,6 +19,15 @@
   roles:
     - k3s-server
 
+# Phase 2b: Configure etcd snapshot sync (tiger → jaguar)
+# Runs only on the cluster-init server; sets up a systemd timer that rsyncs
+# /var/lib/rancher/k3s/server/db/snapshots/ to jaguar 10 min after each
+# k3s etcd snapshot cron (every 6h at :00 → sync at :10).
+- name: Configure etcd snapshot sync to jaguar
+  hosts: tiger
+  roles:
+    - k3s-snapshot-sync
+
 # Phase 3: Join workers
 - name: Install k3s agents
   hosts: k3s_agents

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SRC="{{ k3s_snapshot_local_dir }}"
+DST_HOST="{{ k3s_snapshot_target_host_ip }}"
+DST_DIR="{{ k3s_snapshot_target_dir }}"
+SSH_KEY="/root/.ssh/id_ed25519_k3s_snapshot"
+LOG="/var/log/k3s-snapshot-sync.log"
+
+log() { echo "$(date -u +%Y-%m-%dT%H:%M:%SZ) $*" | tee -a "$LOG"; }
+
+log "Starting etcd snapshot sync to ${DST_HOST}:${DST_DIR}"
+
+rsync -az --delete \
+  -e "ssh -i ${SSH_KEY} -o StrictHostKeyChecking=accept-new -o BatchMode=yes" \
+  "${SRC}/" \
+  "root@${DST_HOST}:${DST_DIR}/"
+
+log "Sync complete. $(ls -1 ${SRC} | wc -l) snapshots on source."
