@@ -81,6 +81,11 @@ spec:
         backend:
           replicas: 0
 
+        # chunks-cache default requests 9830Mi — exceeds all nodes (~7.75 GiB each).
+        # Not needed in SingleBinary mode; disable to avoid permanent Pending.
+        chunksCache:
+          enabled: false
+
         # Disable gateway — Promtail and Grafana connect to loki service directly
         gateway:
           enabled: false
