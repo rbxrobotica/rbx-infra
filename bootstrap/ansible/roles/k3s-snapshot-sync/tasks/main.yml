@@ -1,0 +1,50 @@
+---
+- name: Ensure tiger SSH keypair for snapshot sync exists
+  openssh_keypair:
+    path: /root/.ssh/id_ed25519_k3s_snapshot
+    type: ed25519
+    comment: "k3s-snapshot-sync@{{ inventory_hostname }}"
+    force: false
+  register: snapshot_keypair
+
+- name: Authorize tiger snapshot key on jaguar
+  delegate_to: "{{ k3s_snapshot_target_host }}"
+  authorized_key:
+    user: root
+    key: "{{ snapshot_keypair.public_key }}"
+    comment: "k3s-snapshot-sync@tiger"
+    state: present
+
+- name: Create snapshot destination directory on jaguar
+  delegate_to: "{{ k3s_snapshot_target_host }}"
+  file:
+    path: "{{ k3s_snapshot_target_dir }}"
+    state: directory
+    mode: "0700"
+
+- name: Write snapshot sync script
+  template:
+    src: k3s-snapshot-sync.sh.j2
+    dest: /usr/local/bin/k3s-snapshot-sync
+    mode: "0750"
+
+- name: Write systemd service unit
+  template:
+    src: k3s-snapshot-sync.service.j2
+    dest: /etc/systemd/system/k3s-snapshot-sync.service
+    mode: "0644"
+  notify: reload systemd
+
+- name: Write systemd timer unit
+  template:
+    src: k3s-snapshot-sync.timer.j2
+    dest: /etc/systemd/system/k3s-snapshot-sync.timer
+    mode: "0644"
+  notify: reload systemd
+
+- name: Enable and start snapshot sync timer
+  systemd:
+    name: k3s-snapshot-sync.timer
+    enabled: yes
+    state: started
+    daemon_reload: yes

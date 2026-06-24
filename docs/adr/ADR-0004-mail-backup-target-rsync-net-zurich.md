@@ -4,6 +4,13 @@
 
 **Accepted** — 2026-05-07
 
+> **Scope clarification (2026-06-24):** This ADR covers **mail backup only** (Mailcow on `lince`).
+> rsync.net Zurich is **not** the current target for cluster (etcd) snapshots and is not required
+> short-term. etcd snapshots are synced locally to `jaguar` via systemd timer (see
+> `bootstrap/ansible/roles/k3s-snapshot-sync/`). rsync.net or equivalent offsite for cluster
+> state is a **future company phase** and will be addressed in a dedicated ADR when the volume
+> and compliance requirements justify a paid offsite target.
+
 ## Context
 
 Following the institutional mail rollout (`docs/PLAN-mail-self-hosted.md`,

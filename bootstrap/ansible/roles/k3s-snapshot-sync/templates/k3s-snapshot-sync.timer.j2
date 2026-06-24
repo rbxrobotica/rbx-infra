@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer for k3s etcd snapshot sync to jaguar
+Requires=k3s-snapshot-sync.service
+
+[Timer]
+# 10 minutes after each k3s etcd-snapshot-schedule-cron (0 */6 * * *)
+OnCalendar=*-*-* 00,06,12,18:10:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
