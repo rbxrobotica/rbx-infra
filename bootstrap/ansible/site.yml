@@ -25,6 +25,7 @@
 # k3s etcd snapshot cron (every 6h at :00 → sync at :10).
 - name: Configure etcd snapshot sync to jaguar
   hosts: tiger
+  tags: [k3s-snapshot-sync]
   roles:
     - k3s-snapshot-sync
 
