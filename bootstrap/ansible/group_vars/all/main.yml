@@ -11,6 +11,12 @@ k3s_server_ip: "158.220.116.31"
 # Joining servers use its node-token via hostvars[k3s_init_host]['k3s_token'].
 k3s_init_host: "tiger"
 
+# etcd snapshot sync (tiger → jaguar)
+k3s_snapshot_local_dir: "/var/lib/rancher/k3s/server/db/snapshots"
+k3s_snapshot_target_host: "jaguar"
+k3s_snapshot_target_host_ip: "161.97.147.76"
+k3s_snapshot_target_dir: "/var/lib/k3s-snapshots"
+
 # Your local machine's public IPs — port 6443 will be restricted to these only
 # IPv4: curl -4s ifconfig.me  |  IPv6: curl -6s ifconfig.me
 kubectl_allowed_ips:

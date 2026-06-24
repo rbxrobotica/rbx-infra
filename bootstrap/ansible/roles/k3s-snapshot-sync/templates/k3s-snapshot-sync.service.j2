@@ -1,0 +1,9 @@
+[Unit]
+Description=Sync k3s etcd snapshots to jaguar
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/k3s-snapshot-sync
+StandardOutput=journal
+StandardError=journal
