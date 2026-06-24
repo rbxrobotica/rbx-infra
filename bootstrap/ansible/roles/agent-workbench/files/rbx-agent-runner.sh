@@ -342,7 +342,11 @@ Review before merge — merge is human (P4, ADR-0019)." >>"${log_file}" 2>&1 || 
           log "WARN ${code}: git push failed, no PR opened (see ${log_file})"
         fi
       else
-        log "WARN ${code}: delivered (verify=${verify_status}) but NO diff vs ${base_branch} — verify is necessary-not-sufficient; confirm the agent actually did the task"
+        # no-commit guard: verify passed but agent produced no diff — this is a
+        # false delivery. Stop for plan revision so the operator can investigate
+        # whether the objective was already met or the agent missed the task.
+        log "STOP ${code}: verify=passed but NO diff vs ${base_branch} — agent produced nothing; stopping for revision (no-commit guard)"
+        report_stop "${code}" "persistent_failure" "${verify_status}" "${report_vexit}"
       fi
     )
   fi
