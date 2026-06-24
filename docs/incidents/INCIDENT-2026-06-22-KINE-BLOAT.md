@@ -67,7 +67,7 @@ restarts) amplified write churn (events/leases/status).
 Tracked in the resilience/security plan (see `docs/runbooks/K3S-HA-MIGRATION.md` and the
 session plan). Priority order set by operator:
 
-1. **[P1] Control-plane HA** — migrate to embedded-etcd with 3 servers (`tiger`+`altaica`+`sumatrae`); native etcd snapshots; fold in control-plane hardening (secrets-encryption, audit log, `write-kubeconfig-mode 0600`, etcd-snapshot offsite). Scheduled window: **2026-06-23**.
+1. **[P1] Control-plane HA** — ✅ **COMPLETED 2026-06-24** — embedded-etcd 3-server topology live; Ansible codified in PR #59. See `docs/runbooks/K3S-HA-MIGRATION.md` for execution notes.
 2. **[P2] Observability & alerting** — bring up the scaffolded Prometheus/Loki stack + metrics-server; alerts for node `NotReady`, k3s crash-loop, **datastore size / compaction gap**, empty critical endpoints, cert expiry.
 3. **[P2] Automated, verified backups** — etcd snapshots + offsite (rsync.net Zurich, ADR-0004) + documented restore drill. Never rely on `cp` of a live SQLite file.
 4. **[P3] Hygiene** — fix/zero chronic crash-loopers (kine churn sources); clean stale jobs/namespaces.
@@ -81,6 +81,6 @@ session plan). Priority order set by operator:
 
 ## Artifacts (on `tiger`, `/var/lib/rancher/k3s/server/db/`)
 
-- `state.db` — compacted live datastore (~252 MB).
-- `state.db.pre-compact-20260622T064118Z` — verified 17 GB pre-compaction backup (rollback).
-- `state.db.bloated-old` — pre-compaction live copy (redundant; safe to remove after HA migration).
+- `state.db` — **gone** (etcd migration deleted it; etcd WAL now under `/var/lib/rancher/k3s/server/etcd/`).
+- `state.db.pre-compact-20260622T064118Z` — 17 GB pre-compaction backup (can be removed once etcd quorum is stable for several days).
+- `state.db.bloated-old` — pre-compaction live copy (safe to remove now; ~17 GB disk savings).

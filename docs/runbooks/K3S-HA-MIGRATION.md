@@ -1,5 +1,8 @@
 # Runbook — k3s Single-Server → Embedded-etcd HA Migration (+ Control-Plane Hardening)
 
+> **STATUS: COMPLETED 2026-06-24** — migration executed successfully; Ansible codified in PR #59.
+> See [Execution Notes](#execution-notes-2026-06-24) below for actual outcomes and corrections.
+
 **Audience:** RBX operators executing the control-plane HA migration.
 **Prerequisites:** root SSH to all nodes (key-based); `KUBECONFIG=~/.kube/config-rbx`; ArgoCD admin; `pass` access; an offsite backup target (rsync.net Zurich, ADR-0004).
 **Origin:** Action item P1 from `docs/incidents/INCIDENT-2026-06-22-KINE-BLOAT.md`.
@@ -147,13 +150,57 @@ ssh root@158.220.116.31 'systemctl stop k3s; cp -a /var/lib/rancher/k3s/server/d
 
 ## Step 8 — Codify (after a successful migration)
 
-- `bootstrap/ansible/inventory/hosts.yml` — move `altaica`+`sumatrae` into `k3s_server`.
-- `bootstrap/ansible/roles/k3s-server/tasks/main.yml` — template `/etc/rancher/k3s/config.yaml` (etcd + hardening) instead of inline curl flags; handle first-server (`cluster-init`) vs joining servers.
-- Add `audit-policy.yaml` and the etcd-snapshot offsite (S3/rsync) config.
-- Commit on a dedicated branch; PR for review (do **not** push without per-operation authorization).
+✅ **Done in PR #59 (2026-06-24).**
+
+- `bootstrap/ansible/inventory/hosts.yml` — altaica+sumatrae in `k3s_server`; tiger has `k3s_cluster_init: true`.
+- `bootstrap/ansible/roles/k3s-server/templates/k3s-config.yaml.j2` — renders `cluster-init: true` for tiger and `server:` + token for joining servers; includes all hardening.
+- `bootstrap/ansible/roles/k3s-server/files/audit-policy.yaml` — static audit policy.
+- `bootstrap/ansible/roles/k3s-server/handlers/main.yml` — restart k3s on config change.
+- `bootstrap/ansible/site.yml` — `serial: 1` on k3s_server play (tiger-first; token in hostvars before join renders template).
 
 ## Notes
 
-- Consider a **dry-run** of Steps 3–4 on a throwaway VPS before the prod window.
-- Keep `state.db.pre-compact-20260622T064118Z` until HA is proven over several days.
-- After success, remove `state.db.bloated-old` on `tiger` to reclaim 17 GB.
+- ~~Consider a **dry-run** of Steps 3–4 on a throwaway VPS before the prod window.~~
+- Keep `state.db.pre-compact-20260622T064118Z` until HA is proven over several days (then safe to remove).
+- Remove `state.db.bloated-old` on `tiger` now (~17 GB; confirmed redundant post-migration).
+
+---
+
+## Execution Notes (2026-06-24)
+
+### What actually happened — step-by-step corrections
+
+**Step 3 (tiger re-init):** k3s with `cluster-init: true` did NOT start with an empty cluster as
+the runbook warned. It **transparently migrated** the compacted `state.db` (252 MB) to embedded
+etcd. All objects, secrets, ArgoCD apps, and PVCs were intact immediately after restart.
+
+**Step 4 (restore) was SKIPPED entirely** — content was already present from the migration.
+ArgoCD reconciled within minutes from git. All sites returned 200 without any `kubectl apply`.
+
+**Step 5 — joining altaica + sumatrae (two corrections):**
+
+1. **Write config.yaml AFTER the uninstall.** `k3s-server-uninstall.sh` deletes `/etc/rancher/k3s/`
+   including any pre-written config.yaml. If you write the config first and then uninstall, the
+   config is gone. Order: uninstall → write config.yaml → install/start.
+
+2. **Wipe stale server state before joining.** After a brief incorrect standalone start, altaica and
+   sumatrae had `/var/lib/rancher/k3s/server/` with their own bootstrap etcd state.
+   k3s refused to join with "critical configuration value mismatch between servers."
+   Fix: `rm -rf /var/lib/rancher/k3s/server/` on both nodes before rewriting config and restarting.
+
+3. **`secrets-encryption: true` must be on ALL server nodes.** Joining servers without this flag
+   failed to decrypt the existing AES-CBC secrets: "identity transformer tried to read encrypted
+   data; reinitializing..." The Ansible template now unconditionally sets this on all server nodes.
+
+### Result
+
+```
+NAME       STATUS   ROLES                       AGE
+tiger      Ready    control-plane,etcd,master   live
+altaica    Ready    control-plane,etcd,master   joined
+sumatrae   Ready    control-plane,etcd,master   joined
+jaguar     Ready    agent                        unchanged
+```
+
+etcd at 150 MB. state.db absent on all nodes. Secrets encryption enabled. Audit log active.
+etcd snapshots every 6h. All public sites 200. Zero services required manual restoration.
