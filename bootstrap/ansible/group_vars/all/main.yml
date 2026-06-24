@@ -4,8 +4,12 @@ ansible_ssh_private_key_file: ~/.ssh/id_ed25519
 # k3s version — check latest at https://github.com/k3s-io/k3s/releases
 k3s_version: "v1.32.3+k3s1"
 
-# Tiger public IP — used as TLS SAN so kubectl works without tunnel
+# Tiger public IP — used as TLS SAN and join endpoint for server peers
 k3s_server_ip: "158.220.116.31"
+
+# Inventory name of the cluster-init server (the one with cluster-init: true).
+# Joining servers use its node-token via hostvars[k3s_init_host]['k3s_token'].
+k3s_init_host: "tiger"
 
 # Your local machine's public IPs — port 6443 will be restricted to these only
 # IPv4: curl -4s ifconfig.me  |  IPv6: curl -6s ifconfig.me

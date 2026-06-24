@@ -1,0 +1,18 @@
+{% if k3s_cluster_init | default(false) %}
+cluster-init: true
+tls-san:
+  - {{ k3s_server_ip }}
+{% else %}
+server: https://{{ k3s_server_ip }}:6443
+token: {{ hostvars[k3s_init_host | default('tiger')]['k3s_token'] }}
+{% endif %}
+node-name: {{ inventory_hostname }}
+write-kubeconfig-mode: "0600"
+secrets-encryption: true
+kube-apiserver-arg:
+  - "audit-log-path=/var/lib/rancher/k3s/server/logs/audit.log"
+  - "audit-policy-file=/etc/rancher/k3s/audit-policy.yaml"
+  - "audit-log-maxage=30"
+  - "enable-admission-plugins=NodeRestriction"
+etcd-snapshot-schedule-cron: "0 */6 * * *"
+etcd-snapshot-retention: 20
