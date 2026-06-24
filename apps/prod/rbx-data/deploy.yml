@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/component: backend
     app.kubernetes.io/part-of: rbx-data
 spec:
-  replicas: 1
+  replicas: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: rbx-data
