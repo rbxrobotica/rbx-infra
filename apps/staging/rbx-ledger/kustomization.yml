@@ -3,11 +3,12 @@ kind: Kustomization
 
 namespace: rbx-ledger
 
+# Note: the rbx-ledger-secrets Secret (DATABASE_URL) and ghcr-pull-secret are
+# provisioned out of band directly in the rbx-ledger namespace and are NOT in
+# git. rbx-ledger is an isolated financial domain: its own namespace, secret,
+# DB and role; it does not share secrets via rbx-ia-br. See README.md.
 resources:
   - namespace.yml
-  - rbac-external-secrets.yml
-  - secretstore.yml
-  - rbx-ledger-secret.yml
   - configmap.yml
   - backend-deploy.yml
   - backend-svc.yml
