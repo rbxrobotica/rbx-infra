@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: rbx-cms
+
+resources:
+  - namespace.yml
+  - rbac-external-secrets.yml
+  - secretstore.yml
+  - externalsecret.yml
+  - externalsecret-s3.yml
+  - middleware.yml
+  - certificate.yml
+  - ingressroute.yml
+  - postgres-svc.yml
+  - deploy.yml
+  - svc.yml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: rbx-cms
+      environment: production
+    includeSelectors: false
+
+images:
+  # Tags are updated by the image-update workflow on each push (sha-<commit>).
+  - name: ghcr.io/rbxrobotica/rbx-cms
+    newTag: sha-71c4411
+  - name: ghcr.io/rbxrobotica/rbx-cms-web
+    newTag: sha-71c4411

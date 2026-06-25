@@ -293,3 +293,13 @@ resource "powerdns_record" "ledger_rbxsystems_ch" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+# --- CMS (content management for rbx-robotica-frontend) ---
+
+resource "powerdns_record" "cms_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "cms.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}

@@ -1,0 +1,20 @@
+# Headless Service + Endpoints pointing at the external ParadeDB host (jaguar).
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-cms-postgres
+  namespace: rbx-cms
+spec:
+  ports:
+    - port: 5432
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: rbx-cms-postgres
+  namespace: rbx-cms
+subsets:
+  - addresses:
+      - ip: 161.97.147.76
+    ports:
+      - port: 5432

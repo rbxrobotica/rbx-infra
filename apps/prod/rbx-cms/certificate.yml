@@ -1,0 +1,17 @@
+# Certificate: cms.rbxsystems.ch (managed by PowerDNS/OpenTofu — infra/terraform/dns)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rbx-cms-tls
+  namespace: rbx-cms
+spec:
+  dnsNames:
+    - cms.rbxsystems.ch
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: rbx-cms-tls
+  usages:
+    - digital signature
+    - key encipherment
