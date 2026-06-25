@@ -1,0 +1,99 @@
+---
+# Creates the rbx-ledger staging database and user on jaguar (Postgres 16).
+# Runs ONLY on the db_server group. rbx-ledger is an isolated financial domain:
+# its own database, role and least-privilege grants, kept separate from every
+# other service.
+#
+# The password is NOT stored in git. Pass it at runtime from pass:
+#   ansible-playbook site.yml --tags rbx-ledger-db \
+#     -e "rbx_ledger_staging_db_password=$(pass rbx/ledger/staging/db-password)"
+
+- name: Assert the rbx-ledger DB password was provided (never commit it)
+  assert:
+    that:
+      - rbx_ledger_staging_db_password is defined
+      - rbx_ledger_staging_db_password | length > 0
+    fail_msg: >-
+      rbx_ledger_staging_db_password must be passed at runtime, e.g.
+      -e "rbx_ledger_staging_db_password=$(pass rbx/ledger/staging/db-password)".
+      Do not store it in group_vars/vault.
+
+- name: Install python3-psycopg2 (required for Ansible postgresql modules)
+  apt:
+    name: python3-psycopg2
+    state: present
+
+- name: Create rbx-ledger staging database
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: "{{ rbx_ledger_staging_db_name }}"
+    encoding: UTF8
+    state: present
+
+- name: Create rbx-ledger staging user
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ rbx_ledger_staging_db_user }}"
+    password: "{{ rbx_ledger_staging_db_password }}"
+    state: present
+
+- name: Grant rbx-ledger user privileges on the staging database only
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ rbx_ledger_staging_db_name }}"
+    role: "{{ rbx_ledger_staging_db_user }}"
+    type: database
+    privs: ALL
+    state: present
+
+- name: Grant rbx-ledger user CREATE,USAGE on public schema (PostgreSQL 15+ requires explicit grant)
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ rbx_ledger_staging_db_name }}"
+    role: "{{ rbx_ledger_staging_db_user }}"
+    type: schema
+    objs: public
+    privs: CREATE,USAGE
+    state: present
+
+- name: Grant rbx-ledger user ALL on existing tables
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ rbx_ledger_staging_db_name }}"
+    role: "{{ rbx_ledger_staging_db_user }}"
+    type: table
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present
+
+- name: Grant rbx-ledger user ALL on existing sequences
+  become: yes
+  become_user: postgres
+  postgresql_privs:
+    db: "{{ rbx_ledger_staging_db_name }}"
+    role: "{{ rbx_ledger_staging_db_user }}"
+    type: sequence
+    objs: ALL_IN_SCHEMA
+    privs: ALL
+    state: present
+
+- name: Allow k3s nodes to connect to the rbx-ledger staging database only
+  lineinfile:
+    path: /etc/postgresql/16/main/pg_hba.conf
+    line: "host {{ rbx_ledger_staging_db_name }} {{ rbx_ledger_staging_db_user }} {{ hostvars[item].ansible_host }}/32 scram-sha-256"
+    insertafter: EOF
+  loop: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"
+  notify: restart postgresql
+
+- name: Allow firewall access from k3s nodes to Postgres for rbx-ledger
+  ufw:
+    rule: allow
+    port: "5432"
+    proto: tcp
+    src: "{{ hostvars[item].ansible_host }}"
+  loop: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"

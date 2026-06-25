@@ -74,6 +74,16 @@
   roles:
     - zitadel-database
 
+# Phase 6e: Create rbx-ledger staging database on jaguar
+# Password is passed at runtime from pass (never committed):
+#   ansible-playbook site.yml --tags rbx-ledger-db \
+#     -e "rbx_ledger_staging_db_password=$(pass rbx/ledger/staging/db-password)"
+- name: Setup rbx-ledger staging database
+  hosts: db_server
+  tags: [databases, rbx-ledger-db]
+  roles:
+    - rbx-ledger-database
+
 # Phase 7: Harden DNS servers (DNS-specific firewall)
 - name: Harden DNS servers
   hosts: dns_servers
