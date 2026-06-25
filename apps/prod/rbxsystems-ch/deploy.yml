@@ -62,9 +62,24 @@ spec:
                 secretKeyRef:
                   name: contabo-s3-credentials
                   key: AWS_SECRET_ACCESS_KEY
+            # SSR runtime (adapter-node) — ADR-0002 Sovereign Content Delivery Layer.
+            # PORT must match the container/svc port; ORIGIN + forwarded headers let
+            # adapter-node trust the Traefik ingress; cache TTL bounds publish→live.
+            - name: PORT
+              value: "8080"
+            - name: ORIGIN
+              value: "https://rbxsystems.ch"
+            - name: PROTOCOL_HEADER
+              value: "x-forwarded-proto"
+            - name: HOST_HEADER
+              value: "x-forwarded-host"
+            - name: CONTENT_CACHE_TTL_SECONDS
+              value: "60"
+            - name: CONTENT_CACHE_STALE_SECONDS
+              value: "300"
           readinessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: 8080
             initialDelaySeconds: 10
             periodSeconds: 5
@@ -72,7 +87,7 @@ spec:
             failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /
+              path: /healthz
               port: 8080
             initialDelaySeconds: 20
             periodSeconds: 10
@@ -80,8 +95,8 @@ spec:
             failureThreshold: 3
           resources:
             requests:
-              memory: 128Mi
-              cpu: 100m
-            limits:
               memory: 256Mi
-              cpu: 500m
+              cpu: 200m
+            limits:
+              memory: 512Mi
+              cpu: 1000m
