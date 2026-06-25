@@ -33,6 +33,10 @@ data:
   PROJECTION_STREAM_KEY: "robson:daemon"
   PROJECTION_POLL_INTERVAL_MS: "500"
 
+  # Startup stale-active handling:
+  # reconcile stale Active positions on boot instead of aborting the pod.
+  ROBSON_RECONCILIATION_ON_STARTUP_STALE_ACTIVE: "auto_reconcile"
+
   # CORS allow-list for the public frontend origins (FE-P1 B7).
   # Consumed by api::build_cors_layer in robsond.
   ROBSON_CORS_ALLOWED_ORIGINS: "https://robson.rbx.ia.br,https://robson.rbxsystems.ch"
