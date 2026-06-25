@@ -84,6 +84,8 @@ spec:
                   value: "robson/market-briefings"
                 - name: COMMS_BASE_URL
                   value: "http://rbx-comms.rbx-comms.svc.cluster.local"
+                - name: MARKET_DATA_PROVIDER
+                  value: "binance-futures"
                 - name: COMMERCE_BASE_URL
                   value: "http://rbx-commerce.rbx-commerce.svc.cluster.local"
               securityContext:
