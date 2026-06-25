@@ -283,3 +283,13 @@ resource "powerdns_record" "maestro_rbxsystems_ch" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+# --- RBX Ledger (internal finance operations console) ---
+
+resource "powerdns_record" "ledger_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "ledger.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
