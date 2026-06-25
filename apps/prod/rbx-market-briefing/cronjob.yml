@@ -1,5 +1,5 @@
 # CronJob: rbx-market-briefing daily BTCUSDT flight plan.
-# Schedule: 05:00 UTC Mon-Fri (≈02:00 BRT + margin) — markets are 24/7 but the
+# Schedule: 09:00 UTC Mon-Fri (≈06:00 BRT) — markets are 24/7 but the
 # briefing targets the operator's working week.
 # A single container runs the full pipeline (run) and then publishes to S3
 # (publish) sequentially; both commands share the same working dir and the
@@ -14,7 +14,7 @@ metadata:
     app.kubernetes.io/part-of: rbx-market-briefing
     environment: production
 spec:
-  schedule: "0 5 * * 1-5"
+  schedule: "0 9 * * 1-5"
   timeZone: Etc/UTC
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 600
