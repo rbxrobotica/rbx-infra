@@ -24,7 +24,8 @@ spec:
             backend:
               service:
                 name: rbx-ledger-frontend
-                port: { number: 80 }
+                port:
+                  number: 80
     - host: ledger.rbxsystems.ch
       http:
         paths:
@@ -33,4 +34,5 @@ spec:
             backend:
               service:
                 name: rbx-ledger-frontend
-                port: { number: 80 }
+                port:
+                  number: 80
