@@ -1,0 +1,29 @@
+# ArgoCD Application: rbx-ledger (internal finance operations console)
+# Staging-first: deploys backend + frontend into the rbx-ledger namespace.
+# Production is gated on validation.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-ledger
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-ledger
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-ledger
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/staging/rbx-ledger
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-ledger
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
