@@ -1,0 +1,38 @@
+# Only the frontend is exposed. Backend has no auth; keep hosts internal-facing.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rbx-ledger
+  namespace: rbx-ledger
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - ledger.rbx.ia.br
+        - ledger.rbxsystems.ch
+      secretName: rbx-ledger-tls
+  rules:
+    - host: ledger.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-ledger-frontend
+                port:
+                  number: 80
+    - host: ledger.rbxsystems.ch
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-ledger-frontend
+                port:
+                  number: 80

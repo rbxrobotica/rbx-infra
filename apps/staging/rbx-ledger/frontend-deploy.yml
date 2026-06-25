@@ -1,0 +1,62 @@
+# Frontend: SvelteKit (adapter-node). The only component behind the ingress.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-ledger-frontend
+  namespace: rbx-ledger
+  labels:
+    app.kubernetes.io/name: rbx-ledger-frontend
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: rbx-ledger
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-ledger-frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-ledger-frontend
+        app.kubernetes.io/component: frontend
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+        - name: frontend
+          image: ghcr.io/rbxrobotica/rbx-ledger-frontend:sha-e7980b9
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          envFrom:
+            - configMapRef:
+                name: rbx-ledger-frontend
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 192Mi

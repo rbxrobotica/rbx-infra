@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rbx-ledger-frontend
+  namespace: rbx-ledger
+data:
+  RBX_LEDGER_API_BASE_URL: http://rbx-ledger-backend:8080
+  PUBLIC_APP_NAME: RBX Ledger
+  PORT: "3000"
+  PROTOCOL_HEADER: x-forwarded-proto
+  HOST_HEADER: x-forwarded-host
