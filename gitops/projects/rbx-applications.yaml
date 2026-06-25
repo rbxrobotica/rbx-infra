@@ -72,6 +72,9 @@ spec:
     # Merovelis public institutional site (merovelis.com).
     - namespace: merovelis
       server: https://kubernetes.default.svc
+    # rbx-ledger: isolated financial domain (dedicated namespace, not shared staging).
+    - namespace: rbx-ledger
+      server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
