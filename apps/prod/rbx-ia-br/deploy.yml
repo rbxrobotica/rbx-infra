@@ -75,6 +75,18 @@ spec:
               value: "60"
             - name: CONTENT_CACHE_STALE_SECONDS
               value: "300"
+            # AI chat — routes through the LiteLLM gateway (Thalamus-governed).
+            # The site holds only a virtual key; provider keys live in the gateway.
+            # ClusterIP DNS; litellm-default-deny already allows in-cluster :4000.
+            - name: LLM_GATEWAY_URL
+              value: "http://litellm.llm-gateway.svc.cluster.local:4000/v1"
+            - name: LLM_MODEL
+              value: "groq-prod"
+            - name: LLM_GATEWAY_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-llm-secrets
+                  key: LLM_GATEWAY_KEY
           readinessProbe:
             httpGet:
               path: /healthz

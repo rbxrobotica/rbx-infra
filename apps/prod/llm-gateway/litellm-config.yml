@@ -24,6 +24,14 @@ data:
     model_list:
       # Active providers — initial RBX strategy
 
+      # Stable production alias for the public site chat. Decoupled from the
+      # underlying provider/model so the upstream can change without touching
+      # consumers. Currently backed by Groq llama-3.3-70b.
+      - model_name: groq-prod
+        litellm_params:
+          model: groq/llama-3.3-70b-versatile
+          api_key: "os.environ/GROQ_API_KEY"
+
       - model_name: groq-test
         litellm_params:
           model: groq/llama-3.3-70b-versatile
