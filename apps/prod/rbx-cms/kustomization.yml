@@ -25,6 +25,6 @@ labels:
 images:
   # Tags are updated by the image-update workflow on each push (sha-<commit>).
   - name: ghcr.io/rbxrobotica/rbx-cms
-    newTag: sha-71c4411
+    newTag: sha-71c44118a780b00e8a45536e480d372097f64846
   - name: ghcr.io/rbxrobotica/rbx-cms-web
-    newTag: sha-71c4411
+    newTag: sha-71c44118a780b00e8a45536e480d372097f64846
