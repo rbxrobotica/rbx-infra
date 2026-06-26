@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-cms-backend
+  namespace: rbx-cms
+  labels:
+    app.kubernetes.io/name: rbx-cms-backend
+spec:
+  selector:
+    app.kubernetes.io/name: rbx-cms-backend
+  ports:
+    - port: 80
+      targetPort: 8080
+      name: http
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-cms-web
+  namespace: rbx-cms
+  labels:
+    app.kubernetes.io/name: rbx-cms-web
+spec:
+  selector:
+    app.kubernetes.io/name: rbx-cms-web
+  ports:
+    - port: 80
+      targetPort: 3000
+      name: http

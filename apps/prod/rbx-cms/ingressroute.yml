@@ -1,0 +1,31 @@
+# IngressRoute: CMS web UI (cms.rbxsystems.ch) → rbx-cms-web.
+# DNS: cms.rbxsystems.ch is managed by PowerDNS/OpenTofu (infra/terraform/dns).
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rbx-cms
+  namespace: rbx-cms
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    # HTTP → HTTPS redirect
+    - match: Host(`cms.rbxsystems.ch`)
+      kind: Rule
+      priority: 1
+      middlewares:
+        - name: redirect-https
+          namespace: rbx-cms
+      services:
+        - name: rbx-cms-web
+          port: 80
+    # HTTPS traffic → web (node) which serves UI + /auth/* and proxies /api/* to the backend
+    - match: Host(`cms.rbxsystems.ch`)
+      kind: Rule
+      priority: 10
+      services:
+        - name: rbx-cms-web
+          port: 80
+  tls:
+    secretName: rbx-cms-tls

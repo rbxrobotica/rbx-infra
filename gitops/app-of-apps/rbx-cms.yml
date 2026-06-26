@@ -1,0 +1,34 @@
+# ArgoCD Application: rbx-cms (content management for rbx-robotica-frontend)
+# Namespace: rbx-cms
+# Two containers: rbx-cms-web (node, public cms.rbxsystems.ch) + rbx-cms-backend (Go, internal).
+# Blocked until: repo+image exist, rbx-cms-secrets + contabo-s3-credentials in rbx-ia-br,
+# OIDC client at auth.merovelis.com, cms DB on jaguar, DNS cms.rbxsystems.ch.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-cms
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-cms
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-cms
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-cms
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-cms
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
