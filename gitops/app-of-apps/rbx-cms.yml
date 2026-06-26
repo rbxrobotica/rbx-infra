@@ -12,6 +12,21 @@ metadata:
     app.kubernetes.io/name: rbx-cms
     app.kubernetes.io/component: application
     app.kubernetes.io/part-of: rbx-cms
+  annotations:
+    # ArgoCD Image Updater: watch both images (built from the same commit) and
+    # write the promoted sha tag into apps/prod/rbx-cms/kustomization.yml.
+    # Write-back reuses the fleet credential rbx/github/rbx-infra-image-updater
+    # (argocd-image-updater-git-creds). See docs/infra/IMAGE-PROMOTION.md.
+    argocd-image-updater.argoproj.io/image-list: app=ghcr.io/rbxrobotica/rbx-cms, web=ghcr.io/rbxrobotica/rbx-cms-web
+    argocd-image-updater.argoproj.io/app.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/web.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/app.allow-tags: regexp:^sha-[0-9a-f]+$
+    argocd-image-updater.argoproj.io/web.allow-tags: regexp:^sha-[0-9a-f]+$
+    argocd-image-updater.argoproj.io/app.kustomize.image-name: ghcr.io/rbxrobotica/rbx-cms
+    argocd-image-updater.argoproj.io/web.kustomize.image-name: ghcr.io/rbxrobotica/rbx-cms-web
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: main
+    argocd-image-updater.argoproj.io/write-back-target: kustomization
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
