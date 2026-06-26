@@ -19,6 +19,8 @@ spec:
         app.kubernetes.io/name: rbx-cms-backend
         app.kubernetes.io/component: api
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: api
           image: ghcr.io/rbxrobotica/rbx-cms
@@ -107,6 +109,8 @@ spec:
         app.kubernetes.io/name: rbx-cms-web
         app.kubernetes.io/component: web
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: web
           image: ghcr.io/rbxrobotica/rbx-cms-web
