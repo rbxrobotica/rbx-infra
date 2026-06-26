@@ -24,6 +24,8 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: rbx-catalog
       server: https://kubernetes.default.svc
+    - namespace: rbx-cms
+      server: https://kubernetes.default.svc
     - namespace: rbx-comms
       server: https://kubernetes.default.svc
     - namespace: rbx-console
