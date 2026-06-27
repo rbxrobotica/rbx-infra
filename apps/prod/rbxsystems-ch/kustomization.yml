@@ -12,6 +12,7 @@ resources:
   - secretstore-k8s.yml
   - externalsecret-s3.yml
   - externalsecret-contact.yml
+  - externalsecret-llm.yml
 
 commonLabels:
   app.kubernetes.io/part-of: rbxsystems-ch
