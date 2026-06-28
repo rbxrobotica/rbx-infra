@@ -1,8 +1,9 @@
 # md-prec-kulinaryos Deployment
 # RBX MPBIC — Modelo de Precificação Baseado em Índice de Complexidade (v1.0)
-# SvelteKit (adapter-node) SSR server. App repo: github.com/ldamasio/md-prec-kulinaryos
+# SvelteKit (adapter-node) SSR server. App repo: github.com/rbxrobotica/md-prec-kulinaryos
 # Container listens on PORT=3000 and exposes GET /health.
-# Image built & pushed by the app repo's GHCR CI (.github/workflows/build.yml).
+# Pattern R (org registry + kustomize images-transformer): the image TAG is set
+# in kustomization.yml (images.newTag) and promoted by ArgoCD Image Updater.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,12 +25,13 @@ spec:
         app.kubernetes.io/component: web
     spec:
       imagePullSecrets:
-        - name: ghcr-ldamasio
+        - name: ghcr-pull-secret
       containers:
         - name: md-prec-kulinaryos
-          # Immutable sha tag published by ldamasio/md-prec-kulinaryos CI.
-          image: ghcr.io/ldamasio/md-prec-kulinaryos:sha-164e899
-          imagePullPolicy: IfNotPresent
+          # Image name only — tag is injected by kustomization.yml (images-transformer),
+          # promoted by ArgoCD Image Updater. See gitops/app-of-apps/md-prec-kulinaryos-prod.yml.
+          image: ghcr.io/rbxrobotica/md-prec-kulinaryos
+          imagePullPolicy: Always
           ports:
             - containerPort: 3000
               name: http
