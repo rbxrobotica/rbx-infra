@@ -20,4 +20,4 @@ images:
   # Tag promoted by ArgoCD Image Updater (git write-back to this file).
   # See gitops/app-of-apps/md-prec-kulinaryos-prod.yml and docs/infra/IMAGE-PROMOTION.md.
   - name: ghcr.io/rbxrobotica/md-prec-kulinaryos
-    newTag: sha-d15c243
+    newTag: sha-9dfb375
