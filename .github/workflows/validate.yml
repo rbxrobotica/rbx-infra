@@ -33,8 +33,12 @@ jobs:
 
       - name: Validate Kubernetes manifests
         run: |
-          find apps core gitops platform -type f \( -name "*.yml" -o -name "*.yaml" \) | \
-            xargs kubeconform -ignore-missing-schemas -summary -output json
+          # Exclude archived manifests (not deployed) and skip HTTPRoute (Gateway
+          # API CRD with no standard json-schema — its schema URL 400s and trips
+          # kubeconform's error exit instead of -ignore-missing-schemas).
+          find apps core gitops platform -type f \( -name "*.yml" -o -name "*.yaml" \) \
+            -not -path "*/archived/*" | \
+            xargs kubeconform -ignore-missing-schemas -skip HTTPRoute -summary -output json
 
       - name: Validate rendered production overlays
         run: |
