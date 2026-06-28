@@ -78,3 +78,27 @@ jobs:
           exit-code: '0'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
+
+  convention-lint:
+    # Pattern R enforcement on the app manifests a PR changes (blocks NEW
+    # non-conformance; the pre-existing backlog is untouched).
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch main
+        run: git fetch origin main
+
+      - name: Pattern R image convention (changed apps/ manifests)
+        run: |
+          mapfile -t FILES < <(git diff --name-only --diff-filter=AM origin/main...HEAD -- apps/ | grep -E '\.(yml|yaml)$' || true)
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "No changed app manifests — skipping."
+            exit 0
+          fi
+          printf 'Checking %d changed manifest(s):\n' "${#FILES[@]}"
+          printf '  - %s\n' "${FILES[@]}"
+          bash scripts/check-image-convention.sh "${FILES[@]}"
