@@ -8,6 +8,20 @@ metadata:
     app.kubernetes.io/name: strategos-prod
     app.kubernetes.io/component: application
     app.kubernetes.io/part-of: strategos
+  annotations:
+    # ArgoCD Image Updater: watch both org images and write the promoted sha tags
+    # into apps/prod/strategos/kustomization.yml. Write-back reuses the fleet
+    # credential rbx/github/rbx-infra-image-updater (argocd-image-updater-git-creds).
+    argocd-image-updater.argoproj.io/image-list: site=ghcr.io/rbxrobotica/strategos-site, ui=ghcr.io/rbxrobotica/strategos-ui
+    argocd-image-updater.argoproj.io/site.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/ui.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/site.allow-tags: regexp:^sha-[0-9a-f]+$
+    argocd-image-updater.argoproj.io/ui.allow-tags: regexp:^sha-[0-9a-f]+$
+    argocd-image-updater.argoproj.io/site.kustomize.image-name: ghcr.io/rbxrobotica/strategos-site
+    argocd-image-updater.argoproj.io/ui.kustomize.image-name: ghcr.io/rbxrobotica/strategos-ui
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: main
+    argocd-image-updater.argoproj.io/write-back-target: kustomization
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:

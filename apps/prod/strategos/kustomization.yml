@@ -17,3 +17,11 @@ labels:
       app.kubernetes.io/part-of: strategos
       environment: production
     includeSelectors: false
+
+images:
+  # Tags promoted by ArgoCD Image Updater (git write-back to this file).
+  # See gitops/app-of-apps/strategos-prod.yml and docs/infra/IMAGE-PROMOTION.md.
+  - name: ghcr.io/rbxrobotica/strategos-site
+    newTag: sha-f26387e
+  - name: ghcr.io/rbxrobotica/strategos-ui
+    newTag: sha-2b4242e
