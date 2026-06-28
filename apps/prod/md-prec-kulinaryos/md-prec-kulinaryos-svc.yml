@@ -1,0 +1,18 @@
+# md-prec-kulinaryos Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: md-prec-kulinaryos
+  namespace: md-prec-kulinaryos
+  labels:
+    app.kubernetes.io/name: md-prec-kulinaryos
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: md-prec-kulinaryos
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: md-prec-kulinaryos
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000

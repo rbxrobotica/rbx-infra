@@ -1,0 +1,33 @@
+# md-prec-kulinaryos Ingress
+# Public host: md-prec-kulinaryos.rbx.ia.br
+# DNS: A record md-prec-kulinaryos.rbx.ia.br -> 158.220.116.31 (created at registro.br).
+# TLS terminated by cert-manager (letsencrypt-prod); HTTP->HTTPS redirect via Traefik.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: md-prec-kulinaryos
+  namespace: md-prec-kulinaryos
+  labels:
+    app.kubernetes.io/name: md-prec-kulinaryos
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: md-prec-kulinaryos
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.middlewares: md-prec-kulinaryos-redirect-https@kubernetescrd
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - md-prec-kulinaryos.rbx.ia.br
+      secretName: md-prec-kulinaryos-tls
+  rules:
+    - host: md-prec-kulinaryos.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: md-prec-kulinaryos
+                port:
+                  number: 80

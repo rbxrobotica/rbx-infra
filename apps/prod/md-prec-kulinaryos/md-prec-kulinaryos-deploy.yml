@@ -1,0 +1,72 @@
+# md-prec-kulinaryos Deployment
+# RBX MPBIC — Modelo de Precificação Baseado em Índice de Complexidade (v1.0)
+# SvelteKit (adapter-node) SSR server. App repo: github.com/ldamasio/md-prec-kulinaryos
+# Container listens on PORT=3000 and exposes GET /health.
+# Image built & pushed by the app repo's GHCR CI (.github/workflows/build.yml).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: md-prec-kulinaryos
+  namespace: md-prec-kulinaryos
+  labels:
+    app.kubernetes.io/name: md-prec-kulinaryos
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: md-prec-kulinaryos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: md-prec-kulinaryos
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: md-prec-kulinaryos
+        app.kubernetes.io/component: web
+    spec:
+      imagePullSecrets:
+        - name: ghcr-ldamasio
+      containers:
+        - name: md-prec-kulinaryos
+          # Immutable sha tag published by ldamasio/md-prec-kulinaryos CI.
+          image: ghcr.io/ldamasio/md-prec-kulinaryos:sha-164e899
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: PORT
+              value: "3000"
+            - name: ORIGIN
+              value: https://md-prec-kulinaryos.rbx.ia.br
+            - name: NODE_ENV
+              value: production
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "300m"
+              memory: "256Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
