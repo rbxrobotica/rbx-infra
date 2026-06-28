@@ -1,5 +1,5 @@
 # Merovelis Site Deployment (public institutional site for merovelis.com)
-# Image is published by ldamasio/merovelis-site GitHub Actions.
+# Image published by rbxrobotica/merovelis-site CI (Pattern R: org registry; tag in kustomization.yml).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -21,12 +21,13 @@ spec:
         app.kubernetes.io/component: frontend
     spec:
       imagePullSecrets:
-        - name: ghcr-ldamasio
+        - name: ghcr-pull-secret
       containers:
         - name: merovelis-site
-          # Immutable sha tag published by ldamasio/merovelis-site CI.
-          image: ghcr.io/ldamasio/merovelis-site:sha-24989aa
-          imagePullPolicy: IfNotPresent
+          # Image name only — tag injected by kustomization.yml (images-transformer),
+          # promoted by ArgoCD Image Updater. See gitops/app-of-apps/merovelis-prod.yml.
+          image: ghcr.io/rbxrobotica/merovelis-site
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
               name: http

@@ -14,3 +14,9 @@ labels:
       app.kubernetes.io/part-of: merovelis
       environment: production
     includeSelectors: false
+
+images:
+  # Tag promoted by ArgoCD Image Updater (git write-back to this file).
+  # See gitops/app-of-apps/merovelis-prod.yml and docs/infra/IMAGE-PROMOTION.md.
+  - name: ghcr.io/rbxrobotica/merovelis-site
+    newTag: sha-2a8a031

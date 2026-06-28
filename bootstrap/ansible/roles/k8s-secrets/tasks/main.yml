@@ -1324,3 +1324,50 @@
       - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
       - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY"
   when: tenant_id_existing.rc == 0
+
+# --- Pattern R: org-registry pull secrets for apps migrating off ghcr-ldamasio ---
+# Provisioned here (not mid-file) to avoid merge conflicts with concurrent Pattern R PRs.
+
+- name: Ensure merovelis namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace merovelis
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in merovelis
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace merovelis \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+- name: Ensure strategos namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace strategos
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in strategos
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace strategos \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
