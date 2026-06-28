@@ -739,6 +739,30 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# md-prec-kulinaryos namespace (RBX MPBIC — org image ghcr.io/rbxrobotica/md-prec-kulinaryos)
+
+- name: Ensure md-prec-kulinaryos namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace md-prec-kulinaryos
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in md-prec-kulinaryos
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace md-prec-kulinaryos \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
 # monitoring namespace secrets (Grafana)
 # ---------------------------------------------------------------------------
 

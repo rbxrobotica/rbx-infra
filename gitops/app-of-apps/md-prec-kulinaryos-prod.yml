@@ -10,6 +10,18 @@ metadata:
     app.kubernetes.io/name: md-prec-kulinaryos-prod
     app.kubernetes.io/component: application
     app.kubernetes.io/part-of: md-prec-kulinaryos
+  annotations:
+    # ArgoCD Image Updater: watch the org image and write the promoted sha tag
+    # into apps/prod/md-prec-kulinaryos/kustomization.yml. Write-back reuses the
+    # fleet credential rbx/github/rbx-infra-image-updater (argocd-image-updater-git-creds).
+    # See docs/infra/IMAGE-PROMOTION.md.
+    argocd-image-updater.argoproj.io/image-list: app=ghcr.io/rbxrobotica/md-prec-kulinaryos
+    argocd-image-updater.argoproj.io/app.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/app.allow-tags: regexp:^sha-[0-9a-f]+$
+    argocd-image-updater.argoproj.io/app.kustomize.image-name: ghcr.io/rbxrobotica/md-prec-kulinaryos
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: main
+    argocd-image-updater.argoproj.io/write-back-target: kustomization
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
