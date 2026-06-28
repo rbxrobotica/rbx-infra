@@ -8,6 +8,17 @@ metadata:
     app.kubernetes.io/name: rbxsystems-ch
     app.kubernetes.io/component: application
     app.kubernetes.io/part-of: rbxsystems-ch
+  annotations:
+    # ArgoCD Image Updater: watch the org image and write the promoted sha tag
+    # into apps/prod/rbxsystems-ch/kustomization.yml. Same image as rbx-ia-br
+    # (one frontend, two hosts). Replaces the legacy CI self-push promotion.
+    argocd-image-updater.argoproj.io/image-list: app=ghcr.io/rbxrobotica/rbx-ia-br
+    argocd-image-updater.argoproj.io/app.update-strategy: newest-build
+    argocd-image-updater.argoproj.io/app.allow-tags: regexp:^sha-[0-9a-f]+$
+    argocd-image-updater.argoproj.io/app.kustomize.image-name: ghcr.io/rbxrobotica/rbx-ia-br
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: main
+    argocd-image-updater.argoproj.io/write-back-target: kustomization
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
