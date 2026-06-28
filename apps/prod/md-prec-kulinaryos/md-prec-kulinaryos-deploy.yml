@@ -28,7 +28,7 @@ spec:
       containers:
         - name: md-prec-kulinaryos
           # Immutable sha tag published by ldamasio/md-prec-kulinaryos CI.
-          image: ghcr.io/ldamasio/md-prec-kulinaryos:sha-164e899
+          image: ghcr.io/ldamasio/md-prec-kulinaryos:sha-80f56c7
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
