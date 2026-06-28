@@ -33,8 +33,12 @@ jobs:
 
       - name: Validate Kubernetes manifests
         run: |
-          find apps core gitops platform -type f \( -name "*.yml" -o -name "*.yaml" \) | \
-            xargs kubeconform -ignore-missing-schemas -summary -output json
+          # Exclude archived manifests (not deployed) and skip HTTPRoute (Gateway
+          # API CRD with no standard json-schema — its schema URL 400s and trips
+          # kubeconform's error exit instead of -ignore-missing-schemas).
+          find apps core gitops platform -type f \( -name "*.yml" -o -name "*.yaml" \) \
+            -not -path "*/archived/*" | \
+            xargs kubeconform -ignore-missing-schemas -skip HTTPRoute -summary -output json
 
       - name: Validate rendered production overlays
         run: |
@@ -78,3 +82,27 @@ jobs:
           exit-code: '0'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
+
+  convention-lint:
+    # Pattern R enforcement on the app manifests a PR changes (blocks NEW
+    # non-conformance; the pre-existing backlog is untouched).
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch main
+        run: git fetch origin main
+
+      - name: Pattern R image convention (changed apps/ manifests)
+        run: |
+          mapfile -t FILES < <(git diff --name-only --diff-filter=AM origin/main...HEAD -- apps/ | grep -E '\.(yml|yaml)$' || true)
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "No changed app manifests — skipping."
+            exit 0
+          fi
+          printf 'Checking %d changed manifest(s):\n' "${#FILES[@]}"
+          printf '  - %s\n' "${FILES[@]}"
+          bash scripts/check-image-convention.sh "${FILES[@]}"
