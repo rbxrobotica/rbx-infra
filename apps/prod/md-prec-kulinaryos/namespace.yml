@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: md-prec-kulinaryos
+  labels:
+    app.kubernetes.io/part-of: md-prec-kulinaryos
+    environment: production

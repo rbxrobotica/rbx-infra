@@ -1,0 +1,17 @@
+# Kustomization for md-prec-kulinaryos Production
+# RBX MPBIC — Modelo de Precificação Baseado em Índice de Complexidade (v1.0)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yml
+  - middleware-https.yml
+  - md-prec-kulinaryos-deploy.yml
+  - md-prec-kulinaryos-svc.yml
+  - md-prec-kulinaryos-ingress.yml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: md-prec-kulinaryos
+      environment: production
+    includeSelectors: false
