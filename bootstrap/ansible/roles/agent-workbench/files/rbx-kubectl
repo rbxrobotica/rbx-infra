@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# rbx-kubectl — selects the per-agent Corbetti kubeconfig and runs kubectl.
+# ADR-0500 Amendment 2026-07 / rbx-security AGENT-KUBE-001.
+#
+# The selected kubeconfig grants scoped WRITE to 8 app namespaces (robson, rbx-commerce,
+# rbx-maestro, rbx-comms, truthmetal, eden, llm-gateway, rbx-observability). Crown-jewel
+# namespaces are fenced out. Every MUTATING action still requires per-operation human
+# authorization (ai-agent-security-policy §2); this wrapper only selects the credential.
+#
+# Usage:
+#   RBX_AGENT=claude rbx-kubectl get pods -A
+#   rbx-kubectl --agent codex rollout restart deploy/x -n robson
+#   rbx-kubectl kimi logs deploy/y -n rbx-commerce   # leading positional agent
+set -euo pipefail
+
+AGENT="${RBX_AGENT:-}"
+args=("$@")
+# Peel --agent <name> / --agent=<name> out of the args.
+i=0
+while [ $i -lt ${#args[@]} ]; do
+  case "${args[$i]:-}" in
+    --agent)  AGENT="${args[$((i+1))]:-}"; unset 'args[i]' 'args[i+1]'; i=$((i+2)); continue;;
+    --agent=*) AGENT="${args[i]#--agent=}"; unset 'args[i]'; i=$((i+1)); continue;;
+  esac
+  i=$((i+1))
+done
+args=("${args[@]}")
+
+# Allow a leading positional agent name.
+if [ -z "$AGENT" ] && [ ${#args[@]} -gt 0 ]; then
+  case "${args[0]}" in
+    claude|codex|kimi|glm) AGENT="${args[0]}"; args=("${args[@]:1}") ;;
+  esac
+fi
+
+case "$AGENT" in
+  claude|codex|kimi|glm) ;;
+  *) echo "rbx-kubectl: no agent. Set RBX_AGENT=<claude|codex|kimi|glm> or pass --agent / a leading positional agent." >&2; exit 2 ;;
+esac
+
+KC="${HOME}/.kube/corbetti-${AGENT}.kubeconfig"
+[ -f "$KC" ] || { echo "rbx-kubectl: kubeconfig not found: $KC" >&2; exit 2; }
+
+exec kubectl --kubeconfig "$KC" "${args[@]}"

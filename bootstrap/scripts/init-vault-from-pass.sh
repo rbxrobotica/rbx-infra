@@ -35,6 +35,13 @@ POSTMARK_SERVER_TOKEN="$(pass show rbx/postmark/rbx-institutional-server-token)"
 CORBETTI_RUNNER_KEY="$(pass show rbx/corbetti/maestro-runner-key)"
 CORBETTI_GITHUB_PAT="$(pass show rbx/corbetti/github-pat)"
 CORBETTI_ZAI_API_KEY="$(pass show rbx/corbetti/zai-api-key)"
+# Corbetti per-agent kubeconfigs (ADR-0500 Amendment 2026-07 / AGENT-KUBE-001).
+# Minted out-of-band by rbx-agent-tokens; base64-encoded here (multi-line kubeconfig
+# would break a YAML scalar). Phase 3 must mint + pass-insert these before this script runs.
+CORBETTI_KUBECONFIG_CLAUDE="$(pass show rbx/corbetti/claude-kubeconfig)"
+CORBETTI_KUBECONFIG_CODEX="$(pass show rbx/corbetti/codex-kubeconfig)"
+CORBETTI_KUBECONFIG_KIMI="$(pass show rbx/corbetti/kimi-kubeconfig)"
+CORBETTI_KUBECONFIG_GLM="$(pass show rbx/corbetti/glm-kubeconfig)"
 
 echo "==> Writing vault.yml (gitignored)..."
 
@@ -84,6 +91,14 @@ github_pat: "${CORBETTI_GITHUB_PAT}"
 
 # ZhipuAI (z.ai) API key — GLM executor via Anthropic-compatible API (Phase 5)
 zai_api_key: "${CORBETTI_ZAI_API_KEY}"
+
+# Corbetti per-agent kubeconfigs (ADR-0500 Amendment 2026-07 / AGENT-KUBE-001).
+# base64-encoded (a multi-line kubeconfig would break a YAML scalar); the
+# agent-workbench role b64decodes on write.
+corbetti_claude_kubeconfig_b64: "$(printf '%s' "${CORBETTI_KUBECONFIG_CLAUDE}" | base64 -w0)"
+corbetti_codex_kubeconfig_b64: "$(printf '%s' "${CORBETTI_KUBECONFIG_CODEX}" | base64 -w0)"
+corbetti_kimi_kubeconfig_b64: "$(printf '%s' "${CORBETTI_KUBECONFIG_KIMI}" | base64 -w0)"
+corbetti_glm_kubeconfig_b64: "$(printf '%s' "${CORBETTI_KUBECONFIG_GLM}" | base64 -w0)"
 EOF
 
 echo "==> vault.yml written to ${VAULT_FILE}"

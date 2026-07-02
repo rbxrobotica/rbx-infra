@@ -1,0 +1,13 @@
+# Namespace: corbetti-agents
+# Home of the per-agent ServiceAccounts (corbetti-claude/codex/kimi/glm) backing the
+# Corbetti devbox kubeconfigs (ADR-0500 Amendment 2026-07 / rbx-security AGENT-KUBE-001).
+# This namespace is INERT: the SAs have no RoleBindings here. They are bound
+# cross-namespace into the 8 application namespaces by rbac.yml (generated).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: corbetti-agents
+  labels:
+    app.kubernetes.io/part-of: rbx-agent-access
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

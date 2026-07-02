@@ -1,0 +1,33 @@
+# ArgoCD Application: Corbetti agent cluster access (RBAC + ServiceAccounts)
+# ADR-0500 Amendment 2026-07 / rbx-security AGENT-KUBE-001.
+# Deploys the corbetti-agents namespace + 4 per-agent ServiceAccounts + scoped WRITE
+# RBAC (Roles + RoleBindings in 8 app namespaces). The ValidatingAdmissionPolicy
+# guardrail lives under platform/agent-access/ (rbx-platform project, cluster-scoped).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-agent-access
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-agent-access
+    app.kubernetes.io/component: application
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-agent-access
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: corbetti-agents
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
