@@ -1,0 +1,103 @@
+# ValidatingAdmissionPolicy guardrails for the Corbetti agent ServiceAccounts.
+# ADR-0500 Amendment 2026-07 / rbx-security AGENT-KUBE-001.
+# Defense-in-depth ON TOP of the RBAC verb scope — does NOT relax it.
+#
+# VAP-1 (corbetti-agent-destructive-guardrail): denies update/patch/delete on Secrets,
+#   any matched verb on PersistentVolumeClaims, and writes on RBAC objects
+#   (anti-escalation) by the 4 agent SAs, even where RBAC would allow them.
+# VAP-2 (corbetti-agent-excluded-namespace-fence): denies any matched request by the 4
+#   agent SAs into crown-jewel namespaces (rbx-ia-br, argocd, kube-system, monitoring,
+#   default). RBAC absence already denies these; VAP-2 is a second fence.
+#
+# Lives under platform/ (rbx-platform project) because ValidatingAdmissionPolicy is
+# cluster-scoped and rbx-applications whitelists only specific cluster-scoped kinds.
+# k3s v1.32.3: VAP is GA (since upstream k8s 1.30) and on by default — no feature gate,
+# no admission plugin. Fallback if VAP is ever disabled: Kyverno (not present today).
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: corbetti-agent-destructive-guardrail
+  labels:
+    app.kubernetes.io/name: corbetti-agent-guardrails
+    app.kubernetes.io/part-of: rbx-agent-access
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [""]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "PATCH", "DELETE"]
+        resources: ["secrets", "persistentvolumeclaims"]
+      - apiGroups: ["rbac.authorization.k8s.io"]
+        apiVersions: ["v1"]
+        operations: ["CREATE", "UPDATE", "PATCH", "DELETE"]
+        resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
+  matchConditions:
+    - name: is-corbetti-agent
+      expression: >
+        request.userInfo.username in [
+          "system:serviceaccount:corbetti-agents:corbetti-claude",
+          "system:serviceaccount:corbetti-agents:corbetti-codex",
+          "system:serviceaccount:corbetti-agents:corbetti-kimi",
+          "system:serviceaccount:corbetti-agents:corbetti-glm"
+        ]
+  validations:
+    - expression: "!(request.resource.resource == 'secrets' && request.operation in ['UPDATE', 'PATCH', 'DELETE'])"
+      message: "agent SAs may not update/patch/delete Secrets (read + create only)"
+    - expression: "request.resource.resource != 'persistentvolumeclaims'"
+      message: "agent SAs may not touch PersistentVolumeClaims in any verb"
+    - expression: "!(request.resource.resource in ['roles', 'rolebindings', 'clusterroles', 'clusterrolebindings'])"
+      message: "agent SAs may not write RBAC objects (anti-escalation)"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: corbetti-agent-destructive-guardrail-binding
+  labels:
+    app.kubernetes.io/name: corbetti-agent-guardrails
+    app.kubernetes.io/part-of: rbx-agent-access
+spec:
+  policyName: corbetti-agent-destructive-guardrail
+  validationActions:
+    - Deny
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: corbetti-agent-excluded-namespace-fence
+  labels:
+    app.kubernetes.io/name: corbetti-agent-guardrails
+    app.kubernetes.io/part-of: rbx-agent-access
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["*"]
+        apiVersions: ["*"]
+        operations: ["CREATE", "UPDATE", "PATCH", "DELETE", "CONNECT"]
+        resources: ["*"]
+  matchConditions:
+    - name: is-corbetti-agent
+      expression: >
+        request.userInfo.username in [
+          "system:serviceaccount:corbetti-agents:corbetti-claude",
+          "system:serviceaccount:corbetti-agents:corbetti-codex",
+          "system:serviceaccount:corbetti-agents:corbetti-kimi",
+          "system:serviceaccount:corbetti-agents:corbetti-glm"
+        ]
+  validations:
+    - expression: "!(request.namespace in ['rbx-ia-br', 'argocd', 'kube-system', 'monitoring', 'default'])"
+      message: "agent SAs are fenced out of crown-jewel namespaces (rbx-ia-br, argocd, kube-system, monitoring, default)"
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: corbetti-agent-excluded-namespace-fence-binding
+  labels:
+    app.kubernetes.io/name: corbetti-agent-guardrails
+    app.kubernetes.io/part-of: rbx-agent-access
+spec:
+  policyName: corbetti-agent-excluded-namespace-fence
+  validationActions:
+    - Deny
