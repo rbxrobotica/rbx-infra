@@ -21,6 +21,7 @@
     - "{{ ansible_env.HOME }}/.local/bin"
     - "{{ ansible_env.HOME }}/.lean-ctx"
     - "{{ ansible_env.HOME }}/.claude/hooks"
+    - "{{ ansible_env.HOME }}/.kube"
 
 - name: Write runner env file
   copy:
@@ -40,6 +41,27 @@
     dest: "{{ ansible_env.HOME }}/rbx/runner/.zai_key"
     content: "{{ zai_api_key }}"
     mode: "0600"
+
+# Corbetti agent cluster access (ADR-0500 Amendment 2026-07 / AGENT-KUBE-001).
+# Per-agent kubeconfigs from group_vars/agent_workbench/vault.yml (base64-encoded there
+# by init-vault-from-pass.sh; decoded on write). Scoped WRITE to 8 app namespaces only.
+- name: Write per-agent kubeconfigs (scoped WRITE to 8 app namespaces)
+  copy:
+    dest: "{{ ansible_env.HOME }}/.kube/corbetti-{{ item.agent }}.kubeconfig"
+    content: "{{ item.config_b64 | b64decode }}"
+    mode: "0600"
+  loop:
+    - { agent: claude, config_b64: "{{ corbetti_claude_kubeconfig_b64 }}" }
+    - { agent: codex,   config_b64: "{{ corbetti_codex_kubeconfig_b64 }}" }
+    - { agent: kimi,    config_b64: "{{ corbetti_kimi_kubeconfig_b64 }}" }
+    - { agent: glm,     config_b64: "{{ corbetti_glm_kubeconfig_b64 }}" }
+  no_log: true
+
+- name: Deploy rbx-kubectl wrapper (selects per-agent kubeconfig)
+  copy:
+    src: rbx-kubectl
+    dest: "{{ ansible_env.HOME }}/rbx/bin/rbx-kubectl"
+    mode: "0750"
 
 - name: Deploy GLM wrapper script
   copy:
