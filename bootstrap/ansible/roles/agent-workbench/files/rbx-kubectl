@@ -41,4 +41,11 @@ esac
 KC="${HOME}/.kube/corbetti-${AGENT}.kubeconfig"
 [ -f "$KC" ] || { echo "rbx-kubectl: kubeconfig not found: $KC" >&2; exit 2; }
 
-exec kubectl --kubeconfig "$KC" "${args[@]}"
+# Resolve kubectl: $KUBECTL, then PATH, then the devbox nix profile. Agents run inside
+# `devbox shell` (kubectl in PATH); the nix fallback covers ad-hoc login-shell use.
+for _cand in "${KUBECTL:-}" "$(command -v kubectl 2>/dev/null)" "${HOME}/rbx/.devbox/nix/profile/default/bin/kubectl"; do
+  [ -x "$_cand" ] && { KUBECTL="$_cand"; break; }
+done
+[ -x "${KUBECTL:-}" ] || { echo "rbx-kubectl: kubectl not found (run inside 'devbox shell' or install kubectl)" >&2; exit 2; }
+
+exec "$KUBECTL" --kubeconfig "$KC" "${args[@]}"
