@@ -27,11 +27,11 @@ spec:
     resourceRules:
       - apiGroups: [""]
         apiVersions: ["v1"]
-        operations: ["CREATE", "UPDATE", "PATCH", "DELETE"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
         resources: ["secrets", "persistentvolumeclaims"]
       - apiGroups: ["rbac.authorization.k8s.io"]
         apiVersions: ["v1"]
-        operations: ["CREATE", "UPDATE", "PATCH", "DELETE"]
+        operations: ["CREATE", "UPDATE", "DELETE"]
         resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
   matchConditions:
     - name: is-corbetti-agent
@@ -75,7 +75,7 @@ spec:
     resourceRules:
       - apiGroups: ["*"]
         apiVersions: ["*"]
-        operations: ["CREATE", "UPDATE", "PATCH", "DELETE", "CONNECT"]
+        operations: ["CREATE", "UPDATE", "DELETE", "CONNECT"]
         resources: ["*"]
   matchConditions:
     - name: is-corbetti-agent
