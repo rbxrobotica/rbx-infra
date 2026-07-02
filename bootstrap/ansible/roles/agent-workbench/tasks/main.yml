@@ -51,10 +51,14 @@
     content: "{{ item.config_b64 | b64decode }}"
     mode: "0600"
   loop:
-    - { agent: claude, config_b64: "{{ corbetti_claude_kubeconfig_b64 }}" }
-    - { agent: codex,   config_b64: "{{ corbetti_codex_kubeconfig_b64 }}" }
-    - { agent: kimi,    config_b64: "{{ corbetti_kimi_kubeconfig_b64 }}" }
-    - { agent: glm,     config_b64: "{{ corbetti_glm_kubeconfig_b64 }}" }
+    - agent: claude
+      config_b64: "{{ corbetti_claude_kubeconfig_b64 }}"
+    - agent: codex
+      config_b64: "{{ corbetti_codex_kubeconfig_b64 }}"
+    - agent: kimi
+      config_b64: "{{ corbetti_kimi_kubeconfig_b64 }}"
+    - agent: glm
+      config_b64: "{{ corbetti_glm_kubeconfig_b64 }}"
   no_log: true
 
 - name: Deploy rbx-kubectl wrapper (selects per-agent kubeconfig)
