@@ -31,6 +31,13 @@ update-ip:
 	@[ -n "$(NEW_IP6)" ] && ssh root@158.220.116.31 "ufw allow from $(NEW_IP6) to any port 6443 proto tcp" || true
 	@echo "Done. kubectl access updated."
 
+# Allow the Corbetti devbox (static IP) to reach the API server. ADDITIVE; does not
+# touch the operator's rotating-IP rule (update-ip). ADR-0500 Amendment 2026-07.
+allow-corbetti:
+	@echo "Allowing Corbetti 13.140.148.30 -> 6443 on tiger..."
+	ssh root@158.220.116.31 "ufw allow from 13.140.148.30 to any port 6443 proto tcp"
+	@echo "Done."
+
 # Bootstrap a new cluster
 bootstrap:
 	@echo "Creating argocd namespace..."
