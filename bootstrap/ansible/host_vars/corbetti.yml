@@ -1,0 +1,22 @@
+---
+# corbetti — Agent Execution Workbench (rbx-governance ADR-0500).
+# Dedicated VPS devbox for coding agents (Claude Code, Codex, Kimi, GLM).
+# Not a k3s node; outside the prod cluster by design.
+#
+# ADR-0500 Amendment 2026-07 / rbx-security AGENT-KUBE-001: Corbetti holds scoped
+# WRITE kubeconfigs to 8 application namespaces (robson, rbx-commerce, rbx-maestro,
+# rbx-comms, truthmetal, eden, llm-gateway, rbx-observability) via per-agent
+# ServiceAccounts (corbetti-<agent>) in the corbetti-agents namespace.
+#
+# Boundaries (conditions of the exception):
+#   - NO crown-jewel namespace access (rbx-ia-br, argocd, kube-system, monitoring, default).
+#   - NO pass store on host (creds delivered, not the SoT).
+#   - Per-operation human authorization (ai-agent-security-policy §2) required for
+#     every mutating kubectl action; creds enable, they do not authorize.
+#   - Compensating controls: ValidatingAdmissionPolicy guardrail (VAP-1/VAP-2),
+#     selfHeal+prune GitOps backstop, kube-audit review + alert.
+#
+# Kubeconfig delivery: the agent-workbench role writes
+# ~/.kube/corbetti-<agent>.kubeconfig (0600) from group_vars/agent_workbench/vault.yml,
+# sourced from pass via bootstrap/scripts/init-vault-from-pass.sh
+# (pass paths: rbx/corbetti/<agent>-kubeconfig).
