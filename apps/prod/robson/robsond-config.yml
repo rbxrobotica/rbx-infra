@@ -37,6 +37,17 @@ data:
   # reconcile stale Active positions on boot instead of aborting the pod.
   ROBSON_RECONCILIATION_ON_STARTUP_STALE_ACTIVE: "auto_reconcile"
 
+  # Invalidation guard (ADR-0042): clamp the effective stop beyond the recent
+  # adverse extreme (highest high for shorts / lowest low for longs, last 20
+  # 15m candles incl. the forming one) so a mere retest of a recent extreme
+  # does not stop out a still-valid trade. Operator-enabled 2026-07-04.
+  ROBSON_STOP_INVALIDATION_GUARD_ENABLED: "true"
+
+  # Executable-stop buffer (ADR-0041): trigger execution 10 bps beyond the
+  # chosen stop level so fills avoid the obvious chart level. Priced into
+  # sizing; never changes the chart-derived stop itself.
+  ROBSON_STOP_BUFFER_BPS: "10"
+
   # CORS allow-list for the public frontend origins (FE-P1 B7).
   # Consumed by api::build_cors_layer in robsond.
   ROBSON_CORS_ALLOWED_ORIGINS: "https://robson.rbx.ia.br,https://robson.rbxsystems.ch"
