@@ -11,3 +11,5 @@ resources:
   - rbx-commerce-ingress.yml
   - rbx-commerce-deploy.yml
   - rbx-commerce-svc.yml
+  - rbx-commerce-web-deploy.yml
+  - rbx-commerce-web-svc.yml

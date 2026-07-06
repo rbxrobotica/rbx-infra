@@ -1,0 +1,18 @@
+# Service: rbx-commerce-web
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-commerce-web
+  namespace: rbx-commerce
+  labels:
+    app.kubernetes.io/name: rbx-commerce-web
+    app.kubernetes.io/component: web
+    app.kubernetes.io/part-of: rbx-commerce
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rbx-commerce-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000

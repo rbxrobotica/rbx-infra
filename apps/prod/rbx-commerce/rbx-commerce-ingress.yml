@@ -1,4 +1,5 @@
 # Ingress: commerce.rbx.ia.br + commerce.rbxsystems.ch
+# Routes API/webhook/health paths to the Go backend and everything else to the SvelteKit frontend.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -19,20 +20,76 @@ spec:
     - host: commerce.rbx.ia.br
       http:
         paths:
-          - path: /
+          - path: /api/v1
             pathType: Prefix
             backend:
               service:
                 name: rbx-commerce
                 port:
                   number: 80
-    - host: commerce.rbxsystems.ch
-      http:
-        paths:
-          - path: /
+          - path: /api
             pathType: Prefix
             backend:
               service:
                 name: rbx-commerce
+                port:
+                  number: 80
+          - path: /webhooks
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce
+                port:
+                  number: 80
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce-web
+                port:
+                  number: 80
+    - host: commerce.rbxsystems.ch
+      http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce
+                port:
+                  number: 80
+          - path: /webhooks
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce
+                port:
+                  number: 80
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce-web
                 port:
                   number: 80
