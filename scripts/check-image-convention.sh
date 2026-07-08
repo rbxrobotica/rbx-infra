@@ -17,6 +17,10 @@
 #      The tag belongs in the kustomize `images:`-transformer (kustomization.yml
 #      `newTag`); the deploy manifest uses the bare name or `:latest`.
 #
+#   3. NO FLOATING PROD KUSTOMIZE TAG: a production kustomization MUST NOT set
+#      `newTag: latest`. If an app uses `:latest` as a deployment placeholder,
+#      the rendered overlay still has to converge to an immutable `sha-*` tag.
+#
 # Exit 1 on any violation. Designed to run on the manifest files CHANGED by a
 # PR (changed-files scoped), so it blocks new non-conformance without failing
 # on the pre-existing backlog.
@@ -35,6 +39,17 @@ for f in "$@"; do
 
   is_deploy=0
   case "$(basename "$f")" in *deploy*) is_deploy=1 ;; esac
+
+  if [ "$(basename "$f")" = "kustomization.yml" ] || [ "$(basename "$f")" = "kustomization.yaml" ]; then
+    case "$f" in
+      apps/prod/*/kustomization.yml|apps/prod/*/kustomization.yaml)
+        if grep -Eq '^[[:space:]]*newTag:[[:space:]]*["'"'"']?latest["'"'"']?[[:space:]]*$' "$f"; then
+          echo "::error file=$f::Rule 3 (no floating prod kustomize tag): newTag: latest — production overlays must pin an immutable sha-* tag"
+          violations=$((violations + 1))
+        fi
+        ;;
+    esac
+  fi
 
   # Extract every `image: <ref>` value in the file.
   while IFS= read -r img; do
