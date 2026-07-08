@@ -106,3 +106,7 @@ jobs:
           printf 'Checking %d changed manifest(s):\n' "${#FILES[@]}"
           printf '  - %s\n' "${FILES[@]}"
           bash scripts/check-image-convention.sh "${FILES[@]}"
+
+      - name: P1 image-promotion debt report
+        run: |
+          bash scripts/report-p1-image-debt.sh

@@ -1,6 +1,7 @@
-# Workflow: Update Image Tags
-# Triggered by repository_dispatch from application repositories
-name: Update Image Tag
+# Workflow: Promote Image Tag
+# Triggered by repository_dispatch from application repositories.
+# Opens a promotion PR instead of writing directly to main.
+name: Promote Image Tag
 
 on:
   repository_dispatch:
@@ -14,65 +15,100 @@ on:
         description: 'New tag for the image'
         required: true
       app:
-        description: 'Application name (lda-prod, robson, strategos, thalamus)'
+        description: 'Application name'
         required: true
-        default: 'robson'
 
 permissions:
   contents: write
+  pull-requests: write
+  packages: read
 
 jobs:
-  update-manifest:
+  promote-image:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout rbx-infra
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Configure Git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Update image tag
+      - name: Resolve promotion request
+        id: request
         run: |
-          APP="${{ github.event.client_payload.app || inputs.app }}"
-          IMAGE="${{ github.event.client_payload.image || inputs.image }}"
-          TAG="${{ github.event.client_payload.tag || inputs.tag }}"
+          APP="${{ github.event.client_payload.app }}"
+          IMAGE="${{ github.event.client_payload.image }}"
+          TAG="${{ github.event.client_payload.tag }}"
 
-          # Update kustomization.yml
-          cd apps/prod/${APP}
+          if [ -z "$APP" ]; then APP="${{ inputs.app }}"; fi
+          if [ -z "$IMAGE" ]; then IMAGE="${{ inputs.image }}"; fi
+          if [ -z "$TAG" ]; then TAG="${{ inputs.tag }}"; fi
 
-          test -f kustomization.yml
+          TAG_ONLY="${TAG##*:}"
 
-          # Extract just the tag if full image reference provided
-          TAG_ONLY=$(echo "$TAG" | sed 's/.*://')
+          echo "app=$APP" >> "$GITHUB_OUTPUT"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG_ONLY" >> "$GITHUB_OUTPUT"
+          echo "kustomization=apps/prod/${APP}/kustomization.yml" >> "$GITHUB_OUTPUT"
 
-          # Update the image tag in kustomization.yml
-          sed -i "s|newTag: .*|newTag: ${TAG_ONLY}|" kustomization.yml
-
-          echo "Updated ${IMAGE} to tag ${TAG_ONLY}"
-
-      - name: Commit and push
+      - name: Login to GHCR for manifest verification
         run: |
-          git add apps/prod/${{ github.event.client_payload.app || inputs.app }}/kustomization.yml
-          if ! git diff --quiet || ! git diff --staged --quiet; then
-            git commit -m "chore: update image tag for ${{ github.event.client_payload.app || inputs.app }}"
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Validate and update kustomization
+        run: |
+          CHECK_REGISTRY=1 bash scripts/promote-image-tag.sh \
+            "${{ steps.request.outputs.app }}" \
+            "${{ steps.request.outputs.image }}" \
+            "${{ steps.request.outputs.tag }}"
+
+      - name: Run image convention checks
+        run: |
+          bash scripts/check-image-convention.sh "${{ steps.request.outputs.kustomization }}"
+
+      - name: Open promotion PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APP="${{ steps.request.outputs.app }}"
+          IMAGE="${{ steps.request.outputs.image }}"
+          TAG="${{ steps.request.outputs.tag }}"
+          BRANCH="image-promotion/${APP}/${TAG}-${GITHUB_RUN_ID}"
+
+          if git diff --quiet; then
+            echo "No promotion diff generated."
+            exit 0
           fi
-          git push
 
-      - name: Notify ArgoCD
-        if: success()
-        run: |
-          # ArgoCD will auto-sync, but we can force a refresh
-          echo "Image tag updated. ArgoCD will sync automatically."
+          git switch -c "$BRANCH"
+          git add "apps/prod/${APP}/kustomization.yml"
+          git commit -m "chore(${APP}): promote image ${TAG}"
+          git push --set-upstream origin "$BRANCH"
+
+          BODY_FILE="${RUNNER_TEMP}/promotion-pr-body.md"
+          {
+            echo "Automated image promotion request."
+            echo
+            echo "- App: ${APP}"
+            echo "- Image: ${IMAGE}"
+            echo "- Tag: ${TAG}"
+            echo "- Registry check: passed via docker manifest inspect"
+            echo "- Cluster action: none; ArgoCD sync remains separate and human-gated where required."
+          } > "$BODY_FILE"
+
+          gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "chore(${APP}): promote ${IMAGE} to ${TAG}" \
+            --body-file "$BODY_FILE"
 
   notify:
-    needs: update-manifest
+    needs: promote-image
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Send notification
         run: |
-          echo "Image update workflow completed with status: ${{ needs.update-manifest.result }}"
+          echo "Image promotion workflow completed with status: ${{ needs.promote-image.result }}"
