@@ -171,6 +171,14 @@ spec:
               cpu: 100m
               memory: 64Mi
 
+        # Keep admission webhooks enabled, but do not run the Helm
+        # kube-webhook-certgen patch/create hooks under ArgoCD. Existing hook
+        # RBAC/webhook resources caused repeated SyncError on 2026-07-08.
+        prometheusOperator:
+          admissionWebhooks:
+            patch:
+              enabled: false
+
   destination:
     server: https://kubernetes.default.svc
     namespace: monitoring

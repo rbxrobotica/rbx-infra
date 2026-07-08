@@ -75,11 +75,13 @@ Owner: infra operator.
 
 Actions:
 
-1. Restore `metrics-server` endpoints and `kubectl top nodes`.
-2. Consolidate `kube-prometheus-stack` to the `monitoring` namespace.
-3. Remove or prune the duplicate `default` namespace observability stack only
-   through an approved GitOps operation.
-4. Add alerts for:
+1. Use `docs/runbooks/P1B-METRICS-OBSERVABILITY-RECOVERY.md` as the recovery
+   procedure for `metrics-server` and observability consolidation.
+2. Restore `metrics-server` endpoints and `kubectl top nodes`.
+3. Consolidate `kube-prometheus-stack` to the `monitoring` namespace.
+4. Remove or prune the duplicate `default` namespace observability stack only
+   through an approved operational action.
+5. Add alerts for:
    - node `NotReady`;
    - metrics API unavailable;
    - empty critical Service endpoints;
@@ -92,6 +94,7 @@ Exit criteria:
 
 - Metrics API works.
 - Prometheus/Grafana/Loki/Promtail have one intended owner namespace.
+- `kube-prometheus-stack` no longer fails sync on admission hook resources.
 - Alert coverage includes empty endpoints and degraded GitOps apps.
 
 ## Workstream C - Image promotion hardening
