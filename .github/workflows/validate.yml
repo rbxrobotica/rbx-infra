@@ -14,6 +14,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup yamllint
         run: pip install yamllint
@@ -34,11 +36,30 @@ jobs:
       - name: Validate Kubernetes manifests
         run: |
           # Exclude archived manifests (not deployed) and skip HTTPRoute (Gateway
-          # API CRD with no standard json-schema — its schema URL 400s and trips
+          # API CRD with no standard json-schema - its schema URL 400s and trips
           # kubeconform's error exit instead of -ignore-missing-schemas).
-          find apps core gitops platform -type f \( -name "*.yml" -o -name "*.yaml" \) \
-            -not -path "*/archived/*" | \
-            xargs kubeconform -ignore-missing-schemas -skip HTTPRoute -summary -output json
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            mapfile -t manifests < <(
+              git diff --name-only --diff-filter=AM "origin/${{ github.base_ref }}...HEAD" -- apps core gitops platform |
+                grep -E '\.(yml|yaml)$' |
+                grep -v '/archived/' ||
+                true
+            )
+          else
+            mapfile -t manifests < <(
+              find apps core gitops platform -type f \( -name "*.yml" -o -name "*.yaml" \) \
+                -not -path "*/archived/*"
+            )
+          fi
+
+          if [ "${#manifests[@]}" -eq 0 ]; then
+            echo "No Kubernetes manifests to validate."
+            exit 0
+          fi
+
+          printf 'Validating %d manifest(s):\n' "${#manifests[@]}"
+          printf '  - %s\n' "${manifests[@]}"
+          kubeconform -ignore-missing-schemas -skip HTTPRoute -summary -output json "${manifests[@]}"
 
       - name: Validate rendered production overlays
         run: |
