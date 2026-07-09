@@ -40,6 +40,36 @@ Reason: after the first P1-B merge, ArgoCD no longer failed on repeated
 Disabling admission webhooks is a temporary unblock so the chart can reconcile.
 Regenerating webhook certificates is a separate maintenance-window action.
 
+## P1-C Prometheus OOM recovery
+
+After PR #94 merged on 2026-07-09, `root` and `platform` reconciled the merge
+commit and `kube-prometheus-stack` became `Synced`. The remaining degraded state
+moved to the Prometheus custom resource: pod
+`prometheus-kube-prometheus-stack-prometheus-0` was `CrashLoopBackOff` because
+the `prometheus` container was repeatedly `OOMKilled` while replaying WAL and
+running TSDB compaction/checkpoint work.
+
+Declarative remediation:
+
+- Increase Prometheus memory request from `256Mi` to `512Mi`.
+- Increase Prometheus memory limit from `512Mi` to `1536Mi`.
+- Reduce `retentionSize` from `9GB` to `6GB` on the existing 10Gi PVC, leaving
+  head, WAL, and compaction overhead outside the retention target.
+
+Read-only exit criteria after ArgoCD reconciliation:
+
+- `kube-prometheus-stack` is `Synced/Healthy`.
+- `prometheus-kube-prometheus-stack-prometheus-0` is `2/2 Running`.
+- The `prometheus` container has no new `OOMKilled` restart after the rollout.
+- Prometheus service and Grafana service remain `Healthy` in ArgoCD.
+
+Rollback posture:
+
+- Revert the Git resource/retention change if the new limit creates node pressure
+  or scheduling failures.
+- Do not delete the Prometheus PVC or manually compact TSDB data outside an
+  approved maintenance window.
+
 ## Metrics-server recovery gate
 
 `metrics-server` is a k3s-managed addon, not an ArgoCD Application in
