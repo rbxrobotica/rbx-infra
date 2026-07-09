@@ -78,7 +78,7 @@ spec:
         prometheus:
           prometheusSpec:
             retention: 7d
-            retentionSize: "9GB"
+            retentionSize: "6GB"
 
             storageSpec:
               volumeClaimTemplate:
@@ -92,10 +92,10 @@ spec:
             resources:
               requests:
                 cpu: 100m
-                memory: 256Mi
+                memory: 512Mi
               limits:
                 cpu: 500m
-                memory: 512Mi
+                memory: 1536Mi
 
             # Scrape pods with prometheus.io/scrape: "true" annotations
             # This picks up robsond and other annotated pods automatically.
