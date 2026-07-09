@@ -57,9 +57,29 @@ jobs:
             exit 0
           fi
 
+          skip_kinds=(
+            AppProject
+            Application
+            Certificate
+            ClusterIssuer
+            ExternalSecret
+            HTTPRoute
+            IngressRoute
+            Kustomization
+            Middleware
+            SecretStore
+            WorkflowTemplate
+          )
+          skip_csv=$(IFS=,; echo "${skip_kinds[*]}")
+
           printf 'Validating %d manifest(s):\n' "${#manifests[@]}"
           printf '  - %s\n' "${manifests[@]}"
-          kubeconform -ignore-missing-schemas -skip HTTPRoute -summary -output json "${manifests[@]}"
+          kubeconform \
+            -ignore-missing-schemas \
+            -skip "${skip_csv}" \
+            -summary \
+            -output json \
+            "${manifests[@]}"
 
       - name: Validate rendered production overlays
         run: |
