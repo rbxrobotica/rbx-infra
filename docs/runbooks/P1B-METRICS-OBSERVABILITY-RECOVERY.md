@@ -20,20 +20,25 @@ P1-B has two live findings from the 2026-07-08 read-only review:
 
 ## Repository change
 
-`platform/monitoring/kube-prometheus-stack.yml` keeps Prometheus Operator
-admission webhooks enabled but disables the Helm `kube-webhook-certgen` patch
-hook:
+`platform/monitoring/kube-prometheus-stack.yml` temporarily disables Prometheus
+Operator admission webhooks and removes `Replace=true` from sync options:
 
 ```yaml
 prometheusOperator:
   admissionWebhooks:
-    patch:
-      enabled: false
+    enabled: false
 ```
 
-Reason: ArgoCD reports `SyncError` because the chart's admission hook RBAC
-resources already exist. The change removes repeat hook creation from the desired
-manifest while preserving the webhook resources themselves.
+Reason: after the first P1-B merge, ArgoCD no longer failed on repeated
+`kube-webhook-certgen` hook RBAC creation, but it still failed because:
+
+- `Replace=true` attempted to replace the bound Grafana PVC, which Kubernetes
+  forbids because most PVC spec fields are immutable after binding.
+- The existing `prometheusrulemutate` webhook had an invalid CA/certificate and
+  rejected PrometheusRule reconciliation.
+
+Disabling admission webhooks is a temporary unblock so the chart can reconcile.
+Regenerating webhook certificates is a separate maintenance-window action.
 
 ## Metrics-server recovery gate
 
@@ -90,9 +95,12 @@ Human-gated cleanup sequence:
 
 ## Rollback posture
 
-- If disabling the Helm patch hook blocks a future chart upgrade, revert the
-  Git change and handle the admission hook resources in a dedicated maintenance
-  window.
+- If disabling admission webhooks blocks a future chart upgrade, revert the Git
+  change only after the webhook certificate/CA bundle has been regenerated and
+  verified.
+- If removing `Replace=true` leaves an intended immutable-resource change
+  unapplied, handle that resource explicitly in a dedicated maintenance window;
+  do not re-enable broad replace for the whole Application by default.
 - If `metrics-server` restore causes instability, roll back only the approved
   operational action taken for metrics-server; do not change ArgoCD apps as part
   of that rollback unless separately authorized.
