@@ -23,7 +23,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: web
-          image: ghcr.io/rbxrobotica/rbx-commerce-web:sha-30c525c96c904c45824311a9e32f59a4644d56ff
+          image: ghcr.io/rbxrobotica/rbx-commerce-web
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
@@ -35,6 +35,21 @@ spec:
               value: "production"
             - name: ORIGIN
               value: "https://commerce.rbxsystems.ch"
+            # OIDC login (Authorization Code + PKCE) served at /oidc/*.
+            # Public client — no secret to manage. See rbxrobotica/rbx-commerce PR
+            # "feat(web): add server-side OIDC login".
+            - name: OIDC_ISSUER
+              value: "https://auth.merovelis.com"
+            - name: OIDC_CLIENT_ID
+              value: "380956048132931619"
+            - name: OIDC_REDIRECT_URI
+              value: "https://commerce.rbxsystems.ch/oidc/callback"
+            - name: OIDC_POST_LOGOUT_REDIRECT_URI
+              value: "https://commerce.rbxsystems.ch/"
+            # Internal commerce API this pod proxies /api/* to, server-side,
+            # attaching the caller's session token.
+            - name: COMMERCE_INTERNAL_URL
+              value: "http://rbx-commerce.rbx-commerce.svc.cluster.local"
           readinessProbe:
             httpGet:
               path: /healthz
