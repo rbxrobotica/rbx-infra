@@ -1,8 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 namespace: rbx-commerce
-
 resources:
   - namespace.yml
   - rbac-external-secrets.yml
@@ -13,9 +11,8 @@ resources:
   - rbx-commerce-svc.yml
   - rbx-commerce-web-deploy.yml
   - rbx-commerce-web-svc.yml
-
 images:
   - name: ghcr.io/rbxrobotica/rbx-commerce
-    newTag: sha-30c525c96c904c45824311a9e32f59a4644d56ff
+    newTag: sha-632442ee82ecf10a5bd7af79c63bf6975d01652e
   - name: ghcr.io/rbxrobotica/rbx-commerce-web
-    newTag: sha-30c525c96c904c45824311a9e32f59a4644d56ff
+    newTag: sha-632442ee82ecf10a5bd7af79c63bf6975d01652e
