@@ -43,6 +43,14 @@ Follow-up update on 2026-07-10:
   remain on node-local `local-path` PVCs without a tested durable restore path.
 - `scripts/audit-local-path-pv-dirs.sh` and
   `docs/runbooks/LANGFUSE-LOCAL-PATH-PVC-RECOVERY.md` are the interim guardrails.
+- P1-B metrics recovery is verified: `metrics-server` is Ready, the metrics API
+  is `Available=True`, `kubectl top nodes` returns all four nodes, the intended
+  `kube-prometheus-stack` in `monitoring` is `Synced` / `Healthy`, and the
+  duplicate `default` observability stack is absent.
+- Initial Prometheus rules cover `metrics-server` endpoint loss, pods waiting in
+  `CrashLoopBackOff` or image pull failure, and critical endpoints without ready
+  backends. ArgoCD, cert-manager, APIService, and etcd snapshot alerts remain
+  pending until those metric sources are scraped or exposed.
 
 External version context verified on 2026-07-08:
 
@@ -83,6 +91,10 @@ Exit criteria:
 ## Workstream B - Observability recovery
 
 Owner: infra operator.
+
+Current state on 2026-07-10: metrics API and the intended `monitoring`
+observability stack are recovered. This workstream now focuses on durable alert
+coverage and the remaining metric-source gaps.
 
 Actions:
 
