@@ -93,7 +93,21 @@ rbx/
   data/
     warehouse-db-password       # PostgreSQL password for user `rbx_data` on jaguar — rbx_data_warehouse DB
     warehouse-dsn               # Full DSN postgres://rbx_data:<password>@161.97.147.76:5432/rbx_data_warehouse (k8s ExternalSecret source)
+  btcpay/
+    db-password                 # PostgreSQL password for user `rbx_btcpay` on jaguar — rbx_btcpay DB (BTCPay Server's own EF Core store)
+    bitcoind-rpc-user            # Shared RPC username, bitcoind <-> NBXplorer only (never exposed outside rbx-payments)
+    bitcoind-rpc-password        # Shared RPC password, bitcoind <-> NBXplorer only
 ```
+
+**Provisioning note (2026-07-10):** `rbx_btcpay` DB/role and the `rbx-payments`
+namespace's `rbx-btcpay-secrets` Kubernetes Secret were created directly (`psql`
++ `kubectl create secret`, matching what the `paradedb` and `k8s-secrets`
+Ansible roles would do) rather than through the roles themselves — no
+`ansible-vault` password was available in that session. **Follow-up debt:**
+add a `paradedb` role task block for `rbx_btcpay` (mirroring the `robson`
+block) and a `k8s-secrets` task block for `rbx-btcpay-secrets` in
+`rbx-payments`, so a full cluster reinstall reproduces this without a manual
+step.
 
 **Environment separation rule:** `rbx/robson/` paths are for production only. `rbx/robson-testnet/` paths are for testnet only. The Ansible `k8s-secrets` role must never cross-reference these namespaces — the production task reads only from `rbx/robson/`, the testnet task reads only from `rbx/robson-testnet/`.
 

@@ -1,0 +1,92 @@
+# NBXplorer: wallet-tracking indexer BTCPay Server queries against bitcoind.
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-btcpay-nbxplorer
+  namespace: rbx-payments
+  labels:
+    app.kubernetes.io/name: rbx-btcpay-nbxplorer
+spec:
+  selector:
+    app.kubernetes.io/name: rbx-btcpay-nbxplorer
+  ports:
+    - port: 32838
+      targetPort: 32838
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-btcpay-nbxplorer
+  namespace: rbx-payments
+  labels:
+    app.kubernetes.io/name: rbx-btcpay-nbxplorer
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-btcpay-nbxplorer
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-btcpay-nbxplorer
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: altaica
+      containers:
+        - name: nbxplorer
+          image: nicolasdorier/nbxplorer:2.5.20
+          env:
+            - name: NBXPLORER_NETWORK
+              value: "mainnet"
+            - name: NBXPLORER_CHAINS
+              value: "btc"
+            - name: NBXPLORER_BIND
+              value: "0.0.0.0:32838"
+            - name: NBXPLORER_BTCRPCURL
+              value: "http://rbx-btcpay-bitcoind:8332/"
+            - name: NBXPLORER_BTCNODEENDPOINT
+              value: "rbx-btcpay-bitcoind:8333"
+            - name: NBXPLORER_BTCRPCUSER
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-btcpay-secrets
+                  key: BITCOIND_RPC_USER
+            - name: NBXPLORER_BTCRPCPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-btcpay-secrets
+                  key: BITCOIND_RPC_PASSWORD
+            - name: NBXPLORER_BTCZMQPUBRAWBLOCK
+              value: "tcp://rbx-btcpay-bitcoind:28332"
+            - name: NBXPLORER_BTCZMQPUBRAWTX
+              value: "tcp://rbx-btcpay-bitcoind:28333"
+          ports:
+            - containerPort: 32838
+          volumeMounts:
+            - name: nbxplorer-data
+              mountPath: /datadir
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+      volumes:
+        - name: nbxplorer-data
+          persistentVolumeClaim:
+            claimName: nbxplorer-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nbxplorer-data
+  namespace: rbx-payments
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi

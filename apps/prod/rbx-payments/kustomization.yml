@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rbx-payments
+resources:
+  - namespace.yml
+  - bitcoind-statefulset.yml
+  - nbxplorer-deploy.yml
+  - btcpay-postgres-svc.yml
+  - btcpay-deploy.yml
+  - btcpay-ingress.yml

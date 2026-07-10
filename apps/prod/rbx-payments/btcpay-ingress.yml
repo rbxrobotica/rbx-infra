@@ -1,0 +1,30 @@
+# Ingress: btcpay.rbx.ia.br — BTCPay Server admin UI + webhook endpoints.
+# DNS: A record at registro.br (rbx.ia.br is not in OpenTofu/PowerDNS) must point
+# to 158.220.116.31 (same IP already used by commerce.rbx.ia.br) before this
+# resolves publicly — see docs/runbooks/DNS-TROUBLESHOOTING.md.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: rbx-btcpay-server
+  namespace: rbx-payments
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+    traefik.ingress.kubernetes.io/router.tls: "true"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - btcpay.rbx.ia.br
+      secretName: rbx-btcpay-tls
+  rules:
+    - host: btcpay.rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-btcpay-server
+                port:
+                  number: 23000

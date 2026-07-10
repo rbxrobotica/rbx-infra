@@ -29,7 +29,7 @@
 set -euo pipefail
 
 # Third-party images exempt from Rule 1 (matched against the tag-stripped ref).
-ALLOW_THIRDPARTY='^(postgres|redis|busybox|rabbitmq|python|alpine|nginx|paradedb/paradedb|migrate/migrate|docker\.io/migrate/migrate|ghcr\.io/berriai/litellm|squidfunk/mkdocs|minio/minio)([:@]|$)'
+ALLOW_THIRDPARTY='^(postgres|redis|busybox|rabbitmq|python|alpine|nginx|paradedb/paradedb|migrate/migrate|docker\.io/migrate/migrate|ghcr\.io/berriai/litellm|squidfunk/mkdocs|minio/minio|btcpayserver/bitcoin|btcpayserver/btcpayserver|nicolasdorier/nbxplorer)([:@]|$)'
 
 violations=0
 

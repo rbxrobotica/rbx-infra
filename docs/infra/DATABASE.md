@@ -17,6 +17,7 @@ No application should run its own database StatefulSet inside k3s.
 | truthmetal | truthmetal | Truthmetal |
 | litellm | litellm | LLM Gateway (LiteLLM Proxy — experimental) |
 | pdns | pdns | PowerDNS (used by pantera/ns1) |
+| rbx_btcpay | rbx_btcpay | BTCPay Server (ADR-0009 Layer 2) |
 
 ## Connection pattern for k8s apps
 

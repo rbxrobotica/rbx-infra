@@ -1,0 +1,8 @@
+# Namespace: rbx-payments
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-payments
+  labels:
+    app.kubernetes.io/part-of: rbx-payments
+    environment: production

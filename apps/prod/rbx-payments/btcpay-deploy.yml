@@ -1,0 +1,91 @@
+# BTCPay Server — ADR-0009 Layer 2. BTC on-chain only for now; Lightning is a
+# follow-up once a funded channel/LSP decision is made (out of scope for initial
+# rollout — an empty Lightning node can't usefully send/receive).
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-btcpay-server
+  namespace: rbx-payments
+  labels:
+    app.kubernetes.io/name: rbx-btcpay-server
+spec:
+  selector:
+    app.kubernetes.io/name: rbx-btcpay-server
+  ports:
+    - port: 23000
+      targetPort: 23000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-btcpay-server
+  namespace: rbx-payments
+  labels:
+    app.kubernetes.io/name: rbx-btcpay-server
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-btcpay-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-btcpay-server
+    spec:
+      containers:
+        - name: btcpayserver
+          image: btcpayserver/btcpayserver:2.0.5
+          env:
+            - name: BTCPAY_NETWORK
+              value: "mainnet"
+            - name: BTCPAY_CHAINS
+              value: "btc"
+            - name: BTCPAY_BIND
+              value: "0.0.0.0:23000"
+            - name: BTCPAY_ROOTPATH
+              value: "/"
+            - name: BTCPAY_BTCEXPLORERURL
+              value: "http://rbx-btcpay-nbxplorer:32838/"
+            - name: BTCPAY_POSTGRES
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-btcpay-secrets
+                  key: POSTGRES_CONNECTION_STRING
+          ports:
+            - containerPort: 23000
+          volumeMounts:
+            - name: btcpay-data
+              mountPath: /datadir
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1500Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 23000
+            initialDelaySeconds: 20
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 6
+      volumes:
+        - name: btcpay-data
+          persistentVolumeClaim:
+            claimName: btcpay-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: btcpay-data
+  namespace: rbx-payments
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
