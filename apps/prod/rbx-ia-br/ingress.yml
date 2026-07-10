@@ -15,9 +15,20 @@ spec:
   tls:
     - hosts:
         - rbx.ia.br
+        - www.rbx.ia.br
       secretName: rbx-ia-br-tls
   rules:
     - host: rbx.ia.br
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-ia-br-svc
+                port:
+                  number: 80
+    - host: www.rbx.ia.br
       http:
         paths:
           - path: /
