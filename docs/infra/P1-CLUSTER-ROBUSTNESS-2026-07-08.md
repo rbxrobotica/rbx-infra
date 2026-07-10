@@ -51,6 +51,9 @@ Follow-up update on 2026-07-10:
   `CrashLoopBackOff` or image pull failure, and critical endpoints without ready
   backends. ArgoCD, cert-manager, APIService, and etcd snapshot alerts remain
   pending until those metric sources are scraped or exposed.
+- `kube-prometheus-stack` keeps Prometheus Operator CRDs in desired state and uses
+  ArgoCD server-side apply to avoid client-side annotation-size failures when
+  reconciling large CRD manifests.
 
 External version context verified on 2026-07-08:
 
