@@ -84,6 +84,9 @@ spec:
     # Namespace is inert (SAs hold no RoleBindings here); they bind cross-namespace.
     - namespace: corbetti-agents
       server: https://kubernetes.default.svc
+    # BTCPay Server (ADR-0009 Layer 2).
+    - namespace: rbx-payments
+      server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
