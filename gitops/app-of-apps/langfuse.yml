@@ -36,6 +36,22 @@ spec:
               secretKeyRef:
                 name: langfuse-core
                 key: nextauth-secret
+          web:
+            # Langfuse web runs Postgres/ClickHouse init before serving health probes.
+            livenessProbe:
+              path: /api/public/health
+              initialDelaySeconds: 120
+              periodSeconds: 10
+              timeoutSeconds: 10
+              failureThreshold: 12
+              successThreshold: 1
+            readinessProbe:
+              path: /api/public/ready
+              initialDelaySeconds: 30
+              periodSeconds: 10
+              timeoutSeconds: 10
+              failureThreshold: 12
+              successThreshold: 1
           ingress:
             enabled: true
             className: traefik
