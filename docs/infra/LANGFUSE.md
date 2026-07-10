@@ -1,21 +1,22 @@
 # Langfuse Self-Hosting
 
-**Status:** deployed, degraded as of 2026-07-08, manual-sync GitOps Application
+**Status:** deployed, recovered on 2026-07-09, manual-sync GitOps Application
 
-## Current Health Note - 2026-07-08
+## Current Health Note - 2026-07-10
 
-Read-only cluster diagnostics on 2026-07-08 found Langfuse unhealthy:
+Langfuse was recovered on 2026-07-09 after a `local-path` PVC incident:
 
-- `langfuse-clickhouse-shard0-0` is stuck in `ContainerCreating`.
-- `langfuse-zookeeper-1` and `langfuse-zookeeper-2` are stuck in
-  `ContainerCreating`.
-- kubelet reports missing `local-path` volume directories under
-  `/var/lib/rancher/k3s/storage/`.
-- `langfuse-web` is in `CrashLoopBackOff`.
+- Missing local-path directories for ClickHouse and ZooKeeper were recreated
+  after the operator approved disposable recovery.
+- `langfuse-web` no longer relies on the chart's default short liveness window;
+  PR #99 added explicit probe timing to GitOps.
+- ArgoCD reports `langfuse` as `Synced` and `Healthy`.
+- `https://langfuse.rbx.ia.br` returns HTTP 200.
 
-Treat this as a storage and recovery incident, not as a simple pod restart.
-Do not delete PVCs, recreate StatefulSets, or sync the ArgoCD Application until
-an operator has chosen the recovery path and accepted the data-loss risk.
+The structural risk remains open: ClickHouse, ZooKeeper, and Redis still depend
+on node-local `local-path` PVCs. Treat future failures as storage incidents, not
+as simple pod restarts. Use
+`docs/runbooks/LANGFUSE-LOCAL-PATH-PVC-RECOVERY.md` before any repair.
 
 ## Topology
 
@@ -46,6 +47,12 @@ Before any repair:
 Longer term, do not treat `local-path` as HA storage. If Langfuse is a durable
 observability dependency, move state to an external/replicated backend or keep a
 tested backup and restore path for every PVC.
+
+Read-only local-path audit:
+
+```bash
+scripts/audit-local-path-pv-dirs.sh langfuse
+```
 
 ## Required Pass Keys
 

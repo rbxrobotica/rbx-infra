@@ -35,6 +35,15 @@ Collected read-only on 2026-07-08:
 - Guardrails: ResourceQuota/LimitRange and NetworkPolicy coverage are partial;
   Pod Security Admission labels are not visible on app namespaces.
 
+Follow-up update on 2026-07-10:
+
+- `langfuse` has been recovered and is `Synced` / `Healthy` after PR #99 and a
+  human-approved disposable local-path directory recovery.
+- The structural risk is still open: Langfuse ClickHouse, ZooKeeper, and Redis
+  remain on node-local `local-path` PVCs without a tested durable restore path.
+- `scripts/audit-local-path-pv-dirs.sh` and
+  `docs/runbooks/LANGFUSE-LOCAL-PATH-PVC-RECOVERY.md` are the interim guardrails.
+
 External version context verified on 2026-07-08:
 
 - Kubernetes active release branches are `1.34`, `1.35`, and `1.36`; `1.32`
@@ -47,6 +56,8 @@ External version context verified on 2026-07-08:
 2. Restore cluster observability as a dependency, not a best-effort add-on.
 3. Remove image-promotion paths that can produce unavailable production images.
 4. Reduce GitOps drift and make live health visible in release decisions.
+5. Make node-local state explicit with recovery runbooks and read-only audits
+   until durable storage or tested backups exist.
 
 ## Workstream A - Upgrade readiness
 
@@ -139,6 +150,33 @@ Exit criteria:
   explicit owner/action.
 - Dev sandbox TTL has an enforcement path.
 - Release reviews cite live ArgoCD and workload health.
+
+## Workstream E - Stateful storage durability
+
+Owner: infra operator with app owners.
+
+Actions:
+
+1. Use `scripts/audit-local-path-pv-dirs.sh` to identify missing `local-path`
+   directories before any PVC-backed workload repair.
+2. Use `docs/runbooks/LANGFUSE-LOCAL-PATH-PVC-RECOVERY.md` for Langfuse-specific
+   recovery decisions and incident evidence.
+3. Classify each Langfuse PVC as disposable, restorable from backup, or durable
+   before approving repair.
+4. Add a tested backup/restore path for Langfuse ClickHouse, ZooKeeper, and Redis
+   if Langfuse telemetry is considered durable.
+5. Evaluate a replicated storage class or external telemetry stores for Langfuse
+   before the next planned k3s maintenance window.
+6. Convert the audit script into a scheduled alert only after the metrics and
+   eventing workstream has a stable owner.
+
+Exit criteria:
+
+- Langfuse local-path recovery has a tested operator runbook.
+- Missing local-path directories are detectable before a pod restart loop becomes
+  the first symptom.
+- Langfuse has either documented disposable-state semantics or a tested durable
+  backup/restore path.
 
 ## Non-goals for P1
 
