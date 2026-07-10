@@ -230,7 +230,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - RespectIgnoreDifferences=true
-      - ServerSideApply=false
+      - ServerSideApply=true
 
   ignoreDifferences:
     - group: admissionregistration.k8s.io

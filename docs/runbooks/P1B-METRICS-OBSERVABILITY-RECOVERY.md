@@ -54,6 +54,19 @@ Reason: after the first P1-B merge, ArgoCD no longer failed on repeated
 Disabling admission webhooks is a temporary unblock so the chart can reconcile.
 Regenerating webhook certificates is a separate maintenance-window action.
 
+`ServerSideApply=true` is enabled for this Application because the chart renders
+large Prometheus Operator CRDs. Client-side apply stores previous desired state in
+`kubectl.kubernetes.io/last-applied-configuration`; after the P1-B alert merge,
+ArgoCD retried CRD patches that exceeded Kubernetes' annotation size limit.
+Server-side apply keeps the CRDs in desired state without depending on that large
+annotation.
+
+Do not set `crds.enabled: false` as a routine workaround while automated prune is
+enabled. The CRDs are already tracked by the Application; removing them from the
+rendered desired state could make them prune candidates. If CRD ownership changes,
+handle it as a dedicated maintenance-window migration with explicit backup and
+rollback criteria.
+
 ## Initial alert coverage
 
 `platform/monitoring/kube-prometheus-stack.yml` adds the first P1-B
