@@ -1,6 +1,6 @@
 # Runbook - P1-B Metrics and Observability Recovery
 
-Status: draft for human-approved operational window.
+Status: active recovery notes and GitOps guardrails; operational actions remain human-gated.
 
 This runbook covers the P1-B recovery path for cluster metrics and observability
 ownership. It does not authorize a sync, patch, delete, restart, or Helm action
@@ -8,15 +8,29 @@ by itself.
 
 ## Scope
 
-P1-B has two live findings from the 2026-07-08 read-only review:
+P1-B started with two live findings from the 2026-07-08 read-only review:
 
-- `metrics-server` is installed by the k3s addon manager in `kube-system`, but
-  the Deployment has `spec.replicas: 0`; the `metrics-server` Service has no
-  endpoints, `v1beta1.metrics.k8s.io` is `MissingEndpoints`, and `kubectl top
-  nodes` fails.
-- `kube-prometheus-stack` is intended to live in `monitoring`, but an older
-  untracked stack also exists in `default`. Its node-exporter pods are Pending
-  because port `9100` is already owned by the intended `monitoring` stack.
+- `metrics-server` was installed by the k3s addon manager in `kube-system`, but
+  the Deployment had `spec.replicas: 0`; the `metrics-server` Service had no
+  endpoints, `v1beta1.metrics.k8s.io` was `MissingEndpoints`, and `kubectl top
+  nodes` failed.
+- `kube-prometheus-stack` was intended to live in `monitoring`, but an older
+  untracked stack also existed in `default`. Its node-exporter pods were Pending
+  because port `9100` was already owned by the intended `monitoring` stack.
+
+As of 2026-07-10, both recovery gates are closed by read-only verification:
+
+- `metrics-server` is `1/1` Ready, its Service has a ready endpoint,
+  `v1beta1.metrics.k8s.io` is `Available=True`, and `kubectl top nodes` returns
+  all four RBX nodes.
+- `kube-prometheus-stack` is `Synced/Healthy` in `monitoring`; the duplicate
+  `default` namespace resources and PVCs for `app.kubernetes.io/instance=kube-prometheus-stack`
+  are absent.
+- Prometheus, Grafana, Alertmanager, kube-state-metrics, node-exporter, and
+  Promtail are running under the intended `monitoring` owner. Loki is running but
+  remains a watch item because `loki-0` has a high historical restart count.
+- Prometheus currently sees `CrashLoopBackOff` signals for `truthmetal` and
+  `rbx-ledger`, which remain Workstream D application-health follow-ups.
 
 ## Repository change
 
@@ -39,6 +53,23 @@ Reason: after the first P1-B merge, ArgoCD no longer failed on repeated
 
 Disabling admission webhooks is a temporary unblock so the chart can reconcile.
 Regenerating webhook certificates is a separate maintenance-window action.
+
+## Initial alert coverage
+
+`platform/monitoring/kube-prometheus-stack.yml` adds the first P1-B
+`additionalPrometheusRulesMap` group for metrics that are already present in the
+current Prometheus scrape set:
+
+- `RBXMetricsServerEndpointMissing` fires when the `metrics-server` endpoint has
+  no ready address.
+- `RBXPodCrashLoopOrImagePull` fires when any pod container remains in
+  `CrashLoopBackOff`, `ImagePullBackOff`, or `ErrImagePull`.
+- `RBXCriticalEndpointNotReady` fires when the critical `langfuse`, `rbx-ledger`,
+  or `truthmetal` endpoint set has no ready backend address.
+
+The following Workstream B alerts remain pending until their metric sources are
+scraped or exposed: ArgoCD app health, cert-manager certificate readiness or
+expiry, APIService condition status, and etcd snapshot age or sync failure.
 
 ## P1-C Prometheus OOM recovery
 
@@ -73,7 +104,8 @@ Rollback posture:
 ## Metrics-server recovery gate
 
 `metrics-server` is a k3s-managed addon, not an ArgoCD Application in
-`rbx-infra`. Restoring it requires a separate operator-approved action.
+`rbx-infra`. Its 2026-07-10 recovery is verified; any future mutation to restore
+or roll back it still requires a separate operator-approved action.
 
 Read-only precheck:
 
@@ -109,10 +141,10 @@ kubectl get all -n default -l app.kubernetes.io/instance=kube-prometheus-stack
 kubectl get pvc -n default -l app.kubernetes.io/instance=kube-prometheus-stack
 ```
 
-As of 2026-07-08, no matching PVCs were found in `default`; the intended Grafana
-PVC exists in `monitoring`.
+As of 2026-07-10, no matching resources or PVCs were found in `default`; the
+intended Grafana PVC exists in `monitoring`.
 
-Human-gated cleanup sequence:
+Human-gated cleanup sequence if the duplicate `default` stack reappears:
 
 1. Verify the `monitoring` stack is healthy enough to be the owner.
 2. Save a resource inventory for the untracked `default` stack.

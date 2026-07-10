@@ -171,6 +171,46 @@ spec:
               cpu: 100m
               memory: 64Mi
 
+        additionalPrometheusRulesMap:
+          rbx-p1b-core:
+            groups:
+              - name: rbx.p1b.core
+                rules:
+                  - alert: RBXMetricsServerEndpointMissing
+                    expr: absent(kube_endpoint_address{namespace="kube-system", endpoint="metrics-server", ready="true"})
+                    for: 5m
+                    labels:
+                      severity: critical
+                      rbx_workstream: p1b-observability
+                    annotations:
+                      summary: "metrics-server has no ready endpoint"
+                      description: "metrics-server has no ready endpoint; kubectl top and HPA signals may be unavailable."
+
+                  - alert: RBXPodCrashLoopOrImagePull
+                    expr: kube_pod_container_status_waiting_reason{reason=~"CrashLoopBackOff|ImagePullBackOff|ErrImagePull"} == 1
+                    for: 10m
+                    labels:
+                      severity: warning
+                      rbx_workstream: p1b-observability
+                    annotations:
+                      summary: "Pod container is waiting in CrashLoopBackOff or image pull failure"
+                      description: "A pod container has remained in CrashLoopBackOff, ImagePullBackOff, or ErrImagePull for more than 10 minutes."
+
+                  - alert: RBXCriticalEndpointNotReady
+                    expr: |
+                      (
+                        kube_endpoint_info{namespace=~"langfuse|rbx-ledger|truthmetal"}
+                        unless on(namespace, endpoint)
+                        kube_endpoint_address{ready="true"}
+                      )
+                    for: 10m
+                    labels:
+                      severity: warning
+                      rbx_workstream: p1b-observability
+                    annotations:
+                      summary: "Critical service endpoint has no ready backend"
+                      description: "A critical RBX endpoint has had no ready backend address for more than 10 minutes."
+
         # Temporarily disable PrometheusRule admission webhooks until the
         # webhook serving certificate/CA bundle is regenerated in an approved
         # maintenance window. The broken CA currently blocks ArgoCD from
