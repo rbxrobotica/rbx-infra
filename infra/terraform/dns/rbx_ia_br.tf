@@ -170,3 +170,11 @@ resource "powerdns_record" "creator_rbx_ia_br_a" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+resource "powerdns_record" "btcpay_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "btcpay.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
