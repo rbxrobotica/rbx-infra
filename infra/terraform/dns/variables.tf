@@ -38,3 +38,9 @@ variable "dkim_tx_strategos_gr" {
   type        = string
   default     = ""
 }
+
+variable "dkim_rbx_ia_br" {
+  description = "DKIM CNAME target for rbx.ia.br (from Postmark)"
+  type        = string
+  default     = ""
+}

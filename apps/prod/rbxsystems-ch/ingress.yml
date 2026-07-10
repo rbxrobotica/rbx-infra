@@ -15,9 +15,20 @@ spec:
   tls:
     - hosts:
         - rbxsystems.ch
+        - www.rbxsystems.ch
       secretName: rbxsystems-ch-tls
   rules:
     - host: rbxsystems.ch
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: rbxsystems-ch-svc
+                port:
+                  number: 80
+    - host: www.rbxsystems.ch
       http:
         paths:
           - path: /
