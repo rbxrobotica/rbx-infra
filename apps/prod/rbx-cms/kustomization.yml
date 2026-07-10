@@ -15,6 +15,7 @@ resources:
   - postgres-svc.yml
   - deploy.yml
   - svc.yml
+  - db-migrate-job.yml
 
 labels:
   - pairs:
