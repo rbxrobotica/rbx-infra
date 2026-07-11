@@ -98,13 +98,13 @@ spec:
               cpu: "2"
               memory: 3Gi
           readinessProbe:
+            # $(VAR) container-env expansion only applies to command/args, not
+            # exec probes — this needs a real shell to expand $VAR from env.
             exec:
               command:
-                - bitcoin-cli
-                - -datadir=/data
-                - -rpcuser=$(BITCOIND_RPC_USER)
-                - -rpcpassword=$(BITCOIND_RPC_PASSWORD)
-                - getblockchaininfo
+                - /bin/sh
+                - -c
+                - bitcoin-cli -datadir=/data -rpcuser=$BITCOIND_RPC_USER -rpcpassword=$BITCOIND_RPC_PASSWORD getblockchaininfo
             initialDelaySeconds: 30
             periodSeconds: 30
             timeoutSeconds: 10
