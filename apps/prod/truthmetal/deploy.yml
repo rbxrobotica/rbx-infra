@@ -13,6 +13,8 @@ spec:
     matchLabels:
       app.kubernetes.io/name: truthmetal
       app.kubernetes.io/component: api
+      app.kubernetes.io/part-of: truthmetal
+      environment: production
   template:
     metadata:
       labels:

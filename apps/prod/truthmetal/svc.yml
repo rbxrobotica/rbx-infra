@@ -12,6 +12,8 @@ spec:
   selector:
     app.kubernetes.io/name: truthmetal
     app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: truthmetal
+    environment: production
   ports:
     - port: 8080
       targetPort: 8080

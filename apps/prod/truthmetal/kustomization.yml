@@ -11,6 +11,9 @@ resources:
   - svc.yml
   - ingress.yml
 
-commonLabels:
-  app.kubernetes.io/part-of: truthmetal
-  environment: production
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: truthmetal
+      environment: production
+    includeSelectors: false
+    includeTemplates: true
