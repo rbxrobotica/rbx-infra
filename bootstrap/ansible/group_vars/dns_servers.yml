@@ -5,7 +5,9 @@ pdns_version: "4.9"
 # DNS zones served
 pdns_zones:
   - rbxsystems.ch
+  - rbx.ia.br
   - strategos.gr
+  - merovelis.com
 
 # SOA defaults (phase 1)
 pdns_soa_refresh: 3600      # 1h
