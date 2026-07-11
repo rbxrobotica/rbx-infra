@@ -73,11 +73,67 @@ resource "powerdns_record" "rbx_ia_br_dkim" {
   records = [var.dkim_rbx_ia_br]
 }
 
-# --- Internal tooling ---
+# --- Application frontends and APIs ---
+
+resource "powerdns_record" "agents_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "agents.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
+resource "powerdns_record" "api_catalog_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "api.catalog.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
 
 resource "powerdns_record" "api_comms_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
   name    = "api.comms.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
+resource "powerdns_record" "api_eden_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "api.eden.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
+resource "powerdns_record" "api_robson_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "api.robson.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
+resource "powerdns_record" "api_truthmetal_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "api.truthmetal.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
+resource "powerdns_record" "btcpay_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "btcpay.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
+resource "powerdns_record" "catalog_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "catalog.rbx.ia.br."
   type    = "A"
   ttl     = 3600
   records = [var.k3s_ingress_ip]
@@ -91,25 +147,41 @@ resource "powerdns_record" "cms_rbx_ia_br_a" {
   records = [var.k3s_ingress_ip]
 }
 
-resource "powerdns_record" "grafana_rbx_ia_br_a" {
+resource "powerdns_record" "commerce_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
-  name    = "grafana.rbx.ia.br."
+  name    = "commerce.rbx.ia.br."
   type    = "A"
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
 
-resource "powerdns_record" "robson_rbx_ia_br_a" {
+resource "powerdns_record" "commerce_sandbox_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
-  name    = "robson.rbx.ia.br."
+  name    = "commerce-sandbox.rbx.ia.br."
   type    = "A"
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
 
-resource "powerdns_record" "strategos_rbx_ia_br_a" {
+resource "powerdns_record" "comms_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
-  name    = "strategos.rbx.ia.br."
+  name    = "comms.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
+resource "powerdns_record" "console_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "console.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
+resource "powerdns_record" "creator_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "creator.rbx.ia.br."
   type    = "A"
   ttl     = 3600
   records = [var.k3s_ingress_ip]
@@ -123,9 +195,17 @@ resource "powerdns_record" "eden_rbx_ia_br_a" {
   records = [var.k3s_ingress_ip]
 }
 
-resource "powerdns_record" "api_eden_rbx_ia_br_a" {
+resource "powerdns_record" "grafana_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
-  name    = "api.eden.rbx.ia.br."
+  name    = "grafana.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
+resource "powerdns_record" "leandrodamasio_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "leandrodamasio.rbx.ia.br."
   type    = "A"
   ttl     = 3600
   records = [var.k3s_ingress_ip]
@@ -147,33 +227,25 @@ resource "powerdns_record" "maestro_rbx_ia_br_a" {
   records = [var.k3s_ingress_ip]
 }
 
-resource "powerdns_record" "agents_rbx_ia_br_a" {
+resource "powerdns_record" "md_prec_kulinaryos_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
-  name    = "agents.rbx.ia.br."
+  name    = "md-prec-kulinaryos.rbx.ia.br."
   type    = "A"
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
 
-resource "powerdns_record" "commerce_rbx_ia_br_a" {
+resource "powerdns_record" "robson_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
-  name    = "commerce.rbx.ia.br."
+  name    = "robson.rbx.ia.br."
   type    = "A"
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
 
-resource "powerdns_record" "creator_rbx_ia_br_a" {
+resource "powerdns_record" "strategos_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
-  name    = "creator.rbx.ia.br."
-  type    = "A"
-  ttl     = 3600
-  records = [var.k3s_ingress_ip]
-}
-
-resource "powerdns_record" "btcpay_rbx_ia_br_a" {
-  zone    = powerdns_zone.rbx_ia_br.name
-  name    = "btcpay.rbx.ia.br."
+  name    = "strategos.rbx.ia.br."
   type    = "A"
   ttl     = 3600
   records = [var.k3s_ingress_ip]
