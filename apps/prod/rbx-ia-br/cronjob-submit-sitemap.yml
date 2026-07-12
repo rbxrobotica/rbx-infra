@@ -1,0 +1,98 @@
+# CronJob: submit sitemap to Google Search Console once a day.
+# Requires the secret 'rbx-search-console-key' to contain the service-account
+# JSON key with Owner or Restricted Owner role on the Search Console property.
+# The key is expected to be stored in pass at rbx/google/search-console/key.json
+# and applied to the cluster manually until a sealed-secret workflow exists.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: submit-sitemap-rbx-ia-br
+  namespace: rbx-ia-br
+  labels:
+    app.kubernetes.io/name: submit-sitemap
+    app.kubernetes.io/part-of: rbx-ia-br
+spec:
+  schedule: "0 6 * * *"
+  timeZone: America/Sao_Paulo
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: submit-sitemap
+              image: node:20-alpine
+              env:
+                - name: GOOGLE_SEARCH_CONSOLE_KEY_PATH
+                  value: /etc/secrets/key.json
+                - name: SITE_URL
+                  value: "https://rbx.ia.br"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  apk add --no-cache git
+                  git clone --depth 1 https://github.com/rbxrobotica/rbx-systems-frontend.git /app
+                  cd /app
+                  npm pkg set type=module
+                  npm install googleapis
+                  node scripts/submit-sitemap.js
+              volumeMounts:
+                - name: search-console-key
+                  mountPath: /etc/secrets
+                  readOnly: true
+          volumes:
+            - name: search-console-key
+              secret:
+                secretName: rbx-search-console-key
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: submit-sitemap-rbxsystems-ch
+  namespace: rbxsystems-ch
+  labels:
+    app.kubernetes.io/name: submit-sitemap
+    app.kubernetes.io/part-of: rbxsystems-ch
+spec:
+  schedule: "0 6 * * *"
+  timeZone: Europe/Zurich
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: submit-sitemap
+              image: node:20-alpine
+              env:
+                - name: GOOGLE_SEARCH_CONSOLE_KEY_PATH
+                  value: /etc/secrets/key.json
+                - name: SITE_URL
+                  value: "https://rbxsystems.ch"
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  apk add --no-cache git
+                  git clone --depth 1 https://github.com/rbxrobotica/rbx-systems-frontend.git /app
+                  cd /app
+                  npm pkg set type=module
+                  npm install googleapis
+                  node scripts/submit-sitemap.js
+              volumeMounts:
+                - name: search-console-key
+                  mountPath: /etc/secrets
+                  readOnly: true
+          volumes:
+            - name: search-console-key
+              secret:
+                secretName: rbx-search-console-key

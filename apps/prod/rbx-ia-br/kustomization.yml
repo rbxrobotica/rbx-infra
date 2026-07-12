@@ -9,6 +9,7 @@ resources:
   - svc.yml
   - ingress.yml
   - rbac-external-secrets-reader.yml
+  - cronjob-submit-sitemap.yml
 
 commonLabels:
   app.kubernetes.io/part-of: rbx-ia-br
