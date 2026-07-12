@@ -1,7 +1,7 @@
 # CronJob: submit sitemap to Google Search Console once a day.
 # Requires the secret 'rbx-search-console-key' to contain the service-account
 # JSON key with Owner or Restricted Owner role on the Search Console property.
-# The key is expected to be stored in pass at rbx/google/search-console/key.json
+# The key is expected to be stored in pass at rbx/search-console/key.json
 # and applied to the cluster manually until a sealed-secret workflow exists.
 apiVersion: batch/v1
 kind: CronJob
