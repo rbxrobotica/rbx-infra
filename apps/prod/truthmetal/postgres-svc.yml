@@ -1,5 +1,7 @@
 # ParadeDB external service — database runs natively on jaguar (161.97.147.76)
 # Apps connect to this service as if it were local; traffic routes to jaguar.
+# Keep this Service selectorless: the manually declared Endpoints object is the
+# source of backend addresses for this external database.
 apiVersion: v1
 kind: Service
 metadata:

@@ -11,6 +11,33 @@ resources:
   - svc.yml
   - ingress.yml
 
-commonLabels:
-  app.kubernetes.io/part-of: truthmetal
-  environment: production
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: truthmetal
+      environment: production
+    includeSelectors: false
+    includeTemplates: true
+
+patches:
+  # Preserve the Deployment selectors that commonLabels previously rendered.
+  # Deployment selectors are immutable, so keeping them stable avoids replacement.
+  - target:
+      kind: Deployment
+      name: truthmetal
+    patch: |-
+      - op: add
+        path: /spec/selector/matchLabels/app.kubernetes.io~1part-of
+        value: truthmetal
+      - op: add
+        path: /spec/selector/matchLabels/environment
+        value: production
+  - target:
+      kind: Deployment
+      name: truthmetal-redis
+    patch: |-
+      - op: add
+        path: /spec/selector/matchLabels/app.kubernetes.io~1part-of
+        value: truthmetal
+      - op: add
+        path: /spec/selector/matchLabels/environment
+        value: production
