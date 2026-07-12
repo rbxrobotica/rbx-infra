@@ -1,0 +1,28 @@
+# ArgoCD Application: RBX Portal (exec operational-readiness portal)
+# Hosts: portal.rbx.ia.br / portal.rbxsystems.ch
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-portal
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-portal
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-portal
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-portal
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-portal
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

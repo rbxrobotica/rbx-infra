@@ -1,0 +1,29 @@
+# Traefik IngressRoute for the portal. Hosts: portal.rbxsystems.ch + portal.rbx.ia.br.
+# DNS is an operator step (pdns); see docs/DEPLOY-CHECKLIST.md.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rbx-portal
+  namespace: rbx-portal
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`portal.rbxsystems.ch`) || Host(`portal.rbx.ia.br`)
+      kind: Rule
+      priority: 1
+      middlewares:
+        - name: redirect-https
+          namespace: rbx-portal
+      services:
+        - name: rbx-portal
+          port: 80
+    - match: Host(`portal.rbxsystems.ch`) || Host(`portal.rbx.ia.br`)
+      kind: Rule
+      priority: 10
+      services:
+        - name: rbx-portal
+          port: 80
+  tls:
+    secretName: rbx-portal-tls

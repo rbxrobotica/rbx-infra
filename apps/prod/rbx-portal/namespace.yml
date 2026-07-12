@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-portal
+  labels:
+    app.kubernetes.io/name: rbx-portal
+    app.kubernetes.io/part-of: rbx-portal
