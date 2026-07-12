@@ -12,8 +12,6 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/name: truthmetal-redis
-      app.kubernetes.io/part-of: truthmetal
-      environment: production
   template:
     metadata:
       labels:
