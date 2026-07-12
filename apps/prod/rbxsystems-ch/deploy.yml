@@ -89,6 +89,14 @@ spec:
                 secretKeyRef:
                   name: rbx-llm-secrets
                   key: LLM_GATEWAY_KEY
+            # Plausible analytics — privacy-friendly, cookieless.
+            # Self-hosted instance at plausible.rbxsystems.ch serves both domains.
+            - name: VITE_PLAUSIBLE_DOMAIN
+              value: "rbxsystems.ch"
+            - name: VITE_PLAUSIBLE_SCRIPT_SRC
+              value: "https://plausible.rbxsystems.ch/js/script.js"
+            - name: VITE_PLAUSIBLE_API_HOST
+              value: "https://plausible.rbxsystems.ch"
           readinessProbe:
             httpGet:
               path: /healthz
