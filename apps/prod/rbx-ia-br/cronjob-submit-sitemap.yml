@@ -39,7 +39,7 @@ spec:
                   git clone --depth 1 https://github.com/rbxrobotica/rbx-systems-frontend.git /app
                   cd /app
                   npm pkg set type=module
-                  npm install googleapis
+                  npm install googleapis uuid@^11.0.0
                   node scripts/submit-sitemap.js
               volumeMounts:
                 - name: search-console-key
@@ -86,7 +86,7 @@ spec:
                   git clone --depth 1 https://github.com/rbxrobotica/rbx-systems-frontend.git /app
                   cd /app
                   npm pkg set type=module
-                  npm install googleapis
+                  npm install googleapis uuid@^11.0.0
                   node scripts/submit-sitemap.js
               volumeMounts:
                 - name: search-console-key
