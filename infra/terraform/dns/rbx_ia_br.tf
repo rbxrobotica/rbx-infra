@@ -235,6 +235,14 @@ resource "powerdns_record" "md_prec_kulinaryos_rbx_ia_br_a" {
   records = [var.k3s_ingress_ip]
 }
 
+resource "powerdns_record" "portal_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "portal.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
 resource "powerdns_record" "robson_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
   name    = "robson.rbx.ia.br."

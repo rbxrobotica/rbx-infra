@@ -1,0 +1,14 @@
+# Non-secret OIDC + runtime configuration. Secrets (OIDC_CLIENT_SECRET, SESSION_SECRET)
+# come from the ExternalSecret, not this ConfigMap.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rbx-portal-config
+  namespace: rbx-portal
+data:
+  OIDC_ISSUER: "https://auth.rbx.ia.br"
+  OIDC_CLIENT_ID: "rbx-portal"
+  OIDC_REDIRECT_URI: "https://portal.rbxsystems.ch/auth/callback"
+  OIDC_SCOPES: "openid profile email"
+  ORIGIN: "https://portal.rbxsystems.ch"
+  PUBLIC_PORTAL_URL: "https://portal.rbxsystems.ch"

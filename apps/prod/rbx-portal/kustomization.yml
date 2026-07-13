@@ -1,0 +1,21 @@
+# Kustomization for rbx-portal (exec operational-readiness portal)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rbx-portal
+resources:
+  - namespace.yml
+  - rbac-external-secrets.yml
+  - secretstore.yml
+  - externalsecret.yml
+  - configmap.yml
+  - middleware.yml
+  - deploy.yml
+  - svc.yml
+  - certificate.yml
+  - ingressroute.yml
+commonLabels:
+  app.kubernetes.io/part-of: rbx-portal
+  environment: production
+images:
+  - name: ghcr.io/rbxrobotica/rbx-portal
+    newTag: sha-5081837
