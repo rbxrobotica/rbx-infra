@@ -302,4 +302,12 @@ resource "powerdns_record" "cms_rbxsystems_ch" {
   type    = "A"
   ttl     = 3600
   records = [var.k3s_ingress_ip]
+}# --- RBX Portal (exec operational-readiness portal) ---
+
+resource "powerdns_record" "portal_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "portal.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
 }
