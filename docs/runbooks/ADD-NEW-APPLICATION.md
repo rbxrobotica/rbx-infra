@@ -234,6 +234,7 @@ Before submitting the PR, verify:
 - [ ] Resource requests and limits are set
 - [ ] Health probes point to a valid endpoint
 - [ ] No secrets in manifests (use Kubernetes Secrets or external-secrets)
+- [ ] External Postgres apps have selectorless Service + Endpoints and a matching DB/role/pg_hba bootstrap plan (`docs/runbooks/EXTERNAL-POSTGRES-APP-DB-RECOVERY.md`)
 - [ ] ArgoCD Application does NOT use `ServerSideApply=true`
 - [ ] Namespace file exists in `core/namespaces/`
 - [ ] `kustomization.yml` lists all resources
