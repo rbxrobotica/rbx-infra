@@ -114,4 +114,8 @@ pass_postmark_server_token_key: "rbx/postmark/rbx-institutional-server-token"
 pass_rbx_commerce_asaas_api_key: "rbx/commerce/asaas-api-key"
 pass_rbx_commerce_asaas_webhook_token: "rbx/commerce/asaas-webhook-token"
 pass_rbx_commerce_service_key: "rbx/commerce/service-key"
+# ALTCHA_SECRET is independent from rbx-contact-secrets' copy — rbx-commerce
+# issues and verifies its own proof-of-work challenges for the public
+# briefing-btc checkout, no cross-service dependency.
+pass_rbx_commerce_altcha_secret: "rbx/commerce/altcha-secret"
 rbx_commerce_comms_api_url: "http://rbx-comms.rbx-comms.svc.cluster.local"

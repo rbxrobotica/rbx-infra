@@ -1243,6 +1243,12 @@
   register: rbx_commerce_service_key_result
   no_log: true
 
+- name: Read rbx-commerce Altcha secret from pass
+  command: pass show {{ pass_rbx_commerce_altcha_secret }}
+  changed_when: false
+  register: rbx_commerce_altcha_secret_result
+  no_log: true
+
 - name: Create rbx-commerce-secrets in rbx-ia-br
   shell: |
     kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-commerce-secrets \
@@ -1252,6 +1258,7 @@
       --from-literal=ASAAS_API_KEY="$ASAAS_API_KEY" \
       --from-literal=ASAAS_WEBHOOK_TOKEN="$ASAAS_WEBHOOK_TOKEN" \
       --from-literal=COMMERCE_SERVICE_KEY="$COMMERCE_SERVICE_KEY" \
+      --from-literal=ALTCHA_SECRET="$ALTCHA_SECRET" \
       --dry-run=client -o yaml \
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   environment:
@@ -1259,6 +1266,7 @@
     ASAAS_API_KEY: "{{ rbx_commerce_asaas_api_key_result.stdout | trim }}"
     ASAAS_WEBHOOK_TOKEN: "{{ rbx_commerce_asaas_webhook_token_result.stdout | trim }}"
     COMMERCE_SERVICE_KEY: "{{ rbx_commerce_service_key_result.stdout | trim }}"
+    ALTCHA_SECRET: "{{ rbx_commerce_altcha_secret_result.stdout | trim }}"
   changed_when: true
   no_log: true
 
@@ -1292,7 +1300,7 @@
       - "  {{ rbx_ia_br_namespace }}/rbx-market-briefing-llm: LLM_API_KEY (llm-gateway master key)"
       - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
-      - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY"
+      - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET"
       - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
@@ -1322,7 +1330,7 @@
       - "  {{ rbx_ia_br_namespace }}/rbx-market-briefing-llm: LLM_API_KEY (llm-gateway master key)"
       - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
-      - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY"
+      - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET"
   when: tenant_id_existing.rc == 0
 
 # --- Pattern R: org-registry pull secrets for apps migrating off ghcr-ldamasio ---

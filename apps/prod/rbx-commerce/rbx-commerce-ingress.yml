@@ -1,10 +1,12 @@
 # Ingress: commerce.rbx.ia.br + commerce.rbxsystems.ch
-# /api/v1, /webhooks, /health go straight to the Go backend (server-to-server
-# callers with their own bearer tokens). /api and everything else (including
-# /oidc/* login) go to the SvelteKit frontend, which proxies /api/* to the Go
-# backend server-side after attaching the session's ID token. Traefik routes
-# by longest path-prefix match, so the more specific /api/v1 rule still wins
-# over /api for those callers.
+# /api/v1, /api/public, /webhooks, /health go straight to the Go backend:
+# /api/v1 for server-to-server callers with their own bearer tokens, /api/public
+# for anonymous public-checkout callers (Altcha-protected, see internal/checkout),
+# /webhooks for payment providers, /health for probes. /api and everything else
+# (including /oidc/* login) go to the SvelteKit frontend, which proxies /api/*
+# to the Go backend server-side after attaching the session's ID token. Traefik
+# routes by longest path-prefix match, so the more specific rules above still
+# win over the general /api rule.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -26,6 +28,13 @@ spec:
       http:
         paths:
           - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce
+                port:
+                  number: 80
+          - path: /api/public
             pathType: Prefix
             backend:
               service:
@@ -64,6 +73,13 @@ spec:
       http:
         paths:
           - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: rbx-commerce
+                port:
+                  number: 80
+          - path: /api/public
             pathType: Prefix
             backend:
               service:

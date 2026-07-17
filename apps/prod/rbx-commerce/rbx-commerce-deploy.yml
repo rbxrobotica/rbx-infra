@@ -81,6 +81,15 @@ spec:
                 secretKeyRef:
                   name: rbx-commerce-secrets
                   key: COMMERCE_SERVICE_KEY
+            # Public checkout anti-abuse (internal/checkout). optional=true so this
+            # manifest can merge ahead of the pass/k8s-secrets sync — until the key
+            # exists, the public checkout endpoints 503 rather than crash the pod.
+            - name: ALTCHA_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-secrets
+                  key: ALTCHA_SECRET
+                  optional: true
           readinessProbe:
             httpGet:
               path: /health
