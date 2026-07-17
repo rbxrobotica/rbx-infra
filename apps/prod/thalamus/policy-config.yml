@@ -1,0 +1,33 @@
+# Pilot policy config for thalamus-server (master plan §4, observe/deploy
+# stage). Real per-tenant policies are a Gate E deliverable; this pilot policy
+# governs the kulinaryos workflow only, with mandatory audit.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thalamus-policy
+  namespace: thalamus
+  labels:
+    app.kubernetes.io/name: thalamus-server
+    app.kubernetes.io/part-of: thalamus
+data:
+  policy.json: |
+    {
+      "listen": "0.0.0.0:8080",
+      "policies": [
+        {
+          "id": "pilot-kulinaryos",
+          "tenant": "rbx",
+          "product": "kulinaryos",
+          "workflow": "pilot",
+          "permitted_backends": [
+            { "id": "glm-5.2", "backend_type": "Model" }
+          ],
+          "max_tokens": 4000,
+          "max_latency_ms": 60000,
+          "context_grants": [],
+          "redaction_rules": [],
+          "audit_required": true,
+          "risk_threshold": "High"
+        }
+      ]
+    }
