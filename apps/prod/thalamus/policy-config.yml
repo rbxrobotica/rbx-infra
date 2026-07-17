@@ -20,7 +20,7 @@ data:
           "product": "kulinaryos",
           "workflow": "pilot",
           "permitted_backends": [
-            { "id": "glm-5.2", "backend_type": "Model" }
+            { "id": "glm-test", "backend_type": "Model" }
           ],
           "max_tokens": 4000,
           "max_latency_ms": 60000,
