@@ -17,6 +17,8 @@ spec:
         app.kubernetes.io/name: thalamus-server
         app.kubernetes.io/part-of: thalamus
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       securityContext:
         runAsNonRoot: true
         runAsUser: 10001
@@ -24,7 +26,7 @@ spec:
         - name: thalamus-server
           # Pinned after the first ghcr publish (thalamus-core build-image
           # workflow); bump via chore commit like the rest of the fleet.
-          image: ghcr.io/rbxrobotica/thalamus-core:sha-PENDING-FIRST-BUILD
+          image: ghcr.io/rbxrobotica/thalamus-core:sha-f065128
           imagePullPolicy: IfNotPresent
           args: ["/etc/thalamus/policy.json"]
           ports:
