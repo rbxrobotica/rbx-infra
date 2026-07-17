@@ -1,0 +1,51 @@
+# NetworkPolicy: thalamus pilot (§4 initial posture).
+# - No public ingress: cluster-internal callers only (the pilot endpoint is
+#   private; public exposure requires explicit approval per the master plan).
+# - Egress restricted to DNS, the jaguar Postgres (durable audit) and the
+#   LiteLLM internal backend. Thalamus -> LiteLLM is the allowed path; the
+#   final deny of non-Thalamus namespaces -> LiteLLM is Gate F (after
+#   consumer migration), not this policy.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: thalamus-server
+  namespace: thalamus
+  labels:
+    app.kubernetes.io/name: thalamus-server
+    app.kubernetes.io/part-of: thalamus
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: thalamus-server
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector: {}
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # Durable audit store on jaguar (external Postgres)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 5432
+    # LiteLLM internal backend
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: llm-gateway
+      ports:
+        - protocol: TCP
+          port: 4000

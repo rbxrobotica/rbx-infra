@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thalamus-server
+  namespace: thalamus
+  labels:
+    app.kubernetes.io/name: thalamus-server
+    app.kubernetes.io/part-of: thalamus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: thalamus-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: thalamus-server
+        app.kubernetes.io/part-of: thalamus
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: thalamus-server
+          # Pinned after the first ghcr publish (thalamus-core build-image
+          # workflow); bump via chore commit like the rest of the fleet.
+          image: ghcr.io/rbxrobotica/thalamus-core:sha-PENDING-FIRST-BUILD
+          imagePullPolicy: IfNotPresent
+          args: ["/etc/thalamus/policy.json"]
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            # Durable audit (Phase 2): authoritative store on jaguar. The
+            # server fails fast at startup and fails closed at runtime when
+            # the audit store is unavailable.
+            - name: THALAMUS_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: thalamus-db
+                  key: database-url
+            # LiteLLM as internal backend only (§4): never exposed to
+            # callers; Thalamus is the single institutional LLM endpoint.
+            - name: LITELLM_ENDPOINT
+              value: "http://litellm.llm-gateway.svc.cluster.local:4000"
+            # Gate A surface stays off until rbx-token-service introspection
+            # is reachable in-cluster (flip with THALAMUS_RBX_API=on +
+            # THALAMUS_TOKEN_INTROSPECTION_URL).
+            - name: THALAMUS_RBX_API
+              value: "off"
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: policy
+              mountPath: /etc/thalamus
+              readOnly: true
+      volumes:
+        - name: policy
+          configMap:
+            name: thalamus-policy

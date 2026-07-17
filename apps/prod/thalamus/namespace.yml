@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: thalamus
+  labels:
+    app.kubernetes.io/name: thalamus
+    app.kubernetes.io/part-of: thalamus

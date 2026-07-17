@@ -1,0 +1,23 @@
+# External Postgres on jaguar (Postgres-external rule): ClusterIP with manual
+# Endpoints, same pattern as rbx-comms. Database `thalamus`, roles
+# thalamus_app/thalamus_migrator (created in Phase 2; pg_hba scoped to the
+# cluster node IPs).
+apiVersion: v1
+kind: Service
+metadata:
+  name: thalamus-postgres
+  namespace: thalamus
+spec:
+  ports:
+    - port: 5432
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: thalamus-postgres
+  namespace: thalamus
+subsets:
+  - addresses:
+      - ip: 161.97.147.76
+    ports:
+      - port: 5432

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: thalamus
+  namespace: thalamus
+  labels:
+    app.kubernetes.io/name: thalamus-server
+    app.kubernetes.io/part-of: thalamus
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: thalamus-server
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
