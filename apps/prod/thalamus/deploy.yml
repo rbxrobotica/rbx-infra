@@ -24,9 +24,9 @@ spec:
         runAsUser: 10001
       containers:
         - name: thalamus-server
-          # Pinned after the first ghcr publish (thalamus-core build-image
-          # workflow); bump via chore commit like the rest of the fleet.
-          image: ghcr.io/rbxrobotica/thalamus-core:sha-c0e32d1
+          # Tag pinned via the kustomize images transformer
+          # (kustomization.yml newTag), per Pattern R.
+          image: ghcr.io/rbxrobotica/thalamus-core:latest
           imagePullPolicy: IfNotPresent
           args: ["/etc/thalamus/policy.json"]
           ports:

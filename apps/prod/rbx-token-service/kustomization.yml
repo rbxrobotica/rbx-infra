@@ -5,3 +5,8 @@ resources:
   - token-service-deploy.yml
   - token-service-svc.yml
   - network-policy.yml
+images:
+  # Bumped to the immutable sha-* tag after the first rbx-token-service
+  # publish (rbx-identity build workflow).
+  - name: ghcr.io/rbxrobotica/rbx-token-service
+    newTag: sha-PENDING-FIRST-BUILD

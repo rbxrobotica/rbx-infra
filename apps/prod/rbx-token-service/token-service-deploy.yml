@@ -29,7 +29,7 @@ spec:
         runAsUser: 1001
       containers:
         - name: rbx-token-service
-          image: ghcr.io/rbxrobotica/rbx-token-service:sha-PENDING-FIRST-BUILD
+          image: ghcr.io/rbxrobotica/rbx-token-service:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8082

@@ -8,3 +8,6 @@ resources:
   - deploy.yml
   - svc.yml
   - network-policy.yml
+images:
+  - name: ghcr.io/rbxrobotica/thalamus-core
+    newTag: sha-c0e32d1
