@@ -49,3 +49,11 @@ spec:
       ports:
         - protocol: TCP
           port: 4000
+    # rbx-token-service introspection (Gate A credential validation)
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: rbx-identity
+      ports:
+        - protocol: TCP
+          port: 8082

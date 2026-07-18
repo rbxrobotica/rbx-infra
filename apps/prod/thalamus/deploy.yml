@@ -52,11 +52,13 @@ spec:
                 secretKeyRef:
                   name: thalamus-litellm
                   key: api-key
-            # Gate A surface stays off until rbx-token-service introspection
-            # is reachable in-cluster (flip with THALAMUS_RBX_API=on +
-            # THALAMUS_TOKEN_INTROSPECTION_URL).
+            # Gate A governed surface: credential middleware backed by
+            # rbx-token-service introspection (sync the rbx-token-service
+            # app BEFORE this one — /readyz probes the endpoint).
             - name: THALAMUS_RBX_API
-              value: "off"
+              value: "on"
+            - name: THALAMUS_TOKEN_INTROSPECTION_URL
+              value: "http://rbx-token-service.rbx-identity.svc.cluster.local:8082/v1/delegation/introspect"
           readinessProbe:
             httpGet:
               path: /readyz
