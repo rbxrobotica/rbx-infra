@@ -1,0 +1,30 @@
+# ArgoCD Application: rbx-token-service
+# Gate A opaque delegation credentials (ADR-0101 first slice). Lives in the
+# existing rbx-identity namespace alongside ZITADEL/session-bff. NO automated
+# sync; no public ingress — introspection reachable only from thalamus.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-token-service
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-token-service
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-identity
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-token-service
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-identity
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

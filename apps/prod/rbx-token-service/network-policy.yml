@@ -1,0 +1,38 @@
+# NetworkPolicy: rbx-token-service.
+# The introspection surface has no credential of its own in the first slice;
+# network is the boundary. Only the thalamus namespace may reach it (the RBX
+# Agent Bridge gains an entry when it lands). Operator issuance happens via
+# kubectl port-forward, which bypasses NetworkPolicy by design.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rbx-token-service
+  namespace: rbx-identity
+  labels:
+    app.kubernetes.io/name: rbx-token-service
+    app.kubernetes.io/part-of: rbx-identity
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-token-service
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: thalamus
+      ports:
+        - protocol: TCP
+          port: 8082
+  egress:
+    # DNS only; the service holds no upstream in the opaque-credential slice.
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53

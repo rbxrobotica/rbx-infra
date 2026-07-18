@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-token-service
+  namespace: rbx-identity
+  labels:
+    app.kubernetes.io/name: rbx-token-service
+    app.kubernetes.io/part-of: rbx-identity
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rbx-token-service
+  ports:
+    - name: http
+      port: 8082
+      targetPort: http
