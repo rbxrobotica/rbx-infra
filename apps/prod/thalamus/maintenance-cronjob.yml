@@ -1,0 +1,95 @@
+# Thalamus maintenance (Gate E decisions D3/D7, 2026-07-18):
+# - D3 retention: route_envelopes carries the raw prompt payload; purge rows
+#   older than 30 days. audit_events (hash chain, no payload) is permanent.
+# - D7 budgets: 'day'-period budget lines reset daily (consumed_tokens = 0);
+#   the budgets table has no native period semantics, this job provides them.
+# Runs as its own pod identity (thalamus-maintenance) with a dedicated
+# NetworkPolicy: egress to DNS and jaguar 5432 only.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: thalamus-maintenance
+  namespace: thalamus
+  labels:
+    app.kubernetes.io/name: thalamus-maintenance
+    app.kubernetes.io/part-of: thalamus
+spec:
+  schedule: "15 0 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: thalamus-maintenance
+            app.kubernetes.io/part-of: thalamus
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+          containers:
+            - name: maintenance
+              image: docker.io/library/postgres:16
+              imagePullPolicy: IfNotPresent
+              env:
+                - name: THALAMUS_DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: thalamus-db
+                      key: database-url
+              command:
+                - psql
+                - "-v"
+                - "ON_ERROR_STOP=1"
+                - "$(THALAMUS_DATABASE_URL)"
+                - "-c"
+                - >-
+                  DELETE FROM route_envelopes
+                  WHERE created_at < now() - interval '30 days';
+                - "-c"
+                - >-
+                  UPDATE budgets
+                  SET consumed_tokens = 0, updated_at = now()
+                  WHERE period = 'day';
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  memory: 64Mi
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: thalamus-maintenance
+  namespace: thalamus
+  labels:
+    app.kubernetes.io/name: thalamus-maintenance
+    app.kubernetes.io/part-of: thalamus
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: thalamus-maintenance
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress: []
+  egress:
+    # DNS
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+    # jaguar Postgres (external)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 5432
