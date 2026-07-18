@@ -13,6 +13,6 @@ resources:
   - rbx-commerce-web-svc.yml
 images:
   - name: ghcr.io/rbxrobotica/rbx-commerce
-    newTag: sha-51a1616be4f49d44d7bbc333050f8e4cee02c172
+    newTag: sha-31af3814d0a1ad8de539df24e36506118f3aa01e
   - name: ghcr.io/rbxrobotica/rbx-commerce-web
-    newTag: sha-51a1616be4f49d44d7bbc333050f8e4cee02c172
+    newTag: sha-31af3814d0a1ad8de539df24e36506118f3aa01e
