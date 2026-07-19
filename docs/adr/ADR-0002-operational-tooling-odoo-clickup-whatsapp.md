@@ -2,7 +2,9 @@
 
 ## Status
 
-**Accepted** - 2026-03-30
+**Superseded** - 2026-07-19 by [RBX Governance ADR-0602](https://github.com/rbxrobotica/rbx-governance/blob/main/docs/adr/ADR-0602-odoo-retirement-rbx-relations-and-project-boundaries.md)
+
+This record is retained as historical evidence only. ADR-0602 retires Odoo from the RBX target architecture and defines rbx-relations and rbx-project as the planned product boundaries. Do not use the architecture, implementation phases, or integrations below for new work.
 
 ## Context
 
