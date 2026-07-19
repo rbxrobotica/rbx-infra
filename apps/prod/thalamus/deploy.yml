@@ -57,6 +57,11 @@ spec:
             # app BEFORE this one — /readyz probes the endpoint).
             - name: THALAMUS_RBX_API
               value: "on"
+            # Institutional model aliases (Gate 0 item 1): policy speaks
+            # aliases like coding.standard; only this map knows the gateway
+            # model name. Malformed JSON fails startup.
+            - name: THALAMUS_MODEL_MAP
+              value: '{"coding.standard": "anthropic/glm-5.2"}'
             - name: THALAMUS_TOKEN_INTROSPECTION_URL
               value: "http://rbx-token-service.rbx-identity.svc.cluster.local:8082/v1/delegation/introspect"
           readinessProbe:

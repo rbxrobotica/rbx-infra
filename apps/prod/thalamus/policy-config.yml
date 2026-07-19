@@ -44,6 +44,23 @@ data:
           "audit_required": true,
           "risk_threshold": "High",
           "require_run_correlation": true
+        },
+        {
+          "id": "robson-code-coding",
+          "tenant": "rbx",
+          "product": "robson-code",
+          "workflow": "coding",
+          "permitted_backends": [
+            { "id": "coding.standard", "backend_type": "Model" }
+          ],
+          "max_tokens": 32000,
+          "max_latency_ms": 300000,
+          "context_grants": [],
+          "redaction_rules": [],
+          "audit_required": true,
+          "risk_threshold": "High",
+          "require_run_correlation": true,
+          "prompt_profile": "rbx.coding.v1"
         }
       ]
     }
