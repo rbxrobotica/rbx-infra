@@ -7,6 +7,8 @@ resources:
   - rbac-external-secrets.yml
   - secretstore.yml
   - externalsecret-users-access.yml
+  - externalsecret-session-bff.yml
+  - session-bff.yml
   - middleware.yml
   - deploy.yml
   - svc.yml
