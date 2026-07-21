@@ -25,7 +25,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: session-bff
-          image: ghcr.io/rbxrobotica/rbx-session-bff:sha-05c9219
+          image: ghcr.io/rbxrobotica/rbx-session-bff:sha-ee43b15
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
@@ -50,6 +50,10 @@ spec:
               value: "rbx:console:session:"
             - name: RBX_SESSION_BFF_SCOPES
               value: openid profile email
+            # Enables the PII-free /api/v1/operator-context endpoint (rbx-identity #10).
+            # Without it the endpoint returns 404 and the Console resolver cannot bind.
+            - name: RBX_SESSION_BFF_OPERATOR_AUDIENCE
+              value: rbx-console
           readinessProbe:
             httpGet:
               path: /healthz
