@@ -71,6 +71,26 @@ spec:
                 secretKeyRef:
                   name: rbx-console-users-access
                   key: RBX_COMMERCE_USERS_ACCESS_TENANT_ID
+            # --- Console dedicated session-BFF (BFF session mode) ---
+            # Activation order: (1) rbx-console image including PRs #14/#15/#16
+            # must be published and the kustomization newTag bumped; (2) the
+            # rbx-console-session-bff pod must be Running (Secret provisioned);
+            # (3) only then does RBX_CONSOLE_SESSION_MODE=bff take effect. Until
+            # then the Console keeps its current (disabled) resolver behaviour.
+            - name: RBX_CONSOLE_SESSION_MODE
+              value: bff
+            - name: RBX_CONSOLE_SESSION_BFF_BASE_URL
+              value: http://rbx-console-session-bff.rbx-console.svc.cluster.local:8081
+            - name: RBX_CONSOLE_OPERATOR_AUDIENCE
+              value: rbx-console
+            # Fixed server tenant. Assumes it equals the commerce users-access
+            # tenant already mounted below the same secret; confirm at review and
+            # adjust the key if the Console session tenant differs.
+            - name: RBX_CONSOLE_INITIAL_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-console-users-access
+                  key: RBX_COMMERCE_USERS_ACCESS_TENANT_ID
           readinessProbe:
             httpGet:
               path: /healthz
