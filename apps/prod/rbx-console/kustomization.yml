@@ -19,4 +19,4 @@ commonLabels:
   environment: production
 images:
   - name: ghcr.io/rbxrobotica/rbx-console
-    newTag: sha-c2338c3
+    newTag: sha-897295c
