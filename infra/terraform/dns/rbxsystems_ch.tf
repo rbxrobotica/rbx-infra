@@ -311,3 +311,13 @@ resource "powerdns_record" "portal_rbxsystems_ch" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+# --- Eden Outbox (agent-outbox PR ledger UI) ---
+
+resource "powerdns_record" "outbox_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "outbox.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}

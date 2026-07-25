@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: eden-outbox
+  labels:
+    app.kubernetes.io/name: eden-outbox
+    app.kubernetes.io/part-of: eden-outbox

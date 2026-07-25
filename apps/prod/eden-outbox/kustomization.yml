@@ -1,0 +1,21 @@
+# Kustomization for eden-outbox (exec operational-readiness portal)
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: eden-outbox
+resources:
+  - namespace.yml
+  - rbac-external-secrets.yml
+  - secretstore.yml
+  - externalsecret.yml
+  - configmap.yml
+  - middleware.yml
+  - deploy.yml
+  - svc.yml
+  - certificate.yml
+  - ingressroute.yml
+commonLabels:
+  app.kubernetes.io/part-of: eden-outbox
+  environment: production
+images:
+  - name: ghcr.io/rbxrobotica/eden-outbox
+    newTag: sha-ca041b1
