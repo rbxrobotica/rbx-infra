@@ -1,9 +1,17 @@
 # Runbook - P1 k3s Supported-Version Upgrade
 
-Status: draft for human-approved maintenance window. All restore-drill and
-snapshot gates validated 2026-07-18 (see "Gate status (2026-07-18)" below); only
-the human-window approval remains. Approving this runbook does not execute it,
-each minor step still needs a per-window go.
+Status: **COMPLETE — 4 of 4 steps done (2026-07-22).** Cluster on `v1.36.2+k3s1`
+(all 4 nodes), supported stable line. Roadmap finished; no further minor upgrades
+until the next supported-line drift.
+
+> **Resume urgency (security).** 1.34 is the OLDEST currently-supported Kubernetes
+> minor: it enters maintenance **2026-08-27** (~6 weeks) and reaches **EOL
+> 2026-10-27** (~3 months); the imminent 1.37 release drops it from support.
+> Finishing to `v1.36.2+k3s1` (EOL 2027-04-28) restores full CVE coverage. The
+> cluster already sat ~5 months on EOL `v1.32.3` (2026-02-28 → 2026-07-18) with
+> zero upstream patches — do not stall again. Progress: `1.32.3` ✅→ `1.33.13` ✅→ `1.34.9` ✅→ `1.35.6` ✅→
+> **`1.36.2`** (roadmap COMPLETE 2026-07-22). State record:
+> `~/docs/k3s-ha-cluster-state.md` (final section).
 
 This runbook upgrades the RBX k3s cluster from `v1.32.3+k3s1` back into a
 supported Kubernetes release line. It is intentionally written as a controlled
@@ -11,55 +19,28 @@ procedure, not an instruction to run now.
 
 ## Current state
 
-As of 2026-07-18:
+As of 2026-07-22:
 
-- `tiger`, `altaica`, and `sumatrae` are k3s servers with embedded etcd;
-  `jaguar` is an agent and the database/analytics host (central Postgres/ParadeDB).
-- All 4 nodes run `v1.32.3+k3s1` (Ready; `/readyz` ok).
-- Kubernetes `1.32` is EOL (upstream since 2026-02-28); the supported stable
-  line is now `1.36` (`v1.36.2+k3s1` on the k3s stable channel).
-
-## Gate status (2026-07-18, all met)
-
-| Gate | Status |
-|---|---|
-| Human-approved window + target patch | pending (this runbook requests it) |
-| Latest etcd snapshot exists | OK, `etcd-snapshot-tiger-1784390402` (2026-07-18 18:00 UTC); cadence 6h, retention 20 |
-| Snapshot sync to `jaguar` current | OK, lands at `/var/lib/k3s-snapshots/`; latest present |
-| Restore drill performed | OK, **both** etcd and jaguar-Postgres PASS 2026-07-18 |
-| Public smoke URLs listed | OK, see Post-step verification |
-| Rollback target per minor | the fresh etcd snapshot saved at the end of each prior minor |
-| ArgoCD degraded classified | OK, baseline in "Known pre-existing issues" |
-
-Evidence (confidential, agnostic copies under `~/docs/`):
-`~/docs/etcd-restore-drill-evidence-2026-07-18.md` and
-`~/docs/jaguar-pg-restore-drill-evidence-2026-07-18.md`.
+- `tiger`, `altaica`, and `sumatrae` are k3s servers with embedded etcd.
+- `jaguar` is an agent and database/analytics host.
+- All nodes run **`v1.36.2+k3s1`** (upgraded from `v1.32.3` → `1.33.13` → `1.34.9`
+  → `1.35.6` → `1.36.2` across the 2026-07-18/19/20/22 windows).
+- Active upstream Kubernetes branches are `1.34` (oldest; EOL 2026-10-27),
+  `1.35` (EOL 2026-12-28), and `1.36` (current stable; EOL 2027-04-28).
 
 ## Upgrade rule
 
-Do not skip Kubernetes minor versions. The target sequence is:
+Do not skip Kubernetes minor versions. The target sequence (concrete patches from
+the k3s channel API, re-confirmed at each window):
 
-1. `1.32` -> latest stable K3s patch for `1.33`.
-2. `1.33` -> latest stable K3s patch for `1.34`.
-3. Stop on `1.34` if risk is high; otherwise continue to `1.35`.
-4. Continue to `1.36` only after add-on compatibility is verified.
+1. ✅ DONE 2026-07-18 — `v1.32.3+k3s1` -> `v1.33.13+k3s1`.
+2. ✅ DONE 2026-07-18/19 — `v1.33.13+k3s1` -> `v1.34.9+k3s1`.
+3. ✅ DONE 2026-07-20 — `v1.34.9+k3s1` -> `v1.35.6+k3s1`.
+4. ✅ DONE 2026-07-22 — `v1.35.6+k3s1` -> `v1.36.2+k3s1` (stable; roadmap complete).
 
-Recheck K3s releases immediately before the window. The exact patch version is
+Recheck K3s releases immediately before each window
+(`https://update.k3s.io/v1-release/channels`). The exact patch version is
 a maintenance-window decision, not a constant in this runbook.
-
-Concrete target candidates (2026-07-18, from the authoritative
-`https://update.k3s.io/v1-release/channels`; **recheck at each window**):
-
-| Step | From -> To |
-|---|---|
-| 1 | `v1.32.3+k3s1` -> `v1.33.13+k3s1` |
-| 2 | `v1.33.13+k3s1` -> `v1.34.9+k3s1` |
-| 3 | `v1.34.9+k3s1` -> `v1.35.6+k3s1` |
-| 4 | `v1.35.6+k3s1` -> `v1.36.2+k3s1` (stable line) |
-
-Note: the current 1.32 line is itself at `v1.32.13`, so the cluster is
-patch-behind within 1.32 as well; step 1 resolves that. `1.35` is a released
-line, so the no-skip path is four minor jumps.
 
 ## Pre-flight, read-only
 
@@ -91,46 +72,48 @@ Record:
 - Rollback target for the current minor step is written down.
 - ArgoCD degraded apps are classified as pre-existing or upgrade-induced.
 
-## Critical: do NOT drain server nodes (local-path)
-
-Every server node hosts node-bound `local-path` stateful workloads. A
-`kubectl drain` evicts those pods, but their PVCs cannot rebind on another node,
-leaving them `Pending` (data-loss-adjacent). The upgrade is **in-place**:
-
-- `kubectl cordon <node>` only (prevents new scheduling; **no eviction**);
-- upgrade the k3s package and restart the service in place;
-- `kubectl uncordon <node>`; confirm the local-path pods returned to `Running`
-  on the **same** node (not `Pending`).
-
-local-path bindings (2026-07-18):
-
-| Node | local-path stateful workloads |
-|---|---|
-| tiger | langfuse valkey (`langfuse-redis-primary-0`), langfuse zookeeper-0 |
-| altaica | langfuse zookeeper-2, langfuse clickhouse, rbx-payments btcpay / bitcoind-0 / nbxplorer |
-| sumatrae | monitoring grafana / prometheus / alertmanager / loki-0, langfuse zookeeper-1 |
-| jaguar (agent) | none |
-
-PDBs do not protect against a node reboot, so each restarted node causes a
-~1-2 min restart blip for its single-replica workloads. This is inherent and
-acceptable, and is why each minor is its own night window.
-
 ## Execution shape
 
-Upgrade one k3s server at a time. Preserve etcd quorum (3 members -> keep 2
-alive). Identify the current etcd/controller leader at window time and upgrade
-it **last** among servers:
+Upgrade one k3s server at a time. Preserve etcd quorum:
 
-1. `kubectl cordon <non-leader server>`, upgrade k3s in place, restart service.
+1. Upgrade a non-initial server.
 2. Wait for node `Ready`.
 3. Check etcd member health.
 4. Check `/readyz?verbose`.
-5. `kubectl uncordon`; confirm local-path pods back on the same node.
-6. Repeat for the next non-leader server, then the leader server last.
-7. Upgrade `jaguar` agent after the servers are healthy (no local-path, no etcd).
+5. Repeat for the next server.
+6. Upgrade `jaguar` agent after the servers are healthy.
 
 Do not continue to the next minor version until all nodes are healthy on the
 current target minor.
+
+## Agent (jaguar) upgrade method — install-script gotcha
+
+jaguar runs `k3s-agent.service` with the join `--server`/`--token` hardcoded in
+the unit's `ExecStart` (no `K3S_URL` env, no `config.yaml`). **Do NOT** re-run
+`curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION=... sh -` on jaguar without
+`K3S_URL`+`K3S_TOKEN`: with no `K3S_URL` the install script defaults to SERVER
+mode, creates a bogus `k3s.service` that fails to start, and leaves stray
+`/var/lib/rancher/k3s/server/` state. (Hit during the 1.33 window; recovered by
+removing the bogus unit + restarting `k3s-agent.service`.)
+
+Preferred in-place agent upgrade (no token handling) — replace the binary
+directly, then restart the existing agent unit (preserves `--token`):
+
+```bash
+ssh jaguar 'bash -s' <<'EOF'
+set -e
+VER=v1.33.13+k3s1   # set per window from the channel API
+sudo cp -a /etc/systemd/system/k3s-agent.service /etc/systemd/system/k3s-agent.service.pre-upgrade.bak
+curl -sfL "https://github.com/k3s-io/k3s/releases/download/${VER/+/%2B}/k3s" -o /tmp/k3s.new
+sudo install -m 0755 /tmp/k3s.new /usr/local/bin/k3s
+sudo systemctl restart k3s-agent.service
+EOF
+# then: kubectl cordon/uncordon jaguar; wait Ready + new kubeletVersion
+```
+
+(Alternative: re-run the install script WITH `K3S_URL=https://158.220.116.31:6443`
+and `K3S_TOKEN=<server token>`.) Always back up the agent unit first and verify
+the join token survives (length check, never print the value).
 
 ## Post-step verification
 
@@ -152,6 +135,29 @@ After each minor:
 - Run public HTTP smoke checks.
 - Save a fresh etcd snapshot.
 
+## Stateful / long-sync workloads (BTCPay) — do NOT fear sync loss
+
+`rbx-payments` runs BTCPay on **altaica** (bitcoind StatefulSet, 60 Gi `local-path`
+PVC) with its **Postgres external on jaguar** (Service `rbx-btcpay-postgres` →
+manual endpoint `161.97.147.76:5432`). Observed across the 1.33 + 1.34 windows:
+
+- **bitcoind blockchain sync is NOT lost on upgrade.** Its chain state (tip, UTXO
+  set, block index) is persisted to the `bitcoind-data` PVC on altaica's disk; a
+  restart resumes from that tip, it never re-syncs from zero. In both prior windows
+  the bitcoind pod was not even restarted (`RESTARTS=0`) and the sync advanced
+  uninterrupted (34.8% on 07-13 → 77.89% on 07-19 → 83.26% on 07-20 → 100% on 07-22). **The no-drain rule is what
+  protects this** — never drain altaica, only cordon, so the pod is never evicted
+  and its PVC never detaches.
+- **After altaica restarts**, verify sync kept advancing (not stalled):
+  `kubectl logs -n rbx-payments rbx-btcpay-bitcoind-0 --tail=1 | grep -oE 'height=[0-9]+ .*progress=[0-9.]+'`
+  — sample twice ~15s apart; `height` must increase.
+- **btcpay-server ↔ Postgres blip is expected and transient.** When jaguar
+  restarts, btcpay-server's pooled Npgsql connections to `jaguar:5432` briefly
+  break (Npgsql timeouts in `DelayedTransactionBroadcaster` around the window),
+  then **self-recover** within minutes as the network path heals. Verify recovery:
+  `kubectl run -n rbx-payments --rm -i --restart=Never --image=curlimages/curl:8.7.1 <name> -- curl -s -o /dev/null -w '%{http_code}' http://rbx-btcpay-server:23000/`
+  → expect `302`. Only if it does NOT recover, `kubectl rollout restart deploy/rbx-btcpay-server -n rbx-payments` to clear the pool.
+
 ## Rollback posture
 
 Rollback is per minor step. Do not attempt blind downgrade across multiple minor
@@ -164,17 +170,15 @@ versions. If rollback is required:
 
 ## Known pre-existing issues not caused by upgrade
 
-Refreshed baseline 2026-07-18 (compare each window against this; only flag
-regressions in components that were healthy here):
+As of 2026-07-08:
 
-- ArgoCD apps `OutOfSync` / `Healthy` (cosmetic drift, known):
-  `kube-prometheus-stack`, `llm-gateway`, `rbx-data`, `rbx-memory`,
-  `rbx-observability`, `rbx-comms-console`.
-- ArgoCD app `Degraded` (known broken ExternalSecret): `rbx-portal`.
-- High-restart pods, not currently in a waiting state (do not treat as a
-  regression unless they get worse): `truthmetal` (rs ~5309),
-  `rbx-ledger-backend` (rs ~4920), `lda-prod` (rs ~792), `loki-0` (rs ~238).
-- At the 2026-07-18 capture no pod was in a non-running/non-succeeded phase.
+- `metrics-server` unavailable.
+- duplicate/default observability stack has pending node-exporters.
+- `langfuse` degraded by `local-path` PVC mount failures.
+- `truthmetal` CrashLoopBackOff and TLS challenge pending.
+- `rbx-ledger-backend` CrashLoopBackOff.
+- `rbx-cms` ImagePullBackOff for non-existent image tag.
+- `rbx-console-users-access` ExternalSecret sync error.
 
 Do not declare the upgrade failed solely because a pre-existing issue remains.
 Do declare it failed if a healthy critical dependency regresses.
