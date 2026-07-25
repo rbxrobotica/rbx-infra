@@ -1,0 +1,28 @@
+# ArgoCD Application: Eden Outbox (agent-outbox PR ledger UI)
+# Hosts: outbox.rbxsystems.ch / outbox.rbx.ia.br
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: eden-outbox
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: eden-outbox
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: eden-outbox
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/eden-outbox
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: eden-outbox
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

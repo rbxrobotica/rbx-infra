@@ -1,0 +1,13 @@
+# Non-secret OIDC + runtime configuration. Secrets (OIDC_CLIENT_SECRET, SESSION_SECRET)
+# come from the ExternalSecret, not this ConfigMap.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eden-outbox-config
+  namespace: eden-outbox
+data:
+  OIDC_ISSUER: "https://auth.rbx.ia.br"
+  OIDC_CLIENT_ID: "eden-outbox"
+  OIDC_REDIRECT_URI: "https://outbox.rbxsystems.ch/auth/callback"
+  OIDC_SCOPES: "openid profile email"
+  ORIGIN: "https://outbox.rbxsystems.ch"
