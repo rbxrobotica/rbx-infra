@@ -1,0 +1,32 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: plausible
+
+resources:
+  - namespace.yml
+  - rbac-external-secrets.yml
+  - secretstore.yml
+  - externalsecret.yml
+  - postgres-svc.yml
+  - clickhouse-config.yml
+  - clickhouse.yml
+  - deploy.yml
+  - svc.yml
+  - middleware.yml
+  - certificate.yml
+  - ingressroute.yml
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: plausible
+      environment: production
+    includeSelectors: false
+
+images:
+  # Upstream publishes version branches, not tags; the image tag mirrors the
+  # branch name. Bump deliberately, there is no image-updater on this app.
+  - name: ghcr.io/plausible/community-edition
+    newTag: v3.2.1
+  - name: clickhouse/clickhouse-server
+    newTag: 24.12-alpine

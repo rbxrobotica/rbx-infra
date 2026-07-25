@@ -1,0 +1,38 @@
+# ArgoCD Application: Plausible Community Edition (self-hosted web analytics).
+# Namespace: plausible. Serves both rbx.ia.br and rbxsystems.ch from
+# plausible.rbxsystems.ch.
+#
+# Manual sync, like Langfuse: this app owns node-local persistent volumes and its
+# first sync runs database creation plus migrations. Automated prune/selfHeal on
+# a stateful app is not worth the blast radius.
+#
+# Blocked until (see docs/runbooks/PLAUSIBLE-BRINGUP.md):
+#   1. plausible role + database on the external Postgres (161.97.147.76)
+#   2. rbx-ia-br/plausible-secrets Secret populated from `pass`
+#   3. DNS plausible.rbxsystems.ch (infra/terraform/dns/rbxsystems_ch.tf)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: plausible
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: plausible
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: plausible
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/plausible
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: plausible
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

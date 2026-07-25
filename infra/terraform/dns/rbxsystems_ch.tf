@@ -321,3 +321,13 @@ resource "powerdns_record" "outbox_rbxsystems_ch" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+# --- Plausible (self-hosted web analytics for rbx.ia.br + rbxsystems.ch) ---
+
+resource "powerdns_record" "plausible_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "plausible.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}

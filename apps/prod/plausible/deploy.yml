@@ -1,0 +1,109 @@
+# Plausible Community Edition: self-hosted, cookieless web analytics for
+# rbx.ia.br and rbxsystems.ch. Both frontend deployments already point at
+# https://plausible.rbxsystems.ch (VITE_PLAUSIBLE_* env in their deploy.yml),
+# read at runtime by +layout.server.ts, so nothing changes on the site side.
+#
+# Version pinning note: upstream community-edition publishes version *branches*,
+# not git tags, and the image tag is the branch name. v3.2.1 is the newest.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: plausible
+  namespace: plausible
+spec:
+  replicas: 1
+  strategy:
+    # Single writer with a node-local PVC: never run two pods at once.
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: plausible
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: plausible
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: jaguar
+      tolerations:
+        - key: robson.io/dedicated
+          operator: Equal
+          value: analytics
+          effect: NoSchedule
+      containers:
+        - name: plausible
+          image: ghcr.io/plausible/community-edition:v3.2.1
+          # Same sequence upstream compose uses: create the databases if absent,
+          # migrate, then serve. All three are idempotent, so a restart is safe.
+          command:
+            - sh
+            - -c
+            - /entrypoint.sh db createdb && /entrypoint.sh db migrate && /entrypoint.sh run
+          env:
+            - name: BASE_URL
+              value: https://plausible.rbxsystems.ch
+            - name: HTTP_PORT
+              value: "8000"
+            # Upstream default. Self-registration stays closed; see the runbook
+            # for how the first account is created.
+            - name: DISABLE_REGISTRATION
+              value: invite_only
+            # No mailer is wired yet, so verification mail could not be delivered.
+            - name: ENABLE_EMAIL_VERIFICATION
+              value: "false"
+            - name: TMPDIR
+              value: /var/lib/plausible/tmp
+          envFrom:
+            - secretRef:
+                name: plausible-secrets
+          ports:
+            - containerPort: 8000
+              name: http
+          # `/` answers 302 to /login, which counts as success (k8s accepts
+          # 200-399). Upstream documents no health endpoint, so this is the
+          # sanity check their reverse-proxy guide uses.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 12
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            # Generous: the first boot runs createdb plus every migration before
+            # the endpoint answers.
+            initialDelaySeconds: 180
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1536Mi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/plausible
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: plausible-data
+---
+# Holds TMPDIR and, if geolocation is enabled later, the MaxMind database.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: plausible-data
+  namespace: plausible
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 2Gi
