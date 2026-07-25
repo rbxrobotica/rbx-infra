@@ -31,7 +31,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: eden-outbox
-          image: ghcr.io/rbxrobotica/eden-outbox:sha-0000000
+          image: ghcr.io/rbxrobotica/eden-outbox:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
