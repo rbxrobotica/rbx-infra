@@ -62,6 +62,14 @@ spec:
             # model name. Malformed JSON fails startup.
             - name: THALAMUS_MODEL_MAP
               value: '{"coding.standard": "anthropic/glm-5.2"}'
+            # Per-run cost for the audit ledger. Both aliases resolve to
+            # the z.ai GLM seat, so their marginal cost is genuinely zero:
+            # 'subscription' records that as a fact, distinct from an alias
+            # with no rate at all (recorded 'unpriced', amount null). Switch
+            # an alias to 'metered' with per-1M-token rates in micros when it
+            # starts being billed per call. Malformed JSON fails startup.
+            - name: THALAMUS_MODEL_PRICES
+              value: '{"glm-test": {"basis": "subscription", "currency": "USD"}, "coding.standard": {"basis": "subscription", "currency": "USD"}}'
             - name: THALAMUS_TOKEN_INTROSPECTION_URL
               value: "http://rbx-token-service.rbx-identity.svc.cluster.local:8082/v1/delegation/introspect"
           readinessProbe:
