@@ -89,6 +89,9 @@ spec:
     # BTCPay Server (ADR-0009 Layer 2).
     - namespace: rbx-payments
       server: https://kubernetes.default.svc
+    # Plausible CE self-hosted web analytics for rbx.ia.br + rbxsystems.ch.
+    - namespace: plausible
+      server: https://kubernetes.default.svc
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
