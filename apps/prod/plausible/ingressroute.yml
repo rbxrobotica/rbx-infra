@@ -1,0 +1,32 @@
+# IngressRoute: plausible.rbxsystems.ch → plausible.
+# Traefik forwards X-Forwarded-For and the WebSocket Upgrade/Connection headers
+# by default, which is all upstream's reverse-proxy guide requires (the dashboard
+# uses /live/websocket; the tracker posts to /api/event).
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: plausible
+  namespace: plausible
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    # HTTP → HTTPS redirect
+    - match: Host(`plausible.rbxsystems.ch`)
+      kind: Rule
+      priority: 1
+      middlewares:
+        - name: redirect-https
+          namespace: plausible
+      services:
+        - name: plausible
+          port: 80
+    - match: Host(`plausible.rbxsystems.ch`)
+      kind: Rule
+      priority: 10
+      services:
+        - name: plausible
+          port: 80
+  tls:
+    secretName: plausible-tls

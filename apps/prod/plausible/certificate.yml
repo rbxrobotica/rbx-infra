@@ -1,0 +1,19 @@
+# Certificate: plausible.rbxsystems.ch (DNS managed by PowerDNS/OpenTofu —
+# infra/terraform/dns/rbxsystems_ch.tf). The record must exist before this can
+# be issued, otherwise the HTTP-01 challenge has nowhere to land.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: plausible-tls
+  namespace: plausible
+spec:
+  dnsNames:
+    - plausible.rbxsystems.ch
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: plausible-tls
+  usages:
+    - digital signature
+    - key encipherment

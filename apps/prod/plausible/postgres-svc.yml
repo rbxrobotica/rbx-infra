@@ -1,0 +1,23 @@
+# Headless Service + Endpoints pointing at the external Postgres host (jaguar).
+# Postgres is never run inside k3s in production, so Plausible reaches the same
+# shared instance every other app uses. The pod is scheduled on jaguar itself,
+# so this traffic never leaves the node.
+apiVersion: v1
+kind: Service
+metadata:
+  name: plausible-postgres
+  namespace: plausible
+spec:
+  ports:
+    - port: 5432
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: plausible-postgres
+  namespace: plausible
+subsets:
+  - addresses:
+      - ip: 161.97.147.76
+    ports:
+      - port: 5432

@@ -1,0 +1,122 @@
+# ClickHouse for Plausible: event store, in-cluster.
+#
+# Why in-cluster: the "Postgres is always external" rule covers Postgres only,
+# and the fleet already runs ClickHouse in-cluster for Langfuse. Plausible's
+# event volume for two low-traffic marketing domains is small.
+#
+# Failure mode: `local-path` is the only StorageClass, so this PVC is node-local
+# on jaguar and has no replication and no volume expansion. Losing jaguar's disk
+# loses the event history; the Postgres side (sites, users, settings) survives
+# because it lives on the external instance. Sizing is therefore up front: 20Gi
+# holds years of traffic at this scale, and growing it means recreating the PVC.
+apiVersion: v1
+kind: Service
+metadata:
+  name: plausible-clickhouse
+  namespace: plausible
+  labels:
+    app.kubernetes.io/name: plausible-clickhouse
+spec:
+  selector:
+    app.kubernetes.io/name: plausible-clickhouse
+  ports:
+    - port: 8123
+      targetPort: 8123
+      name: http
+    - port: 9000
+      targetPort: 9000
+      name: native
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: plausible-clickhouse
+  namespace: plausible
+spec:
+  serviceName: plausible-clickhouse
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: plausible-clickhouse
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: plausible-clickhouse
+    spec:
+      # jaguar is the analytics node (24Gi, 8 CPU, 394Gi disk) and carries the
+      # NoSchedule taint below. The other three nodes sit at 60-86% memory, so
+      # this workload does not belong on them.
+      nodeSelector:
+        kubernetes.io/hostname: jaguar
+      tolerations:
+        - key: robson.io/dedicated
+          operator: Equal
+          value: analytics
+          effect: NoSchedule
+      securityContext:
+        fsGroup: 101
+      containers:
+        - name: clickhouse
+          image: clickhouse/clickhouse-server:24.12-alpine
+          env:
+            # No user setup: the default user stays password-less and the server
+            # is only reachable on the cluster network, matching upstream compose.
+            - name: CLICKHOUSE_SKIP_USER_SETUP
+              value: "1"
+          ports:
+            - containerPort: 8123
+              name: http
+            - containerPort: 9000
+              name: native
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: 8123
+            initialDelaySeconds: 60
+            periodSeconds: 20
+            failureThreshold: 6
+          resources:
+            requests:
+              cpu: 250m
+              memory: 1Gi
+            limits:
+              cpu: "2"
+              memory: 4Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clickhouse
+            - name: logs
+              mountPath: /var/log/clickhouse-server
+            - name: config
+              mountPath: /etc/clickhouse-server/config.d
+              readOnly: true
+            - name: users
+              mountPath: /etc/clickhouse-server/users.d
+              readOnly: true
+      volumes:
+        # Logs go to console (see logs.xml), so the log dir only needs scratch
+        # space. Keeping it off the PVC stops log growth from filling the store.
+        - name: logs
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: plausible-clickhouse-config
+        - name: users
+          configMap:
+            name: plausible-clickhouse-users
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 20Gi
