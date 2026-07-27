@@ -17,7 +17,7 @@ canonical case study — read it first if you have time.
 |---------|------------------|---------|
 | `tofu apply` errors with "connection refused" or "API unreachable" | SSH tunnel down OR `pdns` not running on pantera | §1, §2 |
 | `tofu apply` errors with "401 Unauthorized" | `PDNS_API_KEY` in `pass` is stale OR pantera config out of sync | §3 |
-| `tofu apply` succeeds but `dig` shows old/no record | Tofu wrote to master but eagle hasn't picked up via AXFR yet | §5 |
+| `tofu apply` succeeds but `dig` shows old/no record | The API write did not bump the SOA serial, so eagle never transfers | §5 |
 | `pdns` stuck in `systemctl restart` loop on pantera | gpgsql password mismatch — config out of sync with vault rotation | §4 |
 | Cert-manager challenge fails for a new host | DNS resolves at ns1 but not at public resolvers yet — wait for TTL | §6 |
 
@@ -183,33 +183,61 @@ group_vars/all/vault.yml` or equivalent), but pantera's rendered
 
 ---
 
-## §5. AXFR replication lag (eagle out of sync)
+## §5. eagle never receives records written by tofu
 
-After a successful `tofu apply` against pantera, eagle should
-pick up the new zone serial within seconds via NOTIFY+AXFR.
+**This is not lag. It is a standing defect: every API write needs a
+manual serial bump.** Diagnosed 2026-07-26 while bringing up
+`plausible.rbxsystems.ch`.
 
-Verify directly at each authoritative server:
+All four zones have the `SOA-EDIT-API` metadata item present but
+**empty**, which disables the automatic serial bump PowerDNS
+applies by default. The tofu provider writes through the API, so
+pantera gains the record while the zone serial stays where it was.
+eagle compares serials, sees no change, and never transfers. Half
+of all resolvers then answer NXDOMAIN for the new name.
 
-```bash
-dig +short A robson.rbxsystems.ch @149.102.139.33   # ns1 (pantera)
-dig +short A robson.rbxsystems.ch @167.86.92.97     # ns2 (eagle)
-```
-
-If pantera answers but eagle does not after ~30s:
-
-```bash
-ssh root@149.102.139.33 'pdns_control notify rbxsystems.ch'
-```
-
-This forces a NOTIFY to slaves. eagle's bind backend should then
-trigger AXFR.
-
-If eagle still doesn't pick up:
+The symptom is easy to misread as caching, because both servers
+report a healthy zone with the *same* serial. Compare the records,
+not just the serials:
 
 ```bash
-ssh root@167.86.92.97 'rndc retransfer rbxsystems.ch || \
-  systemctl status named --no-pager | head -20'
+dig +short A plausible.rbxsystems.ch @149.102.139.33   # ns1 (pantera)
+dig +short A plausible.rbxsystems.ch @167.86.92.97     # ns2 (eagle)
+dig +short SOA rbxsystems.ch @149.102.139.33 | awk '{print $3}'
+dig +short SOA rbxsystems.ch @167.86.92.97   | awk '{print $3}'
 ```
+
+Matching serials plus a record missing on eagle is this defect.
+
+### Fix after every `tofu apply`
+
+```bash
+ssh root@149.102.139.33 "\
+  pdnsutil increase-serial rbxsystems.ch && \
+  pdns_control purge 'rbxsystems.ch\$' && \
+  pdns_control notify rbxsystems.ch"
+```
+
+All three matter. `increase-serial` writes the new serial to the
+database; **`purge` is the step people miss**, because the running
+daemon keeps serving the old serial from cache and eagle would keep
+seeing no change; `notify` then pushes it.
+
+`pdns_control notify` alone, which this section used to prescribe,
+does nothing here: eagle receives the NOTIFY, compares the unchanged
+serial, and declines the transfer.
+
+### Permanent fix, not yet applied
+
+```bash
+ssh root@149.102.139.33 'pdnsutil set-meta <zone> SOA-EDIT-API DEFAULT'
+```
+
+Affects rbxsystems.ch, rbx.ia.br, merovelis.com and strategos.gr.
+It changes behaviour for every future record in those zones, so it
+is an operator decision, not a side effect of the next change.
+Until it is applied, treat the bump above as part of the DNS
+workflow rather than as troubleshooting.
 
 ---
 
@@ -218,6 +246,12 @@ ssh root@167.86.92.97 'rndc retransfer rbxsystems.ch || \
 After a new A record is created and replicated, cert-manager
 attempts an HTTP-01 challenge. If it fails, common causes:
 
+- **The record only exists on ns1.** Check §5 **first**. Let's
+  Encrypt runs a secondary validation from several vantage points;
+  if any of them asks eagle, the challenge fails with
+  `NXDOMAIN looking up A for <host>` even though `dig` from your
+  workstation looks fine. This has already been mistaken for a
+  caching problem once.
 - **Public resolver cache.** External resolvers may not see the
   new record for up to TTL seconds (default 3600). cert-manager
   retries automatically; usually clears within 5–15 minutes.
