@@ -204,6 +204,35 @@ spec:
 **Important:** See `docs/ARGOCD-BEST-PRACTICES.md` for why
 ServerSideApply is forbidden.
 
+### Allow the namespace in the AppProject
+
+The Application above is not enough. `rbx-applications` allowlists
+its destination namespaces, so add the new one to
+`gitops/projects/rbx-applications.yaml`:
+
+```yaml
+  # {app}: one line saying what it is.
+  - namespace: {app}
+    server: https://kubernetes.default.svc
+```
+
+Skipping this does not fail at PR time and does not create anything
+in the cluster. The first sync stops with:
+
+```
+InvalidSpecError: application destination server
+'https://kubernetes.default.svc' and namespace '{app}' do not match
+any of the allowed destinations in project 'rbx-applications'
+```
+
+If you add the destination afterwards, the Application may keep
+reporting the stale condition. Force a re-evaluation before
+concluding the fix did not work:
+
+```bash
+kubectl annotate app -n argocd {app} argocd.argoproj.io/refresh=hard --overwrite
+```
+
 ---
 
 ## Step 4: Add DNS (if external access needed)
@@ -228,6 +257,13 @@ Apply via the standard DNS workflow (see `docs/infra/DNS.md`).
 
 Before submitting the PR, verify:
 
+- [ ] Namespace added to `gitops/projects/rbx-applications.yaml`
+- [ ] If the app talks to the external Postgres **and** is pinned to
+      jaguar, `pg_hba.conf` allows the node's pod subnet
+      (`10.42.1.0/24`), not a public IP. Node-local traffic to the
+      node's own address is not SNAT'd, so it arrives as a pod IP and
+      no public-IP entry can ever match it. See
+      `docs/runbooks/PLAUSIBLE-BRINGUP.md`.
 - [ ] All files use consistent `app.kubernetes.io/name` labels
 - [ ] Image uses SHA tag (`sha-XXXXXXXX`), not `latest`
 - [ ] `securityContext` blocks privilege escalation

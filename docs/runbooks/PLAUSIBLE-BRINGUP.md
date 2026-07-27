@@ -1,151 +1,220 @@
-# Runbook: Plausible CE bring-up
+# Runbook: Plausible CE
 
 Self-hosted web analytics for `rbx.ia.br` and `rbxsystems.ch`, served from
 `plausible.rbxsystems.ch`.
 
+**Status: live since 2026-07-27.** Both sites registered, ingestion verified by
+counting rows in ClickHouse. This is now the operations reference; the bring-up
+steps are kept because they are the recovery procedure if the instance is rebuilt.
+
 - Manifests: `apps/prod/plausible/`
 - ArgoCD Application: `gitops/app-of-apps/plausible.yml` (manual sync)
-- Upstream: `plausible/community-edition` branch `v3.2.1`
-
-The frontend side is already done: both site deployments export
-`VITE_PLAUSIBLE_DOMAIN`, `VITE_PLAUSIBLE_SCRIPT_SRC` and
-`VITE_PLAUSIBLE_API_HOST` pointing at `plausible.rbxsystems.ch`, and
-`+layout.server.ts` reads them at runtime. Today those requests fail because the
-host does not exist. No frontend change or redeploy is part of this bring-up.
+- Upstream: `plausible/community-edition`, branch `v3.2.1`
 
 ## Architecture
 
 | Piece | Where | Why |
 | --- | --- | --- |
 | Plausible app | Deployment, 1 replica, node `jaguar` | Single writer, node-local PVC |
-| Postgres (sites, users, settings) | External `161.97.147.76:5432` | Postgres is never run inside k3s in production |
-| ClickHouse (events) | StatefulSet in-cluster, node `jaguar` | Matches the Langfuse precedent; the external-Postgres rule does not cover ClickHouse |
+| Postgres (sites, users, settings) | External `161.97.147.76:5432` | Postgres never runs inside k3s in production |
+| ClickHouse (events) | StatefulSet in-cluster, node `jaguar`, 20Gi | The Postgres rule does not cover ClickHouse; Langfuse set the precedent |
 | TLS | cert-manager `letsencrypt-prod` | Same as every other public host |
-| Ingress | Traefik IngressRoute | Forwards `X-Forwarded-For` and WebSocket upgrade by default |
+| Ingress | Traefik IngressRoute | Forwards `X-Forwarded-For` and the WebSocket upgrade the dashboard needs |
 
 Both pods are pinned to `jaguar` with a toleration for
 `robson.io/dedicated=analytics:NoSchedule`. jaguar has 24Gi RAM, 8 CPU and 394Gi
 of disk and sits near-idle, while altaica, sumatrae and tiger run at 60-86%
-memory. Pinning also keeps the Postgres traffic on the same node as Postgres.
+memory. Pinning also keeps the Postgres traffic on the node that hosts Postgres.
 
-## Prerequisites (operator actions)
+This ClickHouse is **separate** from the Langfuse one: different image
+(`clickhouse/clickhouse-server:24.12-alpine` against the chart's Bitnami build),
+different node, and no ZooKeeper here because there is a single shard with no
+replication. Do not point one app at the other's instance: the Langfuse one is
+owned by its Helm chart and can be recreated on upgrade.
 
-These three steps involve credentials or DNS, so they are not automated here.
+## Version pinning
+
+Upstream publishes version **branches**, not git tags, and the image tag mirrors
+the branch name. `v3.2.1` is current; material referencing `v3.0.1` is stale.
+There is no image-updater on this app, so bump it deliberately.
+
+## How the tracker is wired
+
+This is the part that silently produced nothing for a day, so it is spelled out.
+
+Plausible serves a **per-site** script, `pa-<id>.js`, which embeds the domain and
+the event endpoint. The generic `/js/script.js` embeds neither and is useless
+here. Each frontend deployment carries its own URL in `VITE_PLAUSIBLE_SCRIPT_SRC`:
+
+```
+rbx.ia.br      -> https://plausible.rbxsystems.ch/js/pa-RWUjVLP5jqiYl69hgg1FN.js
+rbxsystems.ch  -> https://plausible.rbxsystems.ch/js/pa-YLjAxMQF6_-IvBjbWjVcf.js
+```
+
+The ids change only if a site is deleted and recreated in Plausible.
+
+The script also **stays inert until `plausible.init()` is called**. The
+`data-domain` attribute of the older snippet is not a bootstrap on this version:
+the script loads, defines `window.plausible`, and sends nothing. The site calls
+`init()` from `Analytics.svelte` via `bootstrapPlausible()`
+(`rbx-systems-frontend`, `src/lib/analytics/index.ts`).
+
+## Verifying ingestion
+
+**`202 ok` from `/api/event` proves nothing.** Plausible answers 202 for events
+it accepts and for events it discards. The only ground truth is the row count:
+
+```bash
+kubectl exec -n plausible plausible-clickhouse-0 -- \
+  clickhouse-client -q "select count() from plausible_events.events_v2"
+```
+
+Two guards silently discard traffic from any automated check, and both cost real
+debugging time if forgotten:
+
+1. **Client side:** the tracker drops the event when `navigator.webdriver` is
+   set, unless `window.__plausible` is truthy. In Playwright, set it before
+   navigating: `await page.addInitScript(() => { window.__plausible = true })`.
+2. **Server side:** a `HeadlessChrome` User-Agent is classified as a bot and
+   dropped *after* answering 202. Override the UA with a normal Chrome string.
+
+A visit from a real browser needs neither. Treat the dashboard's "Verify Script
+Installation" button as secondary to the row count.
+
+## Rebuild procedure
+
+Steps 1 to 3 involve credentials or DNS.
 
 ### 1. Postgres role and database
 
-On the external instance, as a superuser. Choose a strong password and keep it in
-`pass`; do not echo it.
+On the external instance, as a superuser. Keep the password in `pass` under
+`rbx/plausible/postgres-password`; never echo it.
 
 ```sql
 CREATE ROLE plausible LOGIN CREATEDB PASSWORD '<pw>';
 CREATE DATABASE plausible OWNER plausible;
 ```
 
-`CREATEDB` is required because the container's start command runs
-`/entrypoint.sh db createdb` on every boot. It is idempotent.
+`CREATEDB` is required: the start command runs `/entrypoint.sh db createdb` on
+every boot, idempotently.
+
+**`pg_hba.conf` needs two entries**, and this is not optional. The pod runs on
+jaguar and connects to jaguar's own address, so the traffic is not SNAT'd and
+arrives with a **pod IP**. No public-IP `/32` entry can ever match it:
+
+```
+host plausible plausible 10.42.1.0/24 scram-sha-256
+host postgres  plausible 10.42.1.0/24 scram-sha-256
+```
+
+The second line covers the maintenance database `createdb` connects to in order
+to check whether the target exists. The role is not superuser and cannot reach
+any other database. Reload with `select pg_reload_conf()`.
+
+Testing the login from the host itself (`psql -h 127.0.0.1`) matches a different
+`pg_hba` line and passes while the pod still fails. Test from the pod, or read
+the pod logs, which name the rejected source IP.
 
 ### 2. Secrets
 
-Generate the two application secrets and store them in `pass` without printing
-them:
-
 ```bash
-openssl rand -base64 48 | pass insert -m rbx/plausible/secret_key_base
-openssl rand -base64 32 | pass insert -m rbx/plausible/totp_vault_key
-# the Postgres password chosen in step 1
-pass insert rbx/plausible/postgres_password
+openssl rand -base64 48 | pass insert -m rbx/plausible/secret-key-base
+openssl rand -base64 32 | pass insert -m rbx/plausible/totp-vault-key
+pass insert rbx/plausible/postgres-password
 ```
 
-`SECRET_KEY_BASE` must be at least 64 bytes (48 raw bytes base64-encoded is 64
-characters, which satisfies it).
+`SECRET_KEY_BASE` must be at least 64 bytes; 48 raw bytes base64-encoded is 64
+characters, which satisfies it.
 
-Then create the source Secret in `rbx-ia-br`, which is where every app's
-ExternalSecret reads from. Build it from `pass` so no value is ever typed or
-shown:
+Build the source Secret in `rbx-ia-br` straight from `pass`, so no value is ever
+typed or displayed:
 
 ```bash
 kubectl create secret generic plausible-secrets -n rbx-ia-br \
-  --from-literal=SECRET_KEY_BASE="$(pass rbx/plausible/secret_key_base)" \
-  --from-literal=TOTP_VAULT_KEY="$(pass rbx/plausible/totp_vault_key)" \
-  --from-literal=DATABASE_URL="postgres://plausible:$(pass rbx/plausible/postgres_password)@plausible-postgres:5432/plausible" \
+  --from-literal=SECRET_KEY_BASE="$(pass rbx/plausible/secret-key-base)" \
+  --from-literal=TOTP_VAULT_KEY="$(pass rbx/plausible/totp-vault-key)" \
+  --from-literal=DATABASE_URL="postgres://plausible:$(pass rbx/plausible/postgres-password)@plausible-postgres:5432/plausible" \
   --from-literal=CLICKHOUSE_DATABASE_URL="http://plausible-clickhouse:8123/plausible_events"
 ```
 
-The ExternalSecret in `apps/prod/plausible/externalsecret.yml` mirrors it into
-the `plausible` namespace every 15 minutes.
+The ExternalSecret mirrors it into the `plausible` namespace every 15 minutes.
 
 ### 3. DNS
 
-The record is declared in `infra/terraform/dns/rbxsystems_ch.tf`
-(`plausible_rbxsystems_ch`). Apply it with the usual wrapper:
+The record is declared in `infra/terraform/dns/rbxsystems_ch.tf`. Apply it, then
+**bump the zone serial by hand**: API writes do not bump it and the secondary
+would never receive the record. Full explanation in
+`docs/runbooks/DNS-TROUBLESHOOTING.md` §5.
 
 ```bash
 cd infra/terraform/dns
-../../../scripts/dns-tofu-env.sh tofu plan   # confirm only this record is added
-../../../scripts/dns-tofu-env.sh tofu apply
-dig +short plausible.rbxsystems.ch           # must return the ingress IP
+../../../scripts/dns-tofu-env.sh tofu plan     # confirm what is pending
+../../../scripts/dns-tofu-env.sh tofu apply -target=powerdns_record.plausible_rbxsystems_ch
+ssh root@149.102.139.33 "pdnsutil increase-serial rbxsystems.ch && \
+  pdns_control purge 'rbxsystems.ch\$' && pdns_control notify rbxsystems.ch"
+dig +short plausible.rbxsystems.ch @149.102.139.33
+dig +short plausible.rbxsystems.ch @167.86.92.97    # must also answer
 ```
 
-The certificate cannot be issued before this resolves: the HTTP-01 challenge has
-nowhere to land.
+Use `-target` when the plan shows unrelated pending records: the zone files can
+carry records declared by earlier work that were never applied. The certificate
+cannot issue until **both** nameservers answer.
 
-## Sync order
+### 4. Sync
 
-1. DNS resolves (step 3).
-2. `plausible-secrets` exists in `rbx-ia-br` (step 2).
-3. Postgres role and database exist (step 1).
-4. Sync the ArgoCD app. ClickHouse comes up first; Plausible's first boot runs
-   `createdb` plus every migration before it answers, which is why its liveness
-   probe waits 180s.
+The namespace must be allowlisted in `gitops/projects/rbx-applications.yaml`
+before the first sync, or it fails with `InvalidSpecError` and creates nothing.
 
 ```bash
 kubectl -n plausible get pods -w
-kubectl -n plausible logs deploy/plausible -f      # watch the migrations
+kubectl -n plausible logs deploy/plausible -f       # createdb + migrations
 kubectl -n plausible get certificate plausible-tls  # READY=True
-curl -sI https://plausible.rbxsystems.ch | head -1  # 302 to /login
+curl -sI https://plausible.rbxsystems.ch/ | head -1 # 302
 ```
 
-## First account
+Traefik drops the **whole** IngressRoute while the TLS secret is missing, so
+until the certificate issues the host answers 404 on both ports. That 404 is a
+symptom of the certificate, not of the route.
 
-`DISABLE_REGISTRATION=invite_only` (upstream default) ships in `deploy.yml`.
-Upstream does not document how the first account is created under each mode, so
-do not assume: open `https://plausible.rbxsystems.ch/register` and try. If it
-refuses, flip the env to `false`, sync, register the single admin account, then
-set it to `true` and sync again. Keep that window short; the page is public.
+### 5. First account and sites
 
-After logging in, add two sites with exactly these domains, because they must
-match what the tracker sends:
+Registration is `invite_only` and the first account is allowed: open `/register`.
+Then add two sites with exactly these domains, because they must match what the
+tracker reports:
 
 - `rbx.ia.br`
 - `rbxsystems.ch`
 
-Then confirm data flows: load each site, and the corresponding dashboard should
-show the visit within seconds.
+Both use timezone `America/Sao_Paulo`: the reader is in Brazil, and different
+timezones would shift day boundaries and make the two dashboards
+non-comparable. Plausible stores UTC, so this is a display setting and can be
+changed later without data loss.
 
-## Known gaps, deliberately out of the first deploy
+`www.rbxsystems.ch` needs no separate site: it serves the same HTML with
+`data-domain="rbxsystems.ch"`.
 
-- **No mailer.** `MAILER_ADAPTER` and friends are unset, so invites, password
-  resets and email reports do not send. Postmark is already live in the fleet, so
-  wiring `Bamboo.PostmarkAdapter` plus a `POSTMARK_API_KEY` key in the same
-  Secret is a small follow-up. Until then the admin account's password is the
-  only way in: keep it in `pass`.
-- **No geolocation.** `IP_GEOLOCATION_DB` / `MAXMIND_*` are unset, so visits have
-  no country breakdown. Adding it means a MaxMind licence key and a sidecar or
-  init download into the existing `plausible-data` volume.
+## Known gaps
+
+- **No mailer.** Invites, password resets and email reports do not send. The
+  admin password in `rbx/plausible/admin-password` is the only way in. Postmark
+  is already live in the fleet, so wiring `Bamboo.PostmarkAdapter` plus a
+  `POSTMARK_API_KEY` key into the same Secret is a small follow-up.
+- **No geolocation.** No country breakdown; needs a MaxMind licence.
 - **No backup of the event store.** ClickHouse data lives on a `local-path` PVC
-  on jaguar: no replication, no volume expansion, and losing that disk loses the
-  event history. Sites, users and settings survive on the external Postgres,
-  which is backed up with the rest of that instance. Sizing was chosen up front
-  (20Gi) because expansion is not available on this StorageClass.
+  on jaguar: no replication, and this StorageClass has **no volume expansion**.
+  Losing that disk loses the event history; sites, users and settings survive on
+  the external Postgres. 20Gi was chosen up front for that reason, and growing
+  it means recreating the PVC.
+- **`http://` answers 404** instead of redirecting to HTTPS. The IngressRoute
+  declares both entrypoints and the higher-priority route wins on `web` too.
+  `cms.rbxsystems.ch` shares the pattern and the behaviour. HTTPS is unaffected.
 
 ## Rollback
 
 ```bash
-# Remove the app; PVCs are retained (finalizer keeps them until deleted by hand)
 kubectl -n argocd delete application plausible
 ```
 
-The site keeps working without Plausible: the tracker request simply fails, which
-is exactly the state before this bring-up. To also stop the failing request, unset
-the `VITE_PLAUSIBLE_*` env in both frontend deployments.
+PVCs are retained. The sites keep working without Plausible: the tracker request
+simply fails, which is the state before this bring-up. To also stop that request,
+unset the `VITE_PLAUSIBLE_*` env in both frontend deployments.
