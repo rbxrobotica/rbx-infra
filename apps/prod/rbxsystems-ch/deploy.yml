@@ -93,8 +93,11 @@ spec:
             # Self-hosted instance at plausible.rbxsystems.ch serves both domains.
             - name: VITE_PLAUSIBLE_DOMAIN
               value: "rbxsystems.ch"
+            # Per-site script: it embeds this domain and the event endpoint, and
+            # the generic /js/script.js embeds neither. Regenerated only if the
+            # site is deleted and recreated in Plausible.
             - name: VITE_PLAUSIBLE_SCRIPT_SRC
-              value: "https://plausible.rbxsystems.ch/js/script.js"
+              value: "https://plausible.rbxsystems.ch/js/pa-YLjAxMQF6_-IvBjbWjVcf.js"
             - name: VITE_PLAUSIBLE_API_HOST
               value: "https://plausible.rbxsystems.ch"
           readinessProbe:
