@@ -34,6 +34,10 @@
       GITHUB_PAT={{ github_pat }}
       CLAUDE_MODEL={{ claude_model | default('claude-haiku-4-5-20251001') }}
       CLAUDE_SONNET_MODEL={{ claude_sonnet_model | default('claude-sonnet-4-5-20251001') }}
+      WATCHDOG_MONITORING_REPO={{ watchdog_monitoring_repo | default('') }}
+      WATCHDOG_24H_TOKEN_CAP={{ watchdog_24h_token_cap | default('') }}
+      WATCHDOG_STALL_MIN={{ watchdog_stall_min | default(20) }}
+      WATCHDOG_VERIFY_STREAK={{ watchdog_verify_streak | default(3) }}
   notify: Restart agent runner
 
 - name: Write ZAI API key file (GLM executor, Phase 5)
@@ -184,6 +188,30 @@
 - name: Enable and start agent runner service
   systemd:
     name: rbx-agent-runner.service
+    state: started
+    enabled: true
+    scope: user
+    daemon_reload: true
+
+# ── rbx-agent-watchdog (companion monitor; ADR-0009 + CEO directive 2026-07-27) ──
+- name: Deploy watchdog script
+  copy:
+    src: rbx-agent-watchdog.sh
+    dest: "{{ ansible_env.HOME }}/rbx/runner/rbx-agent-watchdog.sh"
+    mode: "0750"
+
+- name: Deploy watchdog systemd units
+  copy:
+    src: "{{ item }}"
+    dest: "{{ ansible_env.HOME }}/.config/systemd/user/{{ item }}"
+    mode: "0644"
+  loop:
+    - rbx-agent-watchdog.service
+    - rbx-agent-watchdog.timer
+
+- name: Enable and start watchdog timer
+  systemd:
+    name: rbx-agent-watchdog.timer
     state: started
     enabled: true
     scope: user
