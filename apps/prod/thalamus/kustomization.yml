@@ -11,4 +11,4 @@ resources:
   - network-policy.yml
 images:
   - name: ghcr.io/rbxrobotica/thalamus-core
-    newTag: sha-662a1f3
+    newTag: sha-bc7ca57
