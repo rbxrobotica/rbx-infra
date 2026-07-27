@@ -1,0 +1,10 @@
+[Unit]
+Description=RBX Agent Runner Watchdog (health monitor for rbx-agent-runner)
+Documentation=https://github.com/rbxrobotica/rbx-infra/blob/main/docs/adr/ADR-0009-agent-loop-corbetti-runner.md
+
+[Service]
+Type=oneshot
+ExecStart=%h/rbx/runner/rbx-agent-watchdog.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=rbx-agent-watchdog
