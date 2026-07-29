@@ -12,3 +12,7 @@ runner_id: "corbetti-01"
 # Claude model overrides (Phase 5 multi-model runner)
 claude_model: "claude-haiku-4-5-20251001"
 claude_sonnet_model: "claude-sonnet-4-6"  # explicit current snapshot; the older dated id 4-5-20251001 returned model_not_found (404) once retired
+
+# Autonomous-run watchdog (CEO directive 2026-07-27)
+watchdog_monitoring_repo: "rbxrobotica/rbx-runner-alerts"
+watchdog_24h_token_cap: 1000000

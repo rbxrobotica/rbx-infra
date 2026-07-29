@@ -8,9 +8,11 @@
 #   verify-streak  — WATCHDOG_VERIFY_STREAK (default 3) consecutive verify=failed.
 #   stall          — most-recently-claimed mission log untouched for
 #                    WATCHDOG_STALL_MIN (default 20) minutes with no terminal state.
-#   budget         — rolling 24h delivered tokens > WATCHDOG_24H_TOKEN_CAP
+#   budget         — rolling 24h runner tokens > WATCHDOG_24H_TOKEN_CAP
 #                    (stops the runner + alerts; under RUNNER-DIRECT-001 provider
-#                    spend is not Thalamus-mediated, so the watchdog enforces the cap).
+#                    spend is not Thalamus-mediated, so the watchdog enforces the
+#                    cap for Claude/GLM/Codex; the current Kimi executor does not
+#                    emit structured usage).
 #   runner-down    — rbx-agent-runner.service not active.
 #
 # Escalation is §2-compliant: opens ONE GitHub issue assigned to the operator on
@@ -132,16 +134,28 @@ if [[ "${TOKEN_CAP}" =~ ^[0-9]+$ ]]; then
   while IFS= read -r -d '' logfile; do
     while IFS= read -r line; do
       [[ -z "${line}" ]] && continue
-      in=$(printf '%s' "${line}" | jq -r '.usage.input_tokens // empty' 2>/dev/null || true)
+      event_type=$(printf '%s' "${line}" | jq -r '.type // empty' 2>/dev/null || true)
+      if [[ "${event_type}" == "result" ]]; then
+        # Claude/GLM result events may report cache tokens separately.
+        in=$(printf '%s' "${line}" | jq -r '
+          [.usage.input_tokens, .usage.cache_creation_input_tokens, .usage.cache_read_input_tokens]
+          | map(select(type == "number"))
+          | if length == 0 then empty else add end
+        ' 2>/dev/null || true)
+      else
+        # Codex turn.completed input_tokens includes cached_input_tokens.
+        in=$(printf '%s' "${line}" | jq -r '.usage.input_tokens // empty' 2>/dev/null || true)
+      fi
       out=$(printf '%s' "${line}" | jq -r '.usage.output_tokens // empty' 2>/dev/null || true)
       [[ "${in}"  =~ ^[0-9]+$ ]] && total=$(( total + in ))
       [[ "${out}" =~ ^[0-9]+$ ]] && total=$(( total + out ))
-    done < <(grep '"type":"result"' "${logfile}" 2>/dev/null || true)
+    done < <(grep -E '"type"[[:space:]]*:[[:space:]]*"(result|turn\.completed)"' \
+      "${logfile}" 2>/dev/null || true)
   done < <(find "${LOG_DIR}" -maxdepth 1 -name '*.log' -mtime -1 -print0 2>/dev/null)
   if (( total > TOKEN_CAP )); then
     alert "budget" "24h" \
       "runner 24h token budget exceeded (${total} > ${TOKEN_CAP})" \
-      "Rolling-24h delivered tokens (${total}) exceeded WATCHDOG_24H_TOKEN_CAP (${TOKEN_CAP}). Stopping the runner to fail safe; resume only after operator review."
+      "Rolling-24h runner tokens (${total}) exceeded WATCHDOG_24H_TOKEN_CAP (${TOKEN_CAP}). Stopping the runner to fail safe; resume only after operator review."
     systemctl --user stop rbx-agent-runner 2>/dev/null || true
   fi
   log "budget: ${total}/${TOKEN_CAP} tokens (rolling 24h)"
