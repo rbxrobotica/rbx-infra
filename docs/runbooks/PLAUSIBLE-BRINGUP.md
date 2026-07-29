@@ -139,6 +139,56 @@ kubectl create secret generic plausible-secrets -n rbx-ia-br \
 
 The ExternalSecret mirrors it into the `plausible` namespace every 15 minutes.
 
+`POSTMARK_API_KEY` is deliberately **not** in this Secret. It is read from
+`rbx-ia-br/rbx-contact-secrets`, key `POSTMARK_SERVER_TOKEN`, which the contact
+system already owns, so the Postmark server token has one home in the cluster
+and one place to rotate. Nothing to create here during a rebuild; if that Secret
+is missing, follow the contact system's own bring-up first.
+
+### 2b. Mailer
+
+Postmark, on the existing **RBX Institutional** server (id 19089132, delivery
+type Live) rather than a new one. Password resets, invites and email reports go
+out as `no-reply@rbxsystems.ch`.
+
+| Variable | Value | Where |
+| --- | --- | --- |
+| `MAILER_ADAPTER` | `Bamboo.PostmarkAdapter` | plain env, `deploy.yml` |
+| `MAILER_EMAIL` | `no-reply@rbxsystems.ch` | plain env, `deploy.yml` |
+| `MAILER_NAME` | `RBX Analytics` | plain env, `deploy.yml` |
+| `POSTMARK_API_KEY` | Postmark server token | Secret, from `rbx-contact-secrets` |
+
+Two things about the sender that are easy to get wrong:
+
+- **`rbxsystems.ch` is verified in Postmark as a domain**, so any local part on
+  it is accepted, including one that was never registered as a signature.
+- **`tx.rbxsystems.ch` is not.** Sending from it returns HTTP 422 with
+  `ErrorCode 400`, "not a Sender Signature on your account", and nothing is
+  delivered. `docs/PLAN-dns-email-architecture.md` reserves that subdomain for
+  transactional mail and its SPF record exists, but the Postmark side was never
+  completed. Moving Plausible there means verifying the domain in Postmark
+  first, not just editing `MAILER_EMAIL`.
+
+Probe a candidate sender before trusting it. This sends a real message when the
+address *is* accepted, so aim it at an inbox you own:
+
+```bash
+TOKEN=$(kubectl get secret rbx-contact-secrets -n rbx-ia-br \
+  -o jsonpath='{.data.POSTMARK_SERVER_TOKEN}' | base64 -d | tr -d '[:space:]')
+curl -s -o /dev/null -w '%{http_code}\n' -X POST https://api.postmarkapp.com/email \
+  -H "X-Postmark-Server-Token: $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"From":"no-reply@rbxsystems.ch","To":"ceo@rbxsystems.ch",
+       "Subject":"probe","TextBody":"probe","MessageStream":"outbound"}'
+```
+
+`200` means accepted, `422` means the sender is not usable. Note the trailing
+`tr -d '[:space:]'`: `base64 -d` leaves a newline that Postmark rejects as an
+invalid token, and the resulting `401` reads exactly like a rotated credential.
+
+To confirm delivery end to end after a deploy, use the app rather than the API:
+`/password-reset` with a known account address, then check the message in
+Postmark's Activity view or in the destination inbox.
+
 ### 3. DNS
 
 The record is declared in `infra/terraform/dns/rbxsystems_ch.tf`. Apply it, then
@@ -227,10 +277,12 @@ to be reapplied.
 
 ## Known gaps
 
-- **No mailer.** Invites, password resets and email reports do not send. The
-  admin password in `rbx/plausible/admin-password` is the only way in. Postmark
-  is already live in the fleet, so wiring `Bamboo.PostmarkAdapter` plus a
-  `POSTMARK_API_KEY` key into the same Secret is a small follow-up.
+- **Transactional mail rides the institutional Postmark server.** Plausible
+  shares a server, a token and a reputation with the contact system. A bounce
+  storm on one is felt by the other, and the token cannot be revoked for one
+  without cutting the other. The split is designed
+  (`docs/PLAN-dns-email-architecture.md`, RBX Transactional on
+  `tx.rbxsystems.ch`) but not built; see §2b for what it needs.
 - **No geolocation.** No country breakdown; needs a MaxMind licence.
 - **No backup of the event store.** ClickHouse data lives on a `local-path` PVC
   on jaguar: no replication, and this StorageClass has **no volume expansion**.

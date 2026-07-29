@@ -48,9 +48,27 @@ spec:
             # for how the first account is created.
             - name: DISABLE_REGISTRATION
               value: invite_only
-            # No mailer is wired yet, so verification mail could not be delivered.
+            # Registration is invite-only and every account is created by an
+            # operator, so address confirmation adds a step without adding a
+            # guarantee. Password reset does not depend on this flag.
             - name: ENABLE_EMAIL_VERIFICATION
               value: "false"
+            # Mailer: Postmark, "RBX Institutional" server (the one the contact
+            # system already sends through). POSTMARK_API_KEY arrives via
+            # envFrom, sourced from rbx-contact-secrets; see externalsecret.yml.
+            #
+            # Sender: rbxsystems.ch is verified as a *domain* in Postmark, so any
+            # local part on it is accepted. tx.rbxsystems.ch is NOT: sending from
+            # it fails with ErrorCode 400, "not a Sender Signature on your
+            # account", despite what docs/PLAN-dns-email-architecture.md reserves
+            # for transactional mail. Moving there needs a Postmark domain
+            # verification first.
+            - name: MAILER_ADAPTER
+              value: Bamboo.PostmarkAdapter
+            - name: MAILER_EMAIL
+              value: no-reply@rbxsystems.ch
+            - name: MAILER_NAME
+              value: RBX Analytics
             - name: TMPDIR
               value: /var/lib/plausible/tmp
           envFrom:
