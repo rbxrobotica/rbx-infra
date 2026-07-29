@@ -12,8 +12,23 @@ variable "k3s_ingress_ip" {
   default     = "158.220.116.31"
 }
 
-# DKIM CNAMEs — filled after Postmark domain setup
-# Leave empty ("") to skip record creation until values are available
+# DKIM CNAMEs, filled after Postmark domain setup.
+# Leave empty ("") to skip record creation until values are available.
+#
+# WARNING, verified live 2026-07-29: every variable below is still "" and unset
+# in terraform.tfvars, so all five `pm._domainkey.*` resources have count = 0 and
+# have NEVER been created. The DKIM that actually signs RBX mail today was made
+# outside Terraform and does not match this model in any respect:
+#
+#   modelled here:  CNAME  pm._domainkey.rbxsystems.ch
+#   actually live:  TXT    20260503181522pm._domainkey.rbxsystems.ch
+#
+# Postmark generates a timestamp-based selector per domain and serves the key as
+# a TXT record. Filling these variables would therefore NOT adopt the working
+# record; it would publish a second, wrongly named CNAME beside it.
+#
+# To bring DKIM under Terraform, model the real selector and record type instead
+# of setting these. See docs/PLAN-dns-email-architecture.md, DKIM Configuration.
 
 variable "dkim_rbxsystems_ch" {
   description = "DKIM CNAME target for rbxsystems.ch (from Postmark)"
