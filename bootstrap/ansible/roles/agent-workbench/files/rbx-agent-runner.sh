@@ -153,38 +153,38 @@ execute_mission() {
   local executor
   executor=$(printf '%s' "${contract_json}" | jq -r '.executor // "claude-haiku"')
 
-  local agent_cmd agent_model captures_tokens=false
+  local agent_cmd agent_model token_event_type=""
   case "${executor}" in
     claude-haiku)
       agent_cmd="claude"
       agent_model="${CLAUDE_MODEL:-claude-haiku-4-5-20251001}"
-      captures_tokens=true
+      token_event_type="result"
       ;;
     claude-sonnet)
       agent_cmd="claude"
       agent_model="${CLAUDE_SONNET_MODEL:-claude-sonnet-4-5-20251001}"
-      captures_tokens=true
+      token_event_type="result"
       ;;
     glm)
       agent_cmd="glm"
       agent_model="glm-5.2"
-      captures_tokens=true
+      token_event_type="result"
       ;;
     kimi)
       agent_cmd="kimi"
       agent_model="k2.7"
-      captures_tokens=false
+      token_event_type=""
       ;;
     codex)
       agent_cmd="codex"
       agent_model="o4-mini"
-      captures_tokens=false
+      token_event_type="turn.completed"
       ;;
     *)
       log "WARN unknown executor '${executor}', falling back to claude-haiku"
       agent_cmd="claude"
       agent_model="${CLAUDE_MODEL:-claude-haiku-4-5-20251001}"
-      captures_tokens=true
+      token_event_type="result"
       ;;
   esac
 
@@ -248,8 +248,10 @@ Verify command (the runner executes this to prove done; it MUST exit 0):
         # applies here (per-mission git worktree, scoped GitHub PAT, no
         # prod secrets) — the other 4 executors run with no internal
         # sandbox at all, so this brings codex to parity, not above it.
+        # --json emits a turn.completed usage event so the watchdog can enforce
+        # the cross-provider rolling token cap.
         timeout "${timeout_s}" codex exec --dangerously-bypass-approvals-and-sandbox \
-          --skip-git-repo-check "${prompt}" \
+          --skip-git-repo-check --json "${prompt}" \
           >>"${log_file}" 2>&1
         ;;
       *)
@@ -268,11 +270,24 @@ Verify command (the runner executes this to prove done; it MUST exit 0):
 
   # ── extract token usage from stream-json result line ─────────────────────
   local input_tok="" output_tok=""
-  if [[ "${captures_tokens}" == "true" && ${exit_code} -eq 0 ]]; then
+  if [[ -n "${token_event_type}" && ${exit_code} -eq 0 ]]; then
     local result_line
-    result_line=$(grep '"type":"result"' "${log_file}" | tail -1 || true)
+    result_line=$(grep -E "\"type\"[[:space:]]*:[[:space:]]*\"${token_event_type//./\\.}\"" \
+      "${log_file}" | tail -1 || true)
     if [[ -n "${result_line}" ]]; then
-      input_tok=$(printf '%s' "${result_line}" | jq -r '.usage.input_tokens // empty' 2>/dev/null || true)
+      if [[ "${token_event_type}" == "result" ]]; then
+        # Claude reports cache reads/creation separately from input_tokens.
+        # Include them so Max-plan use cannot bypass the local budget.
+        input_tok=$(printf '%s' "${result_line}" | jq -r '
+          [.usage.input_tokens, .usage.cache_creation_input_tokens, .usage.cache_read_input_tokens]
+          | map(select(type == "number"))
+          | if length == 0 then empty else add end
+        ' 2>/dev/null || true)
+      else
+        # Codex input_tokens already includes cached input; cached_input_tokens
+        # is an informational subset and must not be added again.
+        input_tok=$(printf '%s' "${result_line}" | jq -r '.usage.input_tokens // empty' 2>/dev/null || true)
+      fi
       output_tok=$(printf '%s' "${result_line}" | jq -r '.usage.output_tokens // empty' 2>/dev/null || true)
     fi
   fi
