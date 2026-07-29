@@ -151,3 +151,7 @@ jobs:
       - name: P1 image-promotion debt report
         run: |
           bash scripts/report-p1-image-debt.sh
+
+      - name: Agent runner delivery contract
+        run: |
+          bash bootstrap/ansible/roles/agent-workbench/tests/runner-delivery-contract.sh
