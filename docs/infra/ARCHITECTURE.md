@@ -125,16 +125,38 @@ This is a concrete instance of namespace isolation, not a generic multi-environm
 
 ## Postmark (email)
 
-Outbound only. No self-hosted MTA.
+Outbound through Postmark. Inbound lands in Mailcow on `lince`, which also
+relays outbound through Postmark over SMTP.
 
-| Postmark server | Domain | Senders |
-|----------------|--------|---------|
-| RBX Institutional | rbxsystems.ch | contact@, ceo@ |
-| RBX Transactional | tx.rbxsystems.ch | no-reply@, alerts@ |
-| Strategos Transactional | tx.strategos.gr | no-reply@ |
+**Built** (verified against the Postmark API and DNS, 2026-07-29):
 
-SMTP credentials stored as Kubernetes Secret in the cluster.
-DNS records (SPF, DKIM, DMARC) managed via Terraform.
+| Postmark server | Id | Domain | Senders |
+|----------------|-----|--------|---------|
+| RBX Institutional | 19089132 | rbxsystems.ch | contact@, ceo@, no-reply@ |
+
+`rbxsystems.ch` is verified at the **domain** level, so any local part on it is
+accepted without a per-address signature.
+
+**Designed, not built:**
+
+| Postmark server | Domain | Senders | State |
+|----------------|--------|---------|-------|
+| RBX Transactional | tx.rbxsystems.ch | no-reply@, alerts@ | SPF and MX exist; no DKIM, no sender verification. Sending returns HTTP 422 |
+| Strategos Transactional | tx.strategos.gr | no-reply@ | same shape |
+
+Do not read those two rows as deployment. `docs/PLAN-dns-email-architecture.md`
+holds the target architecture and what closing the gap requires.
+
+The Postmark **server token doubles as the SASL username and password** for the
+Mailcow relay. It lives in `pass` at `rbx/postmark/rbx-institutional-server-token`
+and in the cluster as `rbx-ia-br/rbx-contact-secrets`, read by four namespaces.
+Rotating it is a multi-app event.
+
+SPF, DMARC and the Return-Path CNAME are in Terraform. **DKIM is not**: the live
+record is a TXT under a timestamp-based selector Postmark generated
+(`20260503181522pm._domainkey.rbxsystems.ch`), created outside Terraform. The
+`pm._domainkey.*` CNAME resources in `infra/terraform/dns/` have never been
+created; see the comment there before touching them.
 
 ## Secrets plane
 

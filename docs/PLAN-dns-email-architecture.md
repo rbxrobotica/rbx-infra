@@ -218,27 +218,53 @@ Each domain/subdomain has independent SPF/DKIM/DMARC. If `tx.strategos.gr` gets 
 - Alerts: `alerts@tx.rbxsystems.ch` -> internal only, subject prefix `[ALERT]`.
 - Each new product gets its own `tx.{product}.{tld}` before sending any email.
 
+**Standing exception, 2026-07-29.** Plausible sends password resets and invites
+from `no-reply@rbxsystems.ch`, which is system to human on the root domain, in
+breach of the second rule. Taken knowingly because `tx.rbxsystems.ch` cannot
+send (below) and verifying it was out of scope. Recorded in
+`docs/runbooks/PLAUSIBLE-BRINGUP.md` §2b. Every further system sender placed on
+the root domain widens the gap between this policy and the running system.
+
 ### Postmark Servers
 
-| Server Name | Domain | Use |
-|-------------|--------|-----|
-| RBX Institutional | rbxsystems.ch | contact@, ceo@ outbound |
-| RBX Transactional | tx.rbxsystems.ch | no-reply@, alerts@ |
-| Strategos Transactional | tx.strategos.gr | no-reply@ |
+| Server Name | Domain | Use | State (2026-07-29) |
+|-------------|--------|-----|--------------------|
+| RBX Institutional | rbxsystems.ch | contact@, ceo@, no-reply@ outbound | **Live**, id 19089132, domain-verified |
+| RBX Transactional | tx.rbxsystems.ch | no-reply@, alerts@ | **Not built.** Sending returns HTTP 422, `ErrorCode 400` |
+| Strategos Transactional | tx.strategos.gr | no-reply@ | **Not built** |
+
+`rbxsystems.ch` is verified at the **domain** level, so any local part on it is
+accepted, including addresses that were never registered as a sender signature.
+`tx.*` has SPF and MX published and nothing else, which is exactly what makes it
+look ready when it is not. Closing the gap means verifying the subdomain in
+Postmark, publishing the DKIM it issues, and only then moving senders over.
 
 ### DKIM Configuration
 
-Each domain/subdomain verified in Postmark receives a unique DKIM CNAME.
-Postmark provides the exact value after domain setup. All 4 must be configured:
+Postmark generates a **timestamp-based selector per domain** and serves the key
+as a **TXT** record. It is not `pm._domainkey`, and it is not a CNAME. Verified
+live on 2026-07-29:
 
-| Domain | Record | Value |
-|--------|--------|-------|
-| rbxsystems.ch | `pm._domainkey.rbxsystems.ch` | CNAME provided by Postmark |
-| tx.rbxsystems.ch | `pm._domainkey.tx.rbxsystems.ch` | CNAME provided by Postmark |
-| strategos.gr | `pm._domainkey.strategos.gr` | CNAME provided by Postmark |
-| tx.strategos.gr | `pm._domainkey.tx.strategos.gr` | CNAME provided by Postmark |
+| Domain | Record | Type | State |
+|--------|--------|------|-------|
+| rbxsystems.ch | `20260503181522pm._domainkey.rbxsystems.ch` | TXT | Live, created outside Terraform |
+| tx.rbxsystems.ch | none | | Missing; blocks sending from `tx.` |
+| strategos.gr | selector unknown, read the zone | TXT | Has its own selector, not the one above |
+| tx.strategos.gr | none | | Missing |
 
-**Action required:** After creating Postmark servers, copy the exact DKIM CNAME values and add them to the zone files via pdnsutil or SQL on the primary.
+Two traps follow from this:
+
+1. **Probing `pm._domainkey.<domain>` finds nothing and proves nothing.** It is
+   not the selector Postmark issued. A working setup looks broken this way.
+2. **`infra/terraform/dns/*.tf` models it wrong** and is inert. The
+   `powerdns_record` resources named `pm._domainkey.<domain>` are CNAMEs gated
+   on `dkim_*` variables that all default to `""` and are unset in
+   `terraform.tfvars`, so every one has `count = 0` and none has ever been
+   created. Do **not** close the gap by filling those variables: that creates a
+   second, wrongly named CNAME beside the working TXT.
+
+**Action required:** verify `tx.rbxsystems.ch` in Postmark, then add the TXT it
+issues under the selector it names, matching how `rbxsystems.ch` was done.
 
 ### DMARC Cross-Domain Authorization
 
