@@ -195,6 +195,36 @@ changed later without data loss.
 `www.rbxsystems.ch` needs no separate site: it serves the same HTML with
 `data-domain="rbxsystems.ch"`.
 
+## Retention: 14 months, enforced by ClickHouse TTL
+
+Applied 2026-07-29, from the retention the growth taxonomy declares
+(`rbx-growth`, `marketing/2026-h2-growth/analytics/event-taxonomy.yaml`).
+Plausible CE has no retention setting of its own and keeps data forever.
+
+```sql
+ALTER TABLE plausible_events.events_v2   MODIFY TTL timestamp + INTERVAL 14 MONTH;
+ALTER TABLE plausible_events.sessions_v2 MODIFY TTL start     + INTERVAL 14 MONTH;
+```
+
+TTL rather than a pruning CronJob: both tables are partitioned by month
+(`toYYYYMM`), so ClickHouse drops whole partitions during merges instead of
+rewriting data, and there is no extra workload that can fail silently.
+
+**This is local configuration, not upstream.** The tables belong to Plausible,
+which already has 51 migrations applied and will keep migrating on upgrade. A
+migration that recreates either table drops the TTL with it, and nothing warns
+you: the instance keeps working and the retention you believe you have is gone.
+**Check after every Plausible upgrade:**
+
+```bash
+kubectl exec -n plausible plausible-clickhouse-0 -- clickhouse-client -q \
+  "select name, extract(engine_full, 'TTL [^S]*') from system.tables \
+   where database='plausible_events' and name in ('events_v2','sessions_v2')"
+```
+
+Empty output for either table means retention is off and the ALTERs above have
+to be reapplied.
+
 ## Known gaps
 
 - **No mailer.** Invites, password resets and email reports do not send. The
