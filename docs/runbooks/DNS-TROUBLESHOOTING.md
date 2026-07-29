@@ -16,8 +16,8 @@ canonical case study — read it first if you have time.
 | Symptom | Most likely cause | Jump to |
 |---------|------------------|---------|
 | `tofu apply` errors with "connection refused" or "API unreachable" | SSH tunnel down OR `pdns` not running on pantera | §1, §2 |
-| `tofu apply` errors with "401 Unauthorized" | `PDNS_API_KEY` in `pass` is stale OR pantera config out of sync | §3 |
-| `tofu apply` succeeds but `dig` shows old/no record | The API write did not bump the SOA serial, so eagle never transfers | §5 |
+| `tofu apply` errors with "401 Unauthorized" | Stale SSH tunnel (check first), or `PDNS_API_KEY` drift | §3 |
+| `tofu apply` succeeds but `dig` shows old/no record | Genuine replication lag, or `SOA-EDIT-API` cleared again | §5 |
 | `pdns` stuck in `systemctl restart` loop on pantera | gpgsql password mismatch — config out of sync with vault rotation | §4 |
 | Cert-manager challenge fails for a new host | DNS resolves at ns1 but not at public resolvers yet — wait for TTL | §6 |
 
@@ -101,6 +101,22 @@ If the `dns-tofu-env.sh` wrapper sees `401`, the workstation key
 disagrees with pantera. Source of truth is **pantera's config**
 (rendered by Ansible). Sync `pass` to match.
 
+**Rule out a stale tunnel first.** A long-lived tunnel can survive
+as a listening socket while no longer carrying a usable session, and
+the symptom is a clean `401`, identical to key drift. Seen
+2026-07-28 with a tunnel opened the previous day. Reopening it fixed
+it with no key change.
+
+```bash
+# Compare without printing either value: same hash means no drift.
+pass rbx/dns/pdns-api-key | tr -d '\n' | sha256sum | cut -c1-16
+ssh root@149.102.139.33 "grep -oP '^api-key=\\K.*' /etc/powerdns/pdns.conf \\
+  | tr -d '\\n' | sha256sum | cut -c1-16"
+```
+
+If the hashes match, the key is fine: kill the tunnel and reopen it
+before touching anything else.
+
 ```bash
 # Check what pantera has (operator-only; do not paste in chat):
 ssh root@149.102.139.33 'grep ^api-key= /etc/powerdns/pdns.conf'
@@ -183,61 +199,62 @@ group_vars/all/vault.yml` or equivalent), but pantera's rendered
 
 ---
 
-## §5. eagle never receives records written by tofu
+## §5. eagle out of sync after a zone change
 
-**This is not lag. It is a standing defect: every API write needs a
-manual serial bump.** Diagnosed 2026-07-26 while bringing up
-`plausible.rbxsystems.ch`.
+**Fixed 2026-07-28.** For most of this repository's life the four
+zones carried an *empty* `SOA-EDIT-API`, which disables the serial
+bump PowerDNS applies by default. The tofu provider writes through
+the API, so pantera gained the record while the serial stayed put,
+eagle compared an unchanged serial and never transferred, and half
+of all resolvers answered NXDOMAIN for the new name indefinitely.
 
-All four zones have the `SOA-EDIT-API` metadata item present but
-**empty**, which disables the automatic serial bump PowerDNS
-applies by default. The tofu provider writes through the API, so
-pantera gains the record while the zone serial stays where it was.
-eagle compares serials, sees no change, and never transfers. Half
-of all resolvers then answer NXDOMAIN for the new name.
+All four zones are now set to `SOA-EDIT-API=DEFAULT`, which
+generates a `YYYYMMDD01` serial and takes the **larger** of that and
+the current value, so it can never regress. Verified end to end on
+rbxsystems.ch with a throwaway TXT record: the create bumped
+2026062602 to 2026072801 and eagle had it within 8s; the delete
+bumped to 2026072802 and eagle followed within 30s. No manual step
+was involved in either.
 
-The symptom is easy to misread as caching, because both servers
-report a healthy zone with the *same* serial. Compare the records,
-not just the serials:
+**A zone change should now replicate on its own.** If it does not,
+this is genuine lag or a broken secondary, so diagnose rather than
+reach for the recovery below.
 
 ```bash
-dig +short A plausible.rbxsystems.ch @149.102.139.33   # ns1 (pantera)
-dig +short A plausible.rbxsystems.ch @167.86.92.97     # ns2 (eagle)
-dig +short SOA rbxsystems.ch @149.102.139.33 | awk '{print $3}'
-dig +short SOA rbxsystems.ch @167.86.92.97   | awk '{print $3}'
+dig +short A <host> @149.102.139.33   # ns1 (pantera)
+dig +short A <host> @167.86.92.97     # ns2 (eagle)
+dig +short SOA <zone> @149.102.139.33 | awk '{print $3}'
+dig +short SOA <zone> @167.86.92.97   | awk '{print $3}'
 ```
 
-Matching serials plus a record missing on eagle is this defect.
+Give it a minute before concluding anything: replication took up to
+30s in the validation above.
 
-### Fix after every `tofu apply`
+### Manual recovery
+
+Still correct if a zone is genuinely stuck, and the procedure to use
+if `SOA-EDIT-API` is ever cleared again:
 
 ```bash
 ssh root@149.102.139.33 "\
-  pdnsutil increase-serial rbxsystems.ch && \
-  pdns_control purge 'rbxsystems.ch\$' && \
-  pdns_control notify rbxsystems.ch"
+  pdnsutil increase-serial <zone> && \
+  pdns_control purge '<zone>$' && \
+  pdns_control notify <zone>"
 ```
 
 All three matter. `increase-serial` writes the new serial to the
 database; **`purge` is the step people miss**, because the running
 daemon keeps serving the old serial from cache and eagle would keep
-seeing no change; `notify` then pushes it.
+seeing no change; `notify` then pushes it. `notify` on its own does
+nothing when the serial has not moved.
 
-`pdns_control notify` alone, which this section used to prescribe,
-does nothing here: eagle receives the NOTIFY, compares the unchanged
-serial, and declines the transfer.
-
-### Permanent fix, not yet applied
+Check the metadata before assuming the fix is still in place:
 
 ```bash
-ssh root@149.102.139.33 'pdnsutil set-meta <zone> SOA-EDIT-API DEFAULT'
+ssh root@149.102.139.33 'pdnsutil get-meta <zone> SOA-EDIT-API'   # want: DEFAULT
 ```
 
-Affects rbxsystems.ch, rbx.ia.br, merovelis.com and strategos.gr.
-It changes behaviour for every future record in those zones, so it
-is an operator decision, not a side effect of the next change.
-Until it is applied, treat the bump above as part of the DNS
-workflow rather than as troubleshooting.
+An empty value here means the defect is back.
 
 ---
 
@@ -246,7 +263,10 @@ workflow rather than as troubleshooting.
 After a new A record is created and replicated, cert-manager
 attempts an HTTP-01 challenge. If it fails, common causes:
 
-- **The record only exists on ns1.** Check §5 **first**. Let's
+- **The record only exists on ns1.** Check this **first**, with the
+  two `dig` commands in §5. It should no longer happen now that the
+  serial bumps automatically, but it is cheap to rule out and it is
+  what the 2026-07-26 failure turned out to be. Let's
   Encrypt runs a secondary validation from several vantage points;
   if any of them asks eagle, the challenge fails with
   `NXDOMAIN looking up A for <host>` even though `dig` from your

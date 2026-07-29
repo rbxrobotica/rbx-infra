@@ -142,19 +142,21 @@ The ExternalSecret mirrors it into the `plausible` namespace every 15 minutes.
 ### 3. DNS
 
 The record is declared in `infra/terraform/dns/rbxsystems_ch.tf`. Apply it, then
-**bump the zone serial by hand**: API writes do not bump it and the secondary
-would never receive the record. Full explanation in
-`docs/runbooks/DNS-TROUBLESHOOTING.md` §5.
+verify that **both** nameservers answer before expecting a certificate.
 
 ```bash
 cd infra/terraform/dns
 ../../../scripts/dns-tofu-env.sh tofu plan     # confirm what is pending
 ../../../scripts/dns-tofu-env.sh tofu apply -target=powerdns_record.plausible_rbxsystems_ch
-ssh root@149.102.139.33 "pdnsutil increase-serial rbxsystems.ch && \
-  pdns_control purge 'rbxsystems.ch\$' && pdns_control notify rbxsystems.ch"
 dig +short plausible.rbxsystems.ch @149.102.139.33
 dig +short plausible.rbxsystems.ch @167.86.92.97    # must also answer
 ```
+
+Replication is automatic since 2026-07-28, when `SOA-EDIT-API` was set on all
+four zones; allow up to a minute. Before that the serial had to be bumped by
+hand or the secondary never received the record, which is what made this
+bring-up fail its first certificate. If the second `dig` stays empty, see
+`docs/runbooks/DNS-TROUBLESHOOTING.md` §5.
 
 Use `-target` when the plan shows unrelated pending records: the zone files can
 carry records declared by earlier work that were never applied. The certificate
