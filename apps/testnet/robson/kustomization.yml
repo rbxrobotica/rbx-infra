@@ -11,6 +11,8 @@ resources:
   - robsond-config.yml
   # Database external service (robson-testnet namespace — no cross-namespace refs)
   - paradedb-svc.yml
+  # DB migration Job (ArgoCD Sync hook, wave -1, mirrors prod)
+  - robsond-db-migrate-job.yml
   # Daemon
   - robsond-deploy.yml
   - robsond-svc.yml
@@ -20,3 +22,8 @@ labels:
       app.kubernetes.io/part-of: robson
       environment: testnet
     includeSelectors: false
+
+# Pattern R: single pin for every robson-v2 image (deploy + migrate hook).
+images:
+  - name: ghcr.io/rbxrobotica/robson-v2
+    newTag: sha-d5803c47
