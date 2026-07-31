@@ -1,13 +1,15 @@
-# robsond DB bootstrap Job (Testnet)
+# robsond DB migration Job (Testnet)
 #
-# NOTE: Not managed by kustomization. Run manually when migrations are needed.
-# The ServiceAccount "robsond" must exist before running this job.
-# Apply with: kubectl apply -f apps/testnet/robson/robsond-db-migrate-job.yml --kubeconfig ~/.kube/config-rbx
+# Managed by ArgoCD as a Sync hook, mirroring apps/prod/robson. It runs before
+# the robsond Deployment wave on every sync and is safe to re-run because
+# `robsond db migrate` is idempotent.
 #
-# Runs once at deploy time to:
+# Runs at deploy time to:
 #   1. Apply all SQLx migrations (robsond db migrate)
 #   2. Seed the tenant/account rows (robsond db init --tenant-id $PROJECTION_TENANT_ID)
 #
+# If this Job fails, ArgoCD blocks the higher sync wave and the robsond
+# Deployment is not updated to an image that may require unapplied schema.
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -18,6 +20,10 @@ metadata:
     app.kubernetes.io/component: db-migrate
     app.kubernetes.io/part-of: robson
     environment: testnet
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   backoffLimit: 5
   template:
@@ -37,7 +43,7 @@ spec:
 
       containers:
       - name: db-migrate
-        image: ghcr.io/rbxrobotica/robson-v2:sha-c547fb33
+        image: ghcr.io/rbxrobotica/robson-v2:latest
         imagePullPolicy: IfNotPresent
         command:
         - sh
