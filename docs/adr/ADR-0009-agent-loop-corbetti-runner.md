@@ -129,6 +129,22 @@ max_attempts, and a reminder that the agent must not push to main.
 
 ### 5. Artifact publication — branch + PR, then ledger
 
+Before artifact publication, token-denominated `max_cost` is checked against the
+provider CLI's terminal structured-usage event (Claude cache creation/read tokens
+are included; Codex input already includes its cached subset). Provider CLIs do not
+expose a trustworthy cumulative total early enough to undo spend, so this is a
+post-execution gate: an over-budget mission is reported
+`stopped/cost_limit_reached` and performs no verify, push, PR, or delivery.
+
+A companion watchdog also sums structured result events over the rolling 24-hour
+window. On a global cap breach it writes an operator-cleared `budget-stop` marker,
+which blocks new claims immediately. If a mission is active, systemd stop is
+deferred so the runner can observe the marker, report
+`stopped/cost_limit_reached`, and remove its active-mission marker. The watchdog
+then stops the idle runner. This preserves the fail-safe cap without stranding a
+lease in `running`. Kimi remains outside token accounting until its CLI emits
+structured usage.
+
 On agent completion the runner:
 
 1. Commits all changes on a branch `mission/<mission-code>` (or leaves the agent's

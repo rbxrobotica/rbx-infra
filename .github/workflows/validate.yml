@@ -155,3 +155,7 @@ jobs:
       - name: Agent runner delivery contract
         run: |
           bash bootstrap/ansible/roles/agent-workbench/tests/runner-delivery-contract.sh
+
+      - name: Agent runner watchdog budget contract
+        run: |
+          bash bootstrap/ansible/roles/agent-workbench/tests/watchdog-budget-contract.sh

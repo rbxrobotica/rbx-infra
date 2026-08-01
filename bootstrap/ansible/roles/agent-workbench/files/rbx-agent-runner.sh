@@ -18,6 +18,9 @@ HEARTBEAT_INTERVAL_S=60
 LOG_DIR="${HOME}/rbx/logs"
 WORKTREE_DIR="${HOME}/rbx/worktrees"
 REPOS_DIR="${HOME}/rbx/repos"
+STATE_DIR="${HOME}/.rbx/watchdog"
+ACTIVE_MISSION_FILE="${STATE_DIR}/active-mission"
+BUDGET_STOP_FILE="${STATE_DIR}/budget-stop"
 
 # rbx/bin (glm/codex wrappers), rtk/lean-ctx, kimi-code cli, devbox tools
 export PATH="${HOME}/rbx/bin:${HOME}/.local/bin:${HOME}/.kimi-code/bin:${HOME}/rbx/.devbox/nix/profile/default/bin:${HOME}/rbx/.devbox/npm-global/bin:${PATH}"
@@ -26,7 +29,7 @@ export PATH="${HOME}/rbx/bin:${HOME}/.local/bin:${HOME}/.kimi-code/bin:${HOME}/r
 export GH_TOKEN="${GITHUB_PAT}"
 git config --global credential.helper '!gh auth git-credential' 2>/dev/null || true
 
-mkdir -p "${LOG_DIR}"
+mkdir -p "${LOG_DIR}" "${STATE_DIR}"
 
 ts()  { date -u '+%Y-%m-%dT%H:%M:%SZ'; }
 log() { echo "[$(ts)] [${RUNNER_ID}] $*"; }
@@ -111,12 +114,13 @@ execute_mission() {
   local worktree="${WORKTREE_DIR}/${code}"
 
   # Parse contract
-  local mtype repo base_branch objective max_runtime_iso
+  local mtype repo base_branch objective max_runtime_iso max_cost
   mtype=$(printf '%s' "${contract_json}" | jq -r '.type')
   repo=$(printf '%s' "${contract_json}" | jq -r '.repo')
   base_branch=$(printf '%s' "${contract_json}" | jq -r '.base_branch // "main"')
   objective=$(printf '%s' "${contract_json}" | jq -r '.objective')
   max_runtime_iso=$(printf '%s' "${contract_json}" | jq -r '.max_runtime // "PT10M"')
+  max_cost=$(printf '%s' "${contract_json}" | jq -r '.max_cost // ""')
 
   # Parse ISO 8601 duration to seconds (support PTxM and PTxH)
   local timeout_s=600
@@ -299,6 +303,25 @@ Verify command (the runner executes this to prove done; it MUST exit 0):
     fi
   fi
 
+  # Enforce token-denominated mission max_cost at the first trustworthy
+  # usage boundary exposed by the provider CLI. Claude/Codex publish their
+  # complete usage only in the terminal result event, so this cannot undo
+  # provider spend, but it prevents verify/push/PR/delivery after a contract
+  # has exceeded its own bound. Financial-unit bounds remain declarative.
+  local mission_token_cap="" mission_tokens=""
+  if [[ "${max_cost}" =~ ^([0-9]+)[[:space:]]*tokens$ ]]; then
+    mission_token_cap="${BASH_REMATCH[1]}"
+  fi
+  if [[ -n "${mission_token_cap}" && "${input_tok}" =~ ^[0-9]+$ && "${output_tok}" =~ ^[0-9]+$ ]]; then
+    mission_tokens=$(( input_tok + output_tok ))
+    if (( mission_tokens > mission_token_cap )); then
+      log "COST LIMIT ${code}: ${mission_tokens}/${mission_token_cap} tokens; no verify or persistence"
+      printf 'COST_LIMIT tokens=%s cap=%s\n' "${mission_tokens}" "${mission_token_cap}" >> "${log_file}"
+      exit_code=75
+      stop_reason="cost_limit_reached"
+    fi
+  fi
+
   # ── verify gate (ADR-0019): done is provable iff verify_command exits 0 ──
   # Runs only after the executor itself succeeded and only when the contract
   # declares verify_command (code-producing loops). verify_status stays
@@ -320,6 +343,17 @@ Verify command (the runner executes this to prove done; it MUST exit 0):
       verify_status="failed"
       stop_reason="persistent_failure"
     fi
+  fi
+
+  # A rolling-budget breach discovered by the watchdog while this mission was
+  # active is also terminal before persistence. The watchdog deliberately
+  # defers systemd stop until ACTIVE_MISSION_FILE disappears, so this report
+  # reaches Maestro instead of stranding a running lease.
+  if [[ ${exit_code} -eq 0 && -f "${BUDGET_STOP_FILE}" ]]; then
+    log "COST LIMIT ${code}: rolling budget stop requested; no persistence"
+    printf 'COST_LIMIT rolling_budget_stop=true\n' >> "${log_file}"
+    exit_code=75
+    stop_reason="cost_limit_reached"
   fi
 
   # ── collect artifacts (ledger) ───────────────────────────────────────────
@@ -394,6 +428,15 @@ Review before merge — merge is human (P4, ADR-0019)." >>"${log_file}" 2>&1 ||
 log "rbx-agent-runner starting (runner=${RUNNER_ID}, maestro=${MAESTRO_URL})"
 
 while true; do
+  # The watchdog owns this marker. Keep the service alive but idle until its
+  # next pass observes no active mission and performs the fail-safe systemd
+  # stop. The marker is intentionally operator-cleared after budget review.
+  if [[ -f "${BUDGET_STOP_FILE}" ]]; then
+    log "BUDGET PAUSE marker present; refusing new claims pending operator review"
+    sleep "${POLL_INTERVAL_S}"
+    continue
+  fi
+
   raw=$(poll_next 2>/dev/null || printf '\n000')
   http_code=$(printf '%s' "${raw}" | tail -1)
   body=$(printf '%s' "${raw}" | head -n -1)
@@ -407,6 +450,7 @@ while true; do
       contract=$(printf '%s' "${body}" | jq -c '.contract')
 
       log "Claimed ${mission_code}"
+      printf '%s|%s\n' "$$" "${mission_code}" > "${ACTIVE_MISSION_FILE}"
 
       # Heartbeat in background
       heartbeat_loop "${mission_code}" &
@@ -419,6 +463,7 @@ while true; do
 
       kill "${hb_pid}" 2>/dev/null || true
       wait "${hb_pid}" 2>/dev/null || true
+      rm -f "${ACTIVE_MISSION_FILE}"
       ;;
     000)
       log "WARN network error polling /leases/next, retry in ${POLL_INTERVAL_S}s"
