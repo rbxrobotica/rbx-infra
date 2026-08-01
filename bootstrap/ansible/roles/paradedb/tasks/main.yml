@@ -265,3 +265,24 @@
     objs: ALL_IN_SCHEMA
     privs: ALL
     state: present
+
+# =============================================================================
+# Server stability (2026-08-01, rbx-infra issue #164)
+# =============================================================================
+
+- name: Install PostgreSQL tuning drop-in (max_connections)
+  copy:
+    src: rbx-postgresql-tuning.conf
+    dest: /etc/postgresql/16/main/conf.d/rbx-postgresql-tuning.conf
+    owner: postgres
+    group: postgres
+    mode: "0644"
+  notify: restart postgresql
+
+- name: Exclude PostgreSQL from needrestart auto-restart (apt/unattended-upgrades)
+  copy:
+    src: needrestart-postgresql.conf
+    dest: /etc/needrestart/conf.d/50-rbx-postgresql.conf
+    owner: root
+    group: root
+    mode: "0644"
