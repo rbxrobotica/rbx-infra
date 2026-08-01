@@ -1,0 +1,84 @@
+# robsond DB retention CronJob (ADR-0049, robson repo)
+#
+# The event log is an audit trail; auxiliary tables are not. This job prunes:
+#   - event_idempotency: dedupe keys older than 14 days (dedupe horizon is
+#     minutes; keys have no audit value)
+#   - queries_current: Completed/Failed query projections older than 30 days
+#     (Denied rows are kept indefinitely as governance evidence)
+#
+# It never touches event_log partitions or any projection of record
+# (positions_current, monthly_state, income_ledger, ...). Plain VACUUM
+# (ANALYZE) afterwards: space is reused without exclusive locks.
+#
+# Background: without pruning these two tables grew to 4.6 GB by 2026-08
+# (8M idempotency keys, 2M query rows). See robson docs/adr/ADR-0049.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: robsond-db-retention
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: db-retention
+    app.kubernetes.io/part-of: robson
+spec:
+  # Mondays 02:45 UTC — outside the month-boundary window (00:00-00:02 UTC)
+  # and the daily briefing/trading hours.
+  schedule: "45 2 * * 1"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: robsond
+            app.kubernetes.io/component: db-retention
+        spec:
+          imagePullSecrets:
+          - name: ghcr-pull-secret
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 70
+          restartPolicy: Never
+          containers:
+          - name: db-retention
+            image: postgres:16-alpine
+            imagePullPolicy: IfNotPresent
+            command:
+            - sh
+            - -c
+            - |
+              set -e
+              psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+              \timing on
+              DELETE FROM event_idempotency
+              WHERE first_ingested_at < now() - interval '14 days';
+              DELETE FROM queries_current
+              WHERE state IN ('Completed', 'Failed')
+                AND updated_at < now() - interval '30 days';
+              VACUUM (ANALYZE) event_idempotency;
+              VACUUM (ANALYZE) queries_current;
+              SELECT 'event_idempotency' AS table,
+                     pg_size_pretty(pg_total_relation_size('event_idempotency')) AS size
+              UNION ALL
+              SELECT 'queries_current',
+                     pg_size_pretty(pg_total_relation_size('queries_current'));
+              SQL
+              echo "=== Retention complete ==="
+            env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: robsond-secret
+                  key: database-url
+            resources:
+              requests:
+                cpu: "50m"
+                memory: "64Mi"
+              limits:
+                cpu: "250m"
+                memory: "128Mi"

@@ -20,6 +20,7 @@ resources:
   - robsond-rbac.yml
   - robsond-config.yml
   - robsond-db-migrate-job.yml
+  - robsond-db-retention-cronjob.yml
   - robsond-deploy.yml
   - robsond-svc.yml
   - robsond-ingress.yml
