@@ -142,23 +142,62 @@ execute_mission() {
   org="${repo%%/*}"
   repo_name="${repo##*/}"
   repo_dir="${REPOS_DIR}/${org}/${repo_name}.git"
-  mkdir -p "${REPOS_DIR}/${org}"
+  local setup_failure=""
+  if ! mkdir -p "${REPOS_DIR}/${org}"; then
+    setup_failure="repo_parent_create_failed"
+  fi
 
-  if [[ ! -d "${repo_dir}" ]]; then
+  if [[ -z "${setup_failure}" && ! -d "${repo_dir}" ]]; then
     log "Cloning ${repo}"
-    git clone --bare "https://github.com/${repo}.git" "${repo_dir}" \
-      >>"${log_file}" 2>&1
-  else
+    if ! git clone --bare "https://github.com/${repo}.git" "${repo_dir}" \
+      >>"${log_file}" 2>&1; then
+      setup_failure="clone_failed"
+    fi
+  fi
+  if [[ -z "${setup_failure}" ]]; then
     log "Fetching ${repo}"
-    git -C "${repo_dir}" fetch origin >>"${log_file}" 2>&1
+    # Bare clones have no default remote-tracking fetch refspec. Keep a
+    # dedicated current base ref so a stale worktree that still has the local
+    # base branch checked out cannot block fetch or the next mission.
+    if ! git -C "${repo_dir}" fetch origin \
+      "+refs/heads/${base_branch}:refs/remotes/origin/${base_branch}" \
+      >>"${log_file}" 2>&1; then
+      setup_failure="fetch_failed"
+    fi
   fi
 
   # ── isolated worktree ────────────────────────────────────────────────────
-  rm -rf "${worktree}"
-  git -C "${repo_dir}" worktree add "${worktree}" "${base_branch}" \
-    >>"${log_file}" 2>&1
-  git -C "${worktree}" config user.name "${RUNNER_GIT_AUTHOR_NAME}"
-  git -C "${worktree}" config user.email "${RUNNER_GIT_AUTHOR_EMAIL}"
+  if [[ -z "${setup_failure}" ]] && ! rm -rf "${worktree}"; then
+    setup_failure="worktree_path_cleanup_failed"
+  fi
+  if [[ -z "${setup_failure}" ]] &&
+     ! git -C "${repo_dir}" worktree prune >>"${log_file}" 2>&1; then
+    setup_failure="worktree_prune_failed"
+  fi
+  if [[ -z "${setup_failure}" ]] &&
+     ! git -C "${repo_dir}" worktree add --detach "${worktree}" \
+       "refs/remotes/origin/${base_branch}" >>"${log_file}" 2>&1; then
+    setup_failure="worktree_add_failed"
+  fi
+  if [[ -z "${setup_failure}" ]] &&
+     ! git -C "${worktree}" config user.name "${RUNNER_GIT_AUTHOR_NAME}"; then
+    setup_failure="git_identity_name_failed"
+  fi
+  if [[ -z "${setup_failure}" ]] &&
+     ! git -C "${worktree}" config user.email "${RUNNER_GIT_AUTHOR_EMAIL}"; then
+    setup_failure="git_identity_email_failed"
+  fi
+  if [[ -n "${setup_failure}" ]]; then
+    log "STOP ${code}: setup=${setup_failure}; executor not started"
+    printf 'SETUP_FAILURE reason=%s executor_started=false\n' "${setup_failure}" \
+      >>"${log_file}"
+    if [[ -d "${repo_dir}" ]]; then
+      git -C "${repo_dir}" worktree remove "${worktree}" --force \
+        >>"${log_file}" 2>&1 || true
+    fi
+    report_stop "${code}" "persistent_failure"
+    return 0
+  fi
 
   # ── select executor (Phase 5: executor field overrides mtype heuristic) ──
   local executor

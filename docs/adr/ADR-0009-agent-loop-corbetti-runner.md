@@ -89,18 +89,26 @@ on next pod restart (or live if loaded with `sync.Once` replaced by periodic rel
     <repo contents>
 ```
 
-Each mission gets a dedicated git worktree created from a bare clone of the target
-repo (checked out to `base_branch`). The worktree is the agent's entire filesystem
-surface. On mission end (delivered or stopped) the runner removes the worktree; on
-Corbetti wipe/restart worktrees left behind from crashed missions are safe to delete.
+Each mission gets a dedicated detached git worktree created from a bare clone of the
+target repo at the current remote `base_branch`. The worktree is the agent's entire
+filesystem surface. On mission end (delivered or stopped) the runner removes the
+worktree; interrupted worktrees may remain for operator inspection without reserving
+the base branch needed by subsequent missions.
 
 Bare clones live at `~/rbx/repos/<org>/<repo>.git` (already created on first use,
 fetched on subsequent missions). The runner creates `worktrees/<mission-code>` with:
 
 ```bash
-git -C ~/rbx/repos/rbxrobotica/rbx-infra.git fetch origin
-git worktree add ~/rbx/worktrees/mission-2026-00007 origin/main
+git -C ~/rbx/repos/rbxrobotica/rbx-infra.git fetch origin \
+  '+refs/heads/main:refs/remotes/origin/main'
+git -C ~/rbx/repos/rbxrobotica/rbx-infra.git worktree add --detach \
+  ~/rbx/worktrees/mission-2026-00007 refs/remotes/origin/main
 ```
+
+Clone, fetch, prune, worktree creation, and Git identity setup are explicit
+fail-closed gates. If any setup step fails, the runner reports
+`stopped/persistent_failure` and does not start the executor. This is required because
+shell `errexit` is not reliable inside a function invoked from an `||` handler.
 
 Only repos listed in the mission contract `repo` field are cloned (allow-list enforced
 by the contract `allowed_paths` and `forbidden_paths` fields).
