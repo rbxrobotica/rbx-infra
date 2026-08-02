@@ -1,7 +1,6 @@
 # Kustomization for Strategos Production
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 resources:
   - namespace.yml
   - middleware-https.yml
@@ -11,17 +10,15 @@ resources:
   - strategos-site-deploy.yml
   - strategos-site-svc.yml
   - strategos-site-ingress.yml
-
 labels:
   - pairs:
       app.kubernetes.io/part-of: strategos
       environment: production
     includeSelectors: false
-
 images:
   # Tags promoted by the app repo CI (RBX_INFRA_PAT self-push, issue #168).
   # See gitops/app-of-apps/strategos-prod.yml and docs/infra/IMAGE-PROMOTION.md.
   - name: ghcr.io/rbxrobotica/strategos-site
     newTag: sha-a652a30
   - name: ghcr.io/rbxrobotica/strategos-ui
-    newTag: sha-837d9f3
+    newTag: sha-015225d
