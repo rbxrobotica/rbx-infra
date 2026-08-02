@@ -1,88 +1,81 @@
 # Image Promotion
 
-RBX application repositories build and push images to GHCR. Promotion is owned by `rbx-infra`: the promoted image reference is recorded in GitOps state before the cluster converges.
+RBX application repositories build and push images to GHCR. Promotion is owned
+by `rbx-infra`: the promoted image reference is recorded in GitOps state
+(`apps/*/kustomization.yml` `images[].newTag`) and the cluster converges from
+Git, never from a direct cluster mutation.
 
-Production ArgoCD Applications remain manual-sync unless a service-specific ADR says otherwise. Sandbox applications can be automated end to end when the risk is acceptable. In both cases, image automation only changes Git; the cluster converges from Git, not from a direct cluster mutation.
+## The standard: CI self-push (fleet-wide since 2026-08-02)
 
-## Current transition state
+The repository that builds an image is the one that promotes it. After the
+image push on the default branch, the same CI job:
 
-As of 2026-07-08, some Applications still let ArgoCD Image Updater select the
-`newest-build` and write promotion commits directly to `main`. This is a
-transition state, not the target production standard.
+1. Checks out `rbxrobotica/rbx-infra` with the `RBX_INFRA_PAT` secret.
+2. Bumps `images[].newTag` in the owning overlay(s) with `yq` (or `sed`),
+   using the exact tag it just pushed.
+3. Commits as `github-actions[bot]` and pushes to `main`.
 
-The 2026-07-08 cluster health review found `rbx-cms` degraded because GitOps had
-promoted `sha-89d6985` for `ghcr.io/rbxrobotica/rbx-cms` and
-`ghcr.io/rbxrobotica/rbx-cms-web`, but the tag did not exist in GHCR at pull
-time. A `Synced` ArgoCD Application can therefore still be unavailable if the
-promotion path accepts a bad image reference.
-
-## Existing Image Updater flow
-
-The apps listed below still use the transition-state Image Updater path:
-
-1. Application CI builds an image and pushes `ghcr.io/rbxrobotica/<service>:sha-<git-sha>`.
-2. ArgoCD Image Updater runs in the `argocd` namespace.
-3. Image Updater reads GHCR using `argocd/argocd-image-updater-ghcr`.
-4. Image Updater commits the selected tag to `main` in `rbxrobotica/rbx-infra`.
-5. ArgoCD sees the Git change, but the service Application remains manual-sync until an operator syncs it.
-
-Before any production promotion, the chosen tag must be proven to exist in GHCR
-for every image being updated. For multi-image apps, all images must exist
-before any GitOps state changes.
-
-## Applications
-
-The Image Updater-managed Applications currently found under
-`gitops/app-of-apps/` are:
-
-- `md-prec-kulinaryos-prod` -> `ghcr.io/rbxrobotica/md-prec-kulinaryos`
-- `merovelis-prod` -> `ghcr.io/rbxrobotica/merovelis-site`
-- `rbx-cms` -> `ghcr.io/rbxrobotica/rbx-cms`, `ghcr.io/rbxrobotica/rbx-cms-web`
-- `rbx-commerce-sandbox` -> `ghcr.io/rbxrobotica/rbx-commerce`
-- `rbx-data` -> `ghcr.io/rbxrobotica/rbx-data`
-- `rbx-ia-br` -> `ghcr.io/rbxrobotica/rbx-ia-br`
-- `rbx-memory` -> `ghcr.io/rbxrobotica/rbx-memory`
-- `rbx-observability` -> `ghcr.io/rbxrobotica/rbx-observability`
-- `rbxsystems-ch` -> `ghcr.io/rbxrobotica/rbx-ia-br`
-- `strategos-prod` -> `ghcr.io/rbxrobotica/strategos-site`, `ghcr.io/rbxrobotica/strategos-ui`
-
-Single-image Applications use this annotation shape; multi-image Applications
-repeat the per-image settings for each alias (`app`, `web`, `site`, `ui`):
+Template (single image; repeat the `yq` line per image for multi-image apps):
 
 ```yaml
-argocd-image-updater.argoproj.io/image-list: app=ghcr.io/rbxrobotica/<service>
-argocd-image-updater.argoproj.io/app.update-strategy: newest-build
-argocd-image-updater.argoproj.io/app.allow-tags: regexp:^sha-[0-9a-f]+$
-argocd-image-updater.argoproj.io/app.kustomize.image-name: ghcr.io/rbxrobotica/<service>
-argocd-image-updater.argoproj.io/write-back-method: git
-argocd-image-updater.argoproj.io/git-branch: main
-argocd-image-updater.argoproj.io/write-back-target: kustomization
+      # Promote image tag to rbx-infra (fleet standard, rbx-infra issue #168)
+      - uses: actions/checkout@v4
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          repository: rbxrobotica/rbx-infra
+          token: ${{ secrets.RBX_INFRA_PAT }}
+          path: rbx-infra
+      - name: Promote image tag to rbx-infra
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          cd rbx-infra
+          K=apps/prod/<app>/kustomization.yml
+          yq -i '(.images[] | select(.name == "ghcr.io/rbxrobotica/<image>") | .newTag) = "sha-${{ github.sha }}"' "$K"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$K"
+          git diff --cached --quiet || git commit -m "chore(<app>): bump image to sha-${{ github.sha }}"
+          git push
 ```
 
-`write-back-target: kustomization` is required so Image Updater changes `images[].newTag` in `kustomization.yml` instead of writing an `.argocd-source-*` override file.
+The `if` guard is mandatory when the workflow also runs on pull requests.
+Repos that gate the whole job on push-to-main may omit per-step guards.
+Workflows that clone rbx-infra over SSH (rbx-systems-frontend) use their
+read-write deploy key instead of the PAT; the contract is identical.
 
-## Secrets
+Why this pattern is the standard:
 
-The `k8s-secrets` Ansible role provisions the required Kubernetes secrets in the `argocd` namespace.
+- Every deploy is an auditable commit in rbx-infra (author, time, trigger).
+- A broken promotion turns the app repo's CI red on the merge commit. The
+  failure is loud and attributable, never a silent freeze.
+- Because the promoting run is the run that pushed the image, the promoted
+  tag always exists in GHCR (this structurally prevents the 2026-07-08
+  rbx-cms incident, where a nonexistent tag was promoted).
+- Floating tags are forbidden: overlays pin `sha-*` tags only
+  (Pattern R rule 3; `newTag: latest` is a violation).
 
-| Secret | pass path | Purpose |
-| --- | --- | --- |
-| `argocd-image-updater-ghcr` | `rbx/cluster/ghcr-token` | GHCR read token with `read:packages` for registry polling. |
-| `argocd-image-updater-git-creds` | `rbx/github/rbx-infra-image-updater` | ArgoCD repository credential used by Image Updater for write-back commits to `rbxrobotica/rbx-infra`. |
+## Adopting repos
 
-No secret values are stored in Git. Operators provision the pass entries before running the bootstrap secret role.
+All image-producing repos promote via CI as of 2026-08-02: robson,
+rbx-console, rbx-commerce (prod + sandbox), rbx-systems-frontend (rbx-ia-br +
+rbxsystems-ch), rbx-cms (app + web), rbx-data, rbx-memory, rbx-observability,
+strategos-site, strategos-ui, merovelis-site, md-prec-kulinaryos.
 
-The Application annotation uses `write-back-method: git`, so Image Updater reuses ArgoCD repository credentials for `https://github.com/rbxrobotica/rbx-infra`. The bootstrap role labels `argocd-image-updater-git-creds` as an ArgoCD repository secret for that URL.
+## Credentials
 
-## Review Options
+`RBX_INFRA_PAT` (fine-grained PAT with write on rbx-infra; value in
+`pass rbx/github/rbx-infra-write-pat`) is provided as an org secret with
+selected-repository visibility, plus repo-level copies where org visibility
+could not be extended. When rotating the PAT, update the org secret AND the
+repo-level copies (strategos-site, strategos-ui, merovelis-site, rbx-cms,
+md-prec-kulinaryos, rbx-commerce). No secret values are stored in Git.
 
-The current model writes the promotion commit directly to `main`. Production deployment remains manual because the service Applications do not enable automated sync. Sandbox deployment keeps automated sync enabled so the new image lands after the Git change reconciles.
-
-For stricter review, Image Updater can instead write to a promotion branch and open a pull request before `main` changes. A GitHub App is preferable long-term to a deploy key or PAT because its permissions, installation scope, and rotation can be managed centrally.
+A GitHub App remains preferable long-term to a deploy key or PAT because its
+permissions, installation scope, and rotation can be managed centrally.
 
 ## P1 tooling
 
-Two repository-local scripts support the P1 transition:
+Two repository-local scripts support stricter promotion review:
 
 - `scripts/promote-image-tag.sh <app> <image> <tag>` validates the app name,
   image namespace, immutable `sha-*` tag, kustomization image stanza, and
@@ -90,16 +83,13 @@ Two repository-local scripts support the P1 transition:
   `newTag`. It refuses partial promotion for multi-image kustomizations unless
   `ALLOW_PARTIAL_MULTI_IMAGE=1` is set explicitly.
 - `scripts/report-p1-image-debt.sh` prints the current backlog: production
-  `newTag: latest`, manifest `image: *:latest`, Image Updater `newest-build`,
-  direct-main write-back, and ArgoCD apps tracking `targetRevision: main`.
+  `newTag: latest`, manifest `image: *:latest`, direct-main write-back, and
+  ArgoCD apps tracking `targetRevision: main`.
 
-`.github/workflows/image-update.yml` opens a promotion PR after registry
-validation instead of committing directly to `main`. It does not sync ArgoCD or
-mutate the cluster.
+## P1 target standard (future direction)
 
-## P1 target standard
-
-P1 moves production promotion toward a reviewed branch/PR flow:
+The current standard writes the promotion commit directly to `main`. P1 moves
+production promotion toward a reviewed branch/PR flow for high-risk apps:
 
 1. CI publishes image tags.
 2. A promotion job checks that every referenced tag exists in GHCR.
@@ -117,3 +107,22 @@ Blocking conditions for production promotion:
 - No rollback target.
 - ArgoCD app already `Degraded` for unrelated reasons and no owner accepts the
   blast radius.
+
+## History: ArgoCD Image Updater (retired 2026-08-02)
+
+Between 2026-06 and 2026-07 ten Applications delegated promotion to the
+argocd-image-updater controller via Application annotations (`newest-build`
+strategy, git write-back). On 2026-07-28 a chart upgrade replaced the
+controller with the CRD-based version, which ignores annotations and logged
+`No ImageUpdater CRs to process`. Promotion for all ten apps silently stopped
+while every dashboard stayed `Synced/Healthy`; the freeze was only noticed on
+2026-08-01 when a deploy was independently verified. Post-mortem and
+migration: rbx-infra issue #168.
+
+The controller (`platform/image-updater/`), its Application annotations, and
+the overlay comments referencing it were removed. Credentials that served it
+are decommission candidates once the removal syncs: the `argocd` namespace
+secrets `argocd-image-updater-ghcr` and `argocd-image-updater-git-creds`, the
+rbx-infra deploy key `image-updater-ed25519-2026-06-21`, the pass entry
+`rbx/github/rbx-infra-image-updater`, and the `k8s-secrets` Ansible role
+tasks that provision them.
