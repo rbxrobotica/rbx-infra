@@ -17,7 +17,7 @@ labels:
     includeSelectors: false
 
 images:
-  # Tag promoted by ArgoCD Image Updater (git write-back to this file).
+  # Tags promoted by the app repo CI (RBX_INFRA_PAT self-push, issue #168).
   # See gitops/app-of-apps/md-prec-kulinaryos-prod.yml and docs/infra/IMAGE-PROMOTION.md.
   - name: ghcr.io/rbxrobotica/md-prec-kulinaryos
     newTag: sha-9dfb375

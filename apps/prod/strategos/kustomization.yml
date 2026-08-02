@@ -19,9 +19,9 @@ labels:
     includeSelectors: false
 
 images:
-  # Tags promoted by ArgoCD Image Updater (git write-back to this file).
+  # Tags promoted by the app repo CI (RBX_INFRA_PAT self-push, issue #168).
   # See gitops/app-of-apps/strategos-prod.yml and docs/infra/IMAGE-PROMOTION.md.
   - name: ghcr.io/rbxrobotica/strategos-site
-    newTag: sha-f26387e
+    newTag: sha-a652a30
   - name: ghcr.io/rbxrobotica/strategos-ui
     newTag: sha-837d9f3

@@ -13,7 +13,7 @@ resources:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-commerce
-    newTag: sha-9a8d06c62d6828b4a4ef342db467cf6306cfae4f
+    newTag: sha-569d704351cf917b2a69884ccd71beb562d8b96e
 
 labels:
   - pairs:
