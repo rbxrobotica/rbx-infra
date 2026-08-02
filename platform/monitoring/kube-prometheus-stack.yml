@@ -130,7 +130,7 @@ spec:
         # -> mail.rbxsystems.ch:587 -> existing Postmark relay -> ceo@rbxsystems.ch.
         # SMTP password lives in monitoring/alertmanager-smtp (key: password),
         # created by the k8s-secrets Ansible role from pass
-        # rbx/mail/alerts-rbxsystems-ch-smtp. Never inline the password here.
+        # rbx/mail/alerts-password. Never inline the password here.
         alertmanager:
           config:
             global:
