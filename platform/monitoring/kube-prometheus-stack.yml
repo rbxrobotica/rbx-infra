@@ -211,6 +211,60 @@ spec:
                       summary: "Critical service endpoint has no ready backend"
                       description: "A critical RBX endpoint has had no ready backend address for more than 10 minutes."
 
+          rbx-robson-trading:
+            groups:
+              - name: rbx.robson.trading
+                rules:
+                  - alert: RBXRobsondMetricsAbsent
+                    expr: absent(robsond_cycles_total{kubernetes_namespace="robson"})
+                    for: 10m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "robsond metrics missing from Prometheus"
+                      description: "No robsond_cycles_total series from namespace robson for 10 minutes. The daemon is down or scraping is broken while real capital may be exposed."
+
+                  - alert: RBXRobsondMonthlyHaltActive
+                    expr: robsond_monthly_halt_active{kubernetes_namespace="robson"} == 1
+                    for: 5m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson MonthlyHalt circuit breaker is active"
+                      description: "The 4% monthly drawdown circuit breaker has engaged. Trading is halted until the month boundary; operator review required."
+
+                  - alert: RBXRobsondStaleActivePositions
+                    expr: robsond_stale_active_positions{kubernetes_namespace="robson"} > 0
+                    for: 10m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson has open book positions missing on the exchange"
+                      description: "robsond_stale_active_positions above zero for 10 minutes. A sustained value means reconciliation is not clearing a stuck position (2026-07-31 incident)."
+
+                  - alert: RBXRobsondCycleErrors
+                    expr: sum(rate(robsond_cycles_total{kubernetes_namespace="robson", result="error"}[5m])) > 0
+                    for: 10m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "robsond engine cycles are failing"
+                      description: "Engine cycles have been ending in error for 10 minutes. Check robsond logs in namespace robson."
+
+                  - alert: RBXRobsondCyclesStalled
+                    expr: sum(rate(robsond_cycles_total{kubernetes_namespace="robson"}[10m])) == 0
+                    for: 15m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "robsond is up but processing no cycles"
+                      description: "Scrape works but no engine cycles completed in 15 minutes. The daemon may be wedged (e.g. silent market data websocket, robson issue #138)."
+
         # Temporarily disable PrometheusRule admission webhooks until the
         # webhook serving certificate/CA bundle is regenerated in an approved
         # maintenance window. The broken CA currently blocks ArgoCD from
