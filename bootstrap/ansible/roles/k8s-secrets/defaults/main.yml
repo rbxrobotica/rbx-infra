@@ -18,7 +18,7 @@ robsond_namespace: "robson"
 pass_kubeconfig_key: "rbx/cluster/kubeconfig"
 pass_ghcr_token_key: "rbx/cluster/ghcr-token"
 pass_grafana_admin_password_key: "rbx/monitoring/grafana-admin-password"
-pass_alertmanager_smtp_password_key: "rbx/mail/alerts-rbxsystems-ch-smtp"
+pass_alertmanager_smtp_password_key: "rbx/mail/alerts-password"
 
 # Production robson (namespace: robson)
 pass_robson_db_password_key: "rbx/robson/db-password"
