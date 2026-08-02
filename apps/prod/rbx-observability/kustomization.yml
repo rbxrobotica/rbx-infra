@@ -12,4 +12,4 @@ resources:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-observability
-    newTag: latest
+    newTag: sha-501a5091ead3f7fd2cdf386cceb338254bdd291b

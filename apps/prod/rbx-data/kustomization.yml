@@ -13,4 +13,4 @@ resources:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-data
-    newTag: latest
+    newTag: sha-d396e91d537017b58114c716ac052f42f66196fb
