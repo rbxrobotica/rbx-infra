@@ -19,6 +19,6 @@ images:
   # Tags promoted by the app repo CI (RBX_INFRA_PAT self-push, issue #168).
   # See gitops/app-of-apps/strategos-prod.yml and docs/infra/IMAGE-PROMOTION.md.
   - name: ghcr.io/rbxrobotica/strategos-site
-    newTag: sha-a652a30
+    newTag: sha-e83e394
   - name: ghcr.io/rbxrobotica/strategos-ui
     newTag: sha-015225d
