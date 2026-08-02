@@ -11,7 +11,7 @@ resources:
   - rbx-commerce-sandbox-svc.yml
 images:
   - name: ghcr.io/rbxrobotica/rbx-commerce
-    newTag: sha-cf9e9829728ed7e717b9d8f1642abecc1674c51a
+    newTag: sha-998898c200c78dd8757437674cd8007e588e1dad
 labels:
   - pairs:
       app.kubernetes.io/part-of: rbx-commerce
