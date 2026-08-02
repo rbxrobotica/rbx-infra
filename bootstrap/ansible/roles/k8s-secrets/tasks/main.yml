@@ -758,6 +758,30 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# Alertmanager SMTP secret (monitoring namespace)
+# Dedicated Mailcow mailbox alerts@rbxsystems.ch; password SoT in pass.
+# Mounted by the kube-prometheus-stack chart via alertmanagerSpec.secrets.
+# ---------------------------------------------------------------------------
+
+- name: Read Alertmanager SMTP password from pass
+  command: pass show {{ pass_alertmanager_smtp_password_key }}
+  changed_when: false
+  register: alertmanager_smtp_password_result
+  no_log: true
+
+- name: Create alertmanager-smtp secret in monitoring
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic alertmanager-smtp \
+      --namespace monitoring \
+      --from-literal=password="$ALERTMANAGER_SMTP_PASSWORD" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    ALERTMANAGER_SMTP_PASSWORD: "{{ alertmanager_smtp_password_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # llm-gateway namespace secrets (LiteLLM Proxy — experimental)
 # ---------------------------------------------------------------------------
 
@@ -1245,6 +1269,7 @@
       - "  {{ robsond_namespace }}/robsond-secret: database-url + projection-tenant-id"
       - "  {{ robsond_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  monitoring/grafana-admin: Grafana admin credentials"
+      - "  monitoring/alertmanager-smtp: Alertmanager SMTP password (alerts@rbxsystems.ch)"
       - "  {{ llm_gateway_namespace }}/litellm-secrets: database-url + master-key + salt-key + provider keys (experimental)"
       - "  {{ rbx_ia_br_namespace }}/rbx-memory-token: token"
       - "  {{ rbx_ia_br_namespace }}/rbx-observability-token: token"
@@ -1273,6 +1298,7 @@
       - "  {{ robsond_namespace }}/robsond-secret: database-url + projection-tenant-id"
       - "  {{ robsond_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  monitoring/grafana-admin: Grafana admin credentials"
+      - "  monitoring/alertmanager-smtp: Alertmanager SMTP password (alerts@rbxsystems.ch)"
       - "  {{ llm_gateway_namespace }}/litellm-secrets: database-url + master-key + salt-key + provider keys (experimental)"
       - "  {{ rbx_ia_br_namespace }}/rbx-memory-token: token"
       - "  {{ rbx_ia_br_namespace }}/rbx-observability-token: token"

@@ -126,9 +126,46 @@ spec:
                     target_label: kubernetes_pod_name
 
         # ── AlertManager ─────────────────────────────────────────────────────
+        # Email notifications: alerts@rbxsystems.ch (dedicated Mailcow mailbox)
+        # -> mail.rbxsystems.ch:587 -> existing Postmark relay -> ceo@rbxsystems.ch.
+        # SMTP password lives in monitoring/alertmanager-smtp (key: password),
+        # created by the k8s-secrets Ansible role from pass
+        # rbx/mail/alerts-rbxsystems-ch-smtp. Never inline the password here.
         alertmanager:
+          config:
+            global:
+              smtp_from: "alerts@rbxsystems.ch"
+              smtp_smarthost: "mail.rbxsystems.ch:587"
+              smtp_auth_username: "alerts@rbxsystems.ch"
+              smtp_auth_password_file: /etc/alertmanager/secrets/alertmanager-smtp/password
+              smtp_require_tls: true
+            route:
+              receiver: email-ops
+              group_by: ["alertname", "namespace"]
+              group_wait: 30s
+              group_interval: 5m
+              repeat_interval: 12h
+              routes:
+                # Watchdog is an always-firing liveness alert; never email it.
+                - matchers:
+                    - alertname = "Watchdog"
+                  receiver: "null"
+                - matchers:
+                    - severity = "critical"
+                  receiver: email-ops
+                  repeat_interval: 4h
+            receivers:
+              - name: "null"
+              - name: email-ops
+                email_configs:
+                  - to: "ceo@rbxsystems.ch"
+                    send_resolved: true
           alertmanagerSpec:
             replicas: 1
+            # Mounts monitoring/alertmanager-smtp at
+            # /etc/alertmanager/secrets/alertmanager-smtp/ (password file above).
+            secrets:
+              - alertmanager-smtp
             storage:
               volumeClaimTemplate:
                 spec:
