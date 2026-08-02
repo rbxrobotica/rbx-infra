@@ -1,8 +1,6 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 namespace: rbx-cms
-
 resources:
   - namespace.yml
   - rbac-external-secrets.yml
@@ -16,16 +14,14 @@ resources:
   - deploy.yml
   - svc.yml
   - db-migrate-job.yml
-
 labels:
   - pairs:
       app.kubernetes.io/part-of: rbx-cms
       environment: production
     includeSelectors: false
-
 images:
   # Tags are updated by the image-update workflow on each push (sha-<commit>).
   - name: ghcr.io/rbxrobotica/rbx-cms
-    newTag: sha-7c9a7bf200d4b88e7a5544d33194b585afec328e
+    newTag: sha-bcfae3f07c5cb8905d19cd127eab879e74219c98
   - name: ghcr.io/rbxrobotica/rbx-cms-web
-    newTag: sha-7c9a7bf200d4b88e7a5544d33194b585afec328e
+    newTag: sha-bcfae3f07c5cb8905d19cd127eab879e74219c98
