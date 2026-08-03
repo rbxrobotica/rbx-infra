@@ -17,4 +17,4 @@ images:
   # Replaced with the first main-branch image SHA before this branch is published.
   # Subsequent tags are promoted by the KulinaryOS CI via RBX_INFRA_PAT.
   - name: ghcr.io/rbxrobotica/kulinaryos-web
-    newTag: sha-1af6a77
+    newTag: sha-238f8c5
