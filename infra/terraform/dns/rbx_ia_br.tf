@@ -4,9 +4,10 @@
 # Delegation at registro.br: point NS to ns1.rbxsystems.ch / ns2.rbxsystems.ch
 
 resource "powerdns_zone" "rbx_ia_br" {
-  name    = "rbx.ia.br."
-  kind    = "Master"
-  account = ""
+  name         = "rbx.ia.br."
+  kind         = "Master"
+  account      = ""
+  soa_edit_api = "DEFAULT"
 
   nameservers = ["ns1.rbxsystems.ch.", "ns2.rbxsystems.ch."]
 }

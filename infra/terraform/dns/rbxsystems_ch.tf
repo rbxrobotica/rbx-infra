@@ -3,9 +3,10 @@
 # Secondary: eagle (167.86.92.97) — ns2.rbxsystems.ch
 
 resource "powerdns_zone" "rbxsystems_ch" {
-  name    = "rbxsystems.ch."
-  kind    = "Master"
-  account = ""
+  name         = "rbxsystems.ch."
+  kind         = "Master"
+  account      = ""
+  soa_edit_api = "DEFAULT"
 
   # nameservers must match what PowerDNS has in state (set at zone creation).
   # Actual NS records with TTL control are managed via powerdns_record below.
