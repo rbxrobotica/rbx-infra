@@ -1,0 +1,27 @@
+# KulinaryOS v2 frontend. Registered automatically by the root app-of-apps.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kulinaryos-prod
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: kulinaryos-prod
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: kulinaryos
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/kulinaryos
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kulinaryos
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

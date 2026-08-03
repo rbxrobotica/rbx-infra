@@ -63,6 +63,9 @@ spec:
     # Thalamus slim-down reorg services (ADR-0200/0300/0201) + Langfuse backend.
     - namespace: langfuse
       server: https://kubernetes.default.svc
+    # KulinaryOS v2 application frontend.
+    - namespace: kulinaryos
+      server: https://kubernetes.default.svc
     - namespace: rbx-memory
       server: https://kubernetes.default.svc
     - namespace: rbx-observability
