@@ -2,9 +2,10 @@
 # Primary web/auth surface for Merovelis and canonical Strategos app host.
 
 resource "powerdns_zone" "merovelis_com" {
-  name    = "merovelis.com."
-  kind    = "Master"
-  account = ""
+  name         = "merovelis.com."
+  kind         = "Master"
+  account      = ""
+  soa_edit_api = "DEFAULT"
 
   nameservers = ["ns1.rbxsystems.ch.", "ns2.rbxsystems.ch."]
 }

@@ -2,9 +2,10 @@
 # Delegated to ns1/ns2.rbxsystems.ch — glue records live in rbxsystems.ch zone.
 
 resource "powerdns_zone" "strategos_gr" {
-  name    = "strategos.gr."
-  kind    = "Master"
-  account = ""
+  name         = "strategos.gr."
+  kind         = "Master"
+  account      = ""
+  soa_edit_api = "DEFAULT"
 
   # nameservers must match what PowerDNS has in state (set at zone creation).
   # Actual NS records with TTL control are managed via powerdns_record below.
