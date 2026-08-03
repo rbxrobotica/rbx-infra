@@ -203,6 +203,14 @@ resource "powerdns_record" "grafana_rbx_ia_br_a" {
   records = [var.k3s_ingress_ip]
 }
 
+resource "powerdns_record" "kulinaryos_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "kulinaryos.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
 resource "powerdns_record" "leandrodamasio_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
   name    = "leandrodamasio.rbx.ia.br."
