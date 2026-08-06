@@ -1,24 +1,32 @@
 ---
-# The join token normally arrives as a fact set by the k3s_server play. When a
-# single agent is provisioned with --limit, that play never runs, so read the
-# token straight from the cluster-init server. Including the server host in the
-# run instead is not a safe alternative: the k3s-server role rewrites
-# /etc/rancher/k3s/config.yaml with `notify: restart k3s`, which would bounce a
-# live control plane.
-- name: Read the k3s join token from the cluster-init server
+# Token resolution runs in steps on purpose. A single expression of the form
+#   hostvars[init].k3s_token | default(slurp.content | b64decode, true)
+# looks safe and is not: Jinja evaluates the fallback argument even when the
+# left side is defined, so the normal site.yml run (where the server play sets
+# the fact) fails with "'k3s_token_slurp' is undefined". Resolving in steps
+# keeps both paths working: full site.yml, and a single agent under --limit.
+- name: Take the join token from the server play when it ran
+  ansible.builtin.set_fact:
+    k3s_join_token: "{{ hostvars[k3s_init_host]['k3s_token'] | default('', true) }}"
+  no_log: true
+
+# Delegation reaches the init host even when it is outside --limit, which is
+# what makes provisioning a single agent possible without running the
+# k3s-server role. Running that role instead is not an option: it rewrites
+# config.yaml with `notify: restart k3s` and would bounce a live control plane.
+- name: Read the join token from the cluster-init server
   ansible.builtin.slurp:
     src: /var/lib/rancher/k3s/server/node-token
   delegate_to: "{{ k3s_init_host }}"
   register: k3s_token_slurp
   no_log: true
-  when: hostvars[k3s_init_host]['k3s_token'] is not defined
+  when: k3s_join_token | length == 0
 
-- name: Resolve the join token
+- name: Decode the join token read from the server
   ansible.builtin.set_fact:
-    k3s_join_token: >-
-      {{ hostvars[k3s_init_host]['k3s_token']
-         | default(k3s_token_slurp.content | b64decode | trim, true) }}
+    k3s_join_token: "{{ k3s_token_slurp.content | b64decode | trim }}"
   no_log: true
+  when: k3s_token_slurp.content is defined
 
 - name: Refuse to join without a token
   ansible.builtin.assert:
@@ -26,27 +34,61 @@
       - k3s_join_token | length > 0
     fail_msg: >-
       No join token available for {{ inventory_hostname }}. Expected it as a
-      fact from the k3s_server play or readable at
+      fact from the k3s_server play, or readable at
       /var/lib/rancher/k3s/server/node-token on {{ k3s_init_host }}.
+
+# Fail before touching the node rather than after. Without this, a controller
+# without kubectl or without cluster credentials installs and starts the agent
+# remotely and only then fails locally, leaving a half-provisioned node.
+- name: Verify the controller can reach the cluster before provisioning
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
+    get --raw /readyz
+  delegate_to: localhost
+  become: false
+  changed_when: false
+
+- name: Check whether k3s is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: Ensure the k3s configuration directory exists
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  when: not k3s_binary.stat.exists
+
+# The token reaches the host as file content, never as a command argument.
+# Passing --token on the command line puts the cluster join secret in the unit
+# that the installer generates, and that unit is mode 0644: the pre-existing
+# agents carry the token world readable because of exactly that. Passing
+# K3S_TOKEN through the environment is better but still lands the value in the
+# command Ansible builds, visible in -vvv and in /proc/<pid>/cmdline while the
+# install runs. Only the path travels on the command line here.
+- name: Stage the join token for the installer
+  ansible.builtin.copy:
+    content: "{{ k3s_join_token }}"
+    dest: /etc/rancher/k3s/join-token
+    owner: root
+    group: root
+    mode: "0600"
+  when: not k3s_binary.stat.exists
+  no_log: true
 
 # Pin the agent to the version the control plane runs. Installing whatever
 # get.k3s.io serves today would drift the node away from the cluster.
-#
-# The token goes through the environment, not the command line: /proc/PID/cmdline
-# is world readable, so `--token <value>` would expose the cluster join secret to
-# any local account for the duration of the install, while /proc/PID/environ is
-# readable only by the owner. This is the invocation the installer documents.
-# no_log keeps it out of Ansible's own output.
 - name: Install k3s agent
   ansible.builtin.shell: curl -sfL https://get.k3s.io | sh -s - agent
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_version }}"
     K3S_URL: "https://{{ k3s_server_ip }}:6443"
-    K3S_TOKEN: "{{ k3s_join_token }}"
+    K3S_TOKEN_FILE: /etc/rancher/k3s/join-token
     K3S_NODE_NAME: "{{ inventory_hostname }}"
-  args:
-    creates: /usr/local/bin/k3s
-  no_log: true
+  when: not k3s_binary.stat.exists
 
 - name: Enable and start k3s-agent
   ansible.builtin.systemd:
@@ -54,16 +96,12 @@
     enabled: true
     state: started
 
-- name: Wait for the node to register with the control plane
+- name: Wait for the node to report Ready
   ansible.builtin.command: >-
     kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
-    get node {{ inventory_hostname }}
+    wait --for=condition=Ready node/{{ inventory_hostname }} --timeout=150s
   delegate_to: localhost
   become: false
-  register: k3s_node_registered
-  until: k3s_node_registered.rc == 0
-  retries: 20
-  delay: 6
   changed_when: false
 
 - name: Apply node labels
@@ -73,7 +111,8 @@
   delegate_to: localhost
   become: false
   loop: "{{ k3s_node_labels | default([]) }}"
-  changed_when: true
+  register: k3s_label
+  changed_when: "'not labeled' not in k3s_label.stdout"
 
 - name: Apply node taints
   ansible.builtin.command: >-
@@ -82,4 +121,5 @@
   delegate_to: localhost
   become: false
   loop: "{{ k3s_node_taints | default([]) }}"
-  changed_when: true
+  register: k3s_taint
+  changed_when: "'not tainted' not in k3s_taint.stdout"

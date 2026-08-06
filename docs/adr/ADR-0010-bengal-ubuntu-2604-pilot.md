@@ -2,7 +2,13 @@
 
 ## Status
 
-**Accepted** — 2026-08-06
+**Accepted conditionally** — 2026-08-06
+
+Conditional because the governance rule below leans on a daily control that
+does not exist yet: it lives in an open, and currently blocked, pull request
+(rbx-security#3), it is not on `main`, and its timer is not installed anywhere.
+This ADR becomes **Accepted** when that control is merged, installed and
+observed running. Until then the rule is an intent, not an enforced control.
 
 ## Context
 
@@ -62,8 +68,21 @@ losses needs five members.
 The real constraint is memory: the three control planes carry 76 pods across
 24GB combined, with sumatrae between 86% and 88%, while jaguar holds 24GB and
 runs two pods because it is reserved by
-`robson.io/dedicated=analytics:NoSchedule`. bengal joins untainted so the
-scheduler can move work off the control planes.
+`robson.io/dedicated=analytics:NoSchedule`.
+
+### Why the pilot carries a taint
+
+The first version of this ADR had bengal join untainted, to take pressure off
+the control planes immediately. That contradicts the premise that makes the
+pilot cheap: a node whose rollback is "reinstall it" cannot be holding whatever
+the scheduler happened to place there, and `local-path` is the cluster's default
+storage class, so an arbitrary PVC would bind data to this node.
+
+bengal therefore joins with `rbx.io/os-pilot=ubuntu-2604:NoSchedule`. Workloads
+opt in with a matching toleration, starting with stateless canaries. The
+relief the control planes need comes as tolerations are added deliberately, not
+as a side effect of the node existing. The taint comes off when the pilot is
+accepted.
 
 ## Consequences
 
@@ -95,10 +114,17 @@ project with bengal as the reference. If any fails, bengal is reinstalled on
 ### Governance
 
 The four-month gap during which a host flagged as compromised stayed reachable
-and unmanaged is the failure this ADR also closes. The rule it establishes:
+and unmanaged is the failure this ADR also addresses. The rule it establishes:
 **a machine that exists is either in the Ansible inventory or is powered off.**
-The daily fleet check now enforces it, reporting any reachable host absent from
-the inventory.
+
+That rule is currently **unenforced**. The intended control is the daily fleet
+check in rbx-security, which reports any reachable host absent from the
+inventory, but it is still an open pull request and its timer is not installed.
+Even as designed it compares only the Ansible inventory, the SSH config and the
+cluster nodes, so a machine missing from all three stays invisible; closing that
+needs an authoritative asset source, which means the provider API. Until a
+control is merged, installed and observed, the rule holds only as long as
+somebody remembers it.
 
 ## References
 

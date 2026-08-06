@@ -12,7 +12,7 @@
       - unattended-upgrades
     state: present
 
-# Kept in its own file so playbooks/harden-ssh.yml can roll the access policy
+# Kept in its own file so harden-ssh.yml can roll the access policy
 # out one host at a time without the ufw reset below.
 # import_tasks, not include_tasks: only a static import propagates the tag to
 # the tasks inside the file. With a dynamic include, `--tags sshd` resolves the
