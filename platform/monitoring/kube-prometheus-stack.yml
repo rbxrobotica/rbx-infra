@@ -320,6 +320,39 @@ spec:
                       summary: "robsond is up but processing no cycles"
                       description: "Scrape works but no engine cycles completed in 15 minutes. The daemon may be wedged (e.g. silent market data websocket, robson issue #138)."
 
+                  - alert: RBXRobsondMarketDataSilentWithOpenPosition
+                    expr: |
+                      max(robsond_market_data_silent_seconds{kubernetes_namespace="robson"}) > 300
+                      and on()
+                      max(robsond_active_positions{kubernetes_namespace="robson"}) > 0
+                    for: 5m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Market data silent while a position is open"
+                      description: "No WebSocket tick for over 5 minutes on a symbol while positions are open (ADR-0044). The trailing stop may be blind exactly when it matters; check WS endpoints and REST fallback."
+
+                  - alert: RBXRobsondMarketDataSilent
+                    expr: max(robsond_market_data_silent_seconds{kubernetes_namespace="robson"}) > 600
+                    for: 10m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Market data silent (no open position)"
+                      description: "No WebSocket tick for over 10 minutes on at least one symbol. No position is open, so this is not capital-exposed, but the feed should not be silent."
+
+                  - alert: RBXRobsondMarketDataRestFallbackSustained
+                    expr: max(robsond_market_data_mode{kubernetes_namespace="robson"}) == 1
+                    for: 30m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Market data stuck on REST fallback"
+                      description: "At least one symbol has been on REST fallback (robsond_market_data_mode == 1) for 30 minutes (ADR-0044). Fallback is a degraded mode, not a steady state; check WebSocket endpoint health."
+
         # Temporarily disable PrometheusRule admission webhooks until the
         # webhook serving certificate/CA bundle is regenerated in an approved
         # maintenance window. The broken CA currently blocks ArgoCD from
