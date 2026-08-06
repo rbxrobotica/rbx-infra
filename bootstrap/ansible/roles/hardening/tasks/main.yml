@@ -12,19 +12,43 @@
       - unattended-upgrades
     state: present
 
-- name: Disable SSH password authentication
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: "^#?PasswordAuthentication"
-    line: "PasswordAuthentication no"
+# sshd keeps the FIRST value it obtains for a keyword, and sshd_config includes
+# sshd_config.d/*.conf in lexical order before its own body. Editing sshd_config
+# directly loses to any vendor drop-in, which is how cloud-init's
+# 50-cloud-init.conf kept password auth on across the fleet. 10- reads first.
+- name: Install RBX sshd policy drop-in
+  copy:
+    dest: /etc/ssh/sshd_config.d/10-rbx-hardening.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by rbx-infra (role: hardening).
+      PubkeyAuthentication yes
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitRootLogin prohibit-password
+    validate: "sshd -t -f %s"
   notify: restart sshd
+  tags: [sshd]
 
-- name: Disable SSH root password login (keep key-based)
-  lineinfile:
-    path: /etc/ssh/sshd_config
-    regexp: "^#?PermitRootLogin"
-    line: "PermitRootLogin prohibit-password"
+- name: Stop cloud-init from re-enabling ssh password authentication
+  copy:
+    dest: /etc/cloud/cloud.cfg.d/99-rbx-ssh.cfg
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      # Managed by rbx-infra (role: hardening).
+      ssh_pwauth: false
+  tags: [sshd]
+
+- name: Remove cloud-init ssh password drop-in
+  file:
+    path: /etc/ssh/sshd_config.d/50-cloud-init.conf
+    state: absent
   notify: restart sshd
+  tags: [sshd]
 
 - name: Reset ufw to defaults
   ufw:
