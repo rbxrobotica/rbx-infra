@@ -1,0 +1,112 @@
+---
+# sshd keeps the FIRST value it obtains for a keyword, and sshd_config includes
+# sshd_config.d/*.conf in lexical order at the position of the Include. Editing
+# sshd_config directly loses to any vendor drop-in read earlier, which is how
+# cloud-init's 50-cloud-init.conf kept password auth on across the fleet.
+# 10- sorts ahead of every vendor file currently shipped. It is not immunity:
+# a future 00-* drop-in, an Include moved below a directive, or a Match block
+# would still win.
+
+# Closing the password path is irreversible from the network side. Probe first:
+# if no key is installed, the run that applies this is also the last connection
+# this host accepts.
+- name: Read authorized keys that must survive a password lockout
+  ansible.builtin.slurp:
+    src: /root/.ssh/authorized_keys
+  register: rbx_sshd_key_probe
+  failed_when: false
+
+- name: Refuse to disable password authentication without an installed key
+  ansible.builtin.assert:
+    that:
+      - rbx_sshd_key_probe.content is defined
+      - rbx_sshd_key_probe.content | b64decode
+        | regex_search('(ssh-rsa|ssh-ed25519|ecdsa-sha2-|sk-ssh-|sk-ecdsa-)')
+    fail_msg: >-
+      /root/.ssh/authorized_keys holds no usable public key on
+      {{ inventory_hostname }}. Applying this would leave the host with no
+      reachable login.
+
+- name: Apply sshd access policy
+  block:
+    - name: Install RBX sshd policy drop-in
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/10-rbx-hardening.conf
+        owner: root
+        group: root
+        mode: "0644"
+        backup: true
+        content: |
+          # Managed by rbx-infra (role: hardening).
+          PubkeyAuthentication yes
+          PasswordAuthentication no
+          KbdInteractiveAuthentication no
+          PermitRootLogin prohibit-password
+      register: rbx_sshd_drop_in
+
+    # Defense in depth only. cloud-init recreates 50-cloud-init.conf whenever it
+    # is missing, and the image may already carry a 99-*.cfg setting ssh_pwauth
+    # true. The 10- drop-in above is what actually holds the policy.
+    - name: Pin cloud-init away from re-enabling ssh password authentication
+      ansible.builtin.copy:
+        dest: /etc/cloud/cloud.cfg.d/99-rbx-ssh.cfg
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          # Managed by rbx-infra (role: hardening).
+          ssh_pwauth: false
+
+    - name: Remove cloud-init ssh password drop-in
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config.d/50-cloud-init.conf
+        state: absent
+      register: rbx_sshd_cloud_init
+
+    # `sshd -t -f <fragment>` validates the fragment as if it were the whole
+    # config, so it accepts a file that breaks the assembled result. Validate
+    # what sshd will actually load.
+    - name: Validate the assembled sshd configuration
+      ansible.builtin.command: /usr/sbin/sshd -t
+      changed_when: false
+
+    # Reload, never restart: the unit has ExecStartPre=sshd -t, so a restart on
+    # a bad config leaves sshd stopped. A reload keeps open sessions alive.
+    - name: Reload sshd
+      ansible.builtin.service:
+        name: ssh
+        state: reloaded
+      when: rbx_sshd_drop_in.changed or rbx_sshd_cloud_init.changed
+
+  rescue:
+    - name: Restore the previous sshd policy drop-in
+      ansible.builtin.copy:
+        src: "{{ rbx_sshd_drop_in.backup_file }}"
+        dest: /etc/ssh/sshd_config.d/10-rbx-hardening.conf
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0644"
+      when:
+        - rbx_sshd_drop_in is defined
+        - rbx_sshd_drop_in.backup_file is defined
+
+    # Only when this run created the file. On an idempotent run there is no
+    # change and no backup, and the file on disk is the good one: removing it
+    # would destroy a working policy over a failure caused by another drop-in.
+    - name: Drop the new sshd policy drop-in when this run created it
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config.d/10-rbx-hardening.conf
+        state: absent
+      when:
+        - rbx_sshd_drop_in is defined
+        - rbx_sshd_drop_in.changed
+        - rbx_sshd_drop_in.backup_file is not defined
+
+    - name: Report the failed sshd policy change
+      ansible.builtin.fail:
+        msg: >-
+          The assembled sshd configuration did not validate on
+          {{ inventory_hostname }}. The policy drop-in was rolled back and sshd
+          was left running with its previous configuration. Inspect
+          /etc/ssh/sshd_config.d/ on this host before retrying.

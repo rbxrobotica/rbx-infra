@@ -1,0 +1,43 @@
+---
+# Rolls the sshd access policy out ONE host at a time, proving a fresh
+# key-based login before moving to the next. Use this instead of
+# `site.yml --tags sshd`: site.yml has no serial, so it would reload sshd on
+# all three control planes inside the same play.
+#
+#   ansible-playbook playbooks/harden-ssh.yml -i inventory/hosts.yml \
+#     --limit pantera          # canary first, then widen
+#
+# Recovery if a host loses access: the policy is a single file. Remove
+# /etc/ssh/sshd_config.d/10-rbx-hardening.conf and run `systemctl reload ssh`,
+# from an open session or from the provider console. Reverting the Git commit
+# does not reconcile the host, Ansible does not remove what it stopped
+# managing.
+- name: Roll out sshd access policy
+  hosts: all:!agent_workbench
+  become: true
+  gather_facts: true
+  serial: 1
+
+  tasks:
+    - name: Apply sshd access policy
+      ansible.builtin.include_role:
+        name: hardening
+        tasks_from: sshd
+
+  post_tasks:
+    # The role reloads sshd over the connection it is already using, and that
+    # connection survives a reload whatever the new policy says. Prove a *new*
+    # login works before this play advances to the next host.
+    - name: Drop the persistent connection
+      ansible.builtin.meta: reset_connection
+
+    - name: Prove a fresh login still works
+      ansible.builtin.command:
+        cmd: >-
+          ssh -o BatchMode=yes -o ConnectTimeout=10
+          -o StrictHostKeyChecking=accept-new
+          {{ '-i ' ~ ansible_ssh_private_key_file if ansible_ssh_private_key_file is defined else '' }}
+          {{ ansible_user | default('root') }}@{{ ansible_host | default(inventory_hostname) }} true
+      delegate_to: localhost
+      become: false
+      changed_when: false
