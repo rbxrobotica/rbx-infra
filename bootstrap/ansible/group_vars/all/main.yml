@@ -2,7 +2,12 @@ ansible_user: root
 ansible_ssh_private_key_file: ~/.ssh/id_ed25519
 
 # k3s version — check latest at https://github.com/k3s-io/k3s/releases
-k3s_version: "v1.32.3+k3s1"
+# MUST track what the cluster actually runs. The 2026-07 upgrade roadmap moved
+# the fleet v1.32.3 -> 1.33.13 -> 1.34.9 -> 1.35.6 -> 1.36.2 by replacing the
+# binary, and this variable was left behind. A new node provisioned from the
+# stale value would have joined four minor versions below the control plane,
+# outside the supported kubelet skew.
+k3s_version: "v1.36.2+k3s1"
 
 # Tiger public IP — used as TLS SAN and join endpoint for server peers
 k3s_server_ip: "158.220.116.31"

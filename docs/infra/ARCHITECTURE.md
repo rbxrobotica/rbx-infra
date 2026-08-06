@@ -15,8 +15,16 @@
 | eagle | 167.86.92.97 | 4GB | ns2.rbxsystems.ch — DNS secondary | dns_servers |
 | lince | 5.182.33.93 | — | Mail server (Mailcow) | mail_servers |
 | corbetti | 13.140.148.30 | — | Agent Execution Workbench — devbox for coding agents | agent_workbench |
+| bengal | 164.68.96.68 | 8GB | k3s agent | k3s_agents |
 
-**Decommissioned:** bengal (164.68.96.68) — removed 2026-04-07.
+**bengal history:** joined as an agent 2026-03-27, flagged compromised
+2026-03-29, removed from the cluster 2026-04-07. It was never reinstalled and
+stayed powered on and reachable, outside this inventory, until 2026-08-06, when
+the OS was reinstalled from scratch and it rejoined as an agent. It is
+deliberately untainted: the three control planes carry the whole workload while
+jaguar is reserved for analytics, so bengal exists to take scheduling pressure
+off them.
+
 **Reinstalling:** pantera + eagle — VPS images being reinstalled 2026-04-07, will rejoin as DNS-only nodes.
 
 ## Three planes

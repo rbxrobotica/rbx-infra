@@ -1,30 +1,78 @@
 ---
+# The join token normally arrives as a fact set by the k3s_server play. When a
+# single agent is provisioned with --limit, that play never runs, so read the
+# token straight from the cluster-init server. Including the server host in the
+# run instead is not a safe alternative: the k3s-server role rewrites
+# /etc/rancher/k3s/config.yaml with `notify: restart k3s`, which would bounce a
+# live control plane.
+- name: Read the k3s join token from the cluster-init server
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  delegate_to: "{{ k3s_init_host }}"
+  register: k3s_token_slurp
+  no_log: true
+  when: hostvars[k3s_init_host]['k3s_token'] is not defined
+
+- name: Resolve the join token
+  ansible.builtin.set_fact:
+    k3s_join_token: >-
+      {{ hostvars[k3s_init_host]['k3s_token']
+         | default(k3s_token_slurp.content | b64decode | trim, true) }}
+  no_log: true
+
+- name: Refuse to join without a token
+  ansible.builtin.assert:
+    that:
+      - k3s_join_token | length > 0
+    fail_msg: >-
+      No join token available for {{ inventory_hostname }}. Expected it as a
+      fact from the k3s_server play or readable at
+      /var/lib/rancher/k3s/server/node-token on {{ k3s_init_host }}.
+
+# Pin the agent to the version the control plane runs. Installing whatever
+# get.k3s.io serves today would drift the node away from the cluster.
 - name: Install k3s agent
-  shell: |
+  ansible.builtin.shell: |
     curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - agent \
       --server https://{{ k3s_server_ip }}:6443 \
-      --token {{ hostvars['tiger']['k3s_token'] }} \
+      --token {{ k3s_join_token }} \
       --node-name {{ inventory_hostname }}
   args:
     creates: /usr/local/bin/k3s
-  when: hostvars['tiger']['k3s_token'] is defined
+  no_log: true
 
 - name: Enable and start k3s-agent
-  systemd:
+  ansible.builtin.systemd:
     name: k3s-agent
-    enabled: yes
+    enabled: true
     state: started
 
-- name: Apply node labels
+- name: Wait for the node to register with the control plane
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
+    get node {{ inventory_hostname }}
   delegate_to: localhost
-  shell: >
-    kubectl --kubeconfig ~/.kube/config-rbx label node {{ inventory_hostname }}
-    {{ item }} --overwrite
+  become: false
+  register: k3s_node_registered
+  until: k3s_node_registered.rc == 0
+  retries: 20
+  delay: 6
+  changed_when: false
+
+- name: Apply node labels
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
+    label node {{ inventory_hostname }} {{ item }} --overwrite
+  delegate_to: localhost
+  become: false
   loop: "{{ k3s_node_labels | default([]) }}"
+  changed_when: true
 
 - name: Apply node taints
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
+    taint node {{ inventory_hostname }} {{ item }} --overwrite
   delegate_to: localhost
-  shell: >
-    kubectl --kubeconfig ~/.kube/config-rbx taint node {{ inventory_hostname }}
-    {{ item }} --overwrite
+  become: false
   loop: "{{ k3s_node_taints | default([]) }}"
+  changed_when: true

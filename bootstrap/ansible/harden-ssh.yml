@@ -4,8 +4,12 @@
 # `site.yml --tags sshd`: site.yml has no serial, so it would reload sshd on
 # all three control planes inside the same play.
 #
-#   ansible-playbook playbooks/harden-ssh.yml -i inventory/hosts.yml \
+#   ansible-playbook harden-ssh.yml -i inventory/hosts.yml \
 #     --limit pantera          # canary first, then widen
+#
+# This file must stay NEXT TO site.yml. group_vars/ here is adjacent to the
+# playbook, not to the inventory, so a playbook in a subdirectory silently
+# loses ansible_user and connects as the local user instead of root.
 #
 # Recovery if a host loses access: the policy is a single file. Remove
 # /etc/ssh/sshd_config.d/10-rbx-hardening.conf and run `systemctl reload ssh`,
