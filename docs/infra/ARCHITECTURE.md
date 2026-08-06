@@ -9,14 +9,28 @@
 |------|----|-----|------|-------|
 | tiger | 158.220.116.31 | — | k3s control-plane | k3s_server |
 | jaguar | 161.97.147.76 | — | k3s agent, ParadeDB host | k3s_agents, db_server |
-| altaica | 173.212.246.8 | 8GB | k3s agent | k3s_agents |
-| sumatrae | 5.189.178.212 | 8GB | k3s agent | k3s_agents |
+| altaica | 173.212.246.8 | 8GB | k3s control-plane | k3s_server |
+| sumatrae | 5.189.178.212 | 8GB | k3s control-plane | k3s_server |
 | pantera | 149.102.139.33 | 4GB | ns1.rbxsystems.ch — DNS primary | dns_servers |
 | eagle | 167.86.92.97 | 4GB | ns2.rbxsystems.ch — DNS secondary | dns_servers |
 | lince | 5.182.33.93 | — | Mail server (Mailcow) | mail_servers |
 | corbetti | 13.140.148.30 | — | Agent Execution Workbench — devbox for coding agents | agent_workbench |
+| bengal | 164.68.96.68 | 8GB | k3s agent | k3s_agents |
 
-**Decommissioned:** bengal (164.68.96.68) — removed 2026-04-07.
+**bengal history:** joined as an agent 2026-03-27, flagged compromised
+2026-03-29, removed from the cluster 2026-04-07. It was never reinstalled and
+stayed powered on and reachable, outside this inventory, until 2026-08-06, when
+the OS was reinstalled from scratch and it rejoined as an agent. It carries
+`rbx.io/os-pilot=ubuntu-2604:NoSchedule` (ADR-0010): it runs a newer Ubuntu than
+the rest of the fleet, so workloads reach it by opting in with a matching
+toleration plus a `nodeSelector` on `rbx.io/os-pilot=ubuntu-2604`, not by
+default scheduling. Relieving the control planes happens as canaries opt in.
+
+Note that `NoSchedule` does not evict what is already there and does not bind a
+tolerating pod to this node: it only stops new pods without the toleration.
+Pods that landed before the taint stay, and DaemonSets that tolerate every
+`NoSchedule` still run here.
+
 **Reinstalling:** pantera + eagle — VPS images being reinstalled 2026-04-07, will rejoin as DNS-only nodes.
 
 ## Three planes

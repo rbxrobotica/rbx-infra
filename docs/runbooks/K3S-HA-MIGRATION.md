@@ -22,7 +22,14 @@
 | sumatrae | 5.189.178.212 | server (etcd, join) |
 | jaguar | 161.97.147.76 | agent (db/analytics, tainted) — unchanged |
 
-etcd quorum = 3 ⇒ tolerates loss of 1 server. Current k3s: `v1.32.3+k3s1` (pin the same version).
+etcd quorum = 3 ⇒ tolerates loss of 1 server.
+
+> **Version pins below are historical.** Every `INSTALL_K3S_VERSION="v1.32.3+k3s1"`
+> in this document is what was current on 2026-06-24, the day this ran. The fleet
+> has since moved to `v1.36.2+k3s1`. If you reuse these commands, replace the pin
+> with `k3s_version` from `bootstrap/ansible/group_vars/all/main.yml`, which is
+> the single source of truth. Copying them verbatim today would install four
+> minor versions below the control plane, outside the supported kubelet skew.
 
 ---
 
