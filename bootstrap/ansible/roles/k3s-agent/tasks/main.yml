@@ -31,12 +31,19 @@
 
 # Pin the agent to the version the control plane runs. Installing whatever
 # get.k3s.io serves today would drift the node away from the cluster.
+#
+# The token goes through the environment, not the command line: /proc/PID/cmdline
+# is world readable, so `--token <value>` would expose the cluster join secret to
+# any local account for the duration of the install, while /proc/PID/environ is
+# readable only by the owner. This is the invocation the installer documents.
+# no_log keeps it out of Ansible's own output.
 - name: Install k3s agent
-  ansible.builtin.shell: |
-    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - agent \
-      --server https://{{ k3s_server_ip }}:6443 \
-      --token {{ k3s_join_token }} \
-      --node-name {{ inventory_hostname }}
+  ansible.builtin.shell: curl -sfL https://get.k3s.io | sh -s - agent
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    K3S_URL: "https://{{ k3s_server_ip }}:6443"
+    K3S_TOKEN: "{{ k3s_join_token }}"
+    K3S_NODE_NAME: "{{ inventory_hostname }}"
   args:
     creates: /usr/local/bin/k3s
   no_log: true
