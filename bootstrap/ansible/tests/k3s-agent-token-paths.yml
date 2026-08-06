@@ -1,0 +1,104 @@
+---
+# Exercises both branches of the k3s-agent token resolution with a dummy value.
+# Touches no host and installs nothing: it reproduces only the fact/slurp logic.
+- name: Path A - server play ran, fact is defined, slurp must be skipped
+  hosts: localhost
+  gather_facts: false
+  vars:
+    k3s_init_host: fake_init
+    hostvars_stub:
+      fake_init:
+        k3s_token: "TOKEN-FROM-SERVER-PLAY"
+  tasks:
+    - name: Take the join token from the server play when it ran
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ hostvars_stub[k3s_init_host]['k3s_token'] | default('', true) }}"
+
+    - name: Read the join token from the cluster-init server
+      ansible.builtin.set_fact:
+        k3s_token_slurp:
+          content: "VE9LRU4tRlJPTS1TTFVSUAo="
+      when: k3s_join_token | length == 0
+
+    - name: Decode the join token read from the server
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ k3s_token_slurp.content | b64decode | trim }}"
+      when: k3s_token_slurp.content is defined
+
+    - name: Refuse to join without a token
+      ansible.builtin.assert:
+        that:
+          - k3s_join_token | length > 0
+
+    - name: PATH A RESULT
+      ansible.builtin.debug:
+        msg: "resolved={{ k3s_join_token }} expected=TOKEN-FROM-SERVER-PLAY"
+      failed_when: k3s_join_token != 'TOKEN-FROM-SERVER-PLAY'
+
+- name: Path B - agent alone under --limit, fact absent, slurp must run
+  hosts: localhost
+  gather_facts: false
+  vars:
+    k3s_init_host: fake_init
+    hostvars_stub:
+      fake_init: {}
+  tasks:
+    - name: Take the join token from the server play when it ran
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ hostvars_stub[k3s_init_host]['k3s_token'] | default('', true) }}"
+
+    - name: Read the join token from the cluster-init server
+      ansible.builtin.set_fact:
+        k3s_token_slurp:
+          content: "VE9LRU4tRlJPTS1TTFVSUAo="
+      when: k3s_join_token | length == 0
+
+    - name: Decode the join token read from the server
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ k3s_token_slurp.content | b64decode | trim }}"
+      when: k3s_token_slurp.content is defined
+
+    - name: Refuse to join without a token
+      ansible.builtin.assert:
+        that:
+          - k3s_join_token | length > 0
+
+    - name: PATH B RESULT
+      ansible.builtin.debug:
+        msg: "resolved={{ k3s_join_token }} expected=TOKEN-FROM-SLURP"
+      failed_when: k3s_join_token != 'TOKEN-FROM-SLURP'
+
+- name: Path C - neither source has a token, the assert must stop the run
+  hosts: localhost
+  gather_facts: false
+  vars:
+    k3s_init_host: fake_init
+    hostvars_stub:
+      fake_init: {}
+  tasks:
+    - name: Take the join token from the server play when it ran
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ hostvars_stub[k3s_init_host]['k3s_token'] | default('', true) }}"
+
+    - name: Read the join token from the cluster-init server
+      ansible.builtin.set_fact:
+        k3s_token_slurp:
+          content: ""
+      when: k3s_join_token | length == 0
+
+    - name: Decode the join token read from the server
+      ansible.builtin.set_fact:
+        k3s_join_token: "{{ k3s_token_slurp.content | b64decode | trim }}"
+      when: k3s_token_slurp.content is defined
+
+    - name: Refuse to join without a token
+      ansible.builtin.assert:
+        that:
+          - k3s_join_token | length > 0
+      register: path_c
+      ignore_errors: true
+
+    - name: PATH C RESULT
+      ansible.builtin.debug:
+        msg: "assert failed as required"
+      failed_when: not path_c.failed
