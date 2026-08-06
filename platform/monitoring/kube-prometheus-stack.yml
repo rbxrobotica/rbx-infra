@@ -331,7 +331,7 @@ spec:
                       rbx_workstream: robson-trading
                     annotations:
                       summary: "Market data silent while a position is open"
-                      description: "No WebSocket tick for over 5 minutes on a symbol while positions are open (ADR-0044). The trailing stop may be blind exactly when it matters; check WS endpoints and REST fallback."
+                      description: "No WS tick for 5+ minutes on a symbol while positions are open (ADR-0044). The trailing stop may be blind when it matters; check WS endpoints and fallback."
 
                   - alert: RBXRobsondMarketDataSilent
                     expr: max(robsond_market_data_silent_seconds{kubernetes_namespace="robson"}) > 600
@@ -351,7 +351,7 @@ spec:
                       rbx_workstream: robson-trading
                     annotations:
                       summary: "Market data stuck on REST fallback"
-                      description: "At least one symbol has been on REST fallback (robsond_market_data_mode == 1) for 30 minutes (ADR-0044). Fallback is a degraded mode, not a steady state; check WebSocket endpoint health."
+                      description: "A symbol has been on REST fallback (mode == 1) for 30 minutes (ADR-0044). Fallback is degraded mode, not a steady state; check WebSocket endpoint health."
 
         # Temporarily disable PrometheusRule admission webhooks until the
         # webhook serving certificate/CA bundle is regenerated in an approved
