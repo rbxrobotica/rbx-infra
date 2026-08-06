@@ -12,42 +12,13 @@
       - unattended-upgrades
     state: present
 
-# sshd keeps the FIRST value it obtains for a keyword, and sshd_config includes
-# sshd_config.d/*.conf in lexical order before its own body. Editing sshd_config
-# directly loses to any vendor drop-in, which is how cloud-init's
-# 50-cloud-init.conf kept password auth on across the fleet. 10- reads first.
-- name: Install RBX sshd policy drop-in
-  copy:
-    dest: /etc/ssh/sshd_config.d/10-rbx-hardening.conf
-    owner: root
-    group: root
-    mode: "0644"
-    content: |
-      # Managed by rbx-infra (role: hardening).
-      PubkeyAuthentication yes
-      PasswordAuthentication no
-      KbdInteractiveAuthentication no
-      PermitRootLogin prohibit-password
-    validate: "sshd -t -f %s"
-  notify: restart sshd
-  tags: [sshd]
-
-- name: Stop cloud-init from re-enabling ssh password authentication
-  copy:
-    dest: /etc/cloud/cloud.cfg.d/99-rbx-ssh.cfg
-    owner: root
-    group: root
-    mode: "0644"
-    content: |
-      # Managed by rbx-infra (role: hardening).
-      ssh_pwauth: false
-  tags: [sshd]
-
-- name: Remove cloud-init ssh password drop-in
-  file:
-    path: /etc/ssh/sshd_config.d/50-cloud-init.conf
-    state: absent
-  notify: restart sshd
+# Kept in its own file so playbooks/harden-ssh.yml can roll the access policy
+# out one host at a time without the ufw reset below.
+# import_tasks, not include_tasks: only a static import propagates the tag to
+# the tasks inside the file. With a dynamic include, `--tags sshd` resolves the
+# include and then skips every task in it.
+- name: Apply sshd access policy
+  ansible.builtin.import_tasks: sshd.yml
   tags: [sshd]
 
 - name: Reset ufw to defaults
