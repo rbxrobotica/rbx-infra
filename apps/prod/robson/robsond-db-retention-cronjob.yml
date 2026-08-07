@@ -25,6 +25,14 @@ spec:
   # Mondays 02:45 UTC — outside the month-boundary window (00:00-00:02 UTC)
   # and the daily briefing/trading hours.
   schedule: "45 2 * * 1"
+  # Without timeZone the schedule runs in the kube-controller-manager's local
+  # timezone, not UTC as the comment above assumes. Pin it explicitly.
+  timeZone: Etc/UTC
+  # The timezone pin shifts the effective schedule; without a starting
+  # deadline the controller would also fire a catch-up for the old slot
+  # (missed schedules are computed from lastScheduleTime), yielding two runs
+  # hours apart on migration day. 600s matches rbx-market-briefing.
+  startingDeadlineSeconds: 600
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3

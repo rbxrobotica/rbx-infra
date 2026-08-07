@@ -15,6 +15,12 @@ metadata:
     app.kubernetes.io/part-of: thalamus
 spec:
   schedule: "15 0 * * *"
+  # Without timeZone the schedule runs in the kube-controller-manager's local
+  # timezone; pin to UTC so it stays clear of the other DB maintenance windows.
+  timeZone: Etc/UTC
+  # See robsond-db-retention: prevents a stale catch-up run alongside the new
+  # slot when the effective schedule shifts on migration day.
+  startingDeadlineSeconds: 600
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
