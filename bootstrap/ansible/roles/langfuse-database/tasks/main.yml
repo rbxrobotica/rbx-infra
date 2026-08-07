@@ -72,7 +72,7 @@
     line: "host {{ langfuse_db_name }} {{ langfuse_db_user }} {{ hostvars[item].ansible_host }}/32 scram-sha-256"
     insertafter: EOF
   loop: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"
-  notify: restart postgresql
+  notify: reload postgresql
 
 - name: Allow firewall access from k3s nodes to Postgres
   ufw:
