@@ -1,0 +1,163 @@
+---
+# Moves the k3s join token out of the agent's systemd unit and into a
+# root-only file, one host at a time.
+#
+#   ansible-playbook migrate-agent-token.yml -i inventory/hosts.yml --limit bengal
+#   ansible-playbook migrate-agent-token.yml -i inventory/hosts.yml --check --diff
+#
+# Why this exists: passing --token on the k3s installer command line makes the
+# installer write the value into the unit it generates, and that unit is mode
+# 0644. Both existing agents carry the cluster join token readable by any local
+# account. The role fix only covers new installs, because installation is
+# guarded by the presence of the binary, so already-provisioned agents need
+# this migration.
+#
+# Restarting k3s-agent does NOT stop the workloads: containerd keeps the
+# containers running and the kubelet reattaches. The node can report NotReady
+# for a few seconds. Still, this runs serial: 1 and waits for Ready before
+# moving on.
+#
+# This does NOT rotate the token. Rotation is a separate, operator-authorised
+# procedure that touches every node, and it is the right follow-up: a token
+# that sat world-readable must be assumed disclosed.
+- name: Move the k3s join token out of the agent unit
+  hosts: k3s_agents
+  become: true
+  serial: 1
+  gather_facts: false
+
+  vars:
+    k3s_agent_unit: /etc/systemd/system/k3s-agent.service
+    k3s_token_file: /etc/rancher/k3s/join-token
+
+  tasks:
+    - name: Read the agent unit
+      ansible.builtin.slurp:
+        src: "{{ k3s_agent_unit }}"
+      register: k3s_unit_raw
+      no_log: true
+
+    # The installer writes one argument per line, quoted:
+    #     '--token' \
+    #     '<value>' \
+    - name: Extract the inline token, if there still is one
+      ansible.builtin.set_fact:
+        k3s_inline_token: >-
+          {{ (k3s_unit_raw.content | b64decode
+              | regex_search("'--token'[^']*'([^']+)'", '\\1')
+              | default([''], true) | first) | default('', true) }}
+      no_log: true
+
+    - name: Report hosts that need nothing
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }}: no inline token in the unit, nothing to migrate."
+      when: k3s_inline_token | length == 0
+
+    - name: Stop here when there is nothing to migrate
+      ansible.builtin.meta: end_host
+      when: k3s_inline_token | length == 0
+
+    - name: Ensure the k3s configuration directory exists
+      ansible.builtin.file:
+        path: "{{ k3s_token_file | dirname }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0700"
+
+    - name: Write the token to a root-only file
+      ansible.builtin.copy:
+        content: "{{ k3s_inline_token }}"
+        dest: "{{ k3s_token_file }}"
+        owner: root
+        group: root
+        mode: "0600"
+      no_log: true
+
+    - name: Back up the unit before rewriting it
+      ansible.builtin.copy:
+        src: "{{ k3s_agent_unit }}"
+        dest: "{{ k3s_agent_unit }}.pre-token-migration"
+        remote_src: true
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Apply the migration and restart, rolling back if the node does not return
+      block:
+        - name: Replace the token value with the file path
+          ansible.builtin.replace:
+            path: "{{ k3s_agent_unit }}"
+            regexp: "'{{ k3s_inline_token | regex_escape }}'"
+            replace: "'{{ k3s_token_file }}'"
+          no_log: true
+
+        - name: Point the flag at the file
+          ansible.builtin.replace:
+            path: "{{ k3s_agent_unit }}"
+            regexp: "'--token'"
+            replace: "'--token-file'"
+
+        - name: Confirm the token is gone from the unit before restarting
+          ansible.builtin.command: >-
+            grep -c -F "{{ k3s_inline_token }}" {{ k3s_agent_unit }}
+          register: k3s_token_grep
+          failed_when: k3s_token_grep.rc == 0
+          changed_when: false
+          no_log: true
+
+        - name: Reload systemd
+          ansible.builtin.systemd:
+            daemon_reload: true
+
+        - name: Restart the agent
+          ansible.builtin.systemd:
+            name: k3s-agent
+            state: restarted
+
+        - name: Wait for the node to report Ready again
+          ansible.builtin.command: >-
+            kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
+            wait --for=condition=Ready node/{{ inventory_hostname }} --timeout=180s
+          delegate_to: localhost
+          become: false
+          changed_when: false
+
+      rescue:
+        - name: Restore the previous unit
+          ansible.builtin.copy:
+            src: "{{ k3s_agent_unit }}.pre-token-migration"
+            dest: "{{ k3s_agent_unit }}"
+            remote_src: true
+            owner: root
+            group: root
+            mode: "0644"
+
+        - name: Reload systemd after restoring
+          ansible.builtin.systemd:
+            daemon_reload: true
+
+        - name: Restart the agent on the restored unit
+          ansible.builtin.systemd:
+            name: k3s-agent
+            state: restarted
+
+        - name: Report the failed migration
+          ansible.builtin.fail:
+            msg: >-
+              Token migration failed on {{ inventory_hostname }}. The previous
+              unit was restored and the agent restarted on it. The token file
+              at {{ k3s_token_file }} was left in place; remove it by hand if
+              you are not retrying.
+
+    - name: Confirm the unit no longer carries a token
+      ansible.builtin.command: >-
+        grep -c -E "'--token'" {{ k3s_agent_unit }}
+      register: k3s_flag_grep
+      failed_when: k3s_flag_grep.rc == 0
+      changed_when: false
+
+    - name: Drop the backup, it holds the token in clear
+      ansible.builtin.file:
+        path: "{{ k3s_agent_unit }}.pre-token-migration"
+        state: absent

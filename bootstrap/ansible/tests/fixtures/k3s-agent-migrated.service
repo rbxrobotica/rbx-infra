@@ -1,0 +1,8 @@
+ExecStart=/usr/local/bin/k3s \
+    agent \
+	'--server' \
+	'https://158.220.116.31:6443' \
+	'--token-file' \
+	'/etc/rancher/k3s/join-token' \
+	'--node-name' \
+	'testnode' \

@@ -1,0 +1,8 @@
+ExecStart=/usr/local/bin/k3s \
+    agent \
+	'--server' \
+	'https://158.220.116.31:6443' \
+	'--token' \
+	'K10FAKEFAKEfake123::server:abcdef0123456789' \
+	'--node-name' \
+	'testnode' \

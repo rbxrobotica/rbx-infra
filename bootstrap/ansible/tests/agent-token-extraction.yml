@@ -1,0 +1,63 @@
+---
+# Covers the token-extraction contract used by migrate-agent-token.yml against
+# fixtures shaped like the units the k3s installer actually writes.
+#
+#   ansible-playbook tests/agent-token-extraction.yml
+#
+# Known limitation, stated rather than hidden: this duplicates the regex
+# instead of importing it from the playbook, so it would stay green if the
+# playbook changed. It exists because the extraction is the one piece that
+# fails silently: a regex that matches nothing makes every host look "already
+# migrated" and the migration becomes a no-op that reports success.
+# The fixtures carry FAKE tokens.
+- name: Token extraction contract
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    fixtures: "{{ playbook_dir }}/fixtures"
+    expected_token: "K10FAKEFAKEfake123::server:abcdef0123456789"
+
+  tasks:
+    - name: Read the unmigrated fixture
+      ansible.builtin.slurp:
+        src: "{{ fixtures }}/k3s-agent-inline-token.service"
+      register: inline_unit
+
+    - name: Extract from the unmigrated fixture
+      ansible.builtin.set_fact:
+        inline_token: >-
+          {{ (inline_unit.content | b64decode
+              | regex_search("'--token'[^']*'([^']+)'", '\1')
+              | default([''], true) | first) | default('', true) }}
+
+    - name: An inline token must be found, and must be the whole value
+      ansible.builtin.assert:
+        that:
+          - inline_token == expected_token
+        fail_msg: >-
+          Extraction returned '{{ inline_token }}' instead of the fixture's
+          token. A partial match here would write a truncated token file and
+          break the agent on restart.
+        success_msg: "unmigrated unit: token extracted whole"
+
+    - name: Read the already-migrated fixture
+      ansible.builtin.slurp:
+        src: "{{ fixtures }}/k3s-agent-migrated.service"
+      register: migrated_unit
+
+    - name: Extract from the already-migrated fixture
+      ansible.builtin.set_fact:
+        migrated_token: >-
+          {{ (migrated_unit.content | b64decode
+              | regex_search("'--token'[^']*'([^']+)'", '\1')
+              | default([''], true) | first) | default('', true) }}
+
+    - name: A migrated unit must yield nothing
+      ansible.builtin.assert:
+        that:
+          - migrated_token | length == 0
+        fail_msg: >-
+          Extraction matched '{{ migrated_token }}' on a unit that already uses
+          --token-file. The migration would run again and rewrite a good unit.
+        success_msg: "migrated unit: nothing extracted, migration is idempotent"
