@@ -49,7 +49,7 @@
     path: /etc/postgresql/16/main/pg_hba.conf
     line: "host {{ pdns_db_name }} {{ pdns_db_user }} {{ hostvars['pantera'].ansible_host }}/32 scram-sha-256"
     insertafter: EOF
-  notify: restart postgresql
+  notify: reload postgresql
 
 - name: Allow firewall access from pantera to Postgres
   ufw:

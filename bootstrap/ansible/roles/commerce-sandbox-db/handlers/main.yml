@@ -1,5 +1,8 @@
 ---
-- name: restart postgresql
-  service:
+# pg_hba.conf is reloadable configuration: SIGHUP (pg_ctl reload) applies it
+# without dropping a single connection. Restart is reserved for settings that
+# genuinely require it (e.g. max_connections in the paradedb tuning role).
+- name: reload postgresql
+  systemd:
     name: postgresql
-    state: restarted
+    state: reloaded
