@@ -24,6 +24,44 @@ spec:
         app.kubernetes.io/name: md-prec-kulinaryos
         app.kubernetes.io/component: web
     spec:
+      # First canary for the Ubuntu 26.04 pilot on bengal (ADR-0010).
+      #
+      # Three pieces, and all three are needed for different reasons:
+      #
+      # - The toleration makes bengal *eligible*. On its own it does not attract
+      #   anything: a toleration lifts a restriction, it does not express a
+      #   preference.
+      # - The preferred nodeAffinity is what actually pulls a replica there. It
+      #   is `preferred`, not `required`, so if bengal is gone or full the
+      #   Deployment schedules normally instead of going Pending.
+      # - The spread constraint keeps the two replicas on different nodes, so
+      #   the pilot never holds the whole service. `ScheduleAnyway` keeps this a
+      #   preference too.
+      #
+      # A nodeSelector was deliberately NOT used: it would pin *both* replicas
+      # to the pilot node and remove the redundancy that makes this safe to try.
+      tolerations:
+        - key: rbx.io/os-pilot
+          operator: Equal
+          value: ubuntu-2604
+          effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 50
+              preference:
+                matchExpressions:
+                  - key: rbx.io/os-pilot
+                    operator: In
+                    values:
+                      - ubuntu-2604
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: md-prec-kulinaryos
       imagePullSecrets:
         - name: ghcr-pull-secret
       containers:
