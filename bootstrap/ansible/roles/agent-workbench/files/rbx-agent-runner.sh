@@ -201,7 +201,10 @@ execute_mission() {
 
   # ── select executor (Phase 5: executor field overrides mtype heuristic) ──
   local executor
-  executor=$(printf '%s' "${contract_json}" | jq -r '.executor // "claude-haiku"')
+  # GLM is the Corbetti default (operator decision 2026-08-07): cheap mechanical-volume
+  # workhorse that reports token usage. The eden portal admits with an explicit
+  # .executor; this default only covers API-admitted missions without the field.
+  executor=$(printf '%s' "${contract_json}" | jq -r '.executor // "glm"')
 
   local agent_cmd agent_model token_event_type=""
   case "${executor}" in
