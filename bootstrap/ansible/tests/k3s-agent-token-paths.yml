@@ -1,104 +1,92 @@
 ---
-# Exercises both branches of the k3s-agent token resolution with a dummy value.
-# Touches no host and installs nothing: it reproduces only the fact/slurp logic.
-- name: Path A - server play ran, fact is defined, slurp must be skipped
+# Exercises the REAL token resolution by importing
+# roles/k3s-agent/tasks/resolve-token.yml. Touches no host and installs nothing.
+#
+#   ansible-playbook tests/k3s-agent-token-paths.yml
+#
+# The previous version of this file restated the role's expressions instead of
+# importing them, and the restatement diverged: it used \1 where the role used
+# \\1. It passed while the role failed on its first task. Importing the code
+# under test is the difference between a test and a decoration, so if this file
+# ever stops importing, it stops being worth running.
+#
+# Tokens here are fake.
+- name: Path A, the server play ran and set the fact
   hosts: localhost
   gather_facts: false
   vars:
-    k3s_init_host: fake_init
-    hostvars_stub:
-      fake_init:
+    k3s_init_host: localhost
+  tasks:
+    # set_fact, not a play var: only facts land in hostvars, and the k3s-server
+    # role publishes the token exactly this way. A play var would leave
+    # hostvars[init].k3s_token undefined and silently test path B instead.
+    - name: Publish the token the way the server play does
+      ansible.builtin.set_fact:
         k3s_token: "TOKEN-FROM-SERVER-PLAY"
-  tasks:
-    - name: Take the join token from the server play when it ran
-      ansible.builtin.set_fact:
-        k3s_join_token: "{{ hostvars_stub[k3s_init_host]['k3s_token'] | default('', true) }}"
 
-    - name: Read the join token from the cluster-init server
-      ansible.builtin.set_fact:
-        k3s_token_slurp:
-          content: "VE9LRU4tRlJPTS1TTFVSUAo="
-      when: k3s_join_token | length == 0
+    - name: Resolve
+      ansible.builtin.import_tasks: ../roles/k3s-agent/tasks/resolve-token.yml
 
-    - name: Decode the join token read from the server
-      ansible.builtin.set_fact:
-        k3s_join_token: "{{ k3s_token_slurp.content | b64decode | trim }}"
-      when: k3s_token_slurp.content is defined
-
-    - name: Refuse to join without a token
+    - name: The fact must win and the slurp must not have run
       ansible.builtin.assert:
         that:
-          - k3s_join_token | length > 0
+          - k3s_join_token == 'TOKEN-FROM-SERVER-PLAY'
+          - k3s_token_slurp is not defined or k3s_token_slurp.skipped | default(false)
+        success_msg: "path A: fact used, slurp skipped"
+        fail_msg: >-
+          Path A is the full site.yml run. This is the case the previous
+          implementation broke, and the previous test could not see.
 
-    - name: PATH A RESULT
-      ansible.builtin.debug:
-        msg: "resolved={{ k3s_join_token }} expected=TOKEN-FROM-SERVER-PLAY"
-      failed_when: k3s_join_token != 'TOKEN-FROM-SERVER-PLAY'
-
-- name: Path B - agent alone under --limit, fact absent, slurp must run
+- name: Path B, agent alone, the fact is absent
   hosts: localhost
   gather_facts: false
   vars:
-    k3s_init_host: fake_init
-    hostvars_stub:
-      fake_init: {}
+    k3s_init_host: localhost
+    # base64 of "TOKEN-FROM-SLURP", standing in for the file on the init server.
+    k3s_token_source_override: "VE9LRU4tRlJPTS1TTFVSUAo="
   tasks:
-    - name: Take the join token from the server play when it ran
+    # Facts survive between plays in one run, and meta: clear_facts did not
+    # remove this one, so path A's token would still be in hostvars and this
+    # play would silently re-test path A. Set it empty explicitly: that is also
+    # the truthful simulation of "the server play did not run".
+    - name: Simulate the server play not having run
       ansible.builtin.set_fact:
-        k3s_join_token: "{{ hostvars_stub[k3s_init_host]['k3s_token'] | default('', true) }}"
+        k3s_token: ""
 
-    - name: Read the join token from the cluster-init server
-      ansible.builtin.set_fact:
-        k3s_token_slurp:
-          content: "VE9LRU4tRlJPTS1TTFVSUAo="
-      when: k3s_join_token | length == 0
+    - name: Resolve
+      ansible.builtin.import_tasks: ../roles/k3s-agent/tasks/resolve-token.yml
 
-    - name: Decode the join token read from the server
-      ansible.builtin.set_fact:
-        k3s_join_token: "{{ k3s_token_slurp.content | b64decode | trim }}"
-      when: k3s_token_slurp.content is defined
-
-    - name: Refuse to join without a token
+    - name: The token must come from the injected source, whole
       ansible.builtin.assert:
         that:
-          - k3s_join_token | length > 0
+          - k3s_join_token == 'TOKEN-FROM-SLURP'
+        success_msg: "path B: token read and decoded whole"
+        fail_msg: >-
+          A truncated or empty token here would be written to the token file and
+          break the agent on its first start.
 
-    - name: PATH B RESULT
-      ansible.builtin.debug:
-        msg: "resolved={{ k3s_join_token }} expected=TOKEN-FROM-SLURP"
-      failed_when: k3s_join_token != 'TOKEN-FROM-SLURP'
-
-- name: Path C - neither source has a token, the assert must stop the run
+- name: Path C, neither source has a token
   hosts: localhost
   gather_facts: false
   vars:
-    k3s_init_host: fake_init
-    hostvars_stub:
-      fake_init: {}
+    k3s_init_host: localhost
+    k3s_token_source_override: ""
   tasks:
-    - name: Take the join token from the server play when it ran
+    - name: Simulate the server play not having run
       ansible.builtin.set_fact:
-        k3s_join_token: "{{ hostvars_stub[k3s_init_host]['k3s_token'] | default('', true) }}"
+        k3s_token: ""
 
-    - name: Read the join token from the cluster-init server
-      ansible.builtin.set_fact:
-        k3s_token_slurp:
-          content: ""
-      when: k3s_join_token | length == 0
-
-    - name: Decode the join token read from the server
-      ansible.builtin.set_fact:
-        k3s_join_token: "{{ k3s_token_slurp.content | b64decode | trim }}"
-      when: k3s_token_slurp.content is defined
-
-    - name: Refuse to join without a token
-      ansible.builtin.assert:
-        that:
-          - k3s_join_token | length > 0
-      register: path_c
-      ignore_errors: true
-
-    - name: PATH C RESULT
-      ansible.builtin.debug:
-        msg: "assert failed as required"
-      failed_when: not path_c.failed
+    - name: Resolve, expecting refusal
+      block:
+        - name: Resolve
+          ansible.builtin.import_tasks: ../roles/k3s-agent/tasks/resolve-token.yml
+        - name: Reaching here means the assert did not fire
+          ansible.builtin.fail:
+            msg: >-
+              Resolution accepted an empty token. It would be staged into
+              /etc/rancher/k3s/join-token and the agent would fail to join,
+              after the node had already been touched.
+      rescue:
+        - name: The refusal is the expected outcome
+          ansible.builtin.debug:
+            msg: "path C: empty token refused"

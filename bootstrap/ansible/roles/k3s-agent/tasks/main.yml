@@ -1,52 +1,52 @@
 ---
-# Token resolution runs in steps on purpose. A single expression of the form
-#   hostvars[init].k3s_token | default(slurp.content | b64decode, true)
-# looks safe and is not: Jinja evaluates the fallback argument even when the
-# left side is defined, so the normal site.yml run (where the server play sets
-# the fact) fails with "'k3s_token_slurp' is undefined". Resolving in steps
-# keeps both paths working: full site.yml, and a single agent under --limit.
-- name: Take the join token from the server play when it ran
-  ansible.builtin.set_fact:
-    k3s_join_token: "{{ hostvars[k3s_init_host]['k3s_token'] | default('', true) }}"
-  no_log: true
+- name: Resolve the join token
+  ansible.builtin.import_tasks: resolve-token.yml
 
-# Delegation reaches the init host even when it is outside --limit, which is
-# what makes provisioning a single agent possible without running the
-# k3s-server role. Running that role instead is not an option: it rewrites
-# config.yaml with `notify: restart k3s` and would bounce a live control plane.
-- name: Read the join token from the cluster-init server
-  ansible.builtin.slurp:
-    src: /var/lib/rancher/k3s/server/node-token
-  delegate_to: "{{ k3s_init_host }}"
-  register: k3s_token_slurp
-  no_log: true
-  when: k3s_join_token | length == 0
-
-- name: Decode the join token read from the server
-  ansible.builtin.set_fact:
-    k3s_join_token: "{{ k3s_token_slurp.content | b64decode | trim }}"
-  no_log: true
-  when: k3s_token_slurp.content is defined
-
-- name: Refuse to join without a token
+# Availability is not identity. `get --raw /readyz` succeeds against ANY healthy
+# cluster, so a kubeconfig pointing somewhere else passes it, after which the
+# agent is installed against k3s_server_ip while the wait, the label and the
+# taint are applied to the wrong cluster. Pin the identity to something
+# immutable: the kube-system namespace UID is created once, at cluster birth.
+- name: Refuse to provision without an expected cluster identity
   ansible.builtin.assert:
     that:
-      - k3s_join_token | length > 0
+      - k3s_expected_cluster_uid | default('') | length > 0
     fail_msg: >-
-      No join token available for {{ inventory_hostname }}. Expected it as a
-      fact from the k3s_server play, or readable at
-      /var/lib/rancher/k3s/server/node-token on {{ k3s_init_host }}.
+      k3s_expected_cluster_uid is not set. It pins this role to one cluster;
+      without it the preflight can only prove that SOME cluster answers. Read it
+      with: kubectl get ns kube-system -o jsonpath='{.metadata.uid}'
 
-# Fail before touching the node rather than after. Without this, a controller
-# without kubectl or without cluster credentials installs and starts the agent
-# remotely and only then fails locally, leaving a half-provisioned node.
-- name: Verify the controller can reach the cluster before provisioning
+- name: Read the cluster identity the controller is pointed at
   ansible.builtin.command: >-
     kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
-    get --raw /readyz
+    get namespace kube-system -o jsonpath={.metadata.uid}
   delegate_to: localhost
   become: false
+  register: k3s_seen_cluster_uid
   changed_when: false
+
+- name: Refuse to provision against a different cluster
+  ansible.builtin.assert:
+    that:
+      - k3s_seen_cluster_uid.stdout == k3s_expected_cluster_uid
+    fail_msg: >-
+      The kubeconfig points at cluster {{ k3s_seen_cluster_uid.stdout }} but this
+      inventory expects {{ k3s_expected_cluster_uid }}. Refusing: the agent would
+      be installed against {{ k3s_server_ip }} while labels and taints landed
+      somewhere else.
+
+# Reaching the API is not the same as being allowed to change a node. Without
+# this the run installs the agent and only then fails on a permission error,
+# leaving a node joined but unlabelled and untainted.
+- name: Verify the controller may label and taint nodes
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
+    auth can-i patch nodes
+  delegate_to: localhost
+  become: false
+  register: k3s_can_patch
+  changed_when: false
+  failed_when: "'yes' not in k3s_can_patch.stdout"
 
 - name: Check whether k3s is already installed
   ansible.builtin.stat:
@@ -63,12 +63,11 @@
   when: not k3s_binary.stat.exists
 
 # The token reaches the host as file content, never as a command argument.
-# Passing --token on the command line puts the cluster join secret in the unit
-# that the installer generates, and that unit is mode 0644: the pre-existing
-# agents carry the token world readable because of exactly that. Passing
-# K3S_TOKEN through the environment is better but still lands the value in the
-# command Ansible builds, visible in -vvv and in /proc/<pid>/cmdline while the
-# install runs. Only the path travels on the command line here.
+# Passing --token puts the cluster join secret in the unit the installer
+# generates, and that unit is mode 0644: the pre-existing agents carry the token
+# world readable because of exactly that. K3S_TOKEN through the environment is
+# better but still lands the value in the command Ansible builds, visible under
+# -vvv and in /proc/<pid>/cmdline. Only the path travels here.
 - name: Stage the join token for the installer
   ansible.builtin.copy:
     content: "{{ k3s_join_token }}"
@@ -79,15 +78,24 @@
   when: not k3s_binary.stat.exists
   no_log: true
 
-# Pin the agent to the version the control plane runs. Installing whatever
-# get.k3s.io serves today would drift the node away from the cluster.
+# Labels and taints go to the installer so the kubelet REGISTERS with them
+# already applied. Applying them afterwards with kubectl leaves a window in
+# which the node is Ready and unrestricted, and the scheduler uses it: two
+# production pods landed on the pilot node during exactly that window.
+# k3s honours these only at first registration, which is why the reconciliation
+# tasks below still exist for nodes that are already joined.
 - name: Install k3s agent
-  ansible.builtin.shell: curl -sfL https://get.k3s.io | sh -s - agent
+  ansible.builtin.shell: >-
+    curl -sfL https://get.k3s.io | sh -s - agent
+    {% for label in k3s_node_labels | default([]) %} --node-label '{{ label }}'{% endfor %}
+    {% for taint in k3s_node_taints | default([]) %} --node-taint '{{ taint }}'{% endfor %}
   environment:
     INSTALL_K3S_VERSION: "{{ k3s_version }}"
     K3S_URL: "https://{{ k3s_server_ip }}:6443"
     K3S_TOKEN_FILE: /etc/rancher/k3s/join-token
     K3S_NODE_NAME: "{{ inventory_hostname }}"
+  args:
+    creates: /usr/local/bin/k3s
   when: not k3s_binary.stat.exists
 
 - name: Enable and start k3s-agent
@@ -104,7 +112,10 @@
   become: false
   changed_when: false
 
-- name: Apply node labels
+# Reconciliation for nodes that were already joined, and for label or taint
+# changes made after registration. A freshly installed node arrives here already
+# correct, so these report no change.
+- name: Reconcile node labels
   ansible.builtin.command: >-
     kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
     label node {{ inventory_hostname }} {{ item }} --overwrite
@@ -114,7 +125,7 @@
   register: k3s_label
   changed_when: "'not labeled' not in k3s_label.stdout"
 
-- name: Apply node taints
+- name: Reconcile node taints
   ansible.builtin.command: >-
     kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
     taint node {{ inventory_hostname }} {{ item }} --overwrite
