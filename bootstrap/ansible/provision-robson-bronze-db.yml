@@ -1,0 +1,226 @@
+# Bronze Phase B database access provisioning (gated operator window).
+#
+# Scope (deliberately minimal, robson bronze-v1 §4 + provisioning runbook):
+#   - role robson_bronze_reader: NOLOGIN-first, NOINHERIT, CONNECTION LIMIT 1,
+#     default_transaction_read_only=on, per-role timeouts, SELECT on exactly
+#     event_log + income_ledger, EXECUTE on public.bronze_seal_fence.
+#   - role bronze_fence_definer: NOLOGIN, INHERIT (load-bearing: NOINHERIT
+#     would deactivate pg_read_all_stats during SECURITY DEFINER execution).
+#   - one pg_hba managed block (allow + fail-closed rejects) applied via
+#     RELOAD, never restart. pg_postmaster_start_time() is asserted
+#     invariant; if it moves, the play fails (incident).
+#   - LOGIN activation is a separate, explicitly-enabled final step.
+#
+# Run: ansible-playbook -i inventory/hosts.yml provision-robson-bronze-db.yml \
+#        --limit jaguar -e @vault.yml
+# NEVER run via site.yml. Required vars (no defaults, play asserts):
+#   bronze_reader_password_scram (vault; PRE-COMPUTED SCRAM-SHA-256 verifier,
+#       never plaintext: ALTER ROLE ... PASSWORD '<plaintext>' can land in the
+#       server log under log_statement=ddl/all. Generate the verifier offline.)
+#   bronze_reader_source_cidr  (operator decision: exporter node /32 or pod
+#       CIDR. Repo pattern elsewhere is one line per node; a single CIDR here
+#       is deliberate: the exporter is pinned to one origin.)
+#   bronze_activate_login      (false = provision only; true = enable LOGIN)
+#
+# RE-RUN SEMANTICS (intentional kill switch): the reader role is re-created
+# NOLOGIN on every run; re-running with bronze_activate_login=false after a
+# previous activation DISABLES the exporter's login until the next activated
+# run.
+#
+# KNOWN PRECONDITION FOR THE WINDOW: jaguar's pg_hba currently carries broad
+# legacy rules (host all all <node-ip> scram-sha-256, rules 8-12). While they
+# exist, the reader can authenticate through them from those hosts and the
+# fail-closed rejects of this block are never reached. The first-rule assert
+# below FAILS in that case, by design: the operator must remove those rules
+# or formally record the exception before this play can complete.
+
+- name: Provision Robson bronze reader DB access (reload-only)
+  hosts: db_server
+  serial: 1
+  any_errors_fatal: true
+  become: yes
+
+  vars:
+    bronze_db: robson
+    bronze_reader_role: robson_bronze_reader
+    bronze_definer_role: bronze_fence_definer
+
+  handlers:
+    - name: reload postgresql
+      # pg_reload_conf() sidesteps the Debian umbrella-unit question entirely
+      # (postgresql.service has ExecReload=/bin/true; the instance unit relies
+      # on ReloadPropagatedFrom). Matches the precedent in
+      # bootstrap-external-postgres-app-db.sh. Restart is forbidden here.
+      become_user: postgres
+      command: psql -Atc "SELECT pg_reload_conf();"
+      register: reload_result
+      failed_when: reload_result.stdout != 't'
+
+  tasks:
+    - name: Assert required variables are provided
+      assert:
+        that:
+          - bronze_reader_password_scram is defined
+          - bronze_reader_password_scram is match('^SCRAM-SHA-256\\$')
+          - bronze_reader_source_cidr is defined
+          - bronze_reader_source_cidr | length > 0
+          - bronze_activate_login is defined
+        fail_msg: >-
+          bronze_reader_password_scram (a SCRAM-SHA-256 verifier, never
+          plaintext), bronze_reader_source_cidr and bronze_activate_login
+          must be set explicitly (no defaults).
+      no_log: true
+
+    - name: Preflight | record postmaster start time
+      become_user: postgres
+      command: psql -Atc "SELECT pg_postmaster_start_time();"
+      register: postmaster_before
+      changed_when: false
+
+    - name: Preflight | fence function must exist (migration 000028 applied)
+      become_user: postgres
+      command: >-
+        psql -d {{ bronze_db }} -Atc
+        "SELECT 'public.bronze_seal_fence(timestamptz)'::regprocedure;"
+      changed_when: false
+
+    - name: Preflight | refuse to proceed with broken or pending config
+      become_user: postgres
+      command: >-
+        psql -Atc "SELECT
+          (SELECT count(*) FROM pg_file_settings WHERE error IS NOT NULL) ||
+          '|' ||
+          (SELECT count(*) FROM pg_settings WHERE pending_restart);"
+      register: preflight_cfg
+      changed_when: false
+      failed_when: preflight_cfg.stdout != '0|0'
+
+    - name: Definer role | create NOLOGIN INHERIT stats definer
+      become_user: postgres
+      postgresql_user:
+        name: "{{ bronze_definer_role }}"
+        role_attr_flags: "NOLOGIN,INHERIT,NOSUPERUSER,NOCREATEDB,NOCREATEROLE"
+
+    - name: Definer role | grant pg_read_all_stats
+      become_user: postgres
+      postgresql_query:
+        query: 'GRANT pg_read_all_stats TO "{{ bronze_definer_role }}"'
+
+    - name: Reader role | create NOLOGIN-first with hard limits
+      become_user: postgres
+      postgresql_user:
+        name: "{{ bronze_reader_role }}"
+        role_attr_flags: "NOLOGIN,NOINHERIT,NOSUPERUSER,NOCREATEDB,NOCREATEROLE,NOREPLICATION"
+        conn_limit: 1
+
+    - name: Reader role | pin per-role session settings (bronze-v1 §4)
+      become_user: postgres
+      postgresql_query:
+        query: "{{ item }}"
+      loop:
+        - ALTER ROLE {{ bronze_reader_role }} SET default_transaction_read_only = 'on'
+        - ALTER ROLE {{ bronze_reader_role }} SET statement_timeout = '5s'
+        - ALTER ROLE {{ bronze_reader_role }} SET lock_timeout = '1s'
+        - ALTER ROLE {{ bronze_reader_role }} SET idle_in_transaction_session_timeout = '30s'
+
+    - name: Reader role | minimal grants, explicit revokes (robson DB)
+      become_user: postgres
+      postgresql_query:
+        db: "{{ bronze_db }}"
+        query: "{{ item }}"
+      loop:
+        - REVOKE ALL PRIVILEGES ON DATABASE {{ bronze_db }} FROM {{ bronze_reader_role }}
+        - GRANT CONNECT ON DATABASE {{ bronze_db }} TO {{ bronze_reader_role }}
+        - REVOKE ALL PRIVILEGES ON SCHEMA public FROM {{ bronze_reader_role }}
+        - GRANT USAGE ON SCHEMA public TO {{ bronze_reader_role }}
+        - REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM {{ bronze_reader_role }}
+        - REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM {{ bronze_reader_role }}
+        - GRANT SELECT ON TABLE public.event_log, public.income_ledger TO {{ bronze_reader_role }}
+        - GRANT EXECUTE ON FUNCTION public.bronze_seal_fence(timestamptz) TO {{ bronze_reader_role }}
+
+    - name: HBA | managed block with validation and rollback on failure
+      block:
+        - name: HBA | fail-closed managed block (allow + rejects)
+          blockinfile:
+            path: /etc/postgresql/16/main/pg_hba.conf
+            marker: "# {mark} ANSIBLE MANAGED BLOCK robson-bronze-reader"
+            backup: true
+            block: |
+              host  {{ bronze_db }}  {{ bronze_reader_role }}  {{ bronze_reader_source_cidr }}  scram-sha-256
+              host  all  {{ bronze_reader_role }}  0.0.0.0/0  reject
+              host  all  {{ bronze_reader_role }}  ::/0  reject
+          register: hba_block
+          notify: reload postgresql
+
+        - name: HBA | validate file before reload (zero parse errors)
+          become_user: postgres
+          command: >-
+            psql -Atc "SELECT count(*) FROM pg_hba_file_rules WHERE error IS NOT NULL;"
+          register: hba_errors
+          changed_when: false
+          failed_when: hba_errors.stdout != '0'
+
+        - name: HBA | assert the FIRST rule any reader connection can match is our allow line
+          # 'all' renders as the literal member 'all' in user_name/database
+          # (user_name IS NULL only on parse-error lines), so broad legacy
+          # rules (host all all ...) are matched here and correctly FAIL the
+          # assert until the operator resolves them.
+          become_user: postgres
+          command: >-
+            psql -Atc "SELECT type || '|' || array_to_string(database, ',') || '|' ||
+                              address || '|' || auth_method
+                         FROM pg_hba_file_rules
+                        WHERE type LIKE 'host%'
+                          AND ('{{ bronze_reader_role }}' = ANY(user_name)
+                               OR 'all' = ANY(user_name))
+                          AND ('{{ bronze_db }}' = ANY(database)
+                               OR 'all' = ANY(database))
+                        ORDER BY rule_number LIMIT 1;"
+          register: hba_first
+          changed_when: false
+          failed_when: >-
+            hba_first.stdout != 'host|' + bronze_db + '|'
+              + bronze_reader_source_cidr.split('/')[0] + '|scram-sha-256'
+      rescue:
+        - name: HBA | roll back the managed block (validation failed)
+          blockinfile:
+            path: /etc/postgresql/16/main/pg_hba.conf
+            marker: "# {mark} ANSIBLE MANAGED BLOCK robson-bronze-reader"
+            state: absent
+        - name: HBA | fail the play after rollback
+          fail:
+            msg: >-
+              HBA validation failed; managed block removed again (backup at
+              {{ hba_block.backup_file | default('n/a') }}). Nothing was
+              reloaded. Resolve the reported rule conflict (likely the broad
+              legacy host-all-all lines) and re-run.
+
+    - name: Apply reload now (flush handler before postmaster assertion)
+      meta: flush_handlers
+
+    - name: Postcheck | postmaster start time must be invariant (no restart)
+      become_user: postgres
+      command: psql -Atc "SELECT pg_postmaster_start_time();"
+      register: postmaster_after
+      changed_when: false
+      failed_when: postmaster_after.stdout != postmaster_before.stdout
+
+    - name: Activation | enable LOGIN with SCRAM verifier (only when explicitly requested)
+      # A pre-computed verifier means no plaintext ever reaches the server,
+      # so log_statement=ddl/all cannot leak it.
+      become_user: postgres
+      postgresql_query:
+        query: >-
+          ALTER ROLE {{ bronze_reader_role }} LOGIN PASSWORD
+          '{{ bronze_reader_password_scram }}'
+      when: bronze_activate_login | bool
+      no_log: true
+
+    - name: Postcheck | role attributes as contracted
+      become_user: postgres
+      command: >-
+        psql -Atc "SELECT rolcanlogin || '|' || rolinherit || '|' || rolconnlimit
+                     FROM pg_roles WHERE rolname = '{{ bronze_reader_role }}';"
+      register: reader_attrs
+      changed_when: false
+      failed_when: reader_attrs.stdout != (('t' if bronze_activate_login | bool else 'f') + '|f|1')
