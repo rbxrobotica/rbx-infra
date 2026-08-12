@@ -27,12 +27,12 @@
 # previous activation DISABLES the exporter's login until the next activated
 # run.
 #
-# KNOWN PRECONDITION FOR THE WINDOW: jaguar's pg_hba currently carries broad
-# legacy rules (host all all <node-ip> scram-sha-256, rules 8-12). While they
-# exist, the reader can authenticate through them from those hosts and the
-# fail-closed rejects of this block are never reached. The first-rule assert
-# below FAILS in that case, by design: the operator must remove those rules
-# or formally record the exception before this play can complete.
+# PRECONDITION (historical note): jaguar's pg_hba used to carry broad legacy
+# rules (host all all <node-ip> scram-sha-256); they were removed in the
+# 2026-08-12 provisioning window. The first-rule assert below exists so that
+# ANY rule a reader connection could match ahead of the managed allow line
+# (broad, regex, +role, @file) fails the play, by design, until the operator
+# resolves it or formally records the exception.
 
 - name: Provision Robson bronze reader DB access (reload-only)
   hosts: db_server
@@ -165,16 +165,41 @@
           # (user_name IS NULL only on parse-error lines), so broad legacy
           # rules (host all all ...) are matched here and correctly FAIL the
           # assert until the operator resolves them.
+          #
+          # Localhost lines are exempt: the Debian default host-all-all rules
+          # for 127.0.0.1/::1 are standard local-admin paths, out of this
+          # play's scope, and unreachable by the reader anyway (the exporter's
+          # only origin is bronze_reader_source_cidr, a remote node /32; the
+          # 2026-08-12 window failed on exactly this false positive). The
+          # exemption requires the FULL netmask: a pathological '::1/0' or
+          # '127.0.0.1/0' line matches remote clients and must still fail.
+          #
+          # Selector coverage is CONSERVATIVE: besides the literal role name
+          # and 'all', any regex (/...), role-membership (+...) or @file
+          # token in user_name, and any regex/@file/'samerole' token in
+          # database, is treated as potentially matching the reader. Such a
+          # rule preceding the managed allow line fails the assert instead
+          # of being invisible to it (counter-review finding N1).
           become_user: postgres
           command: >-
             psql -Atc "SELECT type || '|' || array_to_string(database, ',') || '|' ||
                               address || '|' || auth_method
                          FROM pg_hba_file_rules
                         WHERE type LIKE 'host%'
+                          AND NOT ((address = '127.0.0.1'
+                                    AND netmask = '255.255.255.255')
+                                   OR (address = '::1'
+                                       AND netmask = 'ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff'))
                           AND ('{{ bronze_reader_role }}' = ANY(user_name)
-                               OR 'all' = ANY(user_name))
+                               OR 'all' = ANY(user_name)
+                               OR EXISTS (SELECT 1 FROM unnest(user_name) u
+                                           WHERE u LIKE '/%' OR u LIKE '+%'
+                                              OR u LIKE '@%'))
                           AND ('{{ bronze_db }}' = ANY(database)
-                               OR 'all' = ANY(database))
+                               OR 'all' = ANY(database)
+                               OR 'samerole' = ANY(database)
+                               OR EXISTS (SELECT 1 FROM unnest(database) d
+                                           WHERE d LIKE '/%' OR d LIKE '@%'))
                         ORDER BY rule_number LIMIT 1;"
           register: hba_first
           changed_when: false
@@ -197,6 +222,36 @@
 
     - name: Apply reload now (flush handler before postmaster assertion)
       meta: flush_handlers
+
+    # Counter-review N2: the handler only fires when blockinfile CHANGED
+    # the file. A re-run after an interrupted first run finds the block
+    # already on disk, gets no notify, and would otherwise proceed to
+    # LOGIN activation while the postmaster still runs the OLD in-memory
+    # HBA. The reload below is UNCONDITIONAL and its effect is proven by
+    # pg_conf_load_time advancing past a pre-reload database clock.
+    - name: Reload | record database clock before the unconditional reload
+      become_user: postgres
+      command: psql -Atc "SELECT clock_timestamp();"
+      register: pre_reload_clock
+      changed_when: false
+
+    - name: Reload | unconditional pg_reload_conf (never restart)
+      become_user: postgres
+      command: psql -Atc "SELECT pg_reload_conf();"
+      register: unconditional_reload
+      changed_when: true
+      failed_when: unconditional_reload.stdout != 't'
+
+    - name: Reload | prove pg_conf_load_time advanced past the pre-reload clock
+      become_user: postgres
+      command: >-
+        psql -Atc "SELECT pg_conf_load_time() >= '{{ pre_reload_clock.stdout }}'::timestamptz;"
+      register: conf_load_proof
+      changed_when: false
+      retries: 3
+      delay: 1
+      until: conf_load_proof.stdout == 't'
+      failed_when: conf_load_proof.stdout != 't'
 
     - name: Postcheck | postmaster start time must be invariant (no restart)
       become_user: postgres
