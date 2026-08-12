@@ -272,10 +272,16 @@
       no_log: true
 
     - name: Postcheck | role attributes as contracted
+      # boolean || text concatenation renders 'true'/'false' (text cast),
+      # not psql's bare-column 't'/'f'; the expected string must match the
+      # cast form. Latent since #197: earlier runs always failed before
+      # reaching this task, so the 2026-08-12 full run exposed it.
       become_user: postgres
       command: >-
         psql -Atc "SELECT rolcanlogin || '|' || rolinherit || '|' || rolconnlimit
                      FROM pg_roles WHERE rolname = '{{ bronze_reader_role }}';"
       register: reader_attrs
       changed_when: false
-      failed_when: reader_attrs.stdout != (('t' if bronze_activate_login | bool else 'f') + '|f|1')
+      failed_when: >-
+        reader_attrs.stdout != (('true' if bronze_activate_login | bool else 'false')
+          + '|false|1')
