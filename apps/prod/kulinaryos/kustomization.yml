@@ -16,4 +16,4 @@ labels:
 images:
   # Subsequent tags are promoted by the KulinaryOS CI via RBX_INFRA_PAT.
   - name: ghcr.io/rbxrobotica/kulinaryos-web
-    newTag: sha-ed418cf58a1f8299a7cdf3a93f29e10b6ae0619c
+    newTag: sha-2e4cbc3143d6670ebf60b117adb62e86c27cff85
