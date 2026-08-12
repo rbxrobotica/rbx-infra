@@ -25,9 +25,21 @@ jobs:
           yamllint .
 
       - name: Setup kubeconform
+        # Authenticated download: anonymous release downloads from shared
+        # Actions runner IPs get rate limited (HTTP 429 with a tiny body,
+        # which curl without -f happily saves and tar then rejects; this
+        # broke PR #199 deterministically on 2026-08-12). gh uses the job
+        # token. The sha256 is pinned from the release CHECKSUMS file, so
+        # a wrong or tampered body fails closed before extraction.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -Lo kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz
-          tar xf kubeconform.tar.gz
+          gh release download v0.6.4 \
+            --repo yannh/kubeconform \
+            --pattern 'kubeconform-linux-amd64.tar.gz' \
+            --output kubeconform.tar.gz
+          echo "2b4ebeaa4d5ac4843cf8f7b7e66a8874252b6b71bc7cbfc4ef1cbf85acec7c07  kubeconform.tar.gz" | sha256sum -c -
+          tar xf kubeconform.tar.gz kubeconform
           sudo mv kubeconform /usr/local/bin/
 
       - name: Setup kubectl
