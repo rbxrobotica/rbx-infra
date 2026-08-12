@@ -165,12 +165,19 @@
           # (user_name IS NULL only on parse-error lines), so broad legacy
           # rules (host all all ...) are matched here and correctly FAIL the
           # assert until the operator resolves them.
+          #
+          # Localhost lines are exempt: the Debian default host-all-all rules
+          # for 127.0.0.1/::1 are standard local-admin paths, out of this
+          # play's scope, and unreachable by the reader anyway (the exporter's
+          # only origin is bronze_reader_source_cidr, a remote node /32; the
+          # 2026-08-12 window failed on exactly this false positive).
           become_user: postgres
           command: >-
             psql -Atc "SELECT type || '|' || array_to_string(database, ',') || '|' ||
                               address || '|' || auth_method
                          FROM pg_hba_file_rules
                         WHERE type LIKE 'host%'
+                          AND address NOT IN ('127.0.0.1', '::1')
                           AND ('{{ bronze_reader_role }}' = ANY(user_name)
                                OR 'all' = ANY(user_name))
                           AND ('{{ bronze_db }}' = ANY(database)
