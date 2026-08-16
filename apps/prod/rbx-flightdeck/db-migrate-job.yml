@@ -1,7 +1,8 @@
 # rbx-flightdeck DB migration Job
 #
-# ArgoCD Sync hook: runs before the Deployment wave on every sync. Safe to
-# re-run: scripts/migrate.js applies migrations/*.sql exactly once each
+# ArgoCD Sync hook. Wave ordering: dependencies (Secret/Service, wave 0) →
+# migrate (1) → bootstrap (2) → Deployment (3). Safe to re-run:
+# scripts/migrate.js applies migrations/*.sql exactly once each
 # (schema_migrations bookkeeping). Against the jaguar database the disposable
 # marker logic is inert by design (non-disposable URL tuple).
 apiVersion: batch/v1
@@ -16,7 +17,7 @@ metadata:
   annotations:
     argocd.argoproj.io/hook: Sync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
-    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   backoffLimit: 5
   template:

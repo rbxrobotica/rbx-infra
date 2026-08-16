@@ -4,7 +4,8 @@
 #   - rbx-flightdeck-secrets in rbx-ia-br (keys in apps/prod/rbx-flightdeck/externalsecret.yml)
 #   - ghcr-pull-secret in rbx-flightdeck (Ansible k8s-secrets role)
 #   - flightdeck DB/role on jaguar (bootstrap-external-postgres-app-db.sh)
-#   - ZITADEL client at auth.rbx.ia.br (redirect https://flightdeck.rbxsystems.ch/auth/callback)
+#   - ZITADEL client at auth.merovelis.com (deployed ExternalDomain; redirect
+#     https://flightdeck.rbxsystems.ch/auth/callback)
 #   - DNS flightdeck.rbxsystems.ch (infra/terraform/dns, operator-applied)
 apiVersion: argoproj.io/v1alpha1
 kind: Application

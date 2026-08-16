@@ -1,5 +1,28 @@
-# IngressRoute: Flight Deck (flightdeck.rbxsystems.ch) → rbx-flightdeck.
+# IngressRoutes: Flight Deck (flightdeck.rbxsystems.ch) → rbx-flightdeck.
 # DNS: flightdeck.rbxsystems.ch is managed by PowerDNS/OpenTofu (infra/terraform/dns).
+#
+# Two routers on purpose: a TLS-scoped router cannot also serve the plain-HTTP
+# redirect, so `web` gets a non-TLS redirect router and `websecure` serves the
+# app (Traefik documented redirect pattern).
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rbx-flightdeck-web
+  namespace: rbx-flightdeck
+spec:
+  entryPoints:
+    - web
+  routes:
+    # HTTP → HTTPS permanent redirect
+    - match: Host(`flightdeck.rbxsystems.ch`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: rbx-flightdeck
+      services:
+        - name: rbx-flightdeck
+          port: 80
+---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -7,23 +30,11 @@ metadata:
   namespace: rbx-flightdeck
 spec:
   entryPoints:
-    - web
     - websecure
   routes:
-    # HTTP → HTTPS redirect
+    # HTTPS → SvelteKit node server (auth in-app: OIDC + allowlist)
     - match: Host(`flightdeck.rbxsystems.ch`)
       kind: Rule
-      priority: 1
-      middlewares:
-        - name: redirect-https
-          namespace: rbx-flightdeck
-      services:
-        - name: rbx-flightdeck
-          port: 80
-    # HTTPS traffic → SvelteKit node server (auth handled in-app: OIDC + allowlist)
-    - match: Host(`flightdeck.rbxsystems.ch`)
-      kind: Rule
-      priority: 10
       services:
         - name: rbx-flightdeck
           port: 80

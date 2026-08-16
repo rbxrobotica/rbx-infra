@@ -1,6 +1,7 @@
 # rbx-flightdeck production bootstrap Job
 #
-# ArgoCD Sync hook after migration (wave 0): idempotently ensures the real
+# ArgoCD Sync hook after migration (wave 2, before the Deployment at wave 3):
+# idempotently ensures the real
 # missions (Swiss Outreach, Robson Weekly Review), the operator's explicit
 # mission_access, active policy v1 and Swiss channels/capacity. Creates no
 # demo content; capacity amounts are starting values the operator adjusts in
@@ -17,7 +18,7 @@ metadata:
   annotations:
     argocd.argoproj.io/hook: Sync
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
-    argocd.argoproj.io/sync-wave: "0"
+    argocd.argoproj.io/sync-wave: "2"
 spec:
   backoffLimit: 5
   template:
@@ -58,6 +59,14 @@ spec:
                 secretKeyRef:
                   name: rbx-flightdeck-secrets
                   key: FLIGHTDECK_OPERATOR_NAME
+            # The bootstrap refuses to run when the operator email is not in
+            # the login allowlist (otherwise mission access could be granted
+            # to an identity that can never authenticate).
+            - name: OIDC_ALLOWED_EMAILS
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-flightdeck-secrets
+                  key: OIDC_ALLOWED_EMAILS
           resources:
             requests:
               cpu: 50m

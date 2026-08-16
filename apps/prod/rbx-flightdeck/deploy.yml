@@ -11,6 +11,9 @@ metadata:
     app.kubernetes.io/name: rbx-flightdeck
     app.kubernetes.io/component: web
     app.kubernetes.io/part-of: rbx-flightdeck
+  annotations:
+    # after dependencies (0), migrate (1) and bootstrap (2)
+    argocd.argoproj.io/sync-wave: "3"
 spec:
   replicas: 2
   selector:
@@ -73,11 +76,16 @@ spec:
                 secretKeyRef:
                   name: rbx-flightdeck-secrets
                   key: SESSION_SECRET
-            - name: OIDC_ALLOWED_EMAILS
-              valueFrom:
-                secretKeyRef:
-                  name: rbx-flightdeck-secrets
-                  key: OIDC_ALLOWED_EMAILS
+            # The allowlist is read per request from a mounted Secret volume
+            # (kubelet refreshes it), so removing an email revokes access to
+            # live pods within the ExternalSecret refresh (15m) + kubelet sync
+            # window, without a rollout. Env vars would freeze at pod start.
+            - name: OIDC_ALLOWED_EMAILS_FILE
+              value: /etc/rbx-flightdeck/allowed-emails
+          volumeMounts:
+            - name: allowlist
+              mountPath: /etc/rbx-flightdeck
+              readOnly: true
           readinessProbe:
             httpGet:
               path: /healthz
@@ -99,3 +107,10 @@ spec:
             limits:
               memory: 256Mi
               cpu: 500m
+      volumes:
+        - name: allowlist
+          secret:
+            secretName: rbx-flightdeck-secrets
+            items:
+              - key: OIDC_ALLOWED_EMAILS
+                path: allowed-emails
