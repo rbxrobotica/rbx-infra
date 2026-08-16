@@ -59,7 +59,9 @@ Why this pattern is the standard:
 All image-producing repos promote via CI as of 2026-08-02: robson,
 rbx-console, rbx-commerce (prod + sandbox), rbx-systems-frontend (rbx-ia-br +
 rbxsystems-ch), rbx-cms (app + web), rbx-data, rbx-memory, rbx-observability,
-strategos-site, strategos-ui, merovelis-site, md-prec-kulinaryos.
+strategos-site, strategos-ui, merovelis-site, md-prec-kulinaryos,
+rbx-flightdeck (since the Flight Deck deploy PR; requires adding
+rbx-flightdeck to the RBX_INFRA_PAT org-secret repository visibility).
 
 ## Credentials
 
