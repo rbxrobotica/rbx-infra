@@ -35,6 +35,9 @@ pass_robson_testnet_binance_api_key: "rbx/robson-testnet/binance-api-key"
 pass_robson_testnet_binance_api_secret: "rbx/robson-testnet/binance-api-secret"
 pass_robson_testnet_api_token_key: "rbx/robson-testnet/api-token"
 
+# rbx-flightdeck (namespace: rbx-flightdeck — Flight Deck mission planning)
+rbx_flightdeck_namespace: "rbx-flightdeck"
+
 # rbx-console (namespace: rbx-console — operational console UI)
 rbx_console_namespace: "rbx-console"
 pass_rbx_console_users_access_identity_service_key_key: "rbx/console/users-access/identity-service-key"

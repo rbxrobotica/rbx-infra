@@ -200,6 +200,15 @@ resource "powerdns_record" "strategos_rbxsystems_ch" {
   records = [var.k3s_ingress_ip]
 }
 
+# Flight Deck (weekly mission planning; apps/prod/rbx-flightdeck)
+resource "powerdns_record" "flightdeck_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "flightdeck.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
 # Reserved legacy auth alias during migration. Canonical auth is auth.merovelis.com.
 resource "powerdns_record" "auth_rbxsystems_ch" {
   zone    = powerdns_zone.rbxsystems_ch.name

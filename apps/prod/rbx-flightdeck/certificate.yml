@@ -1,0 +1,18 @@
+# Certificate: flightdeck.rbxsystems.ch (DNS managed by PowerDNS/OpenTofu —
+# infra/terraform/dns/rbxsystems_ch.tf)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rbx-flightdeck-tls
+  namespace: rbx-flightdeck
+spec:
+  dnsNames:
+    - flightdeck.rbxsystems.ch
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: rbx-flightdeck-tls
+  usages:
+    - digital signature
+    - key encipherment

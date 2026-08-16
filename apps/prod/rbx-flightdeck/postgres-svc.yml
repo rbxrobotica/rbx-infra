@@ -1,0 +1,22 @@
+# Headless Service + Endpoints pointing at the external Postgres host (jaguar).
+# DB/role bootstrap: bootstrap/scripts/bootstrap-external-postgres-app-db.sh
+# (see docs/runbooks/EXTERNAL-POSTGRES-APP-DB-RECOVERY.md).
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-flightdeck-postgres
+  namespace: rbx-flightdeck
+spec:
+  ports:
+    - port: 5432
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: rbx-flightdeck-postgres
+  namespace: rbx-flightdeck
+subsets:
+  - addresses:
+      - ip: 161.97.147.76
+    ports:
+      - port: 5432

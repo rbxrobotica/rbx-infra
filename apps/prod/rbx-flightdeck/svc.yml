@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-flightdeck
+  namespace: rbx-flightdeck
+  labels:
+    app.kubernetes.io/name: rbx-flightdeck
+spec:
+  selector:
+    app.kubernetes.io/name: rbx-flightdeck
+  ports:
+    - port: 80
+      targetPort: http
+      name: http

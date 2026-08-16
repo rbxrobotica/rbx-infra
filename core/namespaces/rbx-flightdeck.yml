@@ -1,0 +1,10 @@
+# Namespace: rbx-flightdeck (flightdeck.rbxsystems.ch — weekly mission planning)
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-flightdeck
+  labels:
+    app.kubernetes.io/part-of: rbx-flightdeck
+    environment: production
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"

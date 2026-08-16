@@ -1,0 +1,40 @@
+# ArgoCD Application: rbx-flightdeck (weekly mission planning, human approval gate)
+# Namespace: rbx-flightdeck — single SvelteKit container (flightdeck.rbxsystems.ch).
+# Prerequisites before first healthy sync (operator):
+#   - rbx-flightdeck-secrets in rbx-ia-br (keys in apps/prod/rbx-flightdeck/externalsecret.yml)
+#   - ghcr-pull-secret in rbx-flightdeck (Ansible k8s-secrets role)
+#   - flightdeck DB/role on jaguar (bootstrap-external-postgres-app-db.sh)
+#   - ZITADEL client at auth.rbx.ia.br (redirect https://flightdeck.rbxsystems.ch/auth/callback)
+#   - DNS flightdeck.rbxsystems.ch (infra/terraform/dns, operator-applied)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-flightdeck
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-flightdeck
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-flightdeck
+  # Image promotion: CI self-push from rbx-flightdeck main (fleet standard,
+  # docs/infra/IMAGE-PROMOTION.md) — the app's build workflow bumps
+  # images[].newTag in apps/prod/rbx-flightdeck/kustomization.yml.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-flightdeck
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-flightdeck
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

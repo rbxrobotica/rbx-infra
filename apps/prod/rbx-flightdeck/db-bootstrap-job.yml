@@ -1,0 +1,67 @@
+# rbx-flightdeck production bootstrap Job
+#
+# ArgoCD Sync hook after migration (wave 0): idempotently ensures the real
+# missions (Swiss Outreach, Robson Weekly Review), the operator's explicit
+# mission_access, active policy v1 and Swiss channels/capacity. Creates no
+# demo content; capacity amounts are starting values the operator adjusts in
+# the UI. Safe to re-run on every sync.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rbx-flightdeck-db-bootstrap
+  namespace: rbx-flightdeck
+  labels:
+    app.kubernetes.io/name: rbx-flightdeck
+    app.kubernetes.io/component: db-bootstrap
+    app.kubernetes.io/part-of: rbx-flightdeck
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-flightdeck
+        app.kubernetes.io/component: db-bootstrap
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+        - name: bootstrap
+          image: ghcr.io/rbxrobotica/rbx-flightdeck
+          imagePullPolicy: IfNotPresent
+          command:
+            - node
+            - scripts/bootstrap-prod.js
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-flightdeck-secrets
+                  key: DATABASE_URL
+            - name: FLIGHTDECK_OPERATOR_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-flightdeck-secrets
+                  key: FLIGHTDECK_OPERATOR_EMAIL
+            - name: FLIGHTDECK_OPERATOR_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-flightdeck-secrets
+                  key: FLIGHTDECK_OPERATOR_NAME
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi

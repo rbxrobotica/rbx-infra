@@ -1390,3 +1390,33 @@
     GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
   changed_when: true
   no_log: true
+
+# ---------------------------------------------------------------------------
+# rbx-flightdeck namespace secrets (Flight Deck — flightdeck.rbxsystems.ch)
+# Only needs ghcr-pull-secret here. The app secret (rbx-flightdeck-secrets)
+# lives in rbx-ia-br and is synced via ExternalSecret; the operator creates it
+# there from pass entries under rbx/flightdeck/ (keys documented in
+# apps/prod/rbx-flightdeck/externalsecret.yml).
+# ---------------------------------------------------------------------------
+
+- name: Ensure rbx-flightdeck namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ rbx_flightdeck_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in rbx-flightdeck
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace {{ rbx_flightdeck_namespace }} \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
