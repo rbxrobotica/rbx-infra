@@ -39,6 +39,10 @@ spec:
           securityContext:
             allowPrivilegeEscalation: false
             runAsNonRoot: true
+            # node UID in docker-node images. Required: containerd reports the
+            # image USER as a username and kubelet rejects runAsNonRoot without
+            # a numeric UID (CreateContainerConfigError otherwise).
+            runAsUser: 1000
             capabilities:
               drop:
                 - ALL
