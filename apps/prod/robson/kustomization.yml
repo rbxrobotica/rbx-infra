@@ -43,3 +43,11 @@ patches:
       - op: add
         path: /spec/template/metadata/annotations/robson.rbx.ia~1config-revision
         value: legacy-position-monitor-disabled-v1
+
+# Pattern R: single pin for every robson-v2 image (deploy + migrate hook).
+# Mirrors apps/testnet/robson/kustomization.yml. Bumped by robson CI
+# (.github/workflows/robsond.yml), never by hand. See
+# docs/infra/IMAGE-PROMOTION.md.
+images:
+  - name: ghcr.io/rbxrobotica/robson-v2
+    newTag: sha-0cef339b
