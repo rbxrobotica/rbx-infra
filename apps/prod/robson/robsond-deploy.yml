@@ -86,13 +86,26 @@ spec:
         - name: FUNDING_ENABLED
           value: "true"
 
+        # Memory headroom after the OOMKill of 2026-08-18 07:24 UTC.
+        #
+        # robsond grew from ~50Mi to the 512Mi limit over 55h of uptime and was
+        # OOMKilled with an open position (it recovered in 5s; the exchange
+        # insurance stop covered the gap, per ADR-0039). The growth cause is not
+        # yet identified, so this is headroom, not a cure: it buys observation
+        # time, it does not stop the trend.
+        #
+        # Ceiling kept at 768Mi rather than 1Gi on purpose: sumatrae already
+        # runs at ~83% real memory use and its limits are 133% overcommitted.
+        # A robsond that genuinely reaches 1Gi there would risk node-level
+        # pressure and kubelet evictions across the namespace, which is worse
+        # than one clean restart of a daemon that recovers in seconds.
         resources:
           requests:
             cpu: "250m"
-            memory: "256Mi"
+            memory: "512Mi"
           limits:
             cpu: "500m"
-            memory: "512Mi"
+            memory: "768Mi"
 
         # Liveness: is the process alive?
         livenessProbe:
