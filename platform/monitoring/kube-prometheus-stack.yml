@@ -388,7 +388,13 @@ spec:
                       rbx_workstream: robson-trading
                     annotations:
                       summary: "robsond was OOMKilled"
-                      description: "The robsond container hit its memory limit and was killed within the last 2 hours. Trading was unattended for the duration of the restart; the exchange insurance stop is the only protection during that window (ADR-0039). Check the memory trend before assuming it was a one-off."
+                      description: >-
+                        The robsond container hit its memory limit and was
+                        killed within the last 2 hours. Trading was unattended
+                        for the duration of the restart; the exchange insurance
+                        stop is the only protection during that window
+                        (ADR-0039). Check the memory trend before assuming it
+                        was a one-off.
 
                   - alert: RBXRobsondMemoryCritical
                     expr: |
@@ -405,7 +411,11 @@ spec:
                       rbx_workstream: robson-trading
                     annotations:
                       summary: "robsond memory above 90% of its limit"
-                      description: "robsond working set has been above 90% of its memory limit for 5 minutes. An OOMKill is imminent. If a position is open, prefer acting now over being restarted mid-trade."
+                      description: >-
+                        robsond working set has been above 90% of its memory
+                        limit for 5 minutes. An OOMKill is imminent. If a
+                        position is open, prefer acting now over being
+                        restarted mid-trade.
 
                   - alert: RBXRobsondMemoryApproachingLimit
                     expr: |
@@ -422,7 +432,12 @@ spec:
                       rbx_workstream: robson-trading
                     annotations:
                       summary: "robsond memory above 75% of its limit"
-                      description: "robsond working set has been above 75% of its memory limit for 15 minutes. The growth cause is not identified as of 2026-08-18; at the rate measured then (roughly 13 to 15 MiB/h under active market data) this leaves hours, not days, before the limit."
+                      description: >-
+                        robsond working set has been above 75% of its memory
+                        limit for 15 minutes. The growth cause is not
+                        identified as of 2026-08-18; at the rate measured then
+                        (roughly 13 to 15 MiB/h under active market data) this
+                        leaves hours, not days, before the limit.
 
                   - alert: RBXRobsondContainerRestarted
                     expr: |
@@ -435,7 +450,11 @@ spec:
                       rbx_workstream: robson-trading
                     annotations:
                       summary: "robsond container restarted"
-                      description: "The robsond container restarted in the last 15 minutes, for any reason. Deliberate rollouts trip this too; it exists so that an unexplained restart is never silent, whatever the cause."
+                      description: >-
+                        The robsond container restarted in the last 15 minutes,
+                        for any reason. Deliberate rollouts trip this too; it
+                        exists so that an unexplained restart is never silent,
+                        whatever the cause.
 
         # Temporarily disable PrometheusRule admission webhooks until the
         # webhook serving certificate/CA bundle is regenerated in an approved
