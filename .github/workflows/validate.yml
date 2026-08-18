@@ -99,6 +99,36 @@ jobs:
           kubectl kustomize apps/prod/rbx-catalog >/dev/null
           kubectl kustomize apps/prod/rbxsystems-ch >/dev/null
           kubectl kustomize apps/prod/strategos >/dev/null
+          kubectl kustomize apps/prod/robson >/dev/null
+
+      # robson runs money. Pattern R rule 2 keeps the sha out of the manifests,
+      # which means the ONLY thing standing between prod and an unpinned image
+      # is the overlay's images transformer. check-image-convention.sh cannot
+      # see that: it lints files, not the render. This asserts the rendered
+      # result, so a deleted, renamed or mistyped images entry fails the PR
+      # instead of reaching the cluster.
+      - name: Assert robson prod renders immutable image tags
+        run: |
+          render=$(kubectl kustomize apps/prod/robson)
+
+          mapfile -t refs < <(printf '%s\n' "$render" \
+            | grep -oE 'ghcr\.io/rbxrobotica/robson-v2:[^[:space:]"]+' || true)
+
+          if [ "${#refs[@]}" -eq 0 ]; then
+            echo "::error::apps/prod/robson renders no robson-v2 image reference"
+            exit 1
+          fi
+
+          bad=0
+          for ref in "${refs[@]}"; do
+            if [[ "$ref" =~ :sha-[0-9a-f]+$ ]]; then
+              echo "ok: $ref"
+            else
+              echo "::error::apps/prod/robson renders a non-immutable robson-v2 tag: $ref"
+              bad=1
+            fi
+          done
+          [ "$bad" -eq 0 ]
 
   validate-argocd:
     runs-on: ubuntu-latest
