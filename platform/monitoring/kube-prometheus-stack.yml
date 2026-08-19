@@ -373,15 +373,22 @@ spec:
               # asked about something else.
               - name: rbx.robson.runtime
                 rules:
+                  # The window comes from the termination timestamp, NOT from
+                  # increase() over the restart counter. increase() only sees a
+                  # rise Prometheus actually observed: a container OOMKilled
+                  # before its first scrape is already at 1 when first seen, so
+                  # the counter never appears to move and the alert stays silent
+                  # through the exact event it exists for.
                   - alert: RBXRobsondOOMKilled
                     expr: |
                       max by (namespace, pod, container) (
                         kube_pod_container_status_last_terminated_reason{namespace="robson",container="robsond",reason="OOMKilled"}
                       ) == 1
-                      and on (namespace, pod, container)
-                      max by (namespace, pod, container) (
-                        increase(kube_pod_container_status_restarts_total{namespace="robson",container="robsond"}[2h])
-                      ) > 0
+                      and on (namespace, pod, container) (
+                        time() - max by (namespace, pod, container) (
+                          kube_pod_container_status_last_terminated_timestamp{namespace="robson",container="robsond"}
+                        )
+                      ) < 7200
                     for: 0m
                     labels:
                       severity: critical
@@ -451,10 +458,12 @@ spec:
                     annotations:
                       summary: "robsond container restarted"
                       description: >-
-                        The robsond container restarted in the last 15 minutes,
-                        for any reason. Deliberate rollouts trip this too; it
-                        exists so that an unexplained restart is never silent,
-                        whatever the cause.
+                        The robsond container restarted IN PLACE in the last 15
+                        minutes: OOMKill, liveness kill or crash. It does NOT
+                        catch a rollout, because a new pod starts its restart
+                        counter at zero, and that is deliberate: a deploy the
+                        operator asked for should not page. Prolonged absence
+                        from any cause is covered by RBXRobsondMetricsAbsent.
 
         # Temporarily disable PrometheusRule admission webhooks until the
         # webhook serving certificate/CA bundle is regenerated in an approved
