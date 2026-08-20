@@ -19,7 +19,14 @@ spec:
   source:
     repoURL: https://argoproj.github.io/argo-helm
     chart: argo-cd
-    targetRevision: 7.3.0
+    # 10.2.2 ships ArgoCD v3.4.6. Bumped from 7.3.0 (v2.11.3, 2024-06-25)
+    # because v2.11's statically embedded Kubernetes schema is built from
+    # k8s.io/api v0.26.11, ten minor versions behind this cluster's k3s
+    # v1.36.2. Any Application using ServerSideApply hits
+    #   ComparisonError: .status.terminatingReplicas: field not declared in schema
+    # and stops being comparable at all, which silently disables drift
+    # detection and auto-sync for it. See the PR body for the evidence.
+    targetRevision: 10.2.2
     helm:
       values: |
         global:
