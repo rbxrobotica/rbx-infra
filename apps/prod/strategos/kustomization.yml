@@ -21,4 +21,4 @@ images:
   - name: ghcr.io/rbxrobotica/strategos-site
     newTag: sha-e83e394
   - name: ghcr.io/rbxrobotica/strategos-ui
-    newTag: sha-015225d
+    newTag: sha-8f6ff98
