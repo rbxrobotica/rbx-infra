@@ -246,7 +246,7 @@ spec:
                     - name: ghcr-pull-secret
                   containers:
                     - name: rbx-session-bff
-                      image: ghcr.io/rbxrobotica/rbx-session-bff:sha-05c9219
+                      image: ghcr.io/rbxrobotica/rbx-session-bff:sha-ea0329c
                       imagePullPolicy: IfNotPresent
                       ports:
                         - containerPort: 8081
@@ -266,6 +266,18 @@ spec:
                           value: "true"
                         - name: RBX_SESSION_BFF_CLIENT_ID
                           value: "376903619468855423"
+                        - name: RBX_SESSION_BFF_SCOPES
+                          value: >-
+                            openid profile email
+                            urn:zitadel:iam:org:project:role:rbx:plans:viewer
+                        # Provider roles are identity metadata. Only this exact
+                        # role from the RBX organization can derive the Plans
+                        # permission. User assignment remains human-gated in
+                        # ZITADEL; the approved audience is all RBX founders.
+                        - name: RBX_SESSION_BFF_ROLE_PERMISSION_MAP_JSON
+                          value: >-
+                            {"rbx:plans:viewer":{"permissions":["rbx:plans:viewer"],
+                            "allowed_organization_ids":["375992756025229511"]}}
                         - name: RBX_SESSION_BFF_REDIRECT_URI
                           value: https://app.merovelis.com/api/auth/callback
                         - name: RBX_SESSION_BFF_BIND_ADDR

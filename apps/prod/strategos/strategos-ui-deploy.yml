@@ -1,5 +1,5 @@
 # Strategos UI Deployment
-# Image is published by ldamasio/strategos-ui GitHub Actions.
+# Image is published by rbxrobotica/strategos-ui GitHub Actions.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -24,8 +24,8 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: strategos-ui
-          # Image name only — tag injected by kustomization.yml (images-transformer),
-          # promoted by ArgoCD Image Updater. See gitops/app-of-apps/strategos-prod.yml.
+          # Image name only. The reviewed immutable tag is injected by the
+          # kustomization images transformer.
           image: ghcr.io/rbxrobotica/strategos-ui
           imagePullPolicy: Always
           ports:
@@ -40,6 +40,8 @@ spec:
               value: "3000"
             - name: RBX_SESSION_BFF_BASE_URL
               value: https://auth.merovelis.com
+            - name: PLANS_REQUIRED_SCOPE
+              value: rbx:plans:viewer
           readinessProbe:
             httpGet:
               path: /healthz
