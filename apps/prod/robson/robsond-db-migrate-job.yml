@@ -49,7 +49,15 @@ spec:
 
       containers:
       - name: db-migrate
-        image: ghcr.io/rbxrobotica/robson-v2:sha-b95db44b
+        # Placeholder only. The real tag comes from the overlay's images
+        # transformer (kustomization.yml newTag). It is deliberately a
+        # tag that does NOT exist in GHCR: if the transformer is ever
+        # bypassed or misconfigured, this fails closed with
+        # ImagePullBackOff instead of silently running whatever :latest
+        # happens to be cached on the node (imagePullPolicy is
+        # IfNotPresent). A trading daemon that refuses to start is
+        # recoverable; one running an unknown build is not.
+        image: ghcr.io/rbxrobotica/robson-v2:sha-REPLACE_ME
         imagePullPolicy: IfNotPresent
         command:
         - sh
