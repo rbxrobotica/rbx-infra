@@ -19,18 +19,28 @@ spec:
   source:
     repoURL: https://argoproj.github.io/argo-helm
     chart: argo-cd
-    # 10.2.2 ships ArgoCD v3.4.6. Bumped from 7.3.0 (v2.11.3, 2024-06-25)
-    # because v2.11's statically embedded Kubernetes schema is built from
-    # k8s.io/api v0.26.11, ten minor versions behind this cluster's k3s
-    # v1.36.2. Any Application using ServerSideApply hits
+    # Bumped from 7.3.0 (ArgoCD v2.11.3, 2024-06-25). v2.11's statically
+    # embedded Kubernetes schema comes from k8s.io/api v0.26.11, ten minor
+    # versions behind this cluster's k3s v1.36.2. When a structured-merge diff
+    # meets a live field absent from that schema, the comparison for the whole
+    # Application aborts:
     #   ComparisonError: .status.terminatingReplicas: field not declared in schema
-    # and stops being comparable at all, which silently disables drift
-    # detection and auto-sync for it. See the PR body for the evidence.
+    # The Application then reports Unknown, never OutOfSync, so drift detection
+    # and auto-sync are silently off for it. That is the state
+    # kube-prometheus-stack has been in since 2026-08-06.
     targetRevision: 10.2.2
     helm:
       values: |
         global:
           domain: argocd.rbx.ia.br
+          image:
+            # Chart 10.2.2 ships v3.4.6. Pinned one patch forward: v3.4.7
+            # carries fixes for Secret masking in server-side diff, CLI
+            # spoofing, and secret material reaching
+            # last-applied-configuration. No chart publishes v3.4.7 yet, so
+            # the tag is overridden rather than the chart moved to the 3.5
+            # line, which is days old.
+            tag: v3.4.7
         configs:
           cm:
             # Pinned explicitly, not left on the chart default.
@@ -53,6 +63,72 @@ spec:
             # down makes the 2.11 -> 3.x upgrade a version change only, with
             # tracking migration as a separate, observed step afterwards.
             application.resourceTrackingMethod: label
+
+            # Pinned, not inherited. Chart 7.3.0 defaults this to 180s and the
+            # live argocd-cm carries 180s; chart 10.2.2 lowers the default to
+            # 120s. Inheriting it would raise reconcile frequency by 50% across
+            # every Application, on a cluster that already has 12 workloads
+            # reporting CPUThrottlingHigh and a control-plane node that went
+            # NotReady twice in 12h. The chart's new
+            # `timeout.reconciliation.jitter: 60s` is left at its default,
+            # because spreading the same load is strictly better than not.
+            timeout.reconciliation: 180s
+
+            # Overridden, not inherited. Chart 10.2.2 introduces default
+            # `resource.exclusions` whose stated premise is that these kinds
+            # "will never be declared in Git". That premise is false here: this
+            # repo declares 12 `Endpoints` objects, one per external Postgres,
+            # including `robson-paradedb` pointing at 161.97.147.76 on jaguar.
+            # Excluding them would not delete anything, but it would silently
+            # end discovery, drift detection and self-heal for every external
+            # database endpoint the fleet depends on.
+            #
+            # This is the chart's default list with the Endpoints/EndpointSlice
+            # entry removed and the other 6 entries (21 kinds) preserved
+            # verbatim.
+            resource.exclusions: |
+              - apiGroups:
+                - coordination.k8s.io
+                kinds:
+                - Lease
+              - apiGroups:
+                - authentication.k8s.io
+                - authorization.k8s.io
+                kinds:
+                - SelfSubjectReview
+                - TokenReview
+                - LocalSubjectAccessReview
+                - SelfSubjectAccessReview
+                - SelfSubjectRulesReview
+                - SubjectAccessReview
+              - apiGroups:
+                - certificates.k8s.io
+                kinds:
+                - CertificateSigningRequest
+              - apiGroups:
+                - cert-manager.io
+                kinds:
+                - CertificateRequest
+              - apiGroups:
+                - cilium.io
+                kinds:
+                - CiliumIdentity
+                - CiliumEndpoint
+                - CiliumEndpointSlice
+              - apiGroups:
+                - kyverno.io
+                - reports.kyverno.io
+                - wgpolicyk8s.io
+                kinds:
+                - PolicyReport
+                - ClusterPolicyReport
+                - EphemeralReport
+                - ClusterEphemeralReport
+                - AdmissionReport
+                - ClusterAdmissionReport
+                - BackgroundScanReport
+                - ClusterBackgroundScanReport
+                - UpdateRequest
           params:
             server.insecure: true
         server:
