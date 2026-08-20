@@ -91,6 +91,14 @@
   loop: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"
   notify: reload postgresql
 
+- name: Allow ZITADEL init hook to use PostgreSQL maintenance database
+  lineinfile:
+    path: /etc/postgresql/16/main/pg_hba.conf
+    line: "host postgres {{ zitadel_admin_db_user }} {{ hostvars[item].ansible_host }}/32 scram-sha-256"
+    insertafter: EOF
+  loop: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"
+  notify: reload postgresql
+
 - name: Allow firewall access from k3s nodes to Postgres
   ufw:
     rule: allow

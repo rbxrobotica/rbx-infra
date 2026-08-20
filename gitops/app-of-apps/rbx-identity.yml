@@ -17,7 +17,8 @@ spec:
   source:
     repoURL: https://charts.zitadel.com
     chart: zitadel
-    targetRevision: 9.34.0
+    # 9.34.1 fixes the Login V2 readiness/startup probe endpoint.
+    targetRevision: 9.34.1
     helm:
       releaseName: rbx-identity
       values: |
@@ -41,6 +42,12 @@ spec:
                 - auth.merovelis.com
 
         login:
+          # Login V2 takes longer to start than the default liveness window.
+          # Gate liveness/readiness until the patched /ready probe succeeds.
+          startupProbe:
+            enabled: true
+            failureThreshold: 60
+            periodSeconds: 1
           ingress:
             enabled: true
             className: traefik
