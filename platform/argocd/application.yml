@@ -25,6 +25,22 @@ spec:
         global:
           domain: argocd.rbx.ia.br
         configs:
+          cm:
+            # Pinned explicitly, not left on the chart default.
+            #
+            # ArgoCD 3.0 flips the default resource tracking method from
+            # `label` to `annotation`. That is a live-cluster migration: every
+            # managed resource has to be re-identified under the new scheme.
+            # Combined with `prune: true`, which most Applications here set,
+            # a resource ArgoCD fails to re-adopt looks like an orphan.
+            #
+            # This cluster currently runs on the `label` default (argocd-cm has
+            # no `application.resourceTrackingMethod` key, and
+            # `application.instanceLabelKey` is
+            # `argocd.argoproj.io/instance`). Writing the current behaviour
+            # down makes the 2.11 -> 3.x upgrade a version change only, with
+            # tracking migration as a separate, observed step afterwards.
+            application.resourceTrackingMethod: label
           params:
             server.insecure: true
         server:
