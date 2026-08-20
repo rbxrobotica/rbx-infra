@@ -31,8 +31,13 @@ spec:
             # ArgoCD 3.0 flips the default resource tracking method from
             # `label` to `annotation`. That is a live-cluster migration: every
             # managed resource has to be re-identified under the new scheme.
-            # Combined with `prune: true`, which most Applications here set,
-            # a resource ArgoCD fails to re-adopt looks like an orphan.
+            #
+            # The failure mode is the opposite of the obvious fear. It is not a
+            # mass prune: if the first sync after the migration also carries a
+            # deletion, ArgoCD fails to recognise the resource and does NOT
+            # delete it, leaving an orphan. Live resources are not swept.
+            # Either way the outcome is a cluster that no longer matches Git,
+            # on Applications that mostly run with `prune: true`.
             #
             # This cluster currently runs on the `label` default (argocd-cm has
             # no `application.resourceTrackingMethod` key, and
