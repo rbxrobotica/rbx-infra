@@ -353,6 +353,118 @@ spec:
                       summary: "Market data stuck on REST fallback"
                       description: "A symbol has been on REST fallback (mode == 1) for 30 minutes (ADR-0044). Fallback is degraded mode, not a steady state; check WebSocket endpoint health."
 
+              # Container-runtime alerts for robsond, as opposed to the
+              # trading-logic alerts in rbx.robson.trading above.
+              #
+              # LABEL WARNING: these rules select on `namespace`, NOT
+              # `kubernetes_namespace`. The rules above scrape robsond's own
+              # /metrics through the annotation-based job, which relabels to
+              # `kubernetes_namespace`. These read kube-state-metrics and
+              # cAdvisor instead, which carry the standard `namespace` label.
+              # Using the wrong one yields a rule that never fires, which is
+              # worse than no rule. Every expression here was verified against
+              # the live Prometheus before being committed.
+              #
+              # Why this group exists: on 2026-08-18 07:24 UTC robsond was
+              # OOMKilled with an open BTCUSDT position and recovered in 5s.
+              # Nothing alerted. RBXRobsondMetricsAbsent needs 10 minutes of
+              # missing series, so a fast restart is invisible to it. The kill
+              # was found by hand, three days later, only because the operator
+              # asked about something else.
+              - name: rbx.robson.runtime
+                rules:
+                  # The window comes from the termination timestamp, NOT from
+                  # increase() over the restart counter. increase() only sees a
+                  # rise Prometheus actually observed: a container OOMKilled
+                  # before its first scrape is already at 1 when first seen, so
+                  # the counter never appears to move and the alert stays silent
+                  # through the exact event it exists for.
+                  - alert: RBXRobsondOOMKilled
+                    expr: |
+                      max by (namespace, pod, container) (
+                        kube_pod_container_status_last_terminated_reason{namespace="robson",container="robsond",reason="OOMKilled"}
+                      ) == 1
+                      and on (namespace, pod, container) (
+                        time() - max by (namespace, pod, container) (
+                          kube_pod_container_status_last_terminated_timestamp{namespace="robson",container="robsond"}
+                        )
+                      ) < 7200
+                    for: 0m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "robsond was OOMKilled"
+                      description: >-
+                        The robsond container hit its memory limit and was
+                        killed within the last 2 hours. Trading was unattended
+                        for the duration of the restart; the exchange insurance
+                        stop is the only protection during that window
+                        (ADR-0039). Check the memory trend before assuming it
+                        was a one-off.
+
+                  - alert: RBXRobsondMemoryCritical
+                    expr: |
+                      max by (namespace, pod, container) (
+                        container_memory_working_set_bytes{namespace="robson",container="robsond"}
+                      )
+                      / on (namespace, pod, container) group_left
+                      max by (namespace, pod, container) (
+                        kube_pod_container_resource_limits{namespace="robson",container="robsond",resource="memory"}
+                      ) > 0.90
+                    for: 5m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "robsond memory above 90% of its limit"
+                      description: >-
+                        robsond working set has been above 90% of its memory
+                        limit for 5 minutes. An OOMKill is imminent. If a
+                        position is open, prefer acting now over being
+                        restarted mid-trade.
+
+                  - alert: RBXRobsondMemoryApproachingLimit
+                    expr: |
+                      max by (namespace, pod, container) (
+                        container_memory_working_set_bytes{namespace="robson",container="robsond"}
+                      )
+                      / on (namespace, pod, container) group_left
+                      max by (namespace, pod, container) (
+                        kube_pod_container_resource_limits{namespace="robson",container="robsond",resource="memory"}
+                      ) > 0.75
+                    for: 15m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "robsond memory above 75% of its limit"
+                      description: >-
+                        robsond working set has been above 75% of its memory
+                        limit for 15 minutes. The growth cause is not
+                        identified as of 2026-08-18; at the rate measured then
+                        (roughly 13 to 15 MiB/h under active market data) this
+                        leaves hours, not days, before the limit.
+
+                  - alert: RBXRobsondContainerRestarted
+                    expr: |
+                      max by (namespace, pod, container) (
+                        increase(kube_pod_container_status_restarts_total{namespace="robson",container="robsond"}[15m])
+                      ) > 0
+                    for: 0m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "robsond container restarted"
+                      description: >-
+                        The robsond container restarted IN PLACE in the last 15
+                        minutes: OOMKill, liveness kill or crash. It does NOT
+                        catch a rollout, because a new pod starts its restart
+                        counter at zero, and that is deliberate: a deploy the
+                        operator asked for should not page. Prolonged absence
+                        from any cause is covered by RBXRobsondMetricsAbsent.
+
         # Temporarily disable PrometheusRule admission webhooks until the
         # webhook serving certificate/CA bundle is regenerated in an approved
         # maintenance window. The broken CA currently blocks ArgoCD from
