@@ -144,9 +144,12 @@ pdns_control retrieve rbxsystems.ch
 |------|-----|-----|---------|
 | `rbxsystems.ch` | pantera | eagle | Web, email, grafana, robson |
 | `strategos.gr` | pantera | eagle | Strategos product |
+| `rbx.ia.br` | pantera | eagle | RBX Brazil applications |
+| `merovelis.com` | pantera | eagle | Merovelis/Strategos web surface |
+| `kulinaryos.com` | pantera | eagle | Kulinaryos web; Aruba-hosted mail |
 
-Zone records are defined in `infra/terraform/dns/rbxsystems_ch.tf`
-and `infra/terraform/dns/strategos_gr.tf`.
+Zone records are defined in `infra/terraform/dns/*.tf`; each zone has its own
+file except provider and shared-variable declarations.
 
 ---
 

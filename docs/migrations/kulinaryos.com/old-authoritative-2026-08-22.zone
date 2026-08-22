@@ -1,0 +1,69 @@
+; Technical backup of the Aruba/Technorail authoritative data.
+; Captured: 2026-08-22 16:19-16:22 America/Sao_Paulo
+; Queries were sent directly to the legacy authoritative servers.
+; AXFR was attempted against all four servers and was refused/failed.
+; dns.technorail.com, dns3.arubadns.net and dns4.arubadns.cz agreed.
+; dns2.technorail.com returned REFUSED over IPv4 and timed out over IPv6.
+;
+; Important: this is the residual post-delegation Aruba zone. Its apex NS
+; already points at RBX. The three names listed at the bottom returned
+; NXDOMAIN and are therefore not represented as live records in this backup.
+
+$ORIGIN kulinaryos.com.
+$TTL 3600
+
+@ IN SOA dns.technorail.com. hostmaster.kulinaryos.com. (
+  2026082203 ; serial
+  10800      ; refresh
+  3600       ; retry
+  604800     ; expire
+  3600       ; minimum
+)
+
+@ IN NS ns1.rbxsystems.ch.
+@ IN NS ns2.rbxsystems.ch.
+
+@         IN A     62.149.128.40
+@         IN MX    10 mx.kulinaryos.com.
+@         IN TXT   "v=spf1 include:_spf.aruba.it ~all"
+localhost IN A     127.0.0.1
+
+mx IN A 62.149.128.163
+mx IN A 62.149.128.160
+mx IN A 62.149.128.151
+mx IN A 62.149.128.157
+mx IN A 62.149.128.166
+mx IN A 62.149.128.154
+mx IN A 62.149.128.74
+
+pop3 IN A 62.149.128.152
+pop3 IN A 62.149.128.164
+pop3 IN A 62.149.128.167
+pop3 IN A 62.149.128.161
+pop3 IN A 62.149.128.155
+pop3 IN A 62.149.128.73
+pop3 IN A 62.149.128.158
+pop3 IN A 62.149.128.75
+
+smtp IN A 62.149.128.203
+smtp IN A 62.149.128.201
+smtp IN A 62.149.128.200
+smtp IN A 62.149.128.202
+
+webmail IN A 62.149.158.92
+webmail IN A 62.149.158.91
+
+_domainconnect      IN CNAME _domainconnect.hst.aruba.it.
+ftp                 IN CNAME www.kulinaryos.com.
+imap                IN CNAME imaps.aruba.it.
+www                 IN CNAME kulinaryos.com.
+_autodiscover._tcp  IN SRV   0 0 443 autodiscover.aruba.it.
+_xmpp-client._tcp   IN SRV   5 0 5222 imchat1.aruba.it.
+_xmpp-server._tcp   IN SRV   5 0 5269 imchat1.aruba.it.
+_dmarc              IN TXT   "v=DMARC1; p=none; adkim=r; aspf=r;"
+a1._domainkey       IN TXT   "v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoOhAWzBuKQYXU6E3E9efq+DPvtkkvWPg3EtB+BT2cTrMGh6Xy00mXfPi/EzubRpbhHpv3b3k1d65Vyhmpp5O3HzTQyzIqYMMF5iF5y05D5aEux3pj/i1g5LkAOFE0Xdf+wnI8zppP2jP7IV4bwKPr1OnBqOjs8hfBWSEGaCSFD/aVbOdNldHiwS" "alzDL38E+IcT0KQB+BdutC2T9B5idcSPaBY57sC4hq31wpBlgNcYpIMDxOQN+E9E+TbgnlJYCOYsD5S0amYFivcJObjSGpdstMBfaM1ox5iEQVpEhLz5cwgohjrMst2us7G9eHZ6p2jR7X+/yTP8ryAAywzMJ5wIDAQAB"
+
+; Confirmed NXDOMAIN on the reachable legacy authoritative servers:
+; posta.kulinaryos.com.              A
+; amministratore.kulinaryos.com.     CNAME
+; autoconfigurazione.kulinaryos.com. CNAME
