@@ -8,6 +8,7 @@ pdns_zones:
   - rbx.ia.br
   - strategos.gr
   - merovelis.com
+  - kulinaryos.com
 
 # SOA defaults (phase 1)
 pdns_soa_refresh: 3600      # 1h
