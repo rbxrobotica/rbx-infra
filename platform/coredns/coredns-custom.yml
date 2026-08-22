@@ -9,6 +9,12 @@ metadata:
     app.kubernetes.io/component: dns
     app.kubernetes.io/part-of: rbx-infra
 data:
+  kulinaryos-com.server: |
+    kulinaryos.com:53 {
+        errors
+        cache 30
+        forward . 149.102.139.33 167.86.92.97
+    }
   rbxsystems-ch.server: |
     rbxsystems.ch:53 {
         errors
