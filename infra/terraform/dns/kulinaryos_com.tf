@@ -26,11 +26,12 @@ resource "powerdns_record" "kulinaryos_com_ns" {
 # --- Web and host addresses ---
 
 resource "powerdns_record" "kulinaryos_com_a" {
-  zone    = powerdns_zone.kulinaryos_com.name
-  name    = "kulinaryos.com."
-  type    = "A"
-  ttl     = 3600
-  records = ["62.149.128.40"]
+  zone = powerdns_zone.kulinaryos_com.name
+  name = "kulinaryos.com."
+  type = "A"
+  # RBX Traefik edge for the legacy WordPress origin at 78.47.113.97.
+  ttl     = 300
+  records = ["158.220.116.31"]
 }
 
 resource "powerdns_record" "localhost_kulinaryos_com_a" {

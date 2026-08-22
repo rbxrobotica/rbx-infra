@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-origin
+  namespace: kulinaryos-v1
+  labels:
+    app.kubernetes.io/name: wordpress-origin
+    app.kubernetes.io/component: external-origin
+    app.kubernetes.io/part-of: kulinaryos
+spec:
+  ports:
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 443
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: wordpress-origin
+  namespace: kulinaryos-v1
+  labels:
+    kubernetes.io/service-name: wordpress-origin
+    app.kubernetes.io/name: wordpress-origin
+    app.kubernetes.io/component: external-origin
+    app.kubernetes.io/part-of: kulinaryos
+addressType: IPv4
+endpoints:
+  - addresses:
+      - 78.47.113.97
+    conditions:
+      ready: true
+ports:
+  - name: https
+    port: 443
+    protocol: TCP
+---
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: wordpress-origin
+  namespace: kulinaryos-v1
+spec:
+  # The legacy Plesk origin presents its self-signed panel certificate for this
+  # vhost. Public TLS is terminated with Let's Encrypt at the RBX ingress.
+  insecureSkipVerify: true
+  serverName: kulinaryos.com

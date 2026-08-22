@@ -1,0 +1,28 @@
+# Legacy Kulinaryos WordPress edge proxy. The public DNS remains authoritative
+# on RBX while Traefik terminates trusted TLS and forwards to the Plesk origin.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kulinaryos-v1-proxy
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: kulinaryos-v1-proxy
+    app.kubernetes.io/component: edge-proxy
+    app.kubernetes.io/part-of: kulinaryos
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/kulinaryos-v1-proxy
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kulinaryos-v1
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

@@ -10,6 +10,27 @@
 - Migration date: 2026-08-22
 - Mail dependency: MX, SMTP, POP3, IMAP, webmail, SPF, DKIM and DMARC remain on Aruba
 
+## Post-incident correction
+
+The active public authority immediately before this migration was Cloudflare,
+not the residual Aruba/Technorail zone. Restored project evidence identified
+the former delegation as `daniella.ns.cloudflare.com` and
+`ian.ns.cloudflare.com`. Both servers still held an authoritative zone during
+incident recovery, including Cloudflare-proxied WordPress and direct records
+for the legacy Vue/Laravel applications.
+
+The Aruba panel capture was therefore not a complete backup of the active
+public zone. In particular, apex `A 62.149.128.40` is an Aruba parking endpoint,
+not the legacy website origin. The WordPress origin was subsequently identified
+as the Plesk virtual host on `78.47.113.97`; the public application origin for
+`app` and `erp` was `116.203.21.141`.
+
+RBX authority is retained. The apex now targets an RBX Traefik proxy at
+`158.220.116.31`, which terminates Let's Encrypt TLS and forwards the original
+host to `78.47.113.97:443`. See
+`apps/prod/kulinaryos-v1-proxy/README.md` for the live traffic path and
+validation procedure.
+
 This migration changes DNS authority only. It does not change the registrar,
 application hosting, mailboxes or mail provider.
 
@@ -126,12 +147,17 @@ introduced in this equivalence migration.
 
 ## Rollback
 
-Because the parent was already delegated to RBX before implementation, the
-registrar rollback is manual: restore all four legacy nameservers
-`dns.technorail.com`, `dns2.technorail.com`, `dns3.arubadns.net` and
-`dns4.arubadns.cz`. Do not delete either provider's zone during rollback. The
-legacy backup above is sufficient to audit the Aruba data, but Aruba must remain
-enabled because mail is still hosted there.
+Do not use `62.149.128.40` as a website rollback target; it serves Aruba's
+parking page. The actual pre-cutover public authority was Cloudflare at
+`daniella.ns.cloudflare.com` and `ian.ns.cloudflare.com`. Re-delegating the
+parent to those servers is an emergency authority rollback only if the
+Cloudflare account and zone ownership have first been verified.
+
+For a proxy-only rollback while retaining RBX authority, restore the previous
+apex RRset from the last known-good OpenTofu state and remove the
+`kulinaryos-v1-proxy` resources only after confirming another valid website
+path. Never remove the live proxy while the apex still resolves to the RBX
+Traefik edge.
 
 To roll back an unmerged RBX implementation only, revert the feature commit and
 apply the canonical OpenTofu/Ansible workflow. Do not remove the live RBX zone
