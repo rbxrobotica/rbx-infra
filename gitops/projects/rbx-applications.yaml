@@ -68,6 +68,9 @@ spec:
     # KulinaryOS v2 application frontend.
     - namespace: kulinaryos
       server: https://kubernetes.default.svc
+    # Kulinaryos v1 legacy WordPress edge proxy.
+    - namespace: kulinaryos-v1
+      server: https://kubernetes.default.svc
     - namespace: rbx-memory
       server: https://kubernetes.default.svc
     - namespace: rbx-observability
