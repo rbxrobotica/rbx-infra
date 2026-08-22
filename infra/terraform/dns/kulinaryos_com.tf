@@ -34,6 +34,22 @@ resource "powerdns_record" "kulinaryos_com_a" {
   records = ["158.220.116.31"]
 }
 
+resource "powerdns_record" "app_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "app.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = ["116.203.21.141"]
+}
+
+resource "powerdns_record" "erp_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "erp.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = ["116.203.21.141"]
+}
+
 resource "powerdns_record" "localhost_kulinaryos_com_a" {
   zone    = powerdns_zone.kulinaryos_com.name
   name    = "localhost.kulinaryos.com."

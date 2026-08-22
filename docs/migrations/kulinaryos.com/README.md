@@ -31,6 +31,12 @@ host to `78.47.113.97:443`. See
 `apps/prod/kulinaryos-v1-proxy/README.md` for the live traffic path and
 validation procedure.
 
+The direct application records were restored from the former Cloudflare zone:
+`app.kulinaryos.com` and `erp.kulinaryos.com` both resolve to the legacy
+Hetzner VPS at `116.203.21.141`. The Vue/Quasar frontend, Laravel login and the
+frontend's existing `food-process.press-start.tech` API dependency were all
+validated after restoration.
+
 This migration changes DNS authority only. It does not change the registrar,
 application hosting, mailboxes or mail provider.
 
@@ -70,7 +76,9 @@ secondary's `/etc/powerdns/named.conf`.
 The RBX SOA defaults are used: `ns1.rbxsystems.ch`,
 `hostmaster.rbxsystems.ch`, refresh 3600, retry 900, expire 604800 and negative
 TTL 300. `SOA-EDIT-API=DEFAULT` supplies monotonically increasing date-based
-serials. Record TTLs remain 3600 except the canonical RBX NS RRset TTL of 86400.
+serials. Legacy Aruba-derived records retain TTL 3600 and the canonical RBX NS
+RRset uses TTL 86400. The recovered apex, `app` and `erp` address records use
+TTL 300 during incident stabilization.
 
 Discovery found PowerDNS Authoritative `4.8.3` running on both servers even
 though the Ansible variable declares `4.9`. Public recursion is disabled, the
@@ -109,6 +117,8 @@ For each server in `ns1.rbxsystems.ch ns2.rbxsystems.ch`, query:
 
 ```bash
 dig @SERVER kulinaryos.com A
+dig @SERVER app.kulinaryos.com A
+dig @SERVER erp.kulinaryos.com A
 dig @SERVER kulinaryos.com NS
 dig @SERVER kulinaryos.com SOA
 dig @SERVER kulinaryos.com MX
