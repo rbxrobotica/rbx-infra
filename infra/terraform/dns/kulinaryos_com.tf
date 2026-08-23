@@ -34,6 +34,22 @@ resource "powerdns_record" "kulinaryos_com_a" {
   records = ["158.220.116.31"]
 }
 
+resource "powerdns_record" "app_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "app.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = ["116.203.21.141"]
+}
+
+resource "powerdns_record" "erp_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "erp.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = ["116.203.21.141"]
+}
+
 resource "powerdns_record" "localhost_kulinaryos_com_a" {
   zone    = powerdns_zone.kulinaryos_com.name
   name    = "localhost.kulinaryos.com."
@@ -160,6 +176,32 @@ resource "powerdns_record" "www_kulinaryos_com_cname" {
   type    = "CNAME"
   ttl     = 3600
   records = ["kulinaryos.com."]
+}
+
+resource "powerdns_record" "ops_kulinaryos_com_cname" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "ops.kulinaryos.com."
+  type    = "CNAME"
+  ttl     = 300
+  records = ["custom-domains.chatgpt.site."]
+}
+
+# --- Kulinaryos Operations custom-domain validation ---
+
+resource "powerdns_record" "openai_site_verification_ops_kulinaryos_com_txt" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "_openai-site-verification.ops.kulinaryos.com."
+  type    = "TXT"
+  ttl     = 300
+  records = ["\"openai-site-verification=W6QKnLbdQZAe5qBbpjwN0MYtaaqeqCbfqyOMLsVWiRs\""]
+}
+
+resource "powerdns_record" "cf_custom_hostname_ops_kulinaryos_com_txt" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "_cf-custom-hostname.ops.kulinaryos.com."
+  type    = "TXT"
+  ttl     = 300
+  records = ["\"25d13f10-68f8-4346-902f-d700f8a48502\""]
 }
 
 # --- Service discovery ---
