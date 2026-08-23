@@ -45,6 +45,7 @@ build/
 **/.terraform/
 *.tfstate
 *.tfstate.*
+*.tfplan
 *.tfvars
 !*.tfvars.example
 # .terraform.lock.hcl is intentionally committed (pins provider versions)

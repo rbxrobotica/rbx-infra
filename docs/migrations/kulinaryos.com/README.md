@@ -37,6 +37,11 @@ Hetzner VPS at `116.203.21.141`. The Vue/Quasar frontend, Laravel login and the
 frontend's existing `food-process.press-start.tech` API dependency were all
 validated after restoration.
 
+`ops.kulinaryos.com` hosts the public operational changelog. It is published
+through OpenAI Sites and uses the provider-issued CNAME plus two TXT ownership
+validation records. These records are independent from the legacy website,
+application, ERP and Aruba mail paths.
+
 This migration changes DNS authority only. It does not change the registrar,
 application hosting, mailboxes or mail provider.
 
@@ -119,6 +124,9 @@ For each server in `ns1.rbxsystems.ch ns2.rbxsystems.ch`, query:
 dig @SERVER kulinaryos.com A
 dig @SERVER app.kulinaryos.com A
 dig @SERVER erp.kulinaryos.com A
+dig @SERVER ops.kulinaryos.com CNAME
+dig @SERVER _openai-site-verification.ops.kulinaryos.com TXT
+dig @SERVER _cf-custom-hostname.ops.kulinaryos.com TXT
 dig @SERVER kulinaryos.com NS
 dig @SERVER kulinaryos.com SOA
 dig @SERVER kulinaryos.com MX
