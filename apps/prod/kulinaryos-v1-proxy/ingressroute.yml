@@ -2,7 +2,7 @@ apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: kulinaryos-v1-http
-  namespace: kulinaryos-v1
+  namespace: kulinaryos
 spec:
   entryPoints:
     - web
@@ -10,31 +10,35 @@ spec:
     - match: Host(`kulinaryos.com`) || Host(`www.kulinaryos.com`)
       kind: Rule
       middlewares:
-        - name: redirect-https
+        - name: institutional-redirect-https
       services:
-        - name: wordpress-origin
-          port: 443
-          scheme: https
-          serversTransport: wordpress-origin
+        - name: kulinaryos-institutional
+          port: 80
 ---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
   name: kulinaryos-v1-https
-  namespace: kulinaryos-v1
+  namespace: kulinaryos
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`kulinaryos.com`) || Host(`www.kulinaryos.com`)
+    - match: Host(`www.kulinaryos.com`)
+      kind: Rule
+      priority: 20
+      middlewares:
+        - name: institutional-www-to-apex
+      services:
+        - name: kulinaryos-institutional
+          port: 80
+    - match: Host(`kulinaryos.com`)
       kind: Rule
       middlewares:
-        - name: compress
+        - name: institutional-compress
       services:
-        - name: wordpress-origin
-          port: 443
-          scheme: https
-          serversTransport: wordpress-origin
+        - name: kulinaryos-institutional
+          port: 80
           passHostHeader: true
   tls:
     secretName: kulinaryos-com-tls
