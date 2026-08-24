@@ -1,0 +1,126 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wordpress-relay
+  namespace: kulinaryos-v1
+data:
+  haproxy.cfg: |
+    global
+      log stdout format raw local0
+      nbthread 1
+
+    defaults
+      mode tcp
+      log global
+      option tcplog
+      timeout connect 5s
+      timeout client 60s
+      timeout server 60s
+
+    frontend wordpress_tls
+      bind :8443
+      default_backend wordpress_origin
+
+    backend wordpress_origin
+      server wordpress 78.47.113.97:443 check inter 5s fall 2 rise 2
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordpress-relay
+  namespace: kulinaryos-v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: wordpress-relay
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: wordpress-relay
+        app.kubernetes.io/component: emergency-origin-relay
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: altaica
+      containers:
+        - name: haproxy
+          image: haproxy:3.0-alpine@sha256:7c8dac975b9def049d6585b7efe865486acaa7b6ec5e74eec45f08fde8bb2ad4
+          imagePullPolicy: IfNotPresent
+          args:
+            - -f
+            - /usr/local/etc/haproxy/haproxy.cfg
+          ports:
+            - name: tls-relay
+              containerPort: 8443
+              protocol: TCP
+          readinessProbe:
+            tcpSocket:
+              port: tls-relay
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: tls-relay
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 99
+            runAsGroup: 99
+          volumeMounts:
+            - name: config
+              mountPath: /usr/local/etc/haproxy
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: wordpress-relay
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordpress-relay
+  namespace: kulinaryos-v1
+spec:
+  selector:
+    app.kubernetes.io/name: wordpress-relay
+  ports:
+    - name: https
+      port: 443
+      targetPort: tls-relay
+      protocol: TCP
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: kulinaryos-v1-relay-hotfix
+  namespace: kulinaryos-v1
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`kulinaryos.com`) || Host(`www.kulinaryos.com`)
+      kind: Rule
+      priority: 1000
+      middlewares:
+        - name: compress
+      services:
+        - name: wordpress-relay
+          port: 443
+          scheme: https
+          serversTransport: wordpress-origin
+          passHostHeader: true
+  tls:
+    secretName: kulinaryos-com-tls
