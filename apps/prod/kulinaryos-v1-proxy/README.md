@@ -9,7 +9,7 @@ WordPress site.
 ```text
 kulinaryos.com / www.kulinaryos.com
   -> 158.220.116.31 (RBX Traefik)
-  -> wordpress-relay on altaica (173.212.246.8)
+  -> wordpress-relay on jaguar (161.97.147.76)
   -> 78.47.113.97:443 (legacy Plesk WordPress origin)
 ```
 
@@ -25,7 +25,9 @@ to infrastructure owned by Kulinaryos.
 The additional relay is an incident hotfix. The legacy origin began refusing
 TCP/80 and TCP/443 specifically from the RBX ingress address
 `158.220.116.31`, while remaining reachable from the other RBX nodes. HAProxy
-runs on the `altaica` node so the origin sees `173.212.246.8` instead. Remove
+runs on the `jaguar` node so the origin sees `161.97.147.76` instead. The relay
+uses only local Kubernetes health probes and reuses upstream connections to
+avoid triggering the origin's source-sensitive connection controls. Remove
 the relay after the origin firewall allows the ingress address or after the
 WordPress site is migrated to owned infrastructure.
 
