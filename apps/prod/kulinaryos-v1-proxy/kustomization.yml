@@ -6,6 +6,8 @@ resources:
   - middleware.yml
   - certificate.yml
   - origin.yml
+  - relay.yml
+  - relay-route.yml
   - ingressroute.yml
 labels:
   - pairs:
