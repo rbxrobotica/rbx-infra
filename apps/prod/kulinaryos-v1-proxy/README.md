@@ -1,35 +1,27 @@
-# Kulinaryos v1 WordPress proxy
+# Kulinaryos institutional site recovery
 
-This overlay keeps `kulinaryos.com` authoritative on the RBX PowerDNS servers
-while Traefik terminates public TLS and proxies the legacy institutional
-WordPress site.
+This overlay keeps `kulinaryos.com` authoritative on the RBX PowerDNS servers,
+terminates public TLS at Traefik, and serves the institutional site from the
+RBX cluster. It no longer depends on the legacy Plesk WordPress origin.
 
 ## Traffic path
 
 ```text
 kulinaryos.com / www.kulinaryos.com
   -> 158.220.116.31 (RBX Traefik)
-  -> wordpress-relay on jaguar (161.97.147.76)
-  -> 78.47.113.97:443 (legacy Plesk WordPress origin)
+  -> kulinaryos-institutional (namespace: kulinaryos)
+  -> immutable GHCR image built from rbxrobotica/kulinaryos
 ```
 
-The origin selects the WordPress virtual host from the original `Host` header.
-It currently presents the self-signed Plesk panel certificate, so the scoped
-`ServersTransport` skips origin certificate verification. Client-facing TLS is
-issued by `letsencrypt-prod` and stored in `kulinaryos-com-tls`.
+Client-facing TLS is issued by `letsencrypt-prod` and stored in
+`kulinaryos-com-tls`. `www` permanently redirects to the apex. The deployment
+shares the existing `kulinaryos` namespace so it can reuse the managed
+`ghcr-pull-secret`; `erp.kulinaryos.com` is outside this overlay and remains
+unchanged.
 
-This is a recovery bridge. Replace `insecureSkipVerify` when a publicly trusted
-origin certificate is installed, or remove the proxy after WordPress is moved
-to infrastructure owned by Kulinaryos.
-
-The additional relay is an incident hotfix. The legacy origin began refusing
-TCP/80 and TCP/443 specifically from the RBX ingress address
-`158.220.116.31`, while remaining reachable from the other RBX nodes. HAProxy
-runs on the `jaguar` node so the origin sees `161.97.147.76` instead. The relay
-uses only local Kubernetes health probes and reuses upstream connections to
-avoid triggering the origin's source-sensitive connection controls. Remove
-the relay after the origin firewall allows the ingress address or after the
-WordPress site is migrated to owned infrastructure.
+The image build first attempts a bounded static capture of the legacy origin
+from GitHub Actions. If the origin is blocked or unhealthy, it uses the
+versioned institutional fallback from `apps/institutional/site`.
 
 ## Validation
 
