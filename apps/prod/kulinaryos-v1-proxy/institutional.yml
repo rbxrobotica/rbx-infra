@@ -33,7 +33,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: web
-          image: ghcr.io/rbxrobotica/kulinaryos-institutional:sha-7b0a2321e1036f72119cdbff0e9f5610f3561227
+          image: ghcr.io/rbxrobotica/kulinaryos-institutional:sha-d06b3cd26ded833545610a2bbfd3227d31a50178
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
