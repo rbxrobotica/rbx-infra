@@ -11,6 +11,7 @@ kulinaryos.com / www.kulinaryos.com
   -> 158.220.116.31 (RBX Traefik)
   -> kulinaryos-institutional (namespace: kulinaryos)
   -> immutable GHCR image built from rbxrobotica/kulinaryos
+  -> private RBX S3 content with a resilient bundled fallback
 ```
 
 Client-facing TLS is issued by `letsencrypt-prod` and stored in
@@ -19,9 +20,11 @@ shares the existing `kulinaryos` namespace so it can reuse the managed
 `ghcr-pull-secret`; `erp.kulinaryos.com` is outside this overlay and remains
 unchanged.
 
-The image build first attempts a bounded static capture of the legacy origin
-from GitHub Actions. If the origin is blocked or unhealthy, it uses the
-versioned institutional fallback from `apps/institutional/site`.
+The SvelteKit workload reads reviewed localized JSON from
+`rbx-content/kulinaryos/institutional/`, caches it per replica for 60 seconds,
+and retains a versioned bundled fallback. It has no runtime dependency on the
+legacy WordPress origin. The S3 credentials are mirrored from `rbx-ia-br` by
+External Secrets and are never stored in Git.
 
 ## Validation
 
