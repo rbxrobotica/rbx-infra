@@ -39,6 +39,25 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+          env:
+            - name: CONTABO_S3_ENDPOINT
+              value: https://eu2.contabostorage.com
+            - name: CONTABO_S3_CONTENT_BUCKET
+              value: rbx-content
+            - name: KULINARYOS_CONTENT_PREFIX
+              value: kulinaryos/institutional
+            - name: CONTENT_CACHE_TTL_SECONDS
+              value: "60"
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_SECRET_ACCESS_KEY
           readinessProbe:
             httpGet:
               path: /healthz
@@ -57,11 +76,11 @@ spec:
             failureThreshold: 3
           resources:
             requests:
-              cpu: 10m
-              memory: 24Mi
+              cpu: 30m
+              memory: 64Mi
             limits:
-              cpu: 150m
-              memory: 96Mi
+              cpu: 300m
+              memory: 256Mi
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:

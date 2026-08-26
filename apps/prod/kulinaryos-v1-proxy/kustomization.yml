@@ -4,6 +4,8 @@ namespace: kulinaryos
 resources:
   - middleware.yml
   - certificate.yml
+  - secretstore.yml
+  - externalsecret-s3.yml
   - institutional.yml
   - ingressroute.yml
 labels:
