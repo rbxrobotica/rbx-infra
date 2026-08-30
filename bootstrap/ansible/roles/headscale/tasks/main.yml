@@ -1,0 +1,76 @@
+---
+# Headscale control server on eagle (ADR-0011). Additive: this role opens
+# 443/tcp and 3478/udp and starts headscale. It closes nothing.
+
+- name: Download headscale deb (pinned version, checksum-verified)
+  get_url:
+    url: "{{ headscale_deb_url }}"
+    dest: "/root/headscale_{{ headscale_version }}_linux_amd64.deb"
+    checksum: "sha256:{{ headscale_deb_sha256 }}"
+    mode: "0640"
+
+- name: Install headscale deb
+  apt:
+    deb: "/root/headscale_{{ headscale_version }}_linux_amd64.deb"
+
+- name: Hold headscale package (upgrades are deliberate PRs)
+  dpkg_selections:
+    name: headscale
+    selection: hold
+
+- name: Ensure state directory exists with headscale ownership
+  file:
+    path: "{{ headscale_state_dir }}"
+    state: directory
+    owner: headscale
+    group: headscale
+    mode: "0770"
+
+- name: Write headscale config
+  template:
+    src: config.yaml.j2
+    dest: /etc/headscale/config.yaml
+    owner: headscale
+    group: headscale
+    mode: "0640"
+  register: headscale_config
+
+- name: Validate headscale config before (re)starting anything
+  command: headscale configtest
+  changed_when: false
+
+- name: Allow headscale control plane on UFW (443/tcp)
+  ufw:
+    rule: allow
+    port: "{{ headscale_listen_port }}"
+    proto: tcp
+    comment: "headscale control + TLS-ALPN + DERP (ADR-0011)"
+
+- name: Allow embedded DERP STUN on UFW (3478/udp)
+  ufw:
+    rule: allow
+    port: "{{ headscale_stun_port }}"
+    proto: udp
+    comment: "headscale embedded DERP STUN (ADR-0011)"
+
+- name: Enable and start headscale
+  systemd:
+    name: headscale
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Restart headscale on config change
+  systemd:
+    name: headscale
+    state: restarted
+  when: headscale_config.changed
+
+- name: Verify headscale answers on its health endpoint
+  uri:
+    url: "https://{{ headscale_domain }}/health"
+    status_code: 200
+  register: headscale_health
+  retries: 12
+  delay: 10
+  until: headscale_health.status == 200

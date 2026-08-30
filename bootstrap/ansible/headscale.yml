@@ -1,0 +1,39 @@
+---
+# Sovereign mesh rollout (ADR-0011). Two plays, both additive: nothing is
+# closed by this playbook, ever. Firewall tightening is a later phase with
+# its own PRs (see docs/runbooks/HEADSCALE-MESH.md).
+#
+# Server:
+#   ansible-playbook headscale.yml -i inventory/hosts.yml --limit eagle
+#
+# Nodes, ONE at a time, lowest-risk first (bengal, corbetti, then DNS,
+# k3s servers, jaguar, lince). serial: 1 is belt; --limit is suspenders:
+#   ansible-playbook headscale.yml -i inventory/hosts.yml \
+#     --limit bengal \
+#     --extra-vars "tailscale_authkey=$(ssh eagle 'headscale preauthkeys create --user 1 --expiration 15m --output json' | jq -r .key)"
+# (--user takes the NUMERIC id in headscale 0.29; 'rbx' created first is 1.
+# Confirm with: ssh eagle 'headscale users list --output json')
+#
+# Without tailscale_authkey the node play only installs and holds the
+# client; no host joins the mesh implicitly.
+#
+# Recovery if a node misbehaves after joining: `tailscale down` from an
+# open session (public SSH stays untouched by this playbook), or the
+# Contabo VNC console. The mesh is an extra interface; removing it
+# restores the exact prior state.
+#
+# This file must stay NEXT TO site.yml (group_vars adjacency, see the
+# note in harden-ssh.yml).
+
+- name: Deploy headscale control server
+  hosts: eagle
+  become: true
+  roles:
+    - headscale
+
+- name: Enroll mesh nodes
+  hosts: tailscale_nodes
+  become: true
+  serial: 1
+  roles:
+    - tailscale-node

@@ -1,0 +1,73 @@
+# Headscale {{ headscale_version }} configuration (ADR-0011).
+# Managed by Ansible role 'headscale'. Do not edit on the host.
+# Sovereignty invariants: embedded DERP only (derp.urls stays empty),
+# MagicDNS off, control URL is a DNS name.
+
+server_url: https://{{ headscale_domain }}
+# Dual-stack bind: the zone publishes A and AAAA for {{ headscale_domain }}.
+listen_addr: ":{{ headscale_listen_port }}"
+metrics_listen_addr: 127.0.0.1:9090
+grpc_listen_addr: 127.0.0.1:50443
+grpc_allow_insecure: false
+
+noise:
+  private_key_path: {{ headscale_state_dir }}/noise_private.key
+
+prefixes:
+  v4: 100.64.0.0/10
+  v6: fd7a:115c:a1e0::/48
+  allocation: sequential
+
+derp:
+  server:
+    enabled: true
+    region_id: {{ headscale_derp_region_id }}
+    region_code: "{{ headscale_derp_region_code }}"
+    region_name: "{{ headscale_derp_region_name }}"
+    stun_listen_addr: ":{{ headscale_stun_port }}"
+    private_key_path: {{ headscale_state_dir }}/derp_server_private.key
+    automatically_add_embedded_derp_region: true
+    ipv4: {{ headscale_derp_ipv4 }}
+{% if headscale_derp_ipv6 %}
+    ipv6: {{ headscale_derp_ipv6 }}
+{% endif %}
+  # Sovereignty: never load the public Tailscale DERP map.
+  urls: []
+  paths: []
+  auto_update_enabled: false
+  update_frequency: 24h
+
+disable_check_updates: true
+
+node:
+  ephemeral:
+    inactivity_timeout: 30m
+
+database:
+  type: sqlite
+  sqlite:
+    path: {{ headscale_state_dir }}/db.sqlite
+    write_ahead_log: true
+
+tls_letsencrypt_hostname: {{ headscale_domain }}
+tls_letsencrypt_cache_dir: {{ headscale_state_dir }}/cache
+tls_letsencrypt_challenge_type: TLS-ALPN-01
+
+log:
+  format: text
+  level: info
+
+dns:
+  # MagicDNS stays off fleet-wide (ADR-0011 condition 5): the mesh never
+  # touches resolv.conf, and pantera/eagle ARE the DNS servers.
+  magic_dns: false
+  base_domain: mesh.rbx.internal
+  nameservers:
+    global: []
+  search_domains: []
+
+unix_socket: /var/run/headscale/headscale.sock
+unix_socket_permission: "0770"
+
+logtail:
+  enabled: false

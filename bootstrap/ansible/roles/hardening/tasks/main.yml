@@ -67,6 +67,33 @@
     direction: routed
   when: inventory_hostname in (groups.get('k3s_server', []) + groups.get('k3s_agents', []))
 
+# Mesh rules (ADR-0011) must survive the ufw reset above: the headscale
+# role's own allows exist only in headscale.yml, so a routine site.yml
+# converge would otherwise firewall out the mesh control plane.
+- name: Allow headscale control plane on the headscale host (ADR-0011)
+  ufw:
+    rule: allow
+    port: "443"
+    proto: tcp
+    comment: "headscale control + TLS-ALPN + DERP (ADR-0011)"
+  when: headscale_on_host | default(false)
+
+- name: Allow headscale embedded DERP STUN on the headscale host (ADR-0011)
+  ufw:
+    rule: allow
+    port: "3478"
+    proto: udp
+    comment: "headscale embedded DERP STUN (ADR-0011)"
+  when: headscale_on_host | default(false)
+
+- name: Allow tailscale wireguard on enrolled mesh nodes (ADR-0011)
+  ufw:
+    rule: allow
+    port: "41641"
+    proto: udp
+    comment: "tailscale wireguard (ADR-0011)"
+  when: inventory_hostname in (groups.get('tailscale_nodes', []))
+
 - name: Enable ufw
   ufw:
     state: enabled

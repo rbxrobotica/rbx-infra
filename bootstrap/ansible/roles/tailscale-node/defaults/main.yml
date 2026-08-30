@@ -1,0 +1,15 @@
+---
+# Tailscale client enrolled against the RBX headscale (ADR-0011).
+# Version pinned and held; upgrades are deliberate PRs.
+tailscale_version: "1.102.3"
+tailscale_login_server: "https://headscale.rbxsystems.ch"
+
+# Apt repo release. Override per host if pkgs.tailscale.com does not yet
+# publish the host's release (e.g. bengal on a brand-new Ubuntu).
+tailscale_apt_release: "{{ ansible_distribution_release }}"
+
+# Pre-auth key. NEVER set in the repository or inventory. Pass at runtime
+# (--user takes the NUMERIC id in headscale 0.29; the first user is 1):
+#   --extra-vars tailscale_authkey=$(ssh eagle 'headscale preauthkeys create --user 1 --expiration 15m --output json' | jq -r .key)
+# Empty means: install and hold only, do not join the mesh.
+tailscale_authkey: ""

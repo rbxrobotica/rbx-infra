@@ -4,3 +4,7 @@ pdns_backend: bind
 
 # Primary IP for AXFR/IXFR requests
 pdns_primary_ip: "149.102.139.33"
+
+# Eagle hosts the headscale mesh control plane (ADR-0011): dns-hardening
+# must not remove its 443/tcp UFW rule.
+headscale_on_host: true

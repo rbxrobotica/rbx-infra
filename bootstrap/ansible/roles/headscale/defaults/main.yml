@@ -1,0 +1,22 @@
+---
+# Headscale control server (ADR-0011). Versions are pinned; upgrades are
+# deliberate PRs that bump version AND checksum together.
+headscale_version: "0.29.3"
+headscale_deb_url: "https://github.com/juanfont/headscale/releases/download/v{{ headscale_version }}/headscale_{{ headscale_version }}_linux_amd64.deb"
+headscale_deb_sha256: "14eccf8d41fd93927ad3fe1fd9e49dbe14d5668a244c4205d940967c442aea0d"
+
+# Public control URL. A DNS name on purpose (ADR-0011 condition 2):
+# relocating the control plane is a DNS change, not a re-enrollment.
+headscale_domain: "headscale.rbxsystems.ch"
+
+headscale_listen_port: 443
+headscale_stun_port: 3478
+headscale_state_dir: /var/lib/headscale
+
+# Embedded DERP region (ADR-0011 condition 1). The public Tailscale DERP
+# map is never used.
+headscale_derp_region_id: 999
+headscale_derp_region_code: "rbx"
+headscale_derp_region_name: "RBX embedded DERP (eagle)"
+headscale_derp_ipv4: "{{ ansible_host }}"
+headscale_derp_ipv6: "{{ ansible_host_ipv6 | default('') }}"
