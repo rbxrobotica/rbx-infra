@@ -1,0 +1,36 @@
+# Managed by Ansible (rbx-infra: roles/pgbackrest, ADR-0012).
+# Do not edit on the host. Contains the repo cipher passphrase: mode 0600.
+
+[global]
+repo1-path={{ pgbackrest_repo1_path }}
+repo1-retention-full={{ pgbackrest_repo1_retention_full }}
+repo1-cipher-type=aes-256-cbc
+repo1-cipher-pass={{ pgbackrest_cipher_pass_result.stdout | trim }}
+{% if pgbackrest_offsite_enabled %}
+repo2-type=sftp
+repo2-path={{ pgbackrest_offsite_repo_path }}
+repo2-sftp-host={{ pgbackrest_offsite_host }}
+repo2-sftp-host-user={{ pgbackrest_offsite_host_user }}
+repo2-sftp-host-key-check-type=fingerprint
+repo2-sftp-host-key-hash-type=sha256
+repo2-sftp-host-fingerprint={{ pgbackrest_offsite_host_fingerprint }}
+repo2-sftp-private-key-file=/var/lib/postgresql/.ssh/id_ed25519_pgbackrest
+repo2-sftp-public-key-file=/var/lib/postgresql/.ssh/id_ed25519_pgbackrest.pub
+repo2-retention-full={{ pgbackrest_offsite_retention_full }}
+repo2-cipher-type=aes-256-cbc
+repo2-cipher-pass={{ pgbackrest_cipher_pass_result.stdout | trim }}
+# Async archiving with a local spool: an unreachable off-site repo must
+# never stall WAL archiving to the local repo (pgBackRest multi-repo
+# archive-push is otherwise limited to one segment of skew).
+archive-async=y
+spool-path={{ pgbackrest_spool_path }}
+{% endif %}
+process-max=2
+compress-type=zst
+start-fast=y
+log-level-console=info
+log-level-file=detail
+
+[{{ pgbackrest_stanza }}]
+pg1-path={{ pgbackrest_pg_path }}
+pg1-port={{ pgbackrest_pg_port }}
