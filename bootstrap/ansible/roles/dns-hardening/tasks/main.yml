@@ -11,12 +11,15 @@
     delete: yes
   ignore_errors: yes
 
-- name: Remove HTTPS rule (not needed on DNS servers)
+# 443 stays open on the headscale host (ADR-0011): eagle serves the mesh
+# control plane + TLS-ALPN + DERP relay on 443/tcp.
+- name: Remove HTTPS rule (not needed on DNS servers, except the headscale host)
   ufw:
     rule: allow
     port: "443"
     proto: tcp
     delete: yes
+  when: not (headscale_on_host | default(false))
   ignore_errors: yes
 
 - name: Remove kubectl 6443 rule (not needed on DNS servers)

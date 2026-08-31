@@ -341,3 +341,23 @@ resource "powerdns_record" "plausible_rbxsystems_ch" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+# --- Headscale (sovereign mesh control plane on eagle, ADR-0011) ---
+# A DNS name on purpose: relocating the control plane off-provider later
+# is a record change here plus one SQLite copy, transparent to nodes.
+
+resource "powerdns_record" "headscale_a" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "headscale.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = ["167.86.92.97"]
+}
+
+resource "powerdns_record" "headscale_aaaa" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "headscale.rbxsystems.ch."
+  type    = "AAAA"
+  ttl     = 3600
+  records = ["2a02:c207:2252:7581::1"]
+}
