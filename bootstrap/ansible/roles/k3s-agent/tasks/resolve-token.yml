@@ -1,0 +1,58 @@
+---
+# Resolves k3s_join_token. Lives in its own file so the test can import THIS
+# code instead of a copy of it. The first version of the test duplicated these
+# expressions and diverged from them: it used \1 where the role used \\1, so it
+# passed while the role failed on its very first task. A test that restates the
+# logic proves the restatement, not the logic.
+#
+# Resolution runs in steps on purpose. A single expression of the form
+#   hostvars[init].k3s_token | default(slurp.content | b64decode, true)
+# looks like a safe fallback and is not: Jinja evaluates the fallback argument
+# even when the left side is defined, so the normal site.yml run, where the
+# server play sets the fact and the slurp is skipped, dies with
+# "'k3s_token_slurp' is undefined".
+#
+# Callers may set k3s_token_source_override to a base64 string to exercise the
+# slurp branch without a server. Nothing in production sets it.
+
+- name: Take the join token from the server play when it ran
+  ansible.builtin.set_fact:
+    k3s_join_token: "{{ hostvars[k3s_init_host]['k3s_token'] | default('', true) }}"
+  no_log: true
+
+# Delegation reaches the init host even when it is outside --limit, which is
+# what makes provisioning a single agent possible. Running the k3s-server role
+# instead is not an option: it rewrites config.yaml with `notify: restart k3s`
+# and would bounce a live control plane.
+- name: Read the join token from the cluster-init server
+  ansible.builtin.slurp:
+    src: /var/lib/rancher/k3s/server/node-token
+  delegate_to: "{{ k3s_init_host }}"
+  register: k3s_token_slurp
+  no_log: true
+  when:
+    - k3s_join_token | length == 0
+    - k3s_token_source_override is not defined
+
+- name: Use the injected token source when a caller provides one
+  ansible.builtin.set_fact:
+    k3s_token_slurp: {"content": "{{ k3s_token_source_override }}"}
+  no_log: true
+  when:
+    - k3s_join_token | length == 0
+    - k3s_token_source_override is defined
+
+- name: Decode the join token read from the server
+  ansible.builtin.set_fact:
+    k3s_join_token: "{{ k3s_token_slurp.content | b64decode | trim }}"
+  no_log: true
+  when: k3s_token_slurp.content is defined
+
+- name: Refuse to join without a token
+  ansible.builtin.assert:
+    that:
+      - k3s_join_token | length > 0
+    fail_msg: >-
+      No join token available for {{ inventory_hostname }}. Expected it as a
+      fact from the k3s_server play, or readable at
+      /var/lib/rancher/k3s/server/node-token on {{ k3s_init_host }}.
