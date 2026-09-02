@@ -58,6 +58,14 @@ resource "powerdns_record" "social_kulinaryos_com_a" {
   records = ["157.230.125.23"]
 }
 
+resource "powerdns_record" "api_test_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "api-test.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = ["157.230.125.23"]
+}
+
 resource "powerdns_record" "localhost_kulinaryos_com_a" {
   zone    = powerdns_zone.kulinaryos_com.name
   name    = "localhost.kulinaryos.com."
