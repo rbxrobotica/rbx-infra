@@ -29,9 +29,9 @@ resource "powerdns_record" "kulinaryos_com_a" {
   zone = powerdns_zone.kulinaryos_com.name
   name = "kulinaryos.com."
   type = "A"
-  # RBX Traefik edge for the legacy WordPress origin at 78.47.113.97.
+  # Food Process DigitalOcean Traefik edge for the restored WordPress site.
   ttl     = 300
-  records = ["158.220.116.31"]
+  records = ["157.230.125.23"]
 }
 
 resource "powerdns_record" "app_kulinaryos_com_a" {
