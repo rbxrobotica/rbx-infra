@@ -1,0 +1,28 @@
+# ArgoCD Application: RBX Atlas (founders' frontend discovery directory)
+# Host: atlas.rbx.ia.br. ADR-0028 topology amendment 2026-09-05, phase 1
+# (public exposure). Manual sync until the first promoted image tag replaces
+# the placeholder in apps/prod/rbx-atlas/kustomization.yml; switch to
+# automated sync in the promotion PR (precedent: rbx-comms-console).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-atlas
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-atlas
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-atlas
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-atlas
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-atlas
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

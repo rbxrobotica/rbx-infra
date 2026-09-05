@@ -336,6 +336,35 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# rbx-atlas: founders' frontend discovery directory (ADR-0028 topology
+# amendment 2026-09-05, phase 1). Only needs ghcr-pull-secret: the private GHCR
+# package inherits the repository visibility. Phase 2 (identity-gated mode) will
+# add rbx-atlas-secrets (OIDC_CLIENT_SECRET, SESSION_SECRET) here.
+# ---------------------------------------------------------------------------
+
+- name: Ensure rbx-atlas namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ rbx_atlas_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in rbx-atlas
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace {{ rbx_atlas_namespace }} \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # rbx-ia-br central vault — reorg services
 # ---------------------------------------------------------------------------
 

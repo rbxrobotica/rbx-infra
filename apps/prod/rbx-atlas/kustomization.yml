@@ -1,0 +1,22 @@
+# Kustomization for rbx-atlas (founders' frontend discovery directory, ADR-0028).
+# newTag is a placeholder until the first image is promoted by the rbx-atlas
+# publish workflow (docs/infra/IMAGE-PROMOTION.md); the Argo CD Application
+# syncs manually until then.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rbx-atlas
+resources:
+  - namespace.yml
+  - middleware.yml
+  - deploy.yml
+  - svc.yml
+  - certificate.yml
+  - ingressroute.yml
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: rbx-atlas
+      environment: production
+    includeSelectors: false
+images:
+  - name: ghcr.io/rbxrobotica/rbx-atlas
+    newTag: sha-0000000

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-atlas
+  labels:
+    app.kubernetes.io/name: rbx-atlas
+    app.kubernetes.io/part-of: rbx-atlas

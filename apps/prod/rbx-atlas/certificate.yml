@@ -1,0 +1,14 @@
+# atlas.rbx.ia.br only. atlas.rbxsystems.ch is reserved in ADR-0003 and needs
+# its own amendment before it is added here (ADR-0028 topology amendment).
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rbx-atlas-tls
+  namespace: rbx-atlas
+spec:
+  secretName: rbx-atlas-tls
+  dnsNames:
+    - atlas.rbx.ia.br
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer

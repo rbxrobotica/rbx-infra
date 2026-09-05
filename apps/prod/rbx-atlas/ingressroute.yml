@@ -1,0 +1,31 @@
+# Traefik IngressRoute for the RBX Atlas. Host: atlas.rbx.ia.br (ADR-0028
+# topology amendment 2026-09-05; ADR-0003 portfolio). DNS record in
+# infra/terraform/dns/rbx_ia_br.tf; onboarding steps in
+# docs/runbooks/ADD-NEW-APPLICATION.md.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rbx-atlas
+  namespace: rbx-atlas
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`atlas.rbx.ia.br`)
+      kind: Rule
+      priority: 1
+      middlewares:
+        - name: redirect-https
+          namespace: rbx-atlas
+      services:
+        - name: rbx-atlas
+          port: 80
+    - match: Host(`atlas.rbx.ia.br`)
+      kind: Rule
+      priority: 10
+      services:
+        - name: rbx-atlas
+          port: 80
+  tls:
+    secretName: rbx-atlas-tls
