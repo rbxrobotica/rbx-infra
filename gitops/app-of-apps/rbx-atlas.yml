@@ -1,11 +1,15 @@
 # ArgoCD Application: RBX Atlas (founders' frontend discovery directory)
 # Host: atlas.rbx.ia.br. ADR-0028 topology amendment 2026-09-05, phase 1
-# (public exposure). Manual sync (no automated block) while the placeholder
-# tag sha-0000000 is in apps/prod/rbx-atlas/kustomization.yml. The first
-# promotion is a reviewed pull request that replaces the placeholder AND adds
-# `automated: {prune: true, selfHeal: true}` here; from then on the rbx-atlas
-# publish workflow promotes tags to main and Argo CD converges automatically
-# (the workflow skips promotion while the placeholder is present).
+# (public exposure). Manual sync (no automated block) so that the first
+# rollout is an explicit, validated operation:
+#   1. a reviewed pull request replaces the placeholder tag sha-0000000 in
+#      apps/prod/rbx-atlas/kustomization.yml and changes nothing here;
+#   2. the operator provisions ghcr-pull-secret (k8s-secrets role), performs
+#      the first sync by hand and validates the rollout (pods ready, /healthz,
+#      HTTPS redirect, public exposure only);
+#   3. a separate reviewed pull request adds `automated: {prune: true,
+#      selfHeal: true}` here. The rbx-atlas publish workflow promotes tags to
+#      main only once this file carries that automated policy.
 # Prerequisite before the first sync: run the k8s-secrets role so that
 # ghcr-pull-secret exists in the rbx-atlas namespace (the image is private).
 apiVersion: argoproj.io/v1alpha1
