@@ -1,8 +1,11 @@
 # ArgoCD Application: RBX Atlas (founders' frontend discovery directory)
 # Host: atlas.rbx.ia.br. ADR-0028 topology amendment 2026-09-05, phase 1
-# (public exposure). Manual sync until the first promoted image tag replaces
-# the placeholder in apps/prod/rbx-atlas/kustomization.yml; switch to
-# automated sync in the promotion PR (precedent: rbx-comms-console).
+# (public exposure). Manual sync (no automated block) while the placeholder
+# tag sha-0000000 is in apps/prod/rbx-atlas/kustomization.yml. The first
+# promotion is a reviewed pull request that replaces the placeholder AND adds
+# `automated: {prune: true, selfHeal: true}` here; from then on the rbx-atlas
+# publish workflow promotes tags to main and Argo CD converges automatically
+# (the workflow skips promotion while the placeholder is present).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

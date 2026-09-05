@@ -37,7 +37,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: atlas
-          image: ghcr.io/rbxrobotica/rbx-atlas:sha-0000000
+          image: ghcr.io/rbxrobotica/rbx-atlas
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
