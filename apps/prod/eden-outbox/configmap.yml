@@ -6,7 +6,7 @@ metadata:
   name: eden-outbox-config
   namespace: eden-outbox
 data:
-  OIDC_ISSUER: "https://auth.rbx.ia.br"
+  OIDC_ISSUER: "https://auth.merovelis.com"
   OIDC_CLIENT_ID: "eden-outbox"
   OIDC_REDIRECT_URI: "https://outbox.rbxsystems.ch/auth/callback"
   OIDC_SCOPES: "openid profile email"
