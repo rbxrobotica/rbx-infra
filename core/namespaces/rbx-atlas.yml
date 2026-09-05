@@ -11,3 +11,4 @@ metadata:
     name: rbx-atlas
     app.kubernetes.io/name: rbx-atlas
     app.kubernetes.io/part-of: rbx-atlas
+    environment: production

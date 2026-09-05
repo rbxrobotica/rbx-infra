@@ -6,6 +6,8 @@
 # `automated: {prune: true, selfHeal: true}` here; from then on the rbx-atlas
 # publish workflow promotes tags to main and Argo CD converges automatically
 # (the workflow skips promotion while the placeholder is present).
+# Prerequisite before the first sync: run the k8s-secrets role so that
+# ghcr-pull-secret exists in the rbx-atlas namespace (the image is private).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

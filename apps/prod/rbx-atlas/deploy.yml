@@ -3,7 +3,10 @@
 # ATLAS_EXPOSURE=public is also the image default. Internal exposure is refused
 # by the application off the loopback interface, so this Deployment cannot be
 # switched to it without the phase 2 identity-gated mode (ATLAS_AUTH=oidc) and
-# the secrets that mode needs. No ConfigMap or Secret is consumed in phase 1.
+# the secrets that mode needs. Phase 1 consumes no application ConfigMap or
+# Secret, but the registry pull secret ghcr-pull-secret must exist in the
+# namespace before the first sync (k8s-secrets bootstrap role); otherwise the
+# private image fails with ImagePullBackOff.
 apiVersion: apps/v1
 kind: Deployment
 metadata:

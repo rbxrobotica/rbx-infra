@@ -231,6 +231,7 @@ Secrets created per namespace:
 | `robson-testnet` | `robsond-testnet-secret` | `database-url`, `projection-tenant-id`, `binance-api-key`, `binance-api-secret`, `api-token` | `rbx/robson-testnet/*` |
 | `robson-testnet` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `rbx-console` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
+| `rbx-atlas` | `ghcr-pull-secret` | docker registry credentials (phase 1 of the ADR-0028 topology amendment; phase 2 adds `rbx-atlas-secrets`) | `rbx/cluster/ghcr-token` |
 | `rbx-console` | `rbx-console-users-access` | `RBX_IDENTITY_USERS_ACCESS_SERVICE_KEY`, `RBX_COMMERCE_USERS_ACCESS_SERVICE_KEY`, `RBX_COMMERCE_USERS_ACCESS_TENANT_ID` | `rbx/console/users-access/identity-service-key`, `rbx-commerce-secrets.COMMERCE_SERVICE_KEY`, `rbx/console/users-access/tenant-id` |
 | `rbx-ia-br` | `rbx-memory-token` | `token` | `rbx/memory/token` |
 | `rbx-ia-br` | `rbx-observability-token` | `token` | `rbx/observability/token` |
