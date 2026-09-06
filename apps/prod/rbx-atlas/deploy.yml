@@ -1,12 +1,19 @@
-# RBX Atlas, phase 1 of the ADR-0028 topology amendment (2026-09-05): public
-# exposure only. The image is Bun-first (oven/bun, UID 1000) and serves on 3000;
-# ATLAS_EXPOSURE=public is also the image default. Internal exposure is refused
-# by the application off the loopback interface, so this Deployment cannot be
-# switched to it without the phase 2 identity-gated mode (ATLAS_AUTH=oidc) and
-# the secrets that mode needs. Phase 1 consumes no application ConfigMap or
-# Secret, but the registry pull secret ghcr-pull-secret must exist in the
-# namespace before the first sync (k8s-secrets bootstrap role); otherwise the
-# private image fails with ImagePullBackOff.
+# RBX Atlas, phase 2 of the ADR-0028 topology amendment (2026-09-06): identity-
+# gated internal exposure (ATLAS_EXPOSURE=internal, ATLAS_AUTH=oidc) against
+# RBX Identity (ZITADEL, https://auth.merovelis.com), role rbx:atlas:founder.
+# The image is Bun-first (oven/bun, UID 1000) and serves on 3000.
+#
+# replicas is pinned to 1: rbx-atlas's login-flow replay-prevention store
+# (src/lib/server/auth/flow.ts in rbx-atlas) is process-local only, with no
+# shared storage across pods. At replicas:2 a flow's single-use guarantee
+# would not hold across pods (documented, known gap in rbx-atlas
+# docs/deployment.md). Do not raise this above 1 until that store moves to
+# shared storage (e.g. Redis) or routing is pinned sticky to one pod.
+#
+# The registry pull secret ghcr-pull-secret and the application secret
+# rbx-atlas-secrets (OIDC_CLIENT_SECRET, SESSION_SECRET) must exist in the
+# namespace before sync (k8s-secrets bootstrap role); otherwise the pod fails
+# with ImagePullBackOff or CreateContainerConfigError.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,7 +24,7 @@ metadata:
     app.kubernetes.io/component: frontend
     app.kubernetes.io/part-of: rbx-atlas
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: rbx-atlas
@@ -29,15 +36,6 @@ spec:
     spec:
       imagePullSecrets:
         - name: ghcr-pull-secret
-      affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-            - weight: 100
-              podAffinityTerm:
-                labelSelector:
-                  matchLabels:
-                    app.kubernetes.io/name: rbx-atlas
-                topologyKey: kubernetes.io/hostname
       containers:
         - name: atlas
           image: ghcr.io/rbxrobotica/rbx-atlas
@@ -45,13 +43,18 @@ spec:
           ports:
             - containerPort: 3000
               name: http
+          envFrom:
+            - secretRef:
+                name: rbx-atlas-secrets
           env:
             - name: PORT
               value: "3000"
             - name: HOST
               value: "0.0.0.0"
             - name: ATLAS_EXPOSURE
-              value: "public"
+              value: "internal"
+            - name: ATLAS_AUTH
+              value: "oidc"
             - name: ORIGIN
               value: "https://atlas.rbx.ia.br"
             - name: PROTOCOL_HEADER
@@ -62,6 +65,16 @@ spec:
               value: "x-forwarded-for"
             - name: XFF_DEPTH
               value: "1"
+            - name: OIDC_ISSUER
+              value: "https://auth.merovelis.com"
+            - name: OIDC_CLIENT_ID
+              value: "389512490368632478"
+            - name: OIDC_REDIRECT_URI
+              value: "https://atlas.rbx.ia.br/auth/callback"
+            - name: OIDC_SCOPES
+              value: "openid profile urn:zitadel:iam:org:project:role:rbx:atlas:founder"
+            - name: OIDC_ALLOWED_ORG_IDS
+              value: "375992756025229511"
           readinessProbe:
             httpGet:
               path: /healthz

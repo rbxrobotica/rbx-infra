@@ -364,6 +364,35 @@
   changed_when: true
   no_log: true
 
+# Phase 2 (ADR-0028 topology amendment, ATLAS_AUTH=oidc): OIDC_CLIENT_SECRET
+# and SESSION_SECRET, never in manifests or the image. Not consumed until the
+# rbx-atlas Deployment is switched to this mode.
+- name: Read rbx-atlas OIDC client secret from pass
+  command: pass show {{ pass_rbx_atlas_oidc_client_secret_key }}
+  register: rbx_atlas_oidc_client_secret_result
+  changed_when: false
+  no_log: true
+
+- name: Read rbx-atlas session secret from pass
+  command: pass show {{ pass_rbx_atlas_session_secret_key }}
+  register: rbx_atlas_session_secret_result
+  changed_when: false
+  no_log: true
+
+- name: Create rbx-atlas-secrets in rbx-atlas
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-atlas-secrets \
+      --namespace {{ rbx_atlas_namespace }} \
+      --from-literal=OIDC_CLIENT_SECRET="$OIDC_CLIENT_SECRET" \
+      --from-literal=SESSION_SECRET="$SESSION_SECRET" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    OIDC_CLIENT_SECRET: "{{ rbx_atlas_oidc_client_secret_result.stdout | trim }}"
+    SESSION_SECRET: "{{ rbx_atlas_session_secret_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
 # ---------------------------------------------------------------------------
 # rbx-ia-br central vault — reorg services
 # ---------------------------------------------------------------------------
