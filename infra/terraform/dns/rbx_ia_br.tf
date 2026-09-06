@@ -124,6 +124,16 @@ resource "powerdns_record" "api_truthmetal_rbx_ia_br_a" {
   records = [var.k3s_ingress_ip]
 }
 
+# RBX Atlas: founders' frontend discovery directory (ADR-0028 topology
+# amendment 2026-09-05; ADR-0003 portfolio, four conditions recorded there).
+resource "powerdns_record" "atlas_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "atlas.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
 resource "powerdns_record" "btcpay_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
   name    = "btcpay.rbx.ia.br."

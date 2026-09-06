@@ -1,0 +1,14 @@
+# Namespace: rbx-atlas
+# Purpose: RBX Atlas, the founders' frontend discovery directory (navigation
+#          only; no operational data, no database, no secrets in phase 1)
+# ADR-0028 (rbx-governance), topology and deployment amendment 2026-09-05
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-atlas
+  labels:
+    name: rbx-atlas
+    app.kubernetes.io/name: rbx-atlas
+    app.kubernetes.io/part-of: rbx-atlas
+    environment: production

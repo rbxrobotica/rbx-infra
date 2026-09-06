@@ -40,6 +40,7 @@ rbx_flightdeck_namespace: "rbx-flightdeck"
 
 # rbx-console (namespace: rbx-console — operational console UI)
 rbx_console_namespace: "rbx-console"
+rbx_atlas_namespace: "rbx-atlas"
 pass_rbx_console_users_access_identity_service_key_key: "rbx/console/users-access/identity-service-key"
 pass_rbx_console_users_access_tenant_id_key: "rbx/console/users-access/tenant-id"
 
