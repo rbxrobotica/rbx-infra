@@ -100,7 +100,6 @@ rbx_identity_namespace: "rbx-identity"
 pass_zitadel_masterkey_key: "rbx/zitadel/masterkey"
 pass_zitadel_db_password_key: "rbx/zitadel/db-password"
 pass_zitadel_admin_password_key: "rbx/zitadel/admin-password"
-pass_rbx_atlas_oidc_client_id_key: "rbx/atlas/oidc-client-id"
 pass_rbx_atlas_oidc_client_secret_key: "rbx/atlas/oidc-client-secret"
 pass_rbx_atlas_session_secret_key: "rbx/atlas/session-secret"
 
