@@ -1,0 +1,31 @@
+# ArgoCD Application: rbx-grant-reconciler
+# Baseline ZITADEL grant automation (rbx-identity ADR-0007). Lives in the
+# existing rbx-identity namespace alongside ZITADEL and the session BFF. No
+# automated sync and no public Ingress: ZITADEL reaches the Actions v2 target
+# over the cluster network only.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-grant-reconciler
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-grant-reconciler
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-identity
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-grant-reconciler
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-identity
+
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
