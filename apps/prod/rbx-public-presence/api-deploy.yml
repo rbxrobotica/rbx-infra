@@ -56,6 +56,10 @@ spec:
               value: rbx-presence
             - name: CONTABO_S3_ENDPOINT
               value: https://eu2.contabostorage.com
+            # Sovereign delivery (rbx-public-presence ADR 0009, amendment 2026-09-06): the bucket
+            # stays private; the console proxies public renditions at /assets/<key>.
+            - name: PRESENCE_S3_PUBLIC_URL
+              value: https://presence.rbx.ia.br/assets
             - name: OIDC_ISSUER
               value: https://auth.merovelis.com
             - name: PRESENCE_WORKER_INTERVAL
