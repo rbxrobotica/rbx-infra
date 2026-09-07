@@ -1,0 +1,45 @@
+# NetworkPolicy: rbx-grant-reconciler.
+# Ingress: only ZITADEL, which is the only legitimate caller of the Actions v2
+# target. The HMAC signature is the real authentication; this is the second
+# layer, so a bug in one is not a compromise.
+# Egress: DNS, plus HTTPS out to reach https://auth.merovelis.com. The
+# management API is called through the public issuer host because the service
+# refuses a plaintext base URL, so this cannot be narrowed to the in-cluster
+# Service.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: rbx-grant-reconciler
+  namespace: rbx-identity
+  labels:
+    app.kubernetes.io/name: rbx-grant-reconciler
+    app.kubernetes.io/part-of: rbx-identity
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-grant-reconciler
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: zitadel
+      ports:
+        - protocol: TCP
+          port: 8084
+  egress:
+    - to:
+        - namespaceSelector: {}
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - ports:
+        - protocol: TCP
+          port: 443

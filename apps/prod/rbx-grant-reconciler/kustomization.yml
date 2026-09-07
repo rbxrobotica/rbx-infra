@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rbx-identity
+resources:
+  - grant-reconciler-deploy.yml
+  - grant-reconciler-svc.yml
+  - network-policy.yml
+images:
+  # Pin to the immutable sha-* tag after the first rbx-grant-reconciler publish
+  # (rbx-identity "Publish grant reconciler image" workflow, which runs on main).
+  - name: ghcr.io/rbxrobotica/rbx-grant-reconciler
+    newTag: latest
