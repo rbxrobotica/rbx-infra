@@ -5,16 +5,17 @@ Owner authorization was recorded on 2026-09-08. The canonical operator host is
 
 ## Gate record
 
-1. **Ratification — awaiting merge.** The owner accepted ADR-0609 through
-   ADR-0613; governance PR #78 records `active/Accepted` in the canonical files.
+1. **Ratification — complete.** The owner accepted ADR-0609 through ADR-0613;
+   governance PR #78 records `active/Accepted` in the canonical files.
 2. **Product — merged.** Product PR #1 is on `main`.
-3. **Release — awaiting production auth build.** The initial source-SHA images
-   were published and verified. Product PR #2 adds the required ZITADEL claim
-   adapter and fleet-standard atomic image promotion. Its resulting main SHA,
-   not the initial image, is the eligible production pin.
-4. **Hostname — configured, DNS apply pending.** Certificate, HTTPS route,
-   `ORIGIN`, exact redirect URI and the `kairos.rbxsystems.ch` PowerDNS resource
-   are declared. Apply DNS only from the canonical OpenTofu state.
+3. **Release — complete.** Product PR #2 added the required ZITADEL claim
+   adapter. Both API and web images for main SHA `9479b8ee78f896e2c71c54b547a909afec36930c`
+   were published and the overlay pins that identical immutable SHA.
+4. **Hostname — complete.** Certificate, HTTPS route, `ORIGIN`, exact redirect
+   URI and the `kairos.rbxsystems.ch` PowerDNS resource are declared. The lost
+   local OpenTofu state was reconstructed by importing 111 live resources; the
+   targeted plan then created only the Kairos A record, with zero changes or
+   destroys. Both authoritative nameservers now serve `158.220.116.31`.
 5. **Identity — complete.** The dedicated ZITADEL project, confidential web
    client, JWT project audience, four tenant-bound roles and owner grant exist.
 6. **Jaguar — complete.** Database `rbx_market_graph` has separate owner/migration
@@ -28,9 +29,8 @@ Owner authorization was recorded on 2026-09-08. The canonical operator host is
 9. **Security review — complete for activation.** Tenant RLS is forced, Claims
    require evidence, sensitive reads are audited, telemetry excludes evidence
    bodies and external-effect integrations remain disabled.
-10. **GitOps registration — authorized, intentionally last.** Add the ArgoCD
-    Application only after PR #2 is merged, both promoted manifests exist and
-    the kustomization contains that same main SHA.
+10. **GitOps registration — ready.** The ArgoCD Application is the final
+    activation switch in this PR. Automated sync starts only after owner merge.
 
 ## Rollback
 
