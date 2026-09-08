@@ -6,6 +6,9 @@ resources:
   - external-secrets-rbac.yml
   - secretstore.yml
   - externalsecret.yml
+  - middleware.yml
+  - certificate.yml
+  - ingressroute.yml
   - postgres-svc.yml
   - network-policy.yml
   - services.yml
@@ -19,8 +22,7 @@ labels:
       environment: production
     includeSelectors: false
 images:
-  # Review artifact only. This tag is not promoted or expected to exist until
-  # the application release gate publishes the reviewed source commit.
+  # Both immutable tags are promoted atomically by the product build workflow.
   - name: ghcr.io/rbxrobotica/rbx-market-graph-api
     newTag: sha-f5efad4f29c3581806d83f852969a0f2b25438b8
   - name: ghcr.io/rbxrobotica/rbx-market-graph-web

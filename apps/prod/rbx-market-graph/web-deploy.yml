@@ -20,6 +20,7 @@ spec:
         app.kubernetes.io/name: rbx-market-graph-web
         app.kubernetes.io/component: web
     spec:
+      automountServiceAccountToken: false
       imagePullSecrets:
         - name: ghcr-pull-secret
       securityContext:

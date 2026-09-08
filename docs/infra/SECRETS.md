@@ -53,6 +53,15 @@ rbx/
       client-id                 # OAuth client ID for rbx-session-bff commerce access
       client-secret             # OAuth client secret for rbx-session-bff commerce access
       audience                  # Audience for the commerce service token
+  market-graph/
+    db-app-password             # Non-owner runtime role rbx_market_graph_app
+    db-migrator-password        # Schema-owner role rbx_market_graph_migrator
+    session-secret              # Kairos encrypted session secret
+    oidc-project-id             # ZITADEL project/audience ID
+    oidc-app-id                 # ZITADEL OIDC application ID
+    oidc-client-id              # Kairos confidential OIDC client ID
+    oidc-client-secret          # Kairos confidential OIDC client secret
+    oidc-owner-grant-id         # Initial human owner role grant ID
   comms/
     db-password                 # PostgreSQL password for user `rbx_comms` on jaguar — MUST be hex (openssl rand -hex 32). DATABASE_URL (the rbx-comms-secrets ExternalSecret source) is assembled from this by the k8s-secrets role.
   llm-gateway/
@@ -240,6 +249,7 @@ Secrets created per namespace:
 | `rbx-ia-br` | `rbx-data-warehouse` | `dsn` | `rbx/data/warehouse-dsn` |
 | `rbx-ia-br` | `rbx-session-bff-commerce` | `RBX_COMMERCE_CLIENT_ID`, `RBX_COMMERCE_CLIENT_SECRET`, `RBX_COMMERCE_MACHINE_KEY_JSON`, `RBX_COMMERCE_AUDIENCE` | `rbx/identity/session-bff-commerce/client-id`, `rbx/identity/session-bff-commerce/client-secret`, `rbx/identity/session-bff-commerce/machine-key-json`, `rbx/identity/session-bff-commerce/audience` |
 | `rbx-ia-br` | `rbx-commerce-sandbox-secrets` | `DATABASE_URL`, `COMMS_API_URL`, `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` | `rbx/commerce-sandbox/db-password`, `rbx/commerce-sandbox/asaas-api-key`, `rbx/commerce-sandbox/asaas-api-webhook-token` |
+| `rbx-ia-br` | `rbx-market-graph-secrets` | database URLs, OIDC configuration, session secret and canonical origin | `rbx/market-graph/*` plus non-secret canonical URLs |
 
 Source of truth for these values is the ZITADEL service-account registration
 used by `rbx-session-bff` to read `rbx-commerce`. Create or rotate the machine
@@ -279,6 +289,12 @@ Run idempotently — safe to re-run after a cluster wipe.
 for a sandbox commerce surface. Sandbox validation should get its own service
 credentials and its own `pass` namespace, alongside a separate K8s secret and
 deployment overlay. The prod commerce path stays pinned to the live values.
+
+The Market Graph source Secret follows the same central-vault pattern. Its
+database URLs are assembled from the two separate pass passwords, and its OIDC
+settings refer to the dedicated ZITADEL project and confidential Kairos client.
+The target namespace receives only a mirrored Secret through External Secrets;
+the application ServiceAccount has no direct access to `rbx-ia-br`.
 
 **Isolation invariant:** The `k8s-secrets` role must have two independent task blocks — one for production (`robson` namespace, reads `rbx/robson/`) and one for testnet (`robson-testnet` namespace, reads `rbx/robson-testnet/`). These blocks must never share pass key references. See `docs/ROBSON-TESTNET-ENVIRONMENT.md` for the full Ansible task specification.
 
