@@ -32,6 +32,8 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: rbx-flightdeck
       server: https://kubernetes.default.svc
+    - namespace: rbx-market-graph
+      server: https://kubernetes.default.svc
     - namespace: rbx-portal
       server: https://kubernetes.default.svc
     # rbx-atlas: founders' frontend discovery directory (ADR-0028).

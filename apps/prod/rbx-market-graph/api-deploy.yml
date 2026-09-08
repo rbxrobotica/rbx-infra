@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-market-graph-api
+  namespace: rbx-market-graph
+  labels:
+    app.kubernetes.io/name: rbx-market-graph-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: rbx-market-graph
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-market-graph-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-market-graph-api
+        app.kubernetes.io/component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: api
+          image: ghcr.io/rbxrobotica/rbx-market-graph-api
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: APP_ENV
+              value: production
+            - name: HTTP_ADDR
+              value: :8080
+            - name: AUTH_MODE
+              value: oidc
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-market-graph-secrets
+                  key: DATABASE_URL
+            - name: OIDC_ISSUER
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-market-graph-secrets
+                  key: OIDC_ISSUER
+            - name: OIDC_AUDIENCE
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-market-graph-secrets
+                  key: OIDC_AUDIENCE
+            - name: OTEL_SERVICE_NAME
+              value: rbx-market-graph-api
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            capabilities:
+              drop:
+                - ALL
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+            timeoutSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      terminationGracePeriodSeconds: 30

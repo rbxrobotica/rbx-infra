@@ -1,0 +1,104 @@
+# rbx-grant-reconciler (rbx-identity ADR-0007): guarantees the baseline ZITADEL
+# project grant for every human user, so a federated login never leaves someone
+# authenticated with an empty project-roles claim.
+#
+# The baseline grant confers NO product permission. Product access is decided by
+# the licence layer in rbx-commerce, read through rbx-policy-gateway. The policy
+# loader refuses any role key that looks privileged, and there is no flag to
+# disable that check.
+#
+# Secret rbx-grant-reconciler must exist in the namespace before sync (k8s-secrets
+# bootstrap role); otherwise the pod fails to start, by design:
+#   RBX_GRANT_RECONCILER_API_TOKEN    credential used for the grant writes
+#   RBX_GRANT_RECONCILER_SIGNING_KEY  signing key returned by ZITADEL CreateTarget
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-grant-reconciler
+  namespace: rbx-identity
+  labels:
+    app.kubernetes.io/name: rbx-grant-reconciler
+    app.kubernetes.io/component: grant-reconciler
+    app.kubernetes.io/part-of: rbx-identity
+spec:
+  # Single replica on purpose: the sweep is a whole-organization pass and two
+  # of them would duplicate every read for no gain. Grant writes are idempotent
+  # (409 reads as success), so this is availability, not correctness.
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-grant-reconciler
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-grant-reconciler
+        app.kubernetes.io/component: grant-reconciler
+        app.kubernetes.io/part-of: rbx-identity
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+      containers:
+        - name: rbx-grant-reconciler
+          image: ghcr.io/rbxrobotica/rbx-grant-reconciler:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+              name: http
+          envFrom:
+            - secretRef:
+                name: rbx-grant-reconciler
+          env:
+            - name: RBX_GRANT_RECONCILER_BIND_ADDR
+              value: "0.0.0.0:8084"
+            - name: RBX_GRANT_RECONCILER_ZITADEL_BASE_URL
+              value: https://auth.merovelis.com
+            # Report-only until the planned grants in the logs match what was
+            # intended. Flip to "true" deliberately, never as part of another
+            # change.
+            - name: RBX_GRANT_RECONCILER_APPLY
+              value: "false"
+            - name: RBX_GRANT_RECONCILER_SWEEP_INTERVAL_SECONDS
+              value: "900"
+            # Baseline role only; a privileged role key is refused at startup.
+            # The project id is a placeholder until the baseline role exists on
+            # the target project. With APPLY=false a placeholder is harmless:
+            # the service reports what it would do and writes nothing.
+            - name: RBX_GRANT_RECONCILER_POLICY_JSON
+              value: >-
+                {"version":1,"event_types":["user.human.added"],
+                "rules":[{"name":"google-baseline",
+                "organization_ids":["375992756025229511"],
+                "project_id":"REPLACE_WITH_PROJECT_ID",
+                "role_keys":["rbx:baseline:member"]}]}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
