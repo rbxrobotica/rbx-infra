@@ -119,6 +119,32 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  name: web-oidc-egress
+  namespace: rbx-market-graph
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: web
+  policyTypes:
+    - Egress
+  egress:
+    # OIDC discovery and token exchange use the public issuer URL. In k3s,
+    # traffic to the cluster's own LoadBalancer is DNATed to Traefik's pod
+    # port, so the external HTTPS ipBlock rule alone does not match it.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
   name: db-migrate
   namespace: rbx-market-graph
 spec:
