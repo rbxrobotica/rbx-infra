@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rbx-market-graph
+resources:
+  - namespace.yml
+  - external-secrets-rbac.yml
+  - secretstore.yml
+  - externalsecret.yml
+  - postgres-svc.yml
+  - network-policy.yml
+  - services.yml
+  - pdb.yml
+  - db-migrate-job.yml
+  - api-deploy.yml
+  - web-deploy.yml
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: rbx-market-graph
+      environment: production
+    includeSelectors: false
+images:
+  # Review artifact only. This tag is not promoted or expected to exist until
+  # the application release gate publishes the reviewed source commit.
+  - name: ghcr.io/rbxrobotica/rbx-market-graph-api
+    newTag: sha-f5efad4f29c3581806d83f852969a0f2b25438b8
+  - name: ghcr.io/rbxrobotica/rbx-market-graph-web
+    newTag: sha-f5efad4f29c3581806d83f852969a0f2b25438b8

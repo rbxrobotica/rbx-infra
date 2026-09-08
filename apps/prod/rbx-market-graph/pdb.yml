@@ -1,0 +1,21 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rbx-market-graph-api
+  namespace: rbx-market-graph
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-market-graph-api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: rbx-market-graph-web
+  namespace: rbx-market-graph
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-market-graph-web
