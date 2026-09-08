@@ -24,6 +24,6 @@ labels:
 images:
   # Both immutable tags are promoted atomically by the product build workflow.
   - name: ghcr.io/rbxrobotica/rbx-market-graph-api
-    newTag: sha-9479b8ee78f896e2c71c54b547a909afec36930c
+    newTag: sha-5e9d442e3d3d32b50cbdf8d96205aff3b382c0ce
   - name: ghcr.io/rbxrobotica/rbx-market-graph-web
-    newTag: sha-9479b8ee78f896e2c71c54b547a909afec36930c
+    newTag: sha-5e9d442e3d3d32b50cbdf8d96205aff3b382c0ce
