@@ -19,6 +19,7 @@ spec:
         app.kubernetes.io/name: rbx-market-graph-api
         app.kubernetes.io/component: db-migrate
     spec:
+      automountServiceAccountToken: false
       restartPolicy: OnFailure
       imagePullSecrets:
         - name: ghcr-pull-secret

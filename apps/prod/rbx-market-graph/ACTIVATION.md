@@ -1,31 +1,41 @@
-# RBX Market Graph GitOps Activation Gate
+# RBX Market Graph Production Activation
 
-This directory is an inert production manifest candidate. It is intentionally
-absent from `gitops/app-of-apps`, the `rbx-applications` project allowlist and
-the cross-namespace ExternalSecret RBAC. Merging this directory alone cannot
-create or sync an ArgoCD Application.
+Owner authorization was recorded on 2026-09-08. The canonical operator host is
+`https://kairos.rbxsystems.ch`; the API remains cluster-internal.
 
-Activation requires all of the following:
+## Gate record
 
-1. Ratify Governance ADR-0609 through ADR-0613.
-2. Merge the reviewed product implementation.
-3. Publish both GHCR images for the same reviewed source SHA and verify their
-   manifests before changing the kustomization pins.
-4. Choose and govern the product hostname, then add DNS, Certificate,
-   IngressRoute, `ORIGIN` and the exact OIDC redirect URI.
-5. Register the rbx-identity web client, API audience and four product scopes.
-6. Provision the Jaguar database with a schema-owner migration role and the
-   non-owner `rbx_market_graph_app` role. Both URLs must use the
-   `rbx-market-graph-postgres` service and `search_path=public`.
-7. Add Jaguar `pg_hba.conf` entries for the applicable pod subnet and verify a
-   backup before reload under the external PostgreSQL runbook.
-8. Create the source Secret `rbx-ia-br/rbx-market-graph-secrets`, the namespace
-   GHCR pull Secret, and the narrow source-secret Role and RoleBinding.
-9. Independently review tenant RLS, personal-data access audit, retention and
-   observability behavior.
-10. Only under a separate operator deployment authorization, add the AppProject
-    destination and `gitops/app-of-apps/rbx-market-graph.yml`.
+1. **Ratification — complete.** The owner accepted ADR-0609 through ADR-0613;
+   governance PR #78 records `active/Accepted` in the canonical files.
+2. **Product — merged.** Product PR #1 is on `main`.
+3. **Release — complete.** Product PR #2 added the required ZITADEL claim
+   adapter. Both API and web images for main SHA `9479b8ee78f896e2c71c54b547a909afec36930c`
+   were published and the overlay pins that identical immutable SHA.
+4. **Hostname — complete.** Certificate, HTTPS route, `ORIGIN`, exact redirect
+   URI and the `kairos.rbxsystems.ch` PowerDNS resource are declared. The lost
+   local OpenTofu state was reconstructed by importing 111 live resources; the
+   targeted plan then created only the Kairos A record, with zero changes or
+   destroys. Both authoritative nameservers now serve `158.220.116.31`.
+5. **Identity — complete.** The dedicated ZITADEL project, confidential web
+   client, JWT project audience, four tenant-bound roles and owner grant exist.
+6. **Jaguar — complete.** Database `rbx_market_graph` has separate owner/migration
+   and non-owner application roles. Application URLs use the selectorless
+   `rbx-market-graph-postgres` Service and `search_path=public`.
+7. **Database network and backup — complete.** Node-scoped SCRAM entries were
+   added only after a PostgreSQL globals dump and `pg_hba.conf` copy were
+   verified; PostgreSQL reloaded successfully.
+8. **Secrets — staged.** Source and GHCR pull Secrets exist. This change adds the
+   exact cross-namespace Role and RoleBinding needed by External Secrets.
+9. **Security review — complete for activation.** Tenant RLS is forced, Claims
+   require evidence, sensitive reads are audited, telemetry excludes evidence
+   bodies and external-effect integrations remain disabled.
+10. **GitOps registration — ready.** The ArgoCD Application is the final
+    activation switch in this PR. Automated sync starts only after owner merge.
 
-No step in this branch creates credentials, DNS, a Jaguar role or database,
-publishes an image, registers ArgoCD, syncs a cluster or enables an external
-integration.
+## Rollback
+
+Remove the ArgoCD Application first, preserving the namespace and database for
+forensics. Revert the DNS resource through the canonical OpenTofu state. Revoke
+the ZITADEL client or owner grant to stop login immediately. Roll an application
+release back by restoring both image pins to the same prior verified SHA. Do not
+drop the database or Claims as part of an application rollback.

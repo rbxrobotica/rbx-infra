@@ -24,6 +24,7 @@ spec:
         prometheus.io/path: /metrics
         prometheus.io/port: "8080"
     spec:
+      automountServiceAccountToken: false
       imagePullSecrets:
         - name: ghcr-pull-secret
       securityContext:
