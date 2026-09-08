@@ -22,6 +22,6 @@ images:
   # Review artifact only. This tag is not promoted or expected to exist until
   # the application release gate publishes the reviewed source commit.
   - name: ghcr.io/rbxrobotica/rbx-market-graph-api
-    newTag: sha-de4a1ae129ea80c998695d15e22d82d3e39fdb4a
+    newTag: sha-f5efad4f29c3581806d83f852969a0f2b25438b8
   - name: ghcr.io/rbxrobotica/rbx-market-graph-web
-    newTag: sha-de4a1ae129ea80c998695d15e22d82d3e39fdb4a
+    newTag: sha-f5efad4f29c3581806d83f852969a0f2b25438b8
