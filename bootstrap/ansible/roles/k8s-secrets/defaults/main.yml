@@ -125,3 +125,27 @@ pass_rbx_commerce_service_key: "rbx/commerce/service-key"
 # briefing-btc checkout, no cross-service dependency.
 pass_rbx_commerce_altcha_secret: "rbx/commerce/altcha-secret"
 rbx_commerce_comms_api_url: "http://rbx-comms.rbx-comms.svc.cluster.local"
+
+# rbx-public-presence-secrets (in rbx-ia-br — feeds rbx-public-presence ExternalSecrets)
+# DATABASE_URL points at the selectorless Service to jaguar (postgres-svc.yml in
+# rbx-infra apps/prod/rbx-public-presence); the role/db bootstrap itself is
+# bootstrap/scripts/bootstrap-external-postgres-app-db.sh, run after this Secret
+# is replicated into the rbx-public-presence namespace by its ExternalSecret.
+# CREATIVE_LLM_API_KEY is intentionally empty until the Thalamus credential for
+# tenant=rbx product=public-presence workflow=copy is minted; the provider
+# reports not_configured until then (services/api/internal/creative/thalamus.go).
+pass_rbx_public_presence_service_key: "rbx/public-presence/service-key"
+pass_rbx_public_presence_bff_key: "rbx/public-presence/bff-key"
+pass_rbx_public_presence_session_secret: "rbx/public-presence/session-secret"
+pass_rbx_public_presence_db_password: "rbx/public-presence/db-password"
+pass_rbx_public_presence_oidc_client_id: "rbx/public-presence/oidc-client-id"
+pass_rbx_public_presence_oidc_client_secret: "rbx/public-presence/oidc-client-secret"
+pass_rbx_public_presence_oidc_allowed_org_ids: "rbx/public-presence/oidc-allowed-org-ids"
+pass_rbx_public_presence_ig_psyctl_token: "rbx/public-presence/instagram-psyctl-token"
+pass_rbx_public_presence_ig_psyctl_user_id: "rbx/public-presence/instagram-psyctl-user-id"
+pass_rbx_public_presence_li_psyctl_token: "rbx/public-presence/linkedin-psyctl-token"
+pass_rbx_public_presence_li_psyctl_author_urn: "rbx/public-presence/linkedin-psyctl-author-urn"
+rbx_public_presence_db_user: "public_presence"
+rbx_public_presence_db_host: "rbx-public-presence-postgres.rbx-public-presence.svc.cluster.local"
+rbx_public_presence_db_port: "5432"
+rbx_public_presence_db_name: "public_presence"
