@@ -1417,9 +1417,12 @@
 
 - name: Create rbx-public-presence-secrets in rbx-ia-br
   shell: |
+    DATABASE_URL="postgres://{{ rbx_public_presence_db_user }}:${RBX_PUBLIC_PRESENCE_DB_PASSWORD}"
+    DATABASE_URL="${DATABASE_URL}@{{ rbx_public_presence_db_host }}:{{ rbx_public_presence_db_port }}"
+    DATABASE_URL="${DATABASE_URL}/{{ rbx_public_presence_db_name }}?sslmode=disable"
     kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-public-presence-secrets \
       --namespace {{ rbx_ia_br_namespace }} \
-      --from-literal=DATABASE_URL="postgres://{{ rbx_public_presence_db_user }}:${RBX_PUBLIC_PRESENCE_DB_PASSWORD}@{{ rbx_public_presence_db_host }}:{{ rbx_public_presence_db_port }}/{{ rbx_public_presence_db_name }}?sslmode=disable" \
+      --from-literal=DATABASE_URL="$DATABASE_URL" \
       --from-literal=PRESENCE_SERVICE_KEY="$PRESENCE_SERVICE_KEY" \
       --from-literal=PRESENCE_BFF_KEY="$PRESENCE_BFF_KEY" \
       --from-literal=SESSION_SECRET="$SESSION_SECRET" \
@@ -1478,7 +1481,7 @@
       - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
       - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET"
-      - "  {{ rbx_ia_br_namespace }}/rbx-public-presence-secrets: DATABASE_URL + PRESENCE_SERVICE_KEY + PRESENCE_BFF_KEY + SESSION_SECRET + OIDC_* + PRESENCE_IG_* + PRESENCE_LI_* (CREATIVE_LLM_API_KEY empty until Thalamus credential is minted)"
+      - "  {{ rbx_ia_br_namespace }}/rbx-public-presence-secrets: DATABASE_URL + PRESENCE_SERVICE_KEY + PRESENCE_BFF_KEY + SESSION_SECRET + OIDC_* + PRESENCE_IG_* + PRESENCE_LI_*"
       - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
@@ -1508,7 +1511,7 @@
       - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
       - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET"
-      - "  {{ rbx_ia_br_namespace }}/rbx-public-presence-secrets: DATABASE_URL + PRESENCE_SERVICE_KEY + PRESENCE_BFF_KEY + SESSION_SECRET + OIDC_* + PRESENCE_IG_* + PRESENCE_LI_* (CREATIVE_LLM_API_KEY empty until Thalamus credential is minted)"
+      - "  {{ rbx_ia_br_namespace }}/rbx-public-presence-secrets: DATABASE_URL + PRESENCE_SERVICE_KEY + PRESENCE_BFF_KEY + SESSION_SECRET + OIDC_* + PRESENCE_IG_* + PRESENCE_LI_*"
   when: tenant_id_existing.rc == 0
 
 # --- Pattern R: org-registry pull secrets for apps migrating off ghcr-ldamasio ---
