@@ -1342,6 +1342,116 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# rbx-public-presence-secrets in rbx-ia-br
+# Feeds the ExternalSecret in the rbx-public-presence namespace (once its
+# GitOps Application syncs). DATABASE_URL is assembled from the single
+# password stored below; bootstrap-external-postgres-app-db.sh aligns the
+# jaguar role/db to it after the Secret is replicated.
+# ---------------------------------------------------------------------------
+
+- name: Read rbx-public-presence service key from pass
+  command: pass show {{ pass_rbx_public_presence_service_key }}
+  changed_when: false
+  register: rbx_public_presence_service_key_result
+  no_log: true
+
+- name: Read rbx-public-presence BFF key from pass
+  command: pass show {{ pass_rbx_public_presence_bff_key }}
+  changed_when: false
+  register: rbx_public_presence_bff_key_result
+  no_log: true
+
+- name: Read rbx-public-presence session secret from pass
+  command: pass show {{ pass_rbx_public_presence_session_secret }}
+  changed_when: false
+  register: rbx_public_presence_session_secret_result
+  no_log: true
+
+- name: Read rbx-public-presence DB password from pass
+  command: pass show {{ pass_rbx_public_presence_db_password }}
+  changed_when: false
+  register: rbx_public_presence_db_password_result
+  no_log: true
+
+- name: Read rbx-public-presence OIDC client id from pass
+  command: pass show {{ pass_rbx_public_presence_oidc_client_id }}
+  changed_when: false
+  register: rbx_public_presence_oidc_client_id_result
+  no_log: true
+
+- name: Read rbx-public-presence OIDC client secret from pass
+  command: pass show {{ pass_rbx_public_presence_oidc_client_secret }}
+  changed_when: false
+  register: rbx_public_presence_oidc_client_secret_result
+  no_log: true
+
+- name: Read rbx-public-presence OIDC allowed org ids from pass
+  command: pass show {{ pass_rbx_public_presence_oidc_allowed_org_ids }}
+  changed_when: false
+  register: rbx_public_presence_oidc_allowed_org_ids_result
+  no_log: true
+
+- name: Read rbx-public-presence Instagram token from pass
+  command: pass show {{ pass_rbx_public_presence_ig_psyctl_token }}
+  changed_when: false
+  register: rbx_public_presence_ig_token_result
+  no_log: true
+
+- name: Read rbx-public-presence Instagram user id from pass
+  command: pass show {{ pass_rbx_public_presence_ig_psyctl_user_id }}
+  changed_when: false
+  register: rbx_public_presence_ig_user_id_result
+  no_log: true
+
+- name: Read rbx-public-presence LinkedIn token from pass
+  command: pass show {{ pass_rbx_public_presence_li_psyctl_token }}
+  changed_when: false
+  register: rbx_public_presence_li_token_result
+  no_log: true
+
+- name: Read rbx-public-presence LinkedIn author URN from pass
+  command: pass show {{ pass_rbx_public_presence_li_psyctl_author_urn }}
+  changed_when: false
+  register: rbx_public_presence_li_urn_result
+  no_log: true
+
+- name: Create rbx-public-presence-secrets in rbx-ia-br
+  shell: |
+    DATABASE_URL="postgres://{{ rbx_public_presence_db_user }}:${RBX_PUBLIC_PRESENCE_DB_PASSWORD}"
+    DATABASE_URL="${DATABASE_URL}@{{ rbx_public_presence_db_host }}:{{ rbx_public_presence_db_port }}"
+    DATABASE_URL="${DATABASE_URL}/{{ rbx_public_presence_db_name }}?sslmode=disable"
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-public-presence-secrets \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=DATABASE_URL="$DATABASE_URL" \
+      --from-literal=PRESENCE_SERVICE_KEY="$PRESENCE_SERVICE_KEY" \
+      --from-literal=PRESENCE_BFF_KEY="$PRESENCE_BFF_KEY" \
+      --from-literal=SESSION_SECRET="$SESSION_SECRET" \
+      --from-literal=OIDC_CLIENT_ID="$OIDC_CLIENT_ID" \
+      --from-literal=OIDC_CLIENT_SECRET="$OIDC_CLIENT_SECRET" \
+      --from-literal=OIDC_ALLOWED_ORG_IDS="$OIDC_ALLOWED_ORG_IDS" \
+      --from-literal=PRESENCE_IG_PSYCTL_TOKEN="$PRESENCE_IG_PSYCTL_TOKEN" \
+      --from-literal=PRESENCE_IG_PSYCTL_USER_ID="$PRESENCE_IG_PSYCTL_USER_ID" \
+      --from-literal=PRESENCE_LI_PSYCTL_TOKEN="$PRESENCE_LI_PSYCTL_TOKEN" \
+      --from-literal=PRESENCE_LI_PSYCTL_AUTHOR_URN="$PRESENCE_LI_PSYCTL_AUTHOR_URN" \
+      --from-literal=CREATIVE_LLM_API_KEY="" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    RBX_PUBLIC_PRESENCE_DB_PASSWORD: "{{ rbx_public_presence_db_password_result.stdout | trim }}"
+    PRESENCE_SERVICE_KEY: "{{ rbx_public_presence_service_key_result.stdout | trim }}"
+    PRESENCE_BFF_KEY: "{{ rbx_public_presence_bff_key_result.stdout | trim }}"
+    SESSION_SECRET: "{{ rbx_public_presence_session_secret_result.stdout | trim }}"
+    OIDC_CLIENT_ID: "{{ rbx_public_presence_oidc_client_id_result.stdout | trim }}"
+    OIDC_CLIENT_SECRET: "{{ rbx_public_presence_oidc_client_secret_result.stdout | trim }}"
+    OIDC_ALLOWED_ORG_IDS: "{{ rbx_public_presence_oidc_allowed_org_ids_result.stdout | trim }}"
+    PRESENCE_IG_PSYCTL_TOKEN: "{{ rbx_public_presence_ig_token_result.stdout | trim }}"
+    PRESENCE_IG_PSYCTL_USER_ID: "{{ rbx_public_presence_ig_user_id_result.stdout | trim }}"
+    PRESENCE_LI_PSYCTL_TOKEN: "{{ rbx_public_presence_li_token_result.stdout | trim }}"
+    PRESENCE_LI_PSYCTL_AUTHOR_URN: "{{ rbx_public_presence_li_urn_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 
@@ -1371,6 +1481,7 @@
       - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
       - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET"
+      - "  {{ rbx_ia_br_namespace }}/rbx-public-presence-secrets: DATABASE_URL + PRESENCE_SERVICE_KEY + PRESENCE_BFF_KEY + SESSION_SECRET + OIDC_* + PRESENCE_IG_* + PRESENCE_LI_*"
       - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
@@ -1400,6 +1511,7 @@
       - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
       - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET"
+      - "  {{ rbx_ia_br_namespace }}/rbx-public-presence-secrets: DATABASE_URL + PRESENCE_SERVICE_KEY + PRESENCE_BFF_KEY + SESSION_SECRET + OIDC_* + PRESENCE_IG_* + PRESENCE_LI_*"
   when: tenant_id_existing.rc == 0
 
 # --- Pattern R: org-registry pull secrets for apps migrating off ghcr-ldamasio ---
