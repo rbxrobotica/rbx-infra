@@ -1,0 +1,100 @@
+# rbx-public-presence api: Go service with the outbox worker in-process. Cluster-internal only.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-public-presence-api
+  namespace: rbx-public-presence
+  labels:
+    app.kubernetes.io/name: rbx-public-presence-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: rbx-public-presence
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  # One replica in V1: the worker claims with a CAS lease, so scale-out is safe later, but a
+  # single instance keeps scheduling observable while the adapters are being proven live.
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-public-presence-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-public-presence-api
+        app.kubernetes.io/component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: /metrics
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+        - name: api
+          image: ghcr.io/rbxrobotica/rbx-public-presence-api
+          imagePullPolicy: IfNotPresent
+          args: ["serve"]
+          ports:
+            - containerPort: 8080
+              name: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 65532
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: PORT
+              value: "8080"
+            - name: PRESENCE_ENV
+              value: production
+            - name: PRESENCE_ASSET_STORE
+              value: s3
+            - name: PRESENCE_S3_BUCKET
+              value: rbx-presence
+            - name: CONTABO_S3_ENDPOINT
+              value: https://eu2.contabostorage.com
+            # Sovereign delivery (rbx-public-presence ADR 0009, amendment 2026-09-06): the bucket
+            # stays private; the console proxies public renditions at /assets/<key>.
+            - name: PRESENCE_S3_PUBLIC_URL
+              value: https://presence.rbx.ia.br/assets
+            - name: OIDC_ISSUER
+              value: https://auth.merovelis.com
+            - name: PRESENCE_WORKER_INTERVAL
+              value: 15s
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+          envFrom:
+            - secretRef:
+                name: rbx-public-presence-secrets
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 3
+          resources:
+            requests:
+              memory: 96Mi
+              cpu: 50m
+            limits:
+              memory: 384Mi
+              cpu: 500m

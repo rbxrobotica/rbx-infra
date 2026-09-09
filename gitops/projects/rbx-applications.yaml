@@ -39,6 +39,9 @@ spec:
     # rbx-atlas: founders' frontend discovery directory (ADR-0028).
     - namespace: rbx-atlas
       server: https://kubernetes.default.svc
+    # rbx-public-presence: Public Presence Control Plane (governance ADR-0608 draft).
+    - namespace: rbx-public-presence
+      server: https://kubernetes.default.svc
     - namespace: rbxsystems-ch
       server: https://kubernetes.default.svc
     - namespace: staging

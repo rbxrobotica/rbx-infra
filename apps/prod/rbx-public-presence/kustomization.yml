@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rbx-public-presence
+resources:
+  - namespace.yml
+  - rbac-external-secrets.yml
+  - secretstore.yml
+  - externalsecret.yml
+  - externalsecret-s3.yml
+  - middleware.yml
+  - certificate.yml
+  - ingressroute.yml
+  - postgres-svc.yml
+  - api-deploy.yml
+  - api-svc.yml
+  - web-deploy.yml
+  - web-svc.yml
+  - db-migrate-job.yml
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: rbx-public-presence
+      environment: production
+    includeSelectors: false
+images:
+  # Promoted by rbx-public-presence CI on each main build (sha-<commit>; docs/infra/IMAGE-PROMOTION.md).
+  # Placeholder tags until the first image is published; ArgoCD sync must wait for real tags.
+  - name: ghcr.io/rbxrobotica/rbx-public-presence-api
+    newTag: sha-0000000000000000000000000000000000000000
+  - name: ghcr.io/rbxrobotica/rbx-public-presence-web
+    newTag: sha-0000000000000000000000000000000000000000

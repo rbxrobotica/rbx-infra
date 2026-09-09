@@ -1,0 +1,35 @@
+# IngressRoutes: presence.rbx.ia.br routes to the web console only. The API stays cluster-internal.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rbx-public-presence-web-redirect
+  namespace: rbx-public-presence
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`presence.rbx.ia.br`)
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: rbx-public-presence
+      services:
+        - name: rbx-public-presence-web
+          port: 80
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rbx-public-presence-web
+  namespace: rbx-public-presence
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`presence.rbx.ia.br`)
+      kind: Rule
+      services:
+        - name: rbx-public-presence-web
+          port: 80
+  tls:
+    secretName: rbx-public-presence-tls
