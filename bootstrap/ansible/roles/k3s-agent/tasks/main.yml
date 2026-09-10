@@ -1,30 +1,136 @@
 ---
+- name: Resolve the join token
+  ansible.builtin.import_tasks: resolve-token.yml
+
+# Availability is not identity. `get --raw /readyz` succeeds against ANY healthy
+# cluster, so a kubeconfig pointing somewhere else passes it, after which the
+# agent is installed against k3s_server_ip while the wait, the label and the
+# taint are applied to the wrong cluster. Pin the identity to something
+# immutable: the kube-system namespace UID is created once, at cluster birth.
+- name: Refuse to provision without an expected cluster identity
+  ansible.builtin.assert:
+    that:
+      - k3s_expected_cluster_uid | default('') | length > 0
+    fail_msg: >-
+      k3s_expected_cluster_uid is not set. It pins this role to one cluster;
+      without it the preflight can only prove that SOME cluster answers. Read it
+      with: kubectl get ns kube-system -o jsonpath='{.metadata.uid}'
+
+- name: Read the cluster identity the controller is pointed at
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
+    get namespace kube-system -o jsonpath={.metadata.uid}
+  delegate_to: localhost
+  become: false
+  register: k3s_seen_cluster_uid
+  changed_when: false
+
+- name: Refuse to provision against a different cluster
+  ansible.builtin.assert:
+    that:
+      - k3s_seen_cluster_uid.stdout == k3s_expected_cluster_uid
+    fail_msg: >-
+      The kubeconfig points at cluster {{ k3s_seen_cluster_uid.stdout }} but this
+      inventory expects {{ k3s_expected_cluster_uid }}. Refusing: the agent would
+      be installed against {{ k3s_server_ip }} while labels and taints landed
+      somewhere else.
+
+# Reaching the API is not the same as being allowed to change a node. Without
+# this the run installs the agent and only then fails on a permission error,
+# leaving a node joined but unlabelled and untainted.
+- name: Verify the controller may label and taint nodes
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
+    auth can-i patch nodes
+  delegate_to: localhost
+  become: false
+  register: k3s_can_patch
+  changed_when: false
+  failed_when: "'yes' not in k3s_can_patch.stdout"
+
+- name: Check whether k3s is already installed
+  ansible.builtin.stat:
+    path: /usr/local/bin/k3s
+  register: k3s_binary
+
+- name: Ensure the k3s configuration directory exists
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  when: not k3s_binary.stat.exists
+
+# The token reaches the host as file content, never as a command argument.
+# Passing --token puts the cluster join secret in the unit the installer
+# generates, and that unit is mode 0644: the pre-existing agents carry the token
+# world readable because of exactly that. K3S_TOKEN through the environment is
+# better but still lands the value in the command Ansible builds, visible under
+# -vvv and in /proc/<pid>/cmdline. Only the path travels here.
+- name: Stage the join token for the installer
+  ansible.builtin.copy:
+    content: "{{ k3s_join_token }}"
+    dest: /etc/rancher/k3s/join-token
+    owner: root
+    group: root
+    mode: "0600"
+  when: not k3s_binary.stat.exists
+  no_log: true
+
+# Labels and taints go to the installer so the kubelet REGISTERS with them
+# already applied. Applying them afterwards with kubectl leaves a window in
+# which the node is Ready and unrestricted, and the scheduler uses it: two
+# production pods landed on the pilot node during exactly that window.
+# k3s honours these only at first registration, which is why the reconciliation
+# tasks below still exist for nodes that are already joined.
 - name: Install k3s agent
-  shell: |
-    curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="{{ k3s_version }}" sh -s - agent \
-      --server https://{{ k3s_server_ip }}:6443 \
-      --token {{ hostvars['tiger']['k3s_token'] }} \
-      --node-name {{ inventory_hostname }}
+  ansible.builtin.shell: >-
+    curl -sfL https://get.k3s.io | sh -s - agent
+    {% for label in k3s_node_labels | default([]) %} --node-label '{{ label }}'{% endfor %}
+    {% for taint in k3s_node_taints | default([]) %} --node-taint '{{ taint }}'{% endfor %}
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+    K3S_URL: "https://{{ k3s_server_ip }}:6443"
+    K3S_TOKEN_FILE: /etc/rancher/k3s/join-token
+    K3S_NODE_NAME: "{{ inventory_hostname }}"
   args:
     creates: /usr/local/bin/k3s
-  when: hostvars['tiger']['k3s_token'] is defined
+  when: not k3s_binary.stat.exists
 
 - name: Enable and start k3s-agent
-  systemd:
+  ansible.builtin.systemd:
     name: k3s-agent
-    enabled: yes
+    enabled: true
     state: started
 
-- name: Apply node labels
+- name: Wait for the node to report Ready
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
+    wait --for=condition=Ready node/{{ inventory_hostname }} --timeout=150s
   delegate_to: localhost
-  shell: >
-    kubectl --kubeconfig ~/.kube/config-rbx label node {{ inventory_hostname }}
-    {{ item }} --overwrite
-  loop: "{{ k3s_node_labels | default([]) }}"
+  become: false
+  changed_when: false
 
-- name: Apply node taints
+# Reconciliation for nodes that were already joined, and for label or taint
+# changes made after registration. A freshly installed node arrives here already
+# correct, so these report no change.
+- name: Reconcile node labels
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
+    label node {{ inventory_hostname }} {{ item }} --overwrite
   delegate_to: localhost
-  shell: >
-    kubectl --kubeconfig ~/.kube/config-rbx taint node {{ inventory_hostname }}
-    {{ item }} --overwrite
+  become: false
+  loop: "{{ k3s_node_labels | default([]) }}"
+  register: k3s_label
+  changed_when: "'not labeled' not in k3s_label.stdout"
+
+- name: Reconcile node taints
+  ansible.builtin.command: >-
+    kubectl --kubeconfig {{ k3s_kubeconfig | default('~/.kube/config-rbx') }}
+    taint node {{ inventory_hostname }} {{ item }} --overwrite
+  delegate_to: localhost
+  become: false
   loop: "{{ k3s_node_taints | default([]) }}"
+  register: k3s_taint
+  changed_when: "'not tainted' not in k3s_taint.stdout"
