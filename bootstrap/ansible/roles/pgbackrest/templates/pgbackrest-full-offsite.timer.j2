@@ -1,0 +1,12 @@
+[Unit]
+Description=pgBackRest weekly full backup timer, off-site repo (ADR-0012)
+# Managed by Ansible (rbx-infra: roles/pgbackrest). Do not edit on the host.
+
+[Timer]
+OnCalendar={{ pgbackrest_offsite_full_on_calendar }}
+# Persistent deliberately off: see pgbackrest-full.timer.
+Persistent=false
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

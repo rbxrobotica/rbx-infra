@@ -1,0 +1,28 @@
+---
+# pgBackRest rollout for the shared Postgres cluster (ADR-0012).
+#
+#   ansible-playbook pgbackrest.yml -i inventory/hosts.yml
+#
+# Prerequisite (once, on the operator machine):
+#   pass generate rbx/backup/pgbackrest-cipher 64
+#
+# The role installs, configures, creates the stanza and only THEN
+# places the WAL archiving drop-in (so an unscheduled restart finds a
+# working archiver), but it NEVER restarts PostgreSQL: archive_mode
+# activates in a human-scheduled restart window (runbook phase 2;
+# brief ZITADEL login and PDNS-write outage). Re-run this playbook
+# after that restart to verify the stanza and enable the backup timers
+# (runbook phase 3).
+#
+# Off-site (phase 4) is enabled later by setting the
+# pgbackrest_offsite_* variables once the rsync.net Zurich account
+# exists; until then the flag stays false and only the local repo runs.
+#
+# This file must stay NEXT TO site.yml (group_vars adjacency, see the
+# note in harden-ssh.yml).
+
+- name: Deploy pgBackRest on the database server
+  hosts: db_server
+  become: true
+  roles:
+    - pgbackrest
