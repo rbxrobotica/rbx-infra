@@ -1,9 +1,66 @@
+# Middlewares sync at wave -1 so they exist before the IngressRoute that
+# references them lands in the same ArgoCD sync (ArgoCD orders a sync by kind,
+# not file order — an IngressRoute referencing a missing Middleware drops the
+# router until Traefik observes the resource arrive).
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
 metadata:
   name: redirect-https
   namespace: rbx-comms
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
 spec:
   redirectScheme:
     scheme: https
     permanent: true
+---
+# Per-provider basicAuth: one Secret+Middleware pair per provider — a shared
+# middleware would let either credential authenticate to the other provider's
+# route (Traefik accepts any user listed in the referenced Secret).
+# The Secrets are operator-created htpasswd Secrets (never committed to git);
+# they MUST exist before this manifest syncs (see ingressroute.yml header).
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: comms-webhook-auth-postmark
+  namespace: rbx-comms
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  basicAuth:
+    secret: comms-webhook-basic-auth-postmark
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: comms-webhook-auth-d360
+  namespace: rbx-comms
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  basicAuth:
+    secret: comms-webhook-basic-auth-d360
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: comms-contact-ratelimit
+  namespace: rbx-comms
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  rateLimit:
+    average: 5
+    period: 1m
+    burst: 10
+    # No sourceCriterion: Traefik's default remote-address key IS the client
+    # in this topology — both DNS zones point directly at k3s_ingress_ip
+    # (infra/terraform/dns/rbxsystems_ch.tf, rbx_ia_br.tf) and no upstream
+    # HTTP proxy, trusted-forwarded-header, or proxy-protocol config exists
+    # in this repo, so there is no X-Forwarded-For hop to select: an
+    # ipStrategy depth would pick an EMPTY entry for direct clients and
+    # collapse every user into one shared bucket (5/min would become a
+    # global limit). If a CDN/proxy is ever introduced in front of Traefik,
+    # revisit with the measured depth. Merge gate: prove two distinct
+    # client IPs receive independent buckets (also catches any source-IP
+    # loss in the k3s ServiceLB path).
