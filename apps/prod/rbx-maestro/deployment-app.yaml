@@ -98,6 +98,17 @@ spec:
                 secretKeyRef:
                   name: maestro-dashboard-key
                   key: key
+            # Workstation interactive-ingress surface auth (ADR-0405 Phase S,
+            # rbx-maestro PR #12): scoped key whose only capabilities are
+            # idempotent interactive ensure + mission-detail reads. Sourced
+            # from ESO-synced Secret maestro-ingress-key (rbx-ia-br →
+            # rbx-maestro namespace); pass SoT: rbx/maestro/ingress-key.
+            # Absent env keeps the surface disabled (503).
+            - name: AGENT_LOOP_INGRESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: maestro-ingress-key
+                  key: key
           resources:
             requests:
               cpu: 100m
