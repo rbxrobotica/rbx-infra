@@ -1389,12 +1389,24 @@
     ASAAS_WEBHOOK_TOKEN: "{{ rbx_commerce_asaas_webhook_token_result.stdout | trim }}"
     COMMERCE_SERVICE_KEY: "{{ rbx_commerce_service_key_result.stdout | trim }}"
     ALTCHA_SECRET: "{{ rbx_commerce_altcha_secret_result.stdout | trim }}"
-    BTCPAY_API_KEY: "{{ (rbx_commerce_btcpay_api_key_result.stdout | default('') | trim) if rbx_commerce_btcpay_api_key_result.rc == 0 else '' }}"
-    BTCPAY_STORE_ID: "{{ (rbx_commerce_btcpay_store_id_result.stdout | default('') | trim) if rbx_commerce_btcpay_store_id_result.rc == 0 else '' }}"
-    BTCPAY_WEBHOOK_SECRET: "{{ (rbx_commerce_btcpay_webhook_secret_result.stdout | default('') | trim) if rbx_commerce_btcpay_webhook_secret_result.rc == 0 else '' }}"
-    PAYREXX_INSTANCE: "{{ (rbx_commerce_payrexx_instance_result.stdout | default('') | trim) if rbx_commerce_payrexx_instance_result.rc == 0 else '' }}"
-    PAYREXX_API_KEY: "{{ (rbx_commerce_payrexx_api_key_result.stdout | default('') | trim) if rbx_commerce_payrexx_api_key_result.rc == 0 else '' }}"
-    PAYREXX_WEBHOOK_SECRET: "{{ (rbx_commerce_payrexx_webhook_secret_result.stdout | default('') | trim) if rbx_commerce_payrexx_webhook_secret_result.rc == 0 else '' }}"
+    BTCPAY_API_KEY: >-
+      {{ (rbx_commerce_btcpay_api_key_result.stdout | default('') | trim)
+      if rbx_commerce_btcpay_api_key_result.rc == 0 else '' }}
+    BTCPAY_STORE_ID: >-
+      {{ (rbx_commerce_btcpay_store_id_result.stdout | default('') | trim)
+      if rbx_commerce_btcpay_store_id_result.rc == 0 else '' }}
+    BTCPAY_WEBHOOK_SECRET: >-
+      {{ (rbx_commerce_btcpay_webhook_secret_result.stdout | default('') | trim)
+      if rbx_commerce_btcpay_webhook_secret_result.rc == 0 else '' }}
+    PAYREXX_INSTANCE: >-
+      {{ (rbx_commerce_payrexx_instance_result.stdout | default('') | trim)
+      if rbx_commerce_payrexx_instance_result.rc == 0 else '' }}
+    PAYREXX_API_KEY: >-
+      {{ (rbx_commerce_payrexx_api_key_result.stdout | default('') | trim)
+      if rbx_commerce_payrexx_api_key_result.rc == 0 else '' }}
+    PAYREXX_WEBHOOK_SECRET: >-
+      {{ (rbx_commerce_payrexx_webhook_secret_result.stdout | default('') | trim)
+      if rbx_commerce_payrexx_webhook_secret_result.rc == 0 else '' }}
   changed_when: true
   no_log: true
 
