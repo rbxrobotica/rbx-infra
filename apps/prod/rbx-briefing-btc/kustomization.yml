@@ -30,4 +30,4 @@ images:
   - name: ghcr.io/rbxrobotica/rbx-briefing-btc
     newTag: sha-df48c53
   - name: ghcr.io/rbxrobotica/rbx-session-bff
-    newTag: sha-ea0329c
+    newTag: sha-515765f
