@@ -53,6 +53,9 @@ rbx/
       client-id                 # OAuth client ID for rbx-session-bff commerce access
       client-secret             # OAuth client secret for rbx-session-bff commerce access
       audience                  # Audience for the commerce service token
+  briefing-btc/
+    session-secret              # SESSION_SECRET for rbx-briefing-btc (reserved for future use), openssl rand -hex 32
+    oidc-client-id              # ZITADEL client ID of the Briefing BTC public PKCE client used by its session BFF (no client secret)
   market-graph/
     db-app-password             # Non-owner runtime role rbx_market_graph_app
     db-migrator-password        # Schema-owner role rbx_market_graph_migrator
@@ -172,6 +175,8 @@ pass insert rbx/commerce-sandbox/asaas-api-webhook-token # sandbox webhook token
 pass insert rbx/identity/session-bff-commerce/client-id
 pass insert rbx/identity/session-bff-commerce/client-secret
 pass insert rbx/identity/session-bff-commerce/audience
+pass insert rbx/briefing-btc/session-secret       # openssl rand -hex 32 (rbx-briefing-btc, reserved)
+pass insert rbx/briefing-btc/oidc-client-id       # ZITADEL public PKCE client ID for the rbx-briefing-btc session BFF
 pass insert rbx/langfuse/db-password               # openssl rand -hex 32
 pass insert rbx/langfuse/nextauth-secret           # openssl rand -hex 32
 pass insert rbx/langfuse/salt                      # openssl rand -hex 32
@@ -241,6 +246,9 @@ Secrets created per namespace:
 | `robson-testnet` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `rbx-console` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `rbx-atlas` | `ghcr-pull-secret` | docker registry credentials (phase 1 of the ADR-0028 topology amendment; phase 2 adds `rbx-atlas-secrets`) | `rbx/cluster/ghcr-token` |
+| `rbx-briefing-btc` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
+| `rbx-ia-br` | `rbx-briefing-btc-secrets` | `SESSION_SECRET` (mirrored into `rbx-briefing-btc` by ExternalSecret; optional in the Deployment, reserved for future use) | `rbx/briefing-btc/session-secret` |
+| `rbx-ia-br` | `rbx-briefing-btc-session-bff-oidc` | `RBX_SESSION_BFF_CLIENT_ID` (public PKCE client, no client secret; mirrored into `rbx-briefing-btc` for its dedicated `rbx-session-bff`) | `rbx/briefing-btc/oidc-client-id` |
 | `rbx-console` | `rbx-console-users-access` | `RBX_IDENTITY_USERS_ACCESS_SERVICE_KEY`, `RBX_COMMERCE_USERS_ACCESS_SERVICE_KEY`, `RBX_COMMERCE_USERS_ACCESS_TENANT_ID` | `rbx/console/users-access/identity-service-key`, `rbx-commerce-secrets.COMMERCE_SERVICE_KEY`, `rbx/console/users-access/tenant-id` |
 | `rbx-ia-br` | `rbx-memory-token` | `token` | `rbx/memory/token` |
 | `rbx-ia-br` | `rbx-observability-token` | `token` | `rbx/observability/token` |
@@ -281,7 +289,10 @@ without manual console work.
 `rbx-ia-br` is the central vault namespace read by the reorg services'
 ExternalSecrets through the `kubernetes-store` SecretStore. The
 `contabo-s3-credentials` secret in `rbx-ia-br` is pre-existing and reused by
-`rbx-memory` and `rbx-data`; this role does not provision or modify it.
+`rbx-memory`, `rbx-data` and `rbx-briefing-btc`; this role does not provision
+or modify it. `rbx-briefing-btc` also mirrors the shared
+`rbx-session-bff-commerce` secret for its dedicated session BFF (same commerce
+service account as the Strategos BFF; no separate pass entries).
 
 Run idempotently — safe to re-run after a cluster wipe.
 

@@ -80,3 +80,16 @@ products:
     description: Public Presence Control Plane (identities, editorial calendar,
       Creative Engine, publishing with receipts, analytics, archive); governance
       ADR-0608 draft
+  - name: rbx-briefing-btc
+    type: fullstack
+    phase: seed
+    namespace: rbx-briefing-btc
+    domains:
+      - app.merovelis.com/briefing-btc
+    repo: https://github.com/rbxrobotica/rbx-briefing-btc
+    owner: rbx
+    created: 2026-09-12
+    description: Logged-in Briefing BTC area (SvelteKit on Bun) behind a dedicated
+      rbx-session-bff instance with the commerce entitlement gate; reads
+      briefing editions from the rbx-content S3 bucket (ADR-0014 canonical
+      entrypoint app.merovelis.com/briefing-btc)

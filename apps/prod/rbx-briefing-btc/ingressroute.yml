@@ -1,0 +1,46 @@
+# IngressRoutes: rbx-briefing-btc on the canonical Hub host app.merovelis.com
+# under the /briefing-btc prefix (rbx-governance ADR-0014). The same host is
+# routed by apps/prod/strategos/strategos-ui-ingress.yml for /strategos, /_app,
+# /strategos-mark.svg and /api/auth; those rules are untouched. The app runs
+# with kit.paths.base = '/briefing-btc', so its assets (/briefing-btc/_app/)
+# and auth adapter (/briefing-btc/api/auth/*) stay inside this prefix.
+#
+# Two routers on purpose (precedent: rbx-atlas, rbx-flightdeck): a TLS-scoped
+# router cannot also serve the plain-HTTP redirect, so `web` gets a non-TLS
+# redirect router and `websecure` serves the application.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rbx-briefing-btc-web
+  namespace: rbx-briefing-btc
+spec:
+  entryPoints:
+    - web
+  routes:
+    # HTTP to HTTPS permanent redirect
+    - match: Host(`app.merovelis.com`) && (Path(`/briefing-btc`) || PathPrefix(`/briefing-btc/`))
+      kind: Rule
+      middlewares:
+        - name: redirect-https
+          namespace: rbx-briefing-btc
+      services:
+        - name: rbx-briefing-btc
+          port: 80
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rbx-briefing-btc
+  namespace: rbx-briefing-btc
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    # HTTPS to the SvelteKit server run by Bun
+    - match: Host(`app.merovelis.com`) && (Path(`/briefing-btc`) || PathPrefix(`/briefing-btc/`))
+      kind: Rule
+      services:
+        - name: rbx-briefing-btc
+          port: 80
+  tls:
+    secretName: rbx-briefing-btc-tls

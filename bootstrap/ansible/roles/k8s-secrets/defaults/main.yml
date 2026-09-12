@@ -149,3 +149,12 @@ rbx_public_presence_db_user: "public_presence"
 rbx_public_presence_db_host: "rbx-public-presence-postgres.rbx-public-presence.svc.cluster.local"
 rbx_public_presence_db_port: "5432"
 rbx_public_presence_db_name: "public_presence"
+
+# rbx-briefing-btc (namespace: rbx-briefing-btc, logged-in Briefing BTC area on
+# app.merovelis.com/briefing-btc, rbx-governance ADR-0014). The web app reads
+# briefing editions with the pre-existing contabo-s3-credentials; its dedicated
+# rbx-session-bff instance uses a public PKCE ZITADEL client (client id only,
+# no client secret) and the shared rbx-session-bff-commerce service account.
+rbx_briefing_btc_namespace: "rbx-briefing-btc"
+pass_rbx_briefing_btc_session_secret_key: "rbx/briefing-btc/session-secret"
+pass_rbx_briefing_btc_oidc_client_id_key: "rbx/briefing-btc/oidc-client-id"

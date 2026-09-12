@@ -1,0 +1,17 @@
+# app.merovelis.com is the canonical Hub host (rbx-governance ADR-0014). The
+# Strategos Ingress in apps/prod/strategos already holds a cert-manager
+# certificate for the same host (strategos-ui-app-merovelis-com-tls, namespace
+# strategos). Traefik resolves TLS per namespace-scoped secret, so this
+# IngressRoute needs its own Certificate in rbx-briefing-btc.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rbx-briefing-btc-tls
+  namespace: rbx-briefing-btc
+spec:
+  secretName: rbx-briefing-btc-tls
+  dnsNames:
+    - app.merovelis.com
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer

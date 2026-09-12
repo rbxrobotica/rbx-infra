@@ -101,6 +101,7 @@ jobs:
           kubectl kustomize apps/prod/strategos >/dev/null
           kubectl kustomize apps/prod/kulinaryos-v1-proxy >/dev/null
           kubectl kustomize apps/prod/rbx-market-graph >/dev/null
+          kubectl kustomize apps/prod/rbx-briefing-btc >/dev/null
 
   validate-argocd:
     runs-on: ubuntu-latest

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-briefing-btc
+  labels:
+    app.kubernetes.io/name: rbx-briefing-btc
+    app.kubernetes.io/part-of: rbx-briefing-btc

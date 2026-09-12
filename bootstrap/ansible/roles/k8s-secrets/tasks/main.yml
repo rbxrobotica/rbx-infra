@@ -1482,6 +1482,9 @@
       - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
       - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET"
       - "  {{ rbx_ia_br_namespace }}/rbx-public-presence-secrets: DATABASE_URL + PRESENCE_SERVICE_KEY + PRESENCE_BFF_KEY + SESSION_SECRET + OIDC_* + PRESENCE_IG_* + PRESENCE_LI_*"
+      - "  {{ rbx_ia_br_namespace }}/rbx-briefing-btc-secrets: SESSION_SECRET"
+      - "  {{ rbx_ia_br_namespace }}/rbx-briefing-btc-session-bff-oidc: RBX_SESSION_BFF_CLIENT_ID"
+      - "  {{ rbx_briefing_btc_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "Tenant ID (new — stored in pass): {{ _robson_tenant_id }}"
   when: tenant_id_existing.rc != 0
 
@@ -1512,6 +1515,9 @@
       - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
       - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET"
       - "  {{ rbx_ia_br_namespace }}/rbx-public-presence-secrets: DATABASE_URL + PRESENCE_SERVICE_KEY + PRESENCE_BFF_KEY + SESSION_SECRET + OIDC_* + PRESENCE_IG_* + PRESENCE_LI_*"
+      - "  {{ rbx_ia_br_namespace }}/rbx-briefing-btc-secrets: SESSION_SECRET"
+      - "  {{ rbx_ia_br_namespace }}/rbx-briefing-btc-session-bff-oidc: RBX_SESSION_BFF_CLIENT_ID"
+      - "  {{ rbx_briefing_btc_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
   when: tenant_id_existing.rc == 0
 
 # --- Pattern R: org-registry pull secrets for apps migrating off ghcr-ldamasio ---
@@ -1588,5 +1594,74 @@
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   environment:
     GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
+# rbx-briefing-btc: logged-in Briefing BTC area (app.merovelis.com/briefing-btc,
+# rbx-governance ADR-0014). The namespace needs ghcr-pull-secret. The app
+# secrets live in rbx-ia-br and are mirrored by ExternalSecrets in
+# apps/prod/rbx-briefing-btc:
+#   rbx-briefing-btc-secrets            SESSION_SECRET (reserved, optional in the Deployment)
+#   rbx-briefing-btc-session-bff-oidc   RBX_SESSION_BFF_CLIENT_ID (public PKCE client, no secret)
+# contabo-s3-credentials and rbx-session-bff-commerce are pre-existing central
+# secrets reused by this app; this block does not touch them.
+# ---------------------------------------------------------------------------
+
+- name: Ensure rbx-briefing-btc namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ rbx_briefing_btc_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in rbx-briefing-btc
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace {{ rbx_briefing_btc_namespace }} \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+- name: Read rbx-briefing-btc session secret from pass
+  command: pass show {{ pass_rbx_briefing_btc_session_secret_key }}
+  register: rbx_briefing_btc_session_secret_result
+  changed_when: false
+  no_log: true
+
+- name: Read rbx-briefing-btc session-BFF OIDC client id from pass
+  command: pass show {{ pass_rbx_briefing_btc_oidc_client_id_key }}
+  register: rbx_briefing_btc_oidc_client_id_result
+  changed_when: false
+  no_log: true
+
+- name: Create rbx-briefing-btc-secrets in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-briefing-btc-secrets \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=SESSION_SECRET="$SESSION_SECRET" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    SESSION_SECRET: "{{ rbx_briefing_btc_session_secret_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+- name: Create rbx-briefing-btc-session-bff-oidc in rbx-ia-br
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-briefing-btc-session-bff-oidc \
+      --namespace {{ rbx_ia_br_namespace }} \
+      --from-literal=RBX_SESSION_BFF_CLIENT_ID="$RBX_SESSION_BFF_CLIENT_ID" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    RBX_SESSION_BFF_CLIENT_ID: "{{ rbx_briefing_btc_oidc_client_id_result.stdout | trim }}"
   changed_when: true
   no_log: true
