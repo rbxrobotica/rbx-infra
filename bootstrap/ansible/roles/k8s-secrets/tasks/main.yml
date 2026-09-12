@@ -1320,6 +1320,51 @@
   register: rbx_commerce_altcha_secret_result
   no_log: true
 
+# USD payment providers: tolerant reads. A pass entry that does not exist yet
+# yields an empty value (rc != 0 is not a failure here) so the Secret always
+# carries the key and the ExternalSecret in rbx-commerce keeps syncing.
+- name: Read rbx-commerce BTCPay API key from pass (optional)
+  command: pass show {{ pass_rbx_commerce_btcpay_api_key }}
+  changed_when: false
+  failed_when: false
+  register: rbx_commerce_btcpay_api_key_result
+  no_log: true
+
+- name: Read rbx-commerce BTCPay store id from pass (optional)
+  command: pass show {{ pass_rbx_commerce_btcpay_store_id }}
+  changed_when: false
+  failed_when: false
+  register: rbx_commerce_btcpay_store_id_result
+  no_log: true
+
+- name: Read rbx-commerce BTCPay webhook secret from pass (optional)
+  command: pass show {{ pass_rbx_commerce_btcpay_webhook_secret }}
+  changed_when: false
+  failed_when: false
+  register: rbx_commerce_btcpay_webhook_secret_result
+  no_log: true
+
+- name: Read rbx-commerce Payrexx instance from pass (optional)
+  command: pass show {{ pass_rbx_commerce_payrexx_instance }}
+  changed_when: false
+  failed_when: false
+  register: rbx_commerce_payrexx_instance_result
+  no_log: true
+
+- name: Read rbx-commerce Payrexx API key from pass (optional)
+  command: pass show {{ pass_rbx_commerce_payrexx_api_key }}
+  changed_when: false
+  failed_when: false
+  register: rbx_commerce_payrexx_api_key_result
+  no_log: true
+
+- name: Read rbx-commerce Payrexx webhook secret from pass (optional)
+  command: pass show {{ pass_rbx_commerce_payrexx_webhook_secret }}
+  changed_when: false
+  failed_when: false
+  register: rbx_commerce_payrexx_webhook_secret_result
+  no_log: true
+
 - name: Create rbx-commerce-secrets in rbx-ia-br
   shell: |
     kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-commerce-secrets \
@@ -1330,6 +1375,12 @@
       --from-literal=ASAAS_WEBHOOK_TOKEN="$ASAAS_WEBHOOK_TOKEN" \
       --from-literal=COMMERCE_SERVICE_KEY="$COMMERCE_SERVICE_KEY" \
       --from-literal=ALTCHA_SECRET="$ALTCHA_SECRET" \
+      --from-literal=BTCPAY_API_KEY="$BTCPAY_API_KEY" \
+      --from-literal=BTCPAY_STORE_ID="$BTCPAY_STORE_ID" \
+      --from-literal=BTCPAY_WEBHOOK_SECRET="$BTCPAY_WEBHOOK_SECRET" \
+      --from-literal=PAYREXX_INSTANCE="$PAYREXX_INSTANCE" \
+      --from-literal=PAYREXX_API_KEY="$PAYREXX_API_KEY" \
+      --from-literal=PAYREXX_WEBHOOK_SECRET="$PAYREXX_WEBHOOK_SECRET" \
       --dry-run=client -o yaml \
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   environment:
@@ -1338,6 +1389,12 @@
     ASAAS_WEBHOOK_TOKEN: "{{ rbx_commerce_asaas_webhook_token_result.stdout | trim }}"
     COMMERCE_SERVICE_KEY: "{{ rbx_commerce_service_key_result.stdout | trim }}"
     ALTCHA_SECRET: "{{ rbx_commerce_altcha_secret_result.stdout | trim }}"
+    BTCPAY_API_KEY: "{{ (rbx_commerce_btcpay_api_key_result.stdout | default('') | trim) if rbx_commerce_btcpay_api_key_result.rc == 0 else '' }}"
+    BTCPAY_STORE_ID: "{{ (rbx_commerce_btcpay_store_id_result.stdout | default('') | trim) if rbx_commerce_btcpay_store_id_result.rc == 0 else '' }}"
+    BTCPAY_WEBHOOK_SECRET: "{{ (rbx_commerce_btcpay_webhook_secret_result.stdout | default('') | trim) if rbx_commerce_btcpay_webhook_secret_result.rc == 0 else '' }}"
+    PAYREXX_INSTANCE: "{{ (rbx_commerce_payrexx_instance_result.stdout | default('') | trim) if rbx_commerce_payrexx_instance_result.rc == 0 else '' }}"
+    PAYREXX_API_KEY: "{{ (rbx_commerce_payrexx_api_key_result.stdout | default('') | trim) if rbx_commerce_payrexx_api_key_result.rc == 0 else '' }}"
+    PAYREXX_WEBHOOK_SECRET: "{{ (rbx_commerce_payrexx_webhook_secret_result.stdout | default('') | trim) if rbx_commerce_payrexx_webhook_secret_result.rc == 0 else '' }}"
   changed_when: true
   no_log: true
 
@@ -1480,7 +1537,7 @@
       - "  {{ rbx_ia_br_namespace }}/rbx-market-briefing-llm: LLM_API_KEY (llm-gateway master key)"
       - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
-      - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET"
+      - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET + BTCPAY_* + PAYREXX_* (empty until issued)"
       - "  {{ rbx_ia_br_namespace }}/rbx-public-presence-secrets: DATABASE_URL + PRESENCE_SERVICE_KEY + PRESENCE_BFF_KEY + SESSION_SECRET + OIDC_* + PRESENCE_IG_* + PRESENCE_LI_*"
       - "  {{ rbx_ia_br_namespace }}/rbx-briefing-btc-secrets: SESSION_SECRET"
       - "  {{ rbx_ia_br_namespace }}/rbx-briefing-btc-session-bff-oidc: RBX_SESSION_BFF_CLIENT_ID"
@@ -1513,7 +1570,7 @@
       - "  {{ rbx_ia_br_namespace }}/rbx-market-briefing-llm: LLM_API_KEY (llm-gateway master key)"
       - "  {{ rbx_market_briefing_namespace }}/ghcr-pull-secret: ghcr.io pull credentials"
       - "  {{ rbx_ia_br_namespace }}/rbx-contact-secrets: ALTCHA_SECRET + COMMS_SERVICE_KEY + D360_API_KEY + POSTMARK_SERVER_TOKEN"
-      - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET"
+      - "  {{ rbx_ia_br_namespace }}/rbx-commerce-secrets: DATABASE_URL + COMMS_API_URL + ASAAS_API_KEY + ASAAS_WEBHOOK_TOKEN + COMMERCE_SERVICE_KEY + ALTCHA_SECRET + BTCPAY_* + PAYREXX_* (empty until issued)"
       - "  {{ rbx_ia_br_namespace }}/rbx-public-presence-secrets: DATABASE_URL + PRESENCE_SERVICE_KEY + PRESENCE_BFF_KEY + SESSION_SECRET + OIDC_* + PRESENCE_IG_* + PRESENCE_LI_*"
       - "  {{ rbx_ia_br_namespace }}/rbx-briefing-btc-secrets: SESSION_SECRET"
       - "  {{ rbx_ia_br_namespace }}/rbx-briefing-btc-session-bff-oidc: RBX_SESSION_BFF_CLIENT_ID"

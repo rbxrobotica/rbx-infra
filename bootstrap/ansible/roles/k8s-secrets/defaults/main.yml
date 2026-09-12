@@ -125,6 +125,18 @@ pass_rbx_commerce_service_key: "rbx/commerce/service-key"
 # briefing-btc checkout, no cross-service dependency.
 pass_rbx_commerce_altcha_secret: "rbx/commerce/altcha-secret"
 rbx_commerce_comms_api_url: "http://rbx-comms.rbx-comms.svc.cluster.local"
+# USD payment providers for Briefing BTC (BTCPay Server in rbx-payments, Payrexx
+# for cards). The entries are read tolerantly: a missing pass entry becomes an
+# empty value and rbx-commerce leaves that provider unconfigured
+# (provisioning=manual) instead of failing the Secret sync. Fill them once the
+# operator creates the BTCPay store, API key and webhook, and the Payrexx
+# instance.
+pass_rbx_commerce_btcpay_api_key: "rbx/commerce/btcpay-api-key"
+pass_rbx_commerce_btcpay_store_id: "rbx/commerce/btcpay-store-id"
+pass_rbx_commerce_btcpay_webhook_secret: "rbx/commerce/btcpay-webhook-secret"
+pass_rbx_commerce_payrexx_instance: "rbx/commerce/payrexx-instance"
+pass_rbx_commerce_payrexx_api_key: "rbx/commerce/payrexx-api-key"
+pass_rbx_commerce_payrexx_webhook_secret: "rbx/commerce/payrexx-webhook-secret"
 
 # rbx-public-presence-secrets (in rbx-ia-br — feeds rbx-public-presence ExternalSecrets)
 # DATABASE_URL points at the selectorless Service to jaguar (postgres-svc.yml in
