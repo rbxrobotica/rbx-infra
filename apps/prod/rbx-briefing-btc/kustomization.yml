@@ -1,0 +1,33 @@
+# Kustomization for rbx-briefing-btc (logged-in Briefing BTC area on
+# app.merovelis.com/briefing-btc, rbx-governance ADR-0014).
+# First rollout: the web image tag is a placeholder until the rbx-briefing-btc
+# publish workflow pushes its first sha-<commit> build; the Argo CD Application
+# will not converge until a real tag replaces it (docs/infra/IMAGE-PROMOTION.md).
+# The session BFF tag matches the Strategos BFF pin in
+# gitops/app-of-apps/rbx-identity.yml (the instance carrying the commerce gate).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rbx-briefing-btc
+resources:
+  - namespace.yml
+  - rbac-external-secrets.yml
+  - secretstore.yml
+  - externalsecret.yml
+  - externalsecret-s3.yml
+  - externalsecret-session-bff.yml
+  - session-bff.yml
+  - middleware.yml
+  - deploy.yml
+  - svc.yml
+  - certificate.yml
+  - ingressroute.yml
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: rbx-briefing-btc
+      environment: production
+    includeSelectors: false
+images:
+  - name: ghcr.io/rbxrobotica/rbx-briefing-btc
+    newTag: sha-df48c53
+  - name: ghcr.io/rbxrobotica/rbx-session-bff
+    newTag: sha-ea0329c

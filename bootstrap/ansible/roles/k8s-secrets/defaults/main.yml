@@ -125,6 +125,18 @@ pass_rbx_commerce_service_key: "rbx/commerce/service-key"
 # briefing-btc checkout, no cross-service dependency.
 pass_rbx_commerce_altcha_secret: "rbx/commerce/altcha-secret"
 rbx_commerce_comms_api_url: "http://rbx-comms.rbx-comms.svc.cluster.local"
+# USD payment providers for Briefing BTC (BTCPay Server in rbx-payments, Payrexx
+# for cards). The entries are read tolerantly: a missing pass entry becomes an
+# empty value and rbx-commerce leaves that provider unconfigured
+# (provisioning=manual) instead of failing the Secret sync. Fill them once the
+# operator creates the BTCPay store, API key and webhook, and the Payrexx
+# instance.
+pass_rbx_commerce_btcpay_api_key: "rbx/commerce/btcpay-api-key"
+pass_rbx_commerce_btcpay_store_id: "rbx/commerce/btcpay-store-id"
+pass_rbx_commerce_btcpay_webhook_secret: "rbx/commerce/btcpay-webhook-secret"
+pass_rbx_commerce_payrexx_instance: "rbx/commerce/payrexx-instance"
+pass_rbx_commerce_payrexx_api_key: "rbx/commerce/payrexx-api-key"
+pass_rbx_commerce_payrexx_webhook_secret: "rbx/commerce/payrexx-webhook-secret"
 
 # rbx-public-presence-secrets (in rbx-ia-br — feeds rbx-public-presence ExternalSecrets)
 # DATABASE_URL points at the selectorless Service to jaguar (postgres-svc.yml in
@@ -149,3 +161,12 @@ rbx_public_presence_db_user: "public_presence"
 rbx_public_presence_db_host: "rbx-public-presence-postgres.rbx-public-presence.svc.cluster.local"
 rbx_public_presence_db_port: "5432"
 rbx_public_presence_db_name: "public_presence"
+
+# rbx-briefing-btc (namespace: rbx-briefing-btc, logged-in Briefing BTC area on
+# app.merovelis.com/briefing-btc, rbx-governance ADR-0014). The web app reads
+# briefing editions with the pre-existing contabo-s3-credentials; its dedicated
+# rbx-session-bff instance uses a public PKCE ZITADEL client (client id only,
+# no client secret) and the shared rbx-session-bff-commerce service account.
+rbx_briefing_btc_namespace: "rbx-briefing-btc"
+pass_rbx_briefing_btc_session_secret_key: "rbx/briefing-btc/session-secret"
+pass_rbx_briefing_btc_oidc_client_id_key: "rbx/briefing-btc/oidc-client-id"

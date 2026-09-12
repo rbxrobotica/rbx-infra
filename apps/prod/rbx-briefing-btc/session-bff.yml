@@ -1,0 +1,127 @@
+# Dedicated rbx-briefing-btc product-local session BFF (console pattern) with
+# the Strategos commerce entitlement gate (gitops/app-of-apps/rbx-identity.yml).
+# The image tag is pinned by kustomization.yml (Pattern R).
+#
+# replicas stays at 1: the session store is in-memory, so a second pod would
+# not share sessions. Cookies use __Host- names scoped to this product so they
+# never collide with the Strategos cookies on the same host.
+#
+# RBX_SESSION_BFF_CLIENT_ID comes from the rbx-briefing-btc-session-bff-oidc
+# mirror (public PKCE client, no client secret). RBX_COMMERCE_CLIENT_ID,
+# RBX_COMMERCE_CLIENT_SECRET, RBX_COMMERCE_MACHINE_KEY_JSON and
+# RBX_COMMERCE_AUDIENCE come from the rbx-session-bff-commerce mirror.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-briefing-btc-session-bff
+  namespace: rbx-briefing-btc
+  labels:
+    app.kubernetes.io/name: rbx-briefing-btc-session-bff
+    app.kubernetes.io/component: session-bff
+    app.kubernetes.io/part-of: rbx-briefing-btc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-briefing-btc-session-bff
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-briefing-btc-session-bff
+        app.kubernetes.io/component: session-bff
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+        - name: session-bff
+          image: ghcr.io/rbxrobotica/rbx-session-bff
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+              name: http
+          envFrom:
+            - secretRef:
+                name: rbx-briefing-btc-session-bff-oidc
+            - secretRef:
+                name: rbx-session-bff-commerce
+          env:
+            - name: RBX_IDENTITY_ISSUER
+              value: https://auth.merovelis.com
+            - name: RBX_SESSION_BFF_DISCOVER_OIDC
+              value: "true"
+            - name: RBX_SESSION_BFF_BIND_ADDR
+              value: 0.0.0.0:8081
+            - name: RBX_SESSION_BFF_REDIRECT_URI
+              value: https://app.merovelis.com/briefing-btc/api/auth/callback
+            - name: RBX_SESSION_BFF_SCOPES
+              value: openid profile email
+            - name: RBX_SESSION_COOKIE_NAME
+              value: __Host-rbx_briefing_session
+            - name: RBX_SESSION_CSRF_COOKIE_NAME
+              value: __Host-rbx_briefing_csrf
+            - name: RBX_SESSION_COOKIE_SECURE
+              value: "true"
+            - name: RBX_PRODUCT_KEY
+              value: briefing-btc
+            - name: RBX_SESSION_BFF_ACCESS_MODE
+              value: annotate
+            - name: RBX_COMMERCE_BASE_URL
+              value: http://rbx-commerce.rbx-commerce.svc.cluster.local
+            - name: RBX_COMMERCE_TOKEN_ENDPOINT
+              value: https://auth.merovelis.com/oauth/v2/token
+            - name: RBX_COMMERCE_SCOPES
+              value: openid service:commerce.read service:commerce.entitlement.claim
+            # Strategos sets this to its own OIDC client id. Here the client id
+            # lives in the OIDC mirror, so it is sourced from the same key to
+            # keep the two values identical.
+            - name: RBX_COMMERCE_TOKEN_EXCHANGE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-briefing-btc-session-bff-oidc
+                  key: RBX_SESSION_BFF_CLIENT_ID
+            - name: RBX_AUTHZ_GATEWAY_URL
+              value: http://rbx-policy-gateway.rbx-identity.svc.cluster.local:8083/authorize
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
+            capabilities:
+              drop:
+                - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-briefing-btc-session-bff
+  namespace: rbx-briefing-btc
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rbx-briefing-btc-session-bff
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http

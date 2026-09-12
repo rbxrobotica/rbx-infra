@@ -11,6 +11,7 @@ resources:
   - rbx-commerce-svc.yml
   - rbx-commerce-web-deploy.yml
   - rbx-commerce-web-svc.yml
+  - renewals-cronjob.yml
 images:
   - name: ghcr.io/rbxrobotica/rbx-commerce
     newTag: sha-998898c200c78dd8757437674cd8007e588e1dad
