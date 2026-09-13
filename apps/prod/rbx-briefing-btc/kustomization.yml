@@ -28,6 +28,6 @@ labels:
     includeSelectors: false
 images:
   - name: ghcr.io/rbxrobotica/rbx-briefing-btc
-    newTag: sha-df48c53
+    newTag: sha-094289c
   - name: ghcr.io/rbxrobotica/rbx-session-bff
     newTag: sha-515765f
