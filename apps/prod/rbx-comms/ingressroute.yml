@@ -1,16 +1,43 @@
 # IngressRoute: rbx-comms API (api.comms.*)
 # rbx.ia.br DNS: ação manual necessária — zona não está no módulo OpenTofu
+#
+# WS-SEC-0 item 1 containment (rbx-comms PLAN-institutional-comms-channels.md, v16):
+# split into two IngressRoutes — `web` carries only the HTTPS redirect; `websecure`
+# carries an explicit allow-only route set (default-deny: anything unmatched gets
+# Traefik's built-in 404). Console routes and /metrics intentionally have no
+# external route. /health has no external route either (Kubernetes probes hit the
+# pod directly); confirm no external uptime monitor depends on it before merging.
+#
+# MERGE GATE (auto-sync applies on merge — every item below precedes the merge):
+# 1. The two htpasswd Secrets `comms-webhook-basic-auth-postmark` and
+#    `comms-webhook-basic-auth-d360` exist in the rbx-comms namespace AND are
+#    well-formed: Opaque, with a non-empty `users` key holding a valid htpasswd
+#    entry (the plan's `kubectl create secret generic --from-file=users=...`
+#    produces the right shape). Traefik drops every router referencing a
+#    basicAuth middleware whose Secret is missing OR malformed — that provider's
+#    webhook routes would 404, not 401 — while Kubernetes/ArgoCD still report
+#    the CRs applied. Verify: `kubectl get secret -n rbx-comms
+#    comms-webhook-basic-auth-postmark -o jsonpath='{.data.users}' | wc -c` > 0
+#    (same for d360).
+# 2. Rate-limit source verified: two distinct client IPs receive independent
+#    buckets on POST /api/contact (see middleware.yml — this also catches any
+#    source-IP loss in the k3s ServiceLB path).
+# 3. Confirmed no external uptime monitor depends on https://.../health (the
+#    allow set drops its external route; in-cluster probes are unaffected).
+# 4. Provider credentials recorded in the secret store and an operator ready to
+#    perform the post-merge re-registrations: routes answer 401 first, THEN
+#    Postmark (userinfo URL) and 360dialog (headers-object Authorization) are
+#    re-registered per WS-SEC-0 item 3.
+---
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: rbx-comms
+  name: rbx-comms-http-redirect
   namespace: rbx-comms
 spec:
   entryPoints:
     - web
-    - websecure
   routes:
-    # HTTP → HTTPS redirect for both hosts
     - match: Host(`api.comms.rbxsystems.ch`) || Host(`api.comms.rbx.ia.br`)
       kind: Rule
       priority: 1
@@ -20,12 +47,99 @@ spec:
       services:
         - name: rbx-comms
           port: 80
-    # HTTPS API traffic
-    - match: Host(`api.comms.rbxsystems.ch`) || Host(`api.comms.rbx.ia.br`)
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: rbx-comms
+  namespace: rbx-comms
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    # --- public surface, api.comms.rbxsystems.ch ---
+    # exact Path, deliberately: PathPrefix(`/api/contact`) would also expose
+    # /api/contacts (console PII surface)
+    - match: Host(`api.comms.rbxsystems.ch`) && Path(`/api/contact`)
       kind: Rule
-      priority: 10
+      priority: 100
+      middlewares:
+        - name: comms-contact-ratelimit
+          namespace: rbx-comms
       services:
         - name: rbx-comms
           port: 80
+    - match: Host(`api.comms.rbxsystems.ch`) && Path(`/api/altcha-challenge`)
+      kind: Rule
+      priority: 100
+      services:
+        - name: rbx-comms
+          port: 80
+    - match: Host(`api.comms.rbxsystems.ch`) && PathPrefix(`/api/webhooks/postmark/`)
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: comms-webhook-auth-postmark
+          namespace: rbx-comms
+      services:
+        - name: rbx-comms
+          port: 80
+    - match: Host(`api.comms.rbxsystems.ch`) && PathPrefix(`/api/webhooks/d360/`)
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: comms-webhook-auth-d360
+          namespace: rbx-comms
+      services:
+        - name: rbx-comms
+          port: 80
+    - match: Host(`api.comms.rbxsystems.ch`) && PathPrefix(`/api/v1/outbound/`)
+      kind: Rule
+      priority: 100
+      services:
+        - name: rbx-comms
+          port: 80
+    # --- same five routes for api.comms.rbx.ia.br ---
+    - match: Host(`api.comms.rbx.ia.br`) && Path(`/api/contact`)
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: comms-contact-ratelimit
+          namespace: rbx-comms
+      services:
+        - name: rbx-comms
+          port: 80
+    - match: Host(`api.comms.rbx.ia.br`) && Path(`/api/altcha-challenge`)
+      kind: Rule
+      priority: 100
+      services:
+        - name: rbx-comms
+          port: 80
+    - match: Host(`api.comms.rbx.ia.br`) && PathPrefix(`/api/webhooks/postmark/`)
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: comms-webhook-auth-postmark
+          namespace: rbx-comms
+      services:
+        - name: rbx-comms
+          port: 80
+    - match: Host(`api.comms.rbx.ia.br`) && PathPrefix(`/api/webhooks/d360/`)
+      kind: Rule
+      priority: 100
+      middlewares:
+        - name: comms-webhook-auth-d360
+          namespace: rbx-comms
+      services:
+        - name: rbx-comms
+          port: 80
+    - match: Host(`api.comms.rbx.ia.br`) && PathPrefix(`/api/v1/outbound/`)
+      kind: Rule
+      priority: 100
+      services:
+        - name: rbx-comms
+          port: 80
+    # NO catch-all route on websecure: console routes and /metrics are
+    # unmatchable externally = denied (Traefik default 404).
   tls:
     secretName: rbx-comms-api-tls
