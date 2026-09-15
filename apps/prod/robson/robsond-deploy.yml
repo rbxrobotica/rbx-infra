@@ -74,8 +74,14 @@ spec:
             secretKeyRef:
               name: robsond-secret
               key: binance-api-secret
-        # API bearer token (from secret)
-        - name: ROBSON_API_TOKEN
+        # Legacy static bearer token (ADR-0054 rollout bridge). Same
+        # secret key as before (api-token) — only the exposed env var
+        # name changed, from the now-rejected ROBSON_API_TOKEN to
+        # ROBSON_LEGACY_API_TOKEN, matching robsond's dual-accept
+        # middleware during the Google OAuth cutover. Remove this
+        # mapping (and the api-token secret key) once Google login is
+        # confirmed stable — see ADR-0054's migration plan.
+        - name: ROBSON_LEGACY_API_TOKEN
           valueFrom:
             secretKeyRef:
               name: robsond-secret
