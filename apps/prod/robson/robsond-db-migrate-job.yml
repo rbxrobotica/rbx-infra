@@ -49,7 +49,7 @@ spec:
 
       containers:
       - name: db-migrate
-        image: ghcr.io/rbxrobotica/robson-v2:sha-3d1a0c69
+        image: ghcr.io/rbxrobotica/robson-v2:sha-bfa3bb9c
         imagePullPolicy: IfNotPresent
         command:
         - sh
