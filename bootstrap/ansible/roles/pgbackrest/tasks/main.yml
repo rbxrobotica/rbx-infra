@@ -1,0 +1,152 @@
+---
+# pgBackRest on jaguar (ADR-0012). The role never restarts the shared
+# cluster; the archive_mode restart is a human-scheduled window.
+#
+# ORDER MATTERS for safety: the stanza is created BEFORE the archiving
+# drop-in is placed, so that an unscheduled restart (postgresql-16
+# package postinst, the paradedb tuning handler, a host reboot) that
+# activates archive_mode finds a WORKING archiver instead of a failing
+# archive_command accumulating WAL until the disk fills.
+
+- name: Install pgbackrest from the Ubuntu archive
+  apt:
+    name: pgbackrest
+    state: present
+    update_cache: true
+
+- name: Hold pgbackrest package (upgrades are deliberate PRs)
+  dpkg_selections:
+    name: pgbackrest
+    selection: hold
+
+- name: Read repo cipher passphrase from the operator's pass store
+  command: pass show {{ pgbackrest_cipher_pass_key }}
+  delegate_to: localhost
+  become: false
+  register: pgbackrest_cipher_pass_result
+  changed_when: false
+  no_log: true
+
+- name: Create repository, spool and log directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: "0750"
+  loop:
+    - "{{ pgbackrest_repo1_path }}"
+    - "{{ pgbackrest_spool_path }}"
+    - /var/log/pgbackrest
+    - /etc/pgbackrest
+
+- name: Write pgbackrest configuration (contains the cipher passphrase)
+  template:
+    src: pgbackrest.conf.j2
+    dest: /etc/pgbackrest/pgbackrest.conf
+    owner: postgres
+    group: postgres
+    mode: "0600"
+  no_log: true
+
+- name: Generate dedicated ed25519 keypair for the off-site repository
+  become: true
+  become_user: postgres
+  openssh_keypair:
+    path: /var/lib/postgresql/.ssh/id_ed25519_pgbackrest
+    type: ed25519
+    comment: "pgbackrest-offsite@jaguar"
+    force: false
+  register: pgbackrest_offsite_keypair
+  when: pgbackrest_offsite_enabled
+
+- name: Show the public key to register at the off-site provider
+  debug:
+    msg: "Register at rsync.net: {{ pgbackrest_offsite_keypair.public_key }}"
+  when: pgbackrest_offsite_enabled
+
+- name: Create the stanza on all configured repositories (idempotent)
+  become: true
+  become_user: postgres
+  command: pgbackrest --stanza={{ pgbackrest_stanza }} stanza-create
+  changed_when: false
+
+- name: Write WAL archiving drop-in (takes effect at the next restart)
+  template:
+    src: rbx-pgbackrest-archiving.conf.j2
+    dest: "{{ pgbackrest_pg_conf_d }}/rbx-pgbackrest-archiving.conf"
+    owner: postgres
+    group: postgres
+    mode: "0644"
+
+- name: Check whether archive_mode is already active
+  become: true
+  become_user: postgres
+  command: psql -tAc "SHOW archive_mode"
+  register: pgbackrest_archive_mode
+  changed_when: false
+
+- name: Report restart requirement (the role never restarts the cluster)
+  debug:
+    msg: >-
+      archive_mode is '{{ pgbackrest_archive_mode.stdout | trim }}'.
+      {% if pgbackrest_archive_mode.stdout | trim != 'on' %}
+      A human-scheduled PostgreSQL restart is required before WAL
+      archiving starts; see docs/runbooks/PGBACKREST-BACKUP.md phase 2.
+      {% else %}
+      WAL archiving is active.
+      {% endif %}
+
+- name: Verify the stanza end to end (all repositories)
+  become: true
+  become_user: postgres
+  command: pgbackrest --stanza={{ pgbackrest_stanza }} check
+  changed_when: false
+  when: pgbackrest_archive_mode.stdout | trim == 'on'
+
+- name: Install local backup service units and timers
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop:
+    - pgbackrest-full.service
+    - pgbackrest-full.timer
+    - pgbackrest-diff.service
+    - pgbackrest-diff.timer
+
+- name: Install off-site backup service units and timers
+  template:
+    src: "{{ item }}.j2"
+    dest: "/etc/systemd/system/{{ item }}"
+    mode: "0644"
+  loop:
+    - pgbackrest-full-offsite.service
+    - pgbackrest-full-offsite.timer
+    - pgbackrest-diff-offsite.service
+    - pgbackrest-diff-offsite.timer
+  when: pgbackrest_offsite_enabled
+
+- name: Enable local timers (only once archiving is active)
+  systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop:
+    - pgbackrest-full.timer
+    - pgbackrest-diff.timer
+  when: pgbackrest_archive_mode.stdout | trim == 'on'
+
+- name: Enable off-site timers (only once archiving is active)
+  systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+    daemon_reload: true
+  loop:
+    - pgbackrest-full-offsite.timer
+    - pgbackrest-diff-offsite.timer
+  when:
+    - pgbackrest_archive_mode.stdout | trim == 'on'
+    - pgbackrest_offsite_enabled
