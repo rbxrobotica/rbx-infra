@@ -7,7 +7,7 @@ metadata:
   namespace: rbx-portal
 data:
   OIDC_ISSUER: "https://auth.merovelis.com"
-  OIDC_CLIENT_ID: "rbx-portal"
+  OIDC_CLIENT_ID: "391414485178384500"
   OIDC_REDIRECT_URI: "https://portal.rbxsystems.ch/auth/callback"
   OIDC_SCOPES: "openid profile email"
   ORIGIN: "https://portal.rbxsystems.ch"

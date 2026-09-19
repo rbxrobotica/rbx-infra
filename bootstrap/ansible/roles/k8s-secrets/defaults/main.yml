@@ -57,6 +57,8 @@ pass_rbx_session_bff_commerce_client_id_key: "rbx/identity/session-bff-commerce/
 pass_rbx_session_bff_commerce_client_secret_key: "rbx/identity/session-bff-commerce/client-secret"
 pass_rbx_session_bff_commerce_machine_key_json_key: "rbx/identity/session-bff-commerce/machine-key-json"
 pass_rbx_session_bff_commerce_audience_key: "rbx/identity/session-bff-commerce/audience"
+pass_rbx_portal_oidc_client_secret_key: "rbx/portal/oidc-client-secret"
+pass_rbx_portal_session_secret_key: "rbx/portal/session-secret"
 
 # rbx-comms (central vault: source DATABASE_URL synced to the rbx-comms ns via
 # ExternalSecret). The DB is the in-cluster Service rbx-comms-postgres — a
