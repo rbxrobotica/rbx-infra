@@ -169,13 +169,13 @@ fi
 password_sql="${DB_PASSWORD//\'/\'\'}"
 
 {
-  printf "DO \\$\\$ BEGIN\n"
+  printf 'DO $$ BEGIN\n'
   printf "  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '%s') THEN\n" "$DB_USER"
   printf "    CREATE ROLE %s LOGIN PASSWORD '%s';\n" "$DB_USER" "$password_sql"
   printf "  ELSE\n"
   printf "    ALTER ROLE %s WITH LOGIN PASSWORD '%s';\n" "$DB_USER" "$password_sql"
   printf "  END IF;\n"
-  printf "END \\$\\$;\n"
+  printf 'END $$;\n'
   printf "SELECT 'CREATE DATABASE %s OWNER %s' WHERE NOT EXISTS (SELECT 1 FROM pg_database WHERE datname = '%s')\\gexec\n" "$DB_NAME" "$DB_USER" "$DB_NAME"
   printf "GRANT ALL PRIVILEGES ON DATABASE %s TO %s;\n" "$DB_NAME" "$DB_USER"
   printf "\\connect %s\n" "$DB_NAME"

@@ -56,14 +56,32 @@ spec:
                   name: rbx-commerce-secrets
                   key: ASAAS_WEBHOOK_TOKEN
                   optional: true
+            # BTCPay Server lives in rbx-payments (apps/prod/rbx-payments); the
+            # Greenfield API listens on 23000. Store id, API key and webhook
+            # secret are issued by the operator in the BTCPay UI; until they
+            # exist USD checkouts fall back to provisioning=manual.
             - name: BTCPAY_URL
-              value: "http://btcpay-server.btc-pay.svc.cluster.local:23001"
+              value: "http://rbx-btcpay-server.rbx-payments.svc.cluster.local:23000"
             - name: BTCPAY_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: rbx-commerce-secrets
                   key: BTCPAY_API_KEY
                   optional: true
+            - name: BTCPAY_STORE_ID
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-secrets
+                  key: BTCPAY_STORE_ID
+                  optional: true
+            - name: BTCPAY_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-secrets
+                  key: BTCPAY_WEBHOOK_SECRET
+                  optional: true
+            - name: BTCPAY_RETURN_URL
+              value: "https://app.merovelis.com/briefing-btc/account"
             - name: PAYREXX_INSTANCE
               valueFrom:
                 secretKeyRef:
@@ -76,6 +94,22 @@ spec:
                   name: rbx-commerce-secrets
                   key: PAYREXX_API_KEY
                   optional: true
+            - name: PAYREXX_WEBHOOK_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-secrets
+                  key: PAYREXX_WEBHOOK_SECRET
+                  optional: true
+            - name: PAYREXX_RETURN_URL
+              value: "https://app.merovelis.com/briefing-btc/account"
+            # Tenant the public checkout writes under. Not a secret: uuid5 of the
+            # Strategos machine user, the same value rbx-console keeps in
+            # rbx/console/users-access/tenant-id and the session BFFs resolve.
+            # Without it commerce falls back to the zero UUID, which the portal
+            # and /api/entitlements/access never see (rbx-commerce migration
+            # 000018 moved the rows written that way).
+            - name: COMMERCE_PUBLIC_TENANT_ID
+              value: "885f24d2-1217-534e-bb1b-53440a3c04bb"
             - name: COMMERCE_SERVICE_KEY
               valueFrom:
                 secretKeyRef:

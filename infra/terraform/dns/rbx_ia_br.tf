@@ -134,6 +134,16 @@ resource "powerdns_record" "atlas_rbx_ia_br_a" {
   records = [var.k3s_ingress_ip]
 }
 
+# RBX Public Presence: operational console of the Public Presence Control Plane
+# (governance ADR-0608 draft; ADR-0003 portfolio). API stays cluster-internal.
+resource "powerdns_record" "presence_rbx_ia_br_a" {
+  zone    = powerdns_zone.rbx_ia_br.name
+  name    = "presence.rbx.ia.br."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
 resource "powerdns_record" "btcpay_rbx_ia_br_a" {
   zone    = powerdns_zone.rbx_ia_br.name
   name    = "btcpay.rbx.ia.br."

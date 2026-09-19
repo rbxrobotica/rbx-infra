@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-public-presence-api
+  namespace: rbx-public-presence
+  labels:
+    app.kubernetes.io/name: rbx-public-presence-api
+spec:
+  selector:
+    app.kubernetes.io/name: rbx-public-presence-api
+  ports:
+    - port: 8080
+      targetPort: http
+      name: http

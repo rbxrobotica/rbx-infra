@@ -1,0 +1,17 @@
+# Certificate: presence.rbx.ia.br (DNS managed by PowerDNS/OpenTofu, infra/terraform/dns/rbx_ia_br.tf)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rbx-public-presence-tls
+  namespace: rbx-public-presence
+spec:
+  dnsNames:
+    - presence.rbx.ia.br
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: letsencrypt-prod
+  secretName: rbx-public-presence-tls
+  usages:
+    - digital signature
+    - key encipherment

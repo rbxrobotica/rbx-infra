@@ -1,0 +1,37 @@
+# ArgoCD Application: rbx-public-presence (Public Presence Control Plane: api + web console)
+# Namespace: rbx-public-presence (presence.rbx.ia.br routes to web; api cluster-internal)
+# Prerequisites before first healthy sync (operator):
+#   - rbx-public-presence-secrets in rbx-ia-br (keys in apps/prod/rbx-public-presence/externalsecret.yml)
+#   - contabo-s3-credentials in rbx-ia-br; bucket rbx-presence with public read on public/
+#   - ghcr-pull-secret in rbx-public-presence (Ansible k8s-secrets role)
+#   - public_presence DB/role on jaguar (bootstrap-external-postgres-app-db.sh)
+#   - ZITADEL client at auth.merovelis.com (redirect https://presence.rbx.ia.br/auth/callback,
+#     role rbx:public-presence:founder)
+#   - DNS presence.rbx.ia.br (infra/terraform/dns, operator-applied)
+#   - real image tags in apps/prod/rbx-public-presence/kustomization.yml (placeholders until first publish)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-public-presence
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-public-presence
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-public-presence
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-public-presence
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-public-presence
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

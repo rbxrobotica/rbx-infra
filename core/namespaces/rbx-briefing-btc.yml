@@ -1,0 +1,15 @@
+# Namespace: rbx-briefing-btc
+# Purpose: logged-in Briefing BTC area (app.merovelis.com/briefing-btc), a
+#          SvelteKit web app plus its dedicated rbx-session-bff instance;
+#          reads briefing editions from S3, holds no database
+# rbx-governance ADR-0014 (canonical entrypoint), created 2026-09-12
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-briefing-btc
+  labels:
+    name: rbx-briefing-btc
+    app.kubernetes.io/name: rbx-briefing-btc
+    app.kubernetes.io/part-of: rbx-briefing-btc
+    environment: production

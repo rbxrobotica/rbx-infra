@@ -1,0 +1,63 @@
+# ArgoCD Sync hook: applies embedded migrations (schema presence) before the api rolls out.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: rbx-public-presence-db-migrate
+  namespace: rbx-public-presence
+  labels:
+    app.kubernetes.io/name: rbx-public-presence-api
+    app.kubernetes.io/component: db-migrate
+    app.kubernetes.io/part-of: rbx-public-presence
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-public-presence-api
+        app.kubernetes.io/component: db-migrate
+    spec:
+      restartPolicy: OnFailure
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+        - name: migrate
+          image: ghcr.io/rbxrobotica/rbx-public-presence-api
+          imagePullPolicy: IfNotPresent
+          args: ["migrate"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 65532
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          env:
+            - name: PRESENCE_ENV
+              value: production
+            - name: PRESENCE_ASSET_STORE
+              value: s3
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+          envFrom:
+            - secretRef:
+                name: rbx-public-presence-secrets
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi

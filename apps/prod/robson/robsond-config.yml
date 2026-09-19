@@ -51,3 +51,14 @@ data:
   # CORS allow-list for the public frontend origins (FE-P1 B7).
   # Consumed by api::build_cors_layer in robsond.
   ROBSON_CORS_ALLOWED_ORIGINS: "https://robson.rbx.ia.br,https://robson.rbxsystems.ch"
+
+  # Google OAuth login (ADR-0054, robson#196/#197). Sole allowlisted
+  # operator, and the two Google Cloud Console Client IDs (rbx-systems
+  # project) — Web application for the frontend's Google Identity
+  # Services flow, TVs/Limited-Input for robson-cli's Device
+  # Authorization Grant. Neither Client ID is secret (GIS client IDs are
+  # meant to be public); the allowlisted email isn't secret either, kept
+  # here rather than hardcoded per this repo's existing config style.
+  ROBSON_ALLOWED_EMAIL: "ldamasio@gmail.com"
+  ROBSON_GOOGLE_WEB_CLIENT_ID: "844825462148-233fhbl236qj9gu3nc7r57rf3gs6gel5.apps.googleusercontent.com"
+  ROBSON_GOOGLE_CLI_CLIENT_ID: "844825462148-3nk0f2943000rev55hdj3jir1nadchev.apps.googleusercontent.com"

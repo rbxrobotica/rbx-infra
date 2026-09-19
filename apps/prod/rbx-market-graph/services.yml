@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-market-graph-api
+  namespace: rbx-market-graph
+  labels:
+    app.kubernetes.io/name: rbx-market-graph-api
+spec:
+  selector:
+    app.kubernetes.io/name: rbx-market-graph-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-market-graph-web
+  namespace: rbx-market-graph
+  labels:
+    app.kubernetes.io/name: rbx-market-graph-web
+spec:
+  selector:
+    app.kubernetes.io/name: rbx-market-graph-web
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

@@ -209,6 +209,15 @@ resource "powerdns_record" "flightdeck_rbxsystems_ch" {
   records = [var.k3s_ingress_ip]
 }
 
+# Kairos operator for the RBX Market Graph bounded context.
+resource "powerdns_record" "kairos_rbxsystems_ch" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "kairos.rbxsystems.ch."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}
+
 # Reserved legacy auth alias during migration. Canonical auth is auth.merovelis.com.
 resource "powerdns_record" "auth_rbxsystems_ch" {
   zone    = powerdns_zone.rbxsystems_ch.name

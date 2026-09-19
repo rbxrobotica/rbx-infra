@@ -53,6 +53,18 @@ rbx/
       client-id                 # OAuth client ID for rbx-session-bff commerce access
       client-secret             # OAuth client secret for rbx-session-bff commerce access
       audience                  # Audience for the commerce service token
+  briefing-btc/
+    session-secret              # SESSION_SECRET for rbx-briefing-btc (reserved for future use), openssl rand -hex 32
+    oidc-client-id              # ZITADEL client ID of the Briefing BTC public PKCE client used by its session BFF (no client secret)
+  market-graph/
+    db-app-password             # Non-owner runtime role rbx_market_graph_app
+    db-migrator-password        # Schema-owner role rbx_market_graph_migrator
+    session-secret              # Kairos encrypted session secret
+    oidc-project-id             # ZITADEL project/audience ID
+    oidc-app-id                 # ZITADEL OIDC application ID
+    oidc-client-id              # Kairos confidential OIDC client ID
+    oidc-client-secret          # Kairos confidential OIDC client secret
+    oidc-owner-grant-id         # Initial human owner role grant ID
   comms/
     db-password                 # PostgreSQL password for user `rbx_comms` on jaguar — MUST be hex (openssl rand -hex 32). DATABASE_URL (the rbx-comms-secrets ExternalSecret source) is assembled from this by the k8s-secrets role.
   llm-gateway/
@@ -163,6 +175,8 @@ pass insert rbx/commerce-sandbox/asaas-api-webhook-token # sandbox webhook token
 pass insert rbx/identity/session-bff-commerce/client-id
 pass insert rbx/identity/session-bff-commerce/client-secret
 pass insert rbx/identity/session-bff-commerce/audience
+pass insert rbx/briefing-btc/session-secret       # openssl rand -hex 32 (rbx-briefing-btc, reserved)
+pass insert rbx/briefing-btc/oidc-client-id       # ZITADEL public PKCE client ID for the rbx-briefing-btc session BFF
 pass insert rbx/langfuse/db-password               # openssl rand -hex 32
 pass insert rbx/langfuse/nextauth-secret           # openssl rand -hex 32
 pass insert rbx/langfuse/salt                      # openssl rand -hex 32
@@ -232,6 +246,9 @@ Secrets created per namespace:
 | `robson-testnet` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `rbx-console` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
 | `rbx-atlas` | `ghcr-pull-secret` | docker registry credentials (phase 1 of the ADR-0028 topology amendment; phase 2 adds `rbx-atlas-secrets`) | `rbx/cluster/ghcr-token` |
+| `rbx-briefing-btc` | `ghcr-pull-secret` | docker registry credentials | `rbx/cluster/ghcr-token` |
+| `rbx-ia-br` | `rbx-briefing-btc-secrets` | `SESSION_SECRET` (mirrored into `rbx-briefing-btc` by ExternalSecret; optional in the Deployment, reserved for future use) | `rbx/briefing-btc/session-secret` |
+| `rbx-ia-br` | `rbx-briefing-btc-session-bff-oidc` | `RBX_SESSION_BFF_CLIENT_ID` (public PKCE client, no client secret; mirrored into `rbx-briefing-btc` for its dedicated `rbx-session-bff`) | `rbx/briefing-btc/oidc-client-id` |
 | `rbx-console` | `rbx-console-users-access` | `RBX_IDENTITY_USERS_ACCESS_SERVICE_KEY`, `RBX_COMMERCE_USERS_ACCESS_SERVICE_KEY`, `RBX_COMMERCE_USERS_ACCESS_TENANT_ID` | `rbx/console/users-access/identity-service-key`, `rbx-commerce-secrets.COMMERCE_SERVICE_KEY`, `rbx/console/users-access/tenant-id` |
 | `rbx-ia-br` | `rbx-memory-token` | `token` | `rbx/memory/token` |
 | `rbx-ia-br` | `rbx-observability-token` | `token` | `rbx/observability/token` |
@@ -239,7 +256,9 @@ Secrets created per namespace:
 | `rbx-ia-br` | `rbx-data-token` | `token` | `rbx/data/token` |
 | `rbx-ia-br` | `rbx-data-warehouse` | `dsn` | `rbx/data/warehouse-dsn` |
 | `rbx-ia-br` | `rbx-session-bff-commerce` | `RBX_COMMERCE_CLIENT_ID`, `RBX_COMMERCE_CLIENT_SECRET`, `RBX_COMMERCE_MACHINE_KEY_JSON`, `RBX_COMMERCE_AUDIENCE` | `rbx/identity/session-bff-commerce/client-id`, `rbx/identity/session-bff-commerce/client-secret`, `rbx/identity/session-bff-commerce/machine-key-json`, `rbx/identity/session-bff-commerce/audience` |
+| `rbx-ia-br` | `rbx-commerce-secrets` | `DATABASE_URL`, `COMMS_API_URL`, `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN`, `COMMERCE_SERVICE_KEY`, `ALTCHA_SECRET`, `BTCPAY_API_KEY`, `BTCPAY_STORE_ID`, `BTCPAY_WEBHOOK_SECRET`, `PAYREXX_INSTANCE`, `PAYREXX_API_KEY`, `PAYREXX_WEBHOOK_SECRET` | `rbx/comms/db-password`, static URL, `rbx/commerce/asaas-api-key`, `rbx/commerce/asaas-webhook-token`, `rbx/commerce/service-key`, `rbx/commerce/altcha-secret`, `rbx/commerce/btcpay-api-key`, `rbx/commerce/btcpay-store-id`, `rbx/commerce/btcpay-webhook-secret`, `rbx/commerce/payrexx-instance`, `rbx/commerce/payrexx-api-key`, `rbx/commerce/payrexx-webhook-secret` (the BTCPay and Payrexx entries may be absent; the role writes empty values until the operator issues them in BTCPay Server and Payrexx) |
 | `rbx-ia-br` | `rbx-commerce-sandbox-secrets` | `DATABASE_URL`, `COMMS_API_URL`, `ASAAS_API_KEY`, `ASAAS_WEBHOOK_TOKEN` | `rbx/commerce-sandbox/db-password`, `rbx/commerce-sandbox/asaas-api-key`, `rbx/commerce-sandbox/asaas-api-webhook-token` |
+| `rbx-ia-br` | `rbx-market-graph-secrets` | database URLs, OIDC configuration, session secret and canonical origin | `rbx/market-graph/*` plus non-secret canonical URLs |
 
 Source of truth for these values is the ZITADEL service-account registration
 used by `rbx-session-bff` to read `rbx-commerce`. Create or rotate the machine
@@ -271,7 +290,10 @@ without manual console work.
 `rbx-ia-br` is the central vault namespace read by the reorg services'
 ExternalSecrets through the `kubernetes-store` SecretStore. The
 `contabo-s3-credentials` secret in `rbx-ia-br` is pre-existing and reused by
-`rbx-memory` and `rbx-data`; this role does not provision or modify it.
+`rbx-memory`, `rbx-data` and `rbx-briefing-btc`; this role does not provision
+or modify it. `rbx-briefing-btc` also mirrors the shared
+`rbx-session-bff-commerce` secret for its dedicated session BFF (same commerce
+service account as the Strategos BFF; no separate pass entries).
 
 Run idempotently — safe to re-run after a cluster wipe.
 
@@ -279,6 +301,12 @@ Run idempotently — safe to re-run after a cluster wipe.
 for a sandbox commerce surface. Sandbox validation should get its own service
 credentials and its own `pass` namespace, alongside a separate K8s secret and
 deployment overlay. The prod commerce path stays pinned to the live values.
+
+The Market Graph source Secret follows the same central-vault pattern. Its
+database URLs are assembled from the two separate pass passwords, and its OIDC
+settings refer to the dedicated ZITADEL project and confidential Kairos client.
+The target namespace receives only a mirrored Secret through External Secrets;
+the application ServiceAccount has no direct access to `rbx-ia-br`.
 
 **Isolation invariant:** The `k8s-secrets` role must have two independent task blocks — one for production (`robson` namespace, reads `rbx/robson/`) and one for testnet (`robson-testnet` namespace, reads `rbx/robson-testnet/`). These blocks must never share pass key references. See `docs/ROBSON-TESTNET-ENVIRONMENT.md` for the full Ansible task specification.
 
