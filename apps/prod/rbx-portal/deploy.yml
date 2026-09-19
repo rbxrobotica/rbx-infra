@@ -31,7 +31,7 @@ spec:
                 topologyKey: kubernetes.io/hostname
       containers:
         - name: portal
-          image: ghcr.io/rbxrobotica/rbx-portal:sha-0000000
+          image: ghcr.io/rbxrobotica/rbx-portal
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -41,10 +41,12 @@ spec:
                 name: rbx-portal-config
             - secretRef:
                 name: rbx-portal-secrets
-                optional: true
+                optional: false
           readinessProbe:
             httpGet:
-              path: /healthz
+              # The root route validates the auth/session configuration before
+              # redirecting to login. A missing Secret must not report Ready.
+              path: /
               port: 8080
             initialDelaySeconds: 5
             periodSeconds: 5
