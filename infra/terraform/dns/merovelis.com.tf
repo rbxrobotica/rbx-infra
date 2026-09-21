@@ -53,3 +53,12 @@ resource "powerdns_record" "auth_merovelis_com" {
   ttl     = 3600
   records = [var.k3s_ingress_ip]
 }
+
+# Isolated Briefing BTC conversion landing (rbx-landing-briefing-btc).
+resource "powerdns_record" "briefingbtc_merovelis_com" {
+  zone    = powerdns_zone.merovelis_com.name
+  name    = "briefingbtc.merovelis.com."
+  type    = "A"
+  ttl     = 3600
+  records = [var.k3s_ingress_ip]
+}

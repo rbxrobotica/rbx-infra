@@ -1,0 +1,32 @@
+# ArgoCD Application: Isolated Briefing BTC landing (briefingbtc.merovelis.com)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbx-landing-briefing-btc
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: rbx-landing-briefing-btc
+    app.kubernetes.io/component: application
+    app.kubernetes.io/part-of: rbx-landing-briefing-btc
+    # Image promotion: CI self-push from the app repo (RBX_INFRA_PAT),
+    # fleet-standard Pattern R. Image Updater annotations retired (issue #168).
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/rbx-landing-briefing-btc
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-landing-briefing-btc
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
