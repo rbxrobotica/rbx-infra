@@ -21,4 +21,4 @@ labels:
     includeSelectors: false
 images:
   - name: ghcr.io/rbxrobotica/rbx-atlas
-    newTag: sha-b0fc35b
+    newTag: sha-43cfc60
