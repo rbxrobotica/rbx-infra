@@ -18,4 +18,4 @@ images:
   # Tag promoted by the app repo CI (RBX_INFRA_PAT self-push, issue #168).
   # Pinned to the bootstrap commit of rbx-landing-briefing-btc (15f6510).
   - name: ghcr.io/rbxrobotica/rbx-landing-briefing-btc
-    newTag: sha-15f6510
+    newTag: sha-9a00047
