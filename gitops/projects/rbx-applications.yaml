@@ -45,6 +45,9 @@ spec:
     # rbx-briefing-btc: logged-in Briefing BTC area on app.merovelis.com/briefing-btc (ADR-0014).
     - namespace: rbx-briefing-btc
       server: https://kubernetes.default.svc
+    # rbx-landing-briefing-btc: isolated conversion landing at briefingbtc.merovelis.com.
+    - namespace: rbx-landing-briefing-btc
+      server: https://kubernetes.default.svc
     - namespace: rbxsystems-ch
       server: https://kubernetes.default.svc
     - namespace: staging

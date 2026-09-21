@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-landing-briefing-btc
+  labels:
+    app.kubernetes.io/name: rbx-landing-briefing-btc
+    app.kubernetes.io/part-of: rbx-landing-briefing-btc
+    environment: production
