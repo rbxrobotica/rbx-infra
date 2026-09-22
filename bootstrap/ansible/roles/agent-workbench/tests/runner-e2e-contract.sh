@@ -22,6 +22,7 @@ git -C "${tmp_dir}/source" config user.email test@example.invalid
 printf 'base\n' >"${tmp_dir}/source/src/base.txt"
 git -C "${tmp_dir}/source" add .
 git -C "${tmp_dir}/source" commit -qm base
+source_commit="$(git -C "${tmp_dir}/source" rev-parse HEAD)"
 git -C "${tmp_dir}/source" remote add origin "${tmp_dir}/origin.git"
 git -C "${tmp_dir}/source" push -q -u origin main
 git clone -q --bare "${tmp_dir}/origin.git" "${HOME}/rbx/repos/rbxrobotica/demo.git"
@@ -75,12 +76,17 @@ cat >"${tmp_dir}/contract.json" <<'JSON'
   "executor":"codex"
 }
 JSON
+jq --arg source_commit "${source_commit}" '. + {source_commit:$source_commit}' \
+  "${tmp_dir}/contract.json" >"${tmp_dir}/contract.with-source.json"
+mv "${tmp_dir}/contract.with-source.json" "${tmp_dir}/contract.json"
 
 export CAPTURE_RESULT="${tmp_dir}/delivery-result.json"
 "$executor" mission-2026-00001 "${tmp_dir}/contract.json" \
   11111111-1111-4111-8111-111111111111 22222222-2222-4222-8222-222222222222 1
 
 jq -e '.delivery.outcome == "delivered" and .delivery.path_policy.status == "passed" and .delivery.verify.status == "passed" and .execution.provider == "openai" and .execution.input_tokens == 5' \
+  "${CAPTURE_RESULT}" >/dev/null
+jq -e --arg source_commit "${source_commit}" '.execution.base_commit == $source_commit' \
   "${CAPTURE_RESULT}" >/dev/null
 git --git-dir="${tmp_dir}/origin.git" show-ref --verify --quiet refs/heads/mission/mission-2026-00001
 test ! -e "${HOME}/rbx/worktrees/mission-2026-00001"

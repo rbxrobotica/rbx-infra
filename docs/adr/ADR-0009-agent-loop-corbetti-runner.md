@@ -9,8 +9,9 @@
 > transport loop is split from a one-shot repository executor, provider CLIs
 > sit behind normalized adapters, claim writes are fenced, repository path and
 > diff policy is enforced after execution and again after verify, and terminal
-> output uses the atomic Maestro result contract described below. The original
-> v0 routes remain as an explicit 404/405-only compatibility fallback.
+> output uses the atomic Maestro result contract described below. An optional
+> `source_commit` pins executable ingress to the admitted Git object. The
+> original v0 routes remain as an explicit 404/405-only compatibility fallback.
 
 ## Context
 
@@ -95,11 +96,14 @@ on next pod restart (or live if loaded with `sync.Once` replaced by periodic rel
     <repo contents>
 ```
 
-Each mission gets a dedicated detached git worktree created from a bare clone of the
-target repo at the current remote `base_branch`. The worktree is the agent's entire
-filesystem surface. On mission end (delivered or stopped) the runner removes the
-worktree; interrupted worktrees may remain for operator inspection without reserving
-the base branch needed by subsequent missions.
+Each mission gets a dedicated detached git worktree created from a bare clone of
+the target repo. A legacy contract starts at the current remote `base_branch`.
+An executable ingress contract supplies `source_commit`; the runner proves that
+the commit exists, is an ancestor of the fetched base branch, and becomes the
+exact worktree `HEAD`. The worktree is the agent's entire filesystem surface.
+On mission end (delivered or stopped) the runner removes the worktree;
+interrupted worktrees may remain for operator inspection without reserving the
+base branch needed by subsequent missions.
 
 Bare clones live at `~/rbx/repos/<org>/<repo>.git` (already created on first use,
 fetched on subsequent missions). The runner creates `worktrees/<mission-code>` with:
@@ -115,6 +119,10 @@ Clone, fetch, prune, worktree creation, and Git identity setup are explicit
 fail-closed gates. If any setup step fails, the runner reports
 `stopped/persistent_failure` and does not start the executor. This is required because
 shell `errexit` is not reliable inside a function invoked from an `||` handler.
+
+The ExecutionManifest reports the resolved worktree commit as `base_commit`.
+Maestro rejects a result whose `base_commit` differs from the admitted
+`source_commit`.
 
 Only the repository named by the mission contract `repo` field is cloned.
 Repository authorization is bounded by the GitHub credential; path authorization

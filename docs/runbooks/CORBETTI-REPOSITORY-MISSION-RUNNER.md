@@ -9,7 +9,7 @@ do not apply the role until the matching Maestro PR and migration are deployed.
 | Runtime file | Responsibility |
 |---|---|
 | `rbx-agent-runner.sh` | HTTPS claim polling, fenced heartbeat, process supervision |
-| `rbx-mission-executor.sh` | one mission's worktree → policy → verify → Git/PR → result pipeline |
+| `rbx-mission-executor.sh` | one mission's pinned worktree, policy, verify, Git/PR and result pipeline |
 | `rbx-executor-adapter.sh` | Claude, Codex, GLM and Kimi CLI invocation plus normalized usage |
 | `rbx-mission-policy.py` | staged-diff path glob and `max_diff_size` enforcement |
 
@@ -51,7 +51,8 @@ network access or production state.
 2. On an operator workstation, run Ansible check mode limited to Corbetti.
 3. Review the diff. Apply the role only with explicit production authorization.
 4. Admit one low-risk canary with a small `allowed_paths`, `max_diff_size`,
-   `max_runtime`, token bound and deterministic `verify_command`.
+   `max_runtime`, token bound, exact `source_commit` and deterministic
+   `verify_command`.
 5. Inspect:
 
    - `systemctl --user status rbx-agent-runner`;

@@ -37,10 +37,12 @@ grep -q "RUNNER_GIT_AUTHOR_EMAIL='{{ runner_git_author_email }}'" "$tasks"
 grep -q 'src: rbx-agent-runner-v2.sh' "$tasks"
 grep -Fq 'refs/remotes/origin/${base_branch}' "$executor"
 grep -Fq 'worktree add --detach "${worktree}"' "$executor"
+grep -Fq 'merge-base --is-ancestor "${source_commit}"' "$executor"
+grep -Fq '"${base_commit}" != "${source_commit}"' "$executor"
 
 # Reproduce mission-35's incident shape: an interrupted mission keeps `main`
 # checked out while upstream advances. A fresh detached worktree must still be
-# created from the new remote-tracking base without disturbing the stale one.
+# created from the contract's immutable source commit without disturbing it.
 tmp_dir="$(mktemp -d)"
 trap 'rm -rf "$tmp_dir"' EXIT
 git init -q --bare "$tmp_dir/origin.git"
@@ -50,6 +52,7 @@ git -C "$tmp_dir/source" config user.email test@example.invalid
 printf 'one\n' >"$tmp_dir/source/probe.txt"
 git -C "$tmp_dir/source" add probe.txt
 git -C "$tmp_dir/source" commit -qm initial
+source_commit="$(git -C "$tmp_dir/source" rev-parse HEAD)"
 git -C "$tmp_dir/source" remote add origin "$tmp_dir/origin.git"
 git -C "$tmp_dir/source" push -q -u origin main
 git clone -q --bare "$tmp_dir/origin.git" "$tmp_dir/cache.git"
@@ -61,12 +64,11 @@ git -C "$tmp_dir/source" push -q origin main
 git -C "$tmp_dir/cache.git" fetch -q origin \
   '+refs/heads/main:refs/remotes/origin/main'
 git -C "$tmp_dir/cache.git" worktree add -q --detach "$tmp_dir/fresh" \
-  refs/remotes/origin/main
+  "$source_commit"
 
 test "$(git -C "$tmp_dir/stale" branch --show-current)" = main
 test -z "$(git -C "$tmp_dir/fresh" branch --show-current)"
-test "$(git -C "$tmp_dir/fresh" rev-parse HEAD)" = \
-  "$(git -C "$tmp_dir/source" rev-parse HEAD)"
-grep -qx two < <(tail -1 "$tmp_dir/fresh/probe.txt")
+test "$(git -C "$tmp_dir/fresh" rev-parse HEAD)" = "$source_commit"
+grep -qx one < <(tail -1 "$tmp_dir/fresh/probe.txt")
 
 echo "runner delivery contract: ok"
