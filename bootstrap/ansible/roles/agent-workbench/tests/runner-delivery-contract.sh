@@ -22,9 +22,11 @@ fi
 
 grep -q 'claim_token' "$runner"
 grep -q 'rbx-mission-executor.sh' "$runner"
+grep -Fq "printf '%s|%s\\n'" "$runner"
 grep -q 'rbx-executor-adapter.sh' "$executor"
 grep -q 'rbx-mission-policy.py' "$executor"
 grep -q 'submit_failure path_policy' "$executor"
+test "$(grep -c 'rolling budget stop requested' "$executor")" -eq 2
 grep -q '/missions/${code}/result' "$executor"
 if grep -q 'rm -rf' "$runner" "$executor"; then
   echo "runner must not recursively delete an unresolved path" >&2

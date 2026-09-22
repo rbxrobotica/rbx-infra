@@ -91,7 +91,7 @@ while true; do
       jq -e '.contract' <<<"${body}" >"${contract_file}"
 
       log "Claimed ${mission_code} lease=${lease_id} generation=${claim_generation}"
-      printf '%s|%s|%s\n' "$$" "${mission_code}" "${lease_id}" >"${ACTIVE_MISSION_FILE}"
+      printf '%s|%s\n' "$$" "${mission_code}" >"${ACTIVE_MISSION_FILE}"
 
       heartbeat_loop "${mission_code}" "${lease_id}" "${claim_token}" &
       hb_pid=$!

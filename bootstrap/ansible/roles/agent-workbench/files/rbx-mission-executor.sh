@@ -19,6 +19,7 @@ LOG_DIR="${HOME}/rbx/logs"
 WORKTREE_DIR="${HOME}/rbx/worktrees"
 REPOS_DIR="${HOME}/rbx/repos"
 MANIFEST_ROOT="${HOME}/rbx/manifests"
+BUDGET_STOP_FILE="${HOME}/.rbx/watchdog/budget-stop"
 manifest_dir="${MANIFEST_ROOT}/${code}"
 log_file="${LOG_DIR}/${code}.log"
 worktree="${WORKTREE_DIR}/${code}"
@@ -313,6 +314,10 @@ if [[ "${max_cost}" =~ ^([0-9]+)[[:space:]]*tokens$ ]]; then
     exit $?
   fi
 fi
+if [[ -f "${BUDGET_STOP_FILE}" ]]; then
+  submit_failure budget "rolling budget stop requested before verification" cost_limit_reached
+  exit $?
+fi
 
 verify_status="not_run"
 verify_exit=0
@@ -355,6 +360,10 @@ if [[ "${verify_status}" == "failed" ]]; then
   reason="persistent_failure"
   [[ ${verify_exit} -eq 124 ]] && reason="time_limit_reached"
   submit_failure verify "verify_command exited ${verify_exit}" "${reason}"
+  exit $?
+fi
+if [[ -f "${BUDGET_STOP_FILE}" ]]; then
+  submit_failure budget "rolling budget stop requested before publication" cost_limit_reached
   exit $?
 fi
 
