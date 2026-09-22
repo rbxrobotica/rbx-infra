@@ -184,6 +184,7 @@ remaining_seconds() {
 
 repo="$(jq -er '.repo' "${contract_file}")"
 base_branch="$(jq -er '.base_branch' "${contract_file}")"
+source_commit="$(jq -r '.source_commit // empty' "${contract_file}")"
 mtype="$(jq -er '.type' "${contract_file}")"
 objective="$(jq -er '.objective' "${contract_file}")"
 executor="$(jq -r '.executor // "claude-haiku"' "${contract_file}")"
@@ -192,7 +193,8 @@ max_cost="$(jq -er '.max_cost' "${contract_file}")"
 timeout_s="$(duration_seconds "${max_runtime}")" || { log "invalid max_runtime: ${max_runtime}"; exit 65; }
 
 if [[ ! "${code}" =~ ^mission-[0-9]{4}-[0-9]{5}$ || ! "${repo}" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] ||
-   ! git check-ref-format --branch "${base_branch}" >/dev/null 2>&1; then
+   ! git check-ref-format --branch "${base_branch}" >/dev/null 2>&1 ||
+   [[ -n "${source_commit}" && ! "${source_commit}" =~ ^[0-9a-f]{40}$ ]]; then
   log "refusing invalid mission/repository/base branch identity"
   exit 65
 fi
@@ -229,6 +231,17 @@ if ! git -C "${repo_dir}" fetch origin \
   exit $?
 fi
 
+checkout_ref="refs/remotes/origin/${base_branch}"
+if [[ -n "${source_commit}" ]]; then
+  if ! git -C "${repo_dir}" cat-file -e "${source_commit}^{commit}" 2>>"${log_file}" ||
+     ! git -C "${repo_dir}" merge-base --is-ancestor "${source_commit}" \
+       "refs/remotes/origin/${base_branch}" >>"${log_file}" 2>&1; then
+    submit_failure repository_setup "source_commit is unavailable or outside the admitted base branch" persistent_failure
+    exit $?
+  fi
+  checkout_ref="${source_commit}"
+fi
+
 git -C "${repo_dir}" worktree prune >>"${log_file}" 2>&1 || true
 if [[ -d "${worktree}" ]]; then
   git -C "${repo_dir}" worktree remove "${worktree}" --force >>"${log_file}" 2>&1 || true
@@ -238,7 +251,7 @@ if [[ -e "${worktree}" ]]; then
   exit $?
 fi
 if ! git -C "${repo_dir}" worktree add --detach "${worktree}" \
-  "refs/remotes/origin/${base_branch}" >>"${log_file}" 2>&1; then
+  "${checkout_ref}" >>"${log_file}" 2>&1; then
   submit_failure repository_setup "detached worktree creation failed" persistent_failure
   exit $?
 fi
@@ -248,6 +261,10 @@ if ! git -C "${worktree}" config user.name "${RUNNER_GIT_AUTHOR_NAME}" ||
   exit $?
 fi
 base_commit="$(git -C "${worktree}" rev-parse HEAD)"
+if [[ -n "${source_commit}" && "${base_commit}" != "${source_commit}" ]]; then
+  submit_failure repository_setup "worktree HEAD does not match source_commit" persistent_failure
+  exit $?
+fi
 
 done_bullets="$(jq -r '(.done_criteria // .success_criteria // [])[]? | "  - \(.)"' "${contract_file}")"
 allowed_paths="$(jq -r '.allowed_paths[]?' "${contract_file}" | tr '\n' ' ')"
