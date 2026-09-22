@@ -5,6 +5,13 @@
 **Deciders**: Leandro Damasio (founder)  
 **Gate**: Phase 3 of the Agent Loop Development roadmap (rbx-governance ADR-0015)
 
+> **2026-09-22 implementation amendment (feature branch, not deployed):** the
+> transport loop is split from a one-shot repository executor, provider CLIs
+> sit behind normalized adapters, claim writes are fenced, repository path and
+> diff policy is enforced after execution and again after verify, and terminal
+> output uses the atomic Maestro result contract described below. The original
+> v0 routes remain as an explicit 404/405-only compatibility fallback.
+
 ## Context
 
 Phase 2 delivered the mission lifecycle engine (Argo Workflows in `agent-missions`
@@ -85,7 +92,6 @@ on next pod restart (or live if loaded with `sync.Once` replaced by periodic rel
 ```
 ~/rbx/worktrees/
   mission-2026-00007/        ← git worktree from repo clone
-    .agent-context/          ← injected: contract.json, instructions.md
     <repo contents>
 ```
 
@@ -110,8 +116,10 @@ fail-closed gates. If any setup step fails, the runner reports
 `stopped/persistent_failure` and does not start the executor. This is required because
 shell `errexit` is not reliable inside a function invoked from an `||` handler.
 
-Only repos listed in the mission contract `repo` field are cloned (allow-list enforced
-by the contract `allowed_paths` and `forbidden_paths` fields).
+Only the repository named by the mission contract `repo` field is cloned.
+Repository authorization is bounded by the GitHub credential; path authorization
+is a separate policy enforced against the staged diff using `allowed_paths` and
+`forbidden_paths`.
 
 ### 4. Agent selection
 
@@ -130,10 +138,23 @@ Agent invocation uses the devbox environment PATH
 (`~/rbx/.devbox/nix/profile/default/bin:~/rbx/.devbox/npm-global/bin`). The runner
 activates devbox env non-interactively (`devbox shellenv --init-hook`).
 
-The agent is given the mission contract as context via a structured
-`.agent-context/instructions.md` file injected into the worktree root. The file
-specifies: objective, success criteria, stop conditions, allowed/forbidden paths,
-max_attempts, and a reminder that the agent must not push to main.
+The agent receives a normalized prompt generated from the immutable contract:
+objective, done criteria, allowed/forbidden paths and `verify_command`, plus a
+reminder that publication and merge are runner/human responsibilities. The
+runner does not inject context files into the worktree because those files would
+themselves contaminate the staged repository diff.
+
+The 2026-09-22 amendment treats the contract's `executor` as authoritative and
+removes heuristic fallback. `rbx-executor-adapter.sh` supports `codex`,
+`claude-haiku`, `claude-sonnet`, `glm` and `kimi`; an unknown value fails closed.
+Each adapter normalizes provider, model, adapter version, exit code and available
+token usage. The queue/heartbeat process contains no provider-specific flags.
+
+Before verify, and again after verify (which can itself create files),
+`rbx-mission-policy.py` stages and evaluates every changed path. Forbidden or
+out-of-scope paths stop with `forbidden_action_attempted`; an exceeded or
+unmeasurable line/file bound stops with `diff_size_exceeded`. Neither condition
+can reach push or PR creation.
 
 ### 5. Artifact publication — branch + PR, then ledger
 
@@ -165,6 +186,14 @@ On agent completion the runner:
    diff stats, and log path.
 5. Transitions lease to `delivered`.
 
+The 2026-09-22 amendment replaces steps 4–5 for v1 runners with one fenced,
+idempotent `POST /missions/{code}/result`. The payload contains an
+ExecutionManifest plus exactly one DeliveryManifest or FailureManifest.
+Maestro atomically persists the manifests, terminal states, executor session
+and ledger artifacts. A local copy is retained under
+`~/rbx/manifests/<mission-code>/`. Legacy calls happen only when Maestro
+explicitly answers 404/405.
+
 No force-push, no direct push to main, no merge. Human gate (P4) is unchanged.
 
 The runner GitHub PAT is distinct from the image-updater PAT (`rbx/github/rbx-infra-
@@ -172,17 +201,18 @@ write-pat`) and carries only the minimum scopes needed (`repo` on target repos).
 
 ### 6. Secret constraints (ADR-0500 §2)
 
-Corbetti never holds:
-- Kubernetes credentials beyond a read-only kubeconfig for health checks (no `exec`
-  or `apply` permissions, not needed by the runner).
-- Production database credentials or API keys for live services.
-- The maestro static runner key grants access only to the runner surface endpoints;
-  it cannot read mission records, governance data, or other tenants' leases.
+Corbetti never holds production database credentials. The Maestro static runner
+key grants access only to runner-surface endpoints; it cannot read governance
+data or unrelated product records. Later ADR-0500/security-policy amendments do
+place per-agent, namespace-scoped Kubernetes write kubeconfigs on Corbetti. The
+repository runner clears `KUBECONFIG` plus Maestro/GitHub publication credentials
+from provider child environments, but a worktree is not an OS sandbox and the
+host OAuth/filesystem trust boundary remains. Container or VM isolation is a
+future hardening item, not a property claimed by this PR.
 
-Agents run inside the worktree with only:
-- The GitHub PAT (env `GITHUB_TOKEN`, scoped to target repo).
-- Agent API key (env `ANTHROPIC_API_KEY` / `OPENAI_API_KEY`), sourced from pass.
-- No other environment variables from the runner process inherited.
+Provider CLIs run from the worktree with their own OAuth/API material. The
+GitHub PAT stays in the publication process and is removed from provider child
+environments.
 
 ### 7. Rollout (three PRs, each manually synced)
 

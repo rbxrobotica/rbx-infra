@@ -70,6 +70,7 @@ printf '%s\n' \
   > "${fixture}/bin/systemctl"
 printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "${fixture}/bin/journalctl"
 chmod +x "${fixture}/bin/systemctl" "${fixture}/bin/journalctl"
+ln -s "$(command -v jq)" "${fixture}/bin/jq"
 printf '%s\n' \
   '{"type":"result","usage":{"input_tokens":80,"cache_creation_input_tokens":20,"cache_read_input_tokens":30,"output_tokens":10},"estimated_tokens":401}' \
   > "${fixture}/home/rbx/logs/mission-2026-90001.log"
