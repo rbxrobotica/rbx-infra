@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# rbx-agent-runner — Corbetti workbench runner (ADR-0009 Phase 3)
+# rbx-agent-runner — legacy v0 implementation retained for rollback/reference.
+# Ansible deploys rbx-agent-runner-v2.sh to the runtime path.
 #
 # Poll loop: GET /leases/next → execute agent in isolated worktree →
 # report terminal state (delivered | stopped) back to maestro.

@@ -18,6 +18,8 @@
     - "{{ ansible_env.HOME }}/rbx/repos"
     - "{{ ansible_env.HOME }}/rbx/runner"
     - "{{ ansible_env.HOME }}/rbx/logs"
+    - "{{ ansible_env.HOME }}/rbx/contracts"
+    - "{{ ansible_env.HOME }}/rbx/manifests"
     - "{{ ansible_env.HOME }}/.local/bin"
     - "{{ ansible_env.HOME }}/.lean-ctx"
     - "{{ ansible_env.HOME }}/.claude/hooks"
@@ -164,11 +166,20 @@
     dest: "{{ ansible_env.HOME }}/rbx/bin/codex"
     mode: "0750"
 
-- name: Deploy runner script
+- name: Deploy provider-neutral runner components
   copy:
-    src: rbx-agent-runner.sh
-    dest: "{{ ansible_env.HOME }}/rbx/runner/rbx-agent-runner.sh"
+    src: "{{ item.src }}"
+    dest: "{{ ansible_env.HOME }}/rbx/runner/{{ item.dest }}"
     mode: "0750"
+  loop:
+    - src: rbx-agent-runner-v2.sh
+      dest: rbx-agent-runner.sh
+    - src: rbx-mission-executor.sh
+      dest: rbx-mission-executor.sh
+    - src: rbx-executor-adapter.sh
+      dest: rbx-executor-adapter.sh
+    - src: rbx-mission-policy.py
+      dest: rbx-mission-policy.py
   notify: Restart agent runner
 
 - name: Create systemd user service directory

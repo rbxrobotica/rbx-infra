@@ -2,27 +2,39 @@
 set -euo pipefail
 
 role_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-runner="${role_dir}/files/rbx-agent-runner.sh"
+runner="${role_dir}/files/rbx-agent-runner-v2.sh"
+executor="${role_dir}/files/rbx-mission-executor.sh"
+adapter="${role_dir}/files/rbx-executor-adapter.sh"
+policy="${role_dir}/files/rbx-mission-policy.py"
 tasks="${role_dir}/tasks/main.yml"
 
 bash -n "$runner"
+bash -n "$executor"
+bash -n "$adapter"
+python3 -c 'import pathlib,sys; compile(pathlib.Path(sys.argv[1]).read_text(), sys.argv[1], "exec")' "$policy"
 
-pr_line="$(grep -n 'gh pr create' "$runner" | cut -d: -f1)"
-delivered_line="$(grep -n 'report_delivered "${code}"' "$runner" | cut -d: -f1)"
+pr_line="$(grep -n 'gh pr create' "$executor" | cut -d: -f1)"
+delivered_line="$(grep -n 'submit_delivery "${branch}"' "$executor" | cut -d: -f1)"
 if [[ -z "$pr_line" || -z "$delivered_line" || "$pr_line" -ge "$delivered_line" ]]; then
-  echo "delivery contract violated: PR creation must precede report_delivered" >&2
+  echo "delivery contract violated: PR creation must precede submit_delivery" >&2
   exit 1
 fi
 
-grep -q 'persistence_reason="git_commit_failed"' "$runner"
-grep -q 'report_stop "${code}" "persistent_failure"' "$runner"
-grep -q "printf 'DELIVERED input_tokens=" "$runner"
-grep -q "printf 'STOP reason=" "$runner"
+grep -q 'claim_token' "$runner"
+grep -q 'rbx-mission-executor.sh' "$runner"
+grep -q 'rbx-executor-adapter.sh' "$executor"
+grep -q 'rbx-mission-policy.py' "$executor"
+grep -q 'submit_failure path_policy' "$executor"
+grep -q '/missions/${code}/result' "$executor"
+if grep -q 'rm -rf' "$runner" "$executor"; then
+  echo "runner must not recursively delete an unresolved path" >&2
+  exit 1
+fi
 grep -q "RUNNER_GIT_AUTHOR_NAME='{{ runner_git_author_name }}'" "$tasks"
 grep -q "RUNNER_GIT_AUTHOR_EMAIL='{{ runner_git_author_email }}'" "$tasks"
-grep -Fq 'refs/remotes/origin/${base_branch}' "$runner"
-grep -Fq 'worktree add --detach "${worktree}"' "$runner"
-grep -Fq 'executor not started' "$runner"
+grep -q 'src: rbx-agent-runner-v2.sh' "$tasks"
+grep -Fq 'refs/remotes/origin/${base_branch}' "$executor"
+grep -Fq 'worktree add --detach "${worktree}"' "$executor"
 
 # Reproduce mission-35's incident shape: an interrupted mission keeps `main`
 # checked out while upstream advances. A fresh detached worktree must still be
