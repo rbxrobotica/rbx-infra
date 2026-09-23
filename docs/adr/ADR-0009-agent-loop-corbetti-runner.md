@@ -5,13 +5,14 @@
 **Deciders**: Leandro Damasio (founder)  
 **Gate**: Phase 3 of the Agent Loop Development roadmap (rbx-governance ADR-0015)
 
-> **2026-09-22 implementation amendment (feature branch, not deployed):** the
+> **2026-09-22 implementation amendment (repository implementation on `main`):** the
 > transport loop is split from a one-shot repository executor, provider CLIs
 > sit behind normalized adapters, claim writes are fenced, repository path and
 > diff policy is enforced after execution and again after verify, and terminal
 > output uses the atomic Maestro result contract described below. An optional
 > `source_commit` pins executable ingress to the admitted Git object. The
 > original v0 routes remain as an explicit 404/405-only compatibility fallback.
+> Applying the Ansible role to Corbetti remains a separate operational action.
 
 ## Context
 
@@ -129,18 +130,14 @@ Repository authorization is bounded by the GitHub credential; path authorization
 is a separate policy enforced against the staged diff using `allowed_paths` and
 `forbidden_paths`.
 
-### 4. Agent selection
+### 4. Executor selection
 
-| Mission type | Primary agent | Fallback |
-|---|---|---|
-| `bugfix-loop` | codex | claude |
-| `feature-loop` | claude | — |
-| `refactor-loop` | codex | claude |
-| `dependency-upgrade-loop` | codex | — |
-| `review-loop` | claude | — |
-| `documentation-loop` | claude | — |
-| `architecture-proposal-loop` | claude | — |
-| `evaluation-loop` | claude | — |
+Current executable ingress contracts select the executor in the immutable
+MissionSpec. Corbetti does not map mission types to vendors and does not silently
+fall back to a different provider. A legacy contract that omits `executor`
+retains the compatibility default `claude-haiku`; the ExecutionManifest records
+that actual choice. This keeps new authority in admission while making legacy
+execution provenance explicit.
 
 Agent invocation uses the devbox environment PATH
 (`~/rbx/.devbox/nix/profile/default/bin:~/rbx/.devbox/npm-global/bin`). The runner
@@ -157,6 +154,15 @@ removes heuristic fallback. `rbx-executor-adapter.sh` supports `codex`,
 `claude-haiku`, `claude-sonnet`, `glm` and `kimi`; an unknown value fails closed.
 Each adapter normalizes provider, model, adapter version, exit code and available
 token usage. The queue/heartbeat process contains no provider-specific flags.
+The compatibility list is an implementation registry, not a lifecycle contract.
+Adding an executor requires normalized adapter and probe behavior, not changes to
+lease, policy, Git or result semantics.
+
+Capability discovery is also separate from selection. Binary presence does not
+prove credentials, network, quota or effective model availability. Creative
+surfaces such as Claude Design require their own verified machine interface or
+an explicitly admitted degraded mode. An executor name is never capability
+evidence. See [`docs/infra/CORBETTI-EXECUTION.md`](../infra/CORBETTI-EXECUTION.md).
 
 Before verify, and again after verify (which can itself create files),
 `rbx-mission-policy.py` stages and evaluates every changed path. Forbidden or
@@ -244,8 +250,8 @@ environments.
 - Runner is a shell script initially (not a compiled binary); acceptable for Phase 3,
   revisit as a Go service in Phase 4 if concurrency or reliability demands it.
 - Corbetti wipe loses in-progress worktrees; acceptable (ADR-0500: disposability).
-- Kimi CLI is not installed (no official automated installer); missions that prefer
-  Kimi fall back to claude until installed manually.
+- Kimi CLI may be absent and does not expose normalized token usage. A Mission
+  selecting an unavailable executor stops; it does not silently fall back.
 
 ## Alternatives considered
 

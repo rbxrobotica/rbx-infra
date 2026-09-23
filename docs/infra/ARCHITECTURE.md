@@ -73,7 +73,7 @@ No direct `kubectl apply` in production.
 
 ```
 corbetti — Agent Execution Workbench (outside all three planes)
-  devbox for coding agents: Claude Code, Codex, Kimi, GLM
+  provider-neutral repository runner with versioned executor adapters
   git worktrees, agent runtimes, caches, local logs
   produces patches, temporary branches, and PRs — GitHub is the source of truth
 ```
@@ -96,6 +96,8 @@ June 2026. Boundaries:
 
 See `rbx-governance/docs/adr/ADR-0500-agentic-workflow-execution-boundary.md`
 and `rbx-governance/docs/roadmaps/agent-loop-development-roadmap.md`.
+The current capability, manifest and compatibility contract is documented in
+[`CORBETTI-EXECUTION.md`](CORBETTI-EXECUTION.md).
 
 ## Environment model
 
