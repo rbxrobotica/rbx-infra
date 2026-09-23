@@ -25,21 +25,22 @@ code="$(basename "${mission_dir}")"
 brand="${E2E_BRAND:-psyctl}"
 mkdir -p "${mission_dir}/out" "${mission_dir}/design"
 printf 'RBX sovereign loop\n\nA deterministic creative produced by the E2E fake executor.\n' > "${mission_dir}/copy.md"
-cat > "${mission_dir}/out/${code}.svg" <<SVG
-<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080"><rect width="1080" height="1080" fill="#0B0C0E"/><text x="80" y="540" fill="#22E5E5" font-family="Inter" font-size="64">RBX ${code}</text></svg>
-SVG
+# A channel-compliant raster: Instagram single image accepts JPEG only (doctrine),
+# so the fake ships a pre-generated 1080x1080 baseline JPEG (base64, no image
+# library needed on the host). Public Presence confirms the MIME from the bytes.
+base64 -d "$(dirname "${BASH_SOURCE[0]}")/artifact-1080x1080.jpg.b64" > "${mission_dir}/out/${code}.jpg"
 printf '{"schema_version":"1","exported_from":"claude-design","frames":[{"name":"post-1x1","width":1080,"height":1080}]}\n' > "${mission_dir}/design/bundle.json"
 sha() { sha256sum "$1" | awk '{print $1}'; }
 size() { stat -c %s "$1"; }
-svg="${mission_dir}/out/${code}.svg"
+jpg="${mission_dir}/out/${code}.jpg"
 now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 cat > "${mission_dir}/manifest.json" <<JSON
 {"mission":"${code}","brand":"${brand}","format":"post-1x1","version":"1.0.0",
- "artifacts":[{"file":"${code}.svg","sha256":"$(sha "${svg}")","sizeBytes":$(size "${svg}"),"mimeType":"image/svg+xml"}],
+ "artifacts":[{"file":"${code}.jpg","sha256":"$(sha "${jpg}")","sizeBytes":$(size "${jpg}"),"mimeType":"image/jpeg"}],
  "verdict":"PASSED",
  "qaSummary":{"wcagContrastRatio":"PASSED (12.0:1; minimum 4.5:1)","lexiconCheck":"PASSED","claimsCheck":"PASSED"},
  "qa":{"schemaVersion":"1","mission":"${code}","brand":"${brand}","verdict":"PASSED",
-       "checks":{"lexicon":"PASSED","claims":"PASSED","svgStructure":"PASSED","palette":"PASSED","typography":"PASSED","contrast":"PASSED"},
+       "checks":{"lexicon":"PASSED","claims":"PASSED","palette":"PASSED","typography":"PASSED","contrast":"PASSED"},
        "minimumContrastRatio":12.0,"violations":[],"warnings":[]},
  "createdAt":"${now}"}
 JSON
