@@ -172,6 +172,7 @@ jobs:
           bash bootstrap/ansible/roles/agent-workbench/tests/runner-delivery-contract.sh
           bash bootstrap/ansible/roles/agent-workbench/tests/runner-provider-neutral-contract.sh
           bash bootstrap/ansible/roles/agent-workbench/tests/runner-e2e-contract.sh
+          bash bootstrap/ansible/roles/agent-workbench/tests/runner-capability-probe-contract.sh
 
       - name: Agent runner watchdog budget contract
         run: |

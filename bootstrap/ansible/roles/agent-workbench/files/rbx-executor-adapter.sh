@@ -6,8 +6,102 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 describe EXECUTOR | run EXECUTOR WORKTREE PROMPT_FILE LOG_FILE TIMEOUT_S RESULT_FILE" >&2
+  echo "usage: $0 describe EXECUTOR | probe EXECUTOR | capabilities | run EXECUTOR WORKTREE PROMPT_FILE LOG_FILE TIMEOUT_S RESULT_FILE" >&2
   exit 64
+}
+
+# cli_for maps an executor to the binary that must exist for it to run at all.
+cli_for() {
+  case "$1" in
+    claude-haiku|claude-sonnet) echo "claude" ;;
+    codex) echo "codex" ;;
+    glm) echo "glm" ;;
+    kimi) echo "kimi" ;;
+    *) return 64 ;;
+  esac
+}
+
+# probe reports only what it actually observed on this host. It never claims an
+# executor is usable end to end: credentials, network reachability and quota are
+# deliberately NOT probed, because verifying them would mean reading credential
+# material or spending a billable call. They are reported as unverified so a
+# caller cannot mistake "binary present" for "mission will succeed".
+#
+# It must never read or print the value of a credential environment variable.
+probe() {
+  local executor="$1" cli meta available reason version structured help_text
+  meta="$(describe "${executor}")" || return $?
+  cli="$(cli_for "${executor}")"
+
+  available=false
+  reason="cli_not_on_path"
+  version=""
+  structured=false
+
+  if command -v "${cli}" >/dev/null 2>&1; then
+    if version="$(timeout 20 "${cli}" --version 2>/dev/null | head -1 | tr -d '\r')" && [[ -n "${version}" ]]; then
+      available=true
+      reason="observed"
+    else
+      reason="cli_version_check_failed"
+      version=""
+    fi
+    # Structured output is what the Corbetti result parser depends on. Probe the
+    # advertised interface rather than assuming it from the executor name.
+    help_text="$(timeout 20 "${cli}" --help 2>/dev/null || true)"
+    case "${executor}" in
+      claude-haiku|claude-sonnet|glm)
+        if grep -q -- '--output-format' <<<"${help_text}" && grep -q -- '--print' <<<"${help_text}"; then
+          structured=true
+        fi ;;
+      codex)
+        grep -q -- '--json' <<<"${help_text}" && structured=true ;;
+      kimi)
+        structured=false ;;
+    esac
+    if [[ "${available}" == true && "${structured}" == false && "${executor}" != "kimi" ]]; then
+      available=false
+      reason="structured_output_unsupported"
+    fi
+  fi
+
+  jq -n --argjson meta "${meta}" --arg cli "${cli}" --argjson available "${available}" \
+    --arg reason "${reason}" --arg version "${version}" --argjson structured "${structured}" \
+    '$meta + {
+       cli: $cli,
+       available: $available,
+       reason: $reason,
+       cli_version: (if $version == "" then null else $version end),
+       structured_output: $structured,
+       unverified: ["credentials","network","quota","model_availability"]
+     }'
+}
+
+# design_capability probes the Claude Design interface available to a headless
+# executor on this host. There is no service-credentialed Claude Design API:
+# the only interface is the DesignSync tool inside an interactive Claude Code
+# session, which authenticates through the owner's claude.ai login and gates
+# writes behind a human-reviewed plan. A Corbetti executor therefore cannot use
+# it without exposing owner credentials, which the mission contract forbids.
+#
+# The supported path is export/import: a design bundle is exported from Claude
+# Design by the owner, committed to the target repository, and consumed by the
+# mission as ordinary repository content.
+design_capability() {
+  local headless=false reason="no_headless_claude_design_interface_on_host"
+  if command -v claude-design >/dev/null 2>&1; then
+    headless=true
+    reason="observed"
+  fi
+  jq -n --argjson headless "${headless}" --arg reason "${reason}" \
+    '{
+       interface: (if $headless then "cli" else "none" end),
+       headless_available: $headless,
+       reason: $reason,
+       owner_login_required: (if $headless then false else true end),
+       supported_mode: (if $headless then "direct" else "export_import" end),
+       degradation: (if $headless then null else "repository_design_bundle" end)
+     }'
 }
 
 describe() {
@@ -32,13 +126,29 @@ describe() {
     '{executor:$executor,provider:$provider,adapter:$adapter,model:$model}'
 }
 
-[[ $# -ge 2 ]] || usage
+[[ $# -ge 1 ]] || usage
 mode="$1"
+
+if [[ "${mode}" == "capabilities" ]]; then
+  [[ $# -eq 1 ]] || usage
+  reports="$(for e in claude-haiku claude-sonnet codex glm kimi; do probe "$e"; done | jq -s '.')"
+  jq -n --argjson executors "${reports}" --argjson design "$(design_capability)" \
+    '{schema_version:"1", executors:$executors, claude_design:$design}'
+  exit 0
+fi
+
+[[ $# -ge 2 ]] || usage
 executor="$2"
 
 if [[ "${mode}" == "describe" ]]; then
   [[ $# -eq 2 ]] || usage
   describe "${executor}"
+  exit $?
+fi
+
+if [[ "${mode}" == "probe" ]]; then
+  [[ $# -eq 2 ]] || usage
+  probe "${executor}"
   exit $?
 fi
 
