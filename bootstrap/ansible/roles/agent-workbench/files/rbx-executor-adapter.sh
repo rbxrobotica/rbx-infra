@@ -89,18 +89,58 @@ probe() {
 # mission as ordinary repository content.
 design_capability() {
   local headless=false reason="no_headless_claude_design_interface_on_host"
+  local candidate=false contract_verified=false service_credentialed=false
+  local interface="none" owner_login_required=true supported_mode="export_import"
+  local cli_version="" probe_fingerprint="" raw_capability="" normalized=""
+
+  # Binary presence is only discovery. Availability requires a narrow,
+  # machine-readable RBX capability handshake so an unrelated or interactive
+  # executable named `claude-design` cannot silently activate this path.
   if command -v claude-design >/dev/null 2>&1; then
-    headless=true
-    reason="observed"
+    candidate=true
+    reason="headless_contract_unverified"
+    if cli_version="$(timeout 20 claude-design --version 2>/dev/null | head -1 | tr -d '\r')" &&
+       [[ -n "${cli_version}" ]] &&
+       raw_capability="$(timeout 20 claude-design capabilities --json 2>/dev/null)" &&
+       normalized="$(jq -cse '
+         if length != 1 or .[0].schema_version != "1" then empty else .[0] end
+         | select(.interface == "cli" or .interface == "design_sync")
+         | select(.headless_available == true)
+         | select(.service_credentialed == true)
+         | select(.owner_login_required == false)
+         | select(.supported_mode == "direct")
+         | {schema_version, interface, headless_available,
+            service_credentialed, owner_login_required, supported_mode}
+       ' <<<"${raw_capability}" 2>/dev/null)" &&
+       [[ -n "${normalized}" ]]; then
+      headless=true
+      contract_verified=true
+      service_credentialed=true
+      interface="$(jq -r '.interface' <<<"${normalized}")"
+      owner_login_required=false
+      supported_mode="direct"
+      reason="observed_verified_contract"
+      probe_fingerprint="$(printf '%s' "${normalized}" | sha256sum | awk '{print $1}')"
+    fi
   fi
+
   jq -n --argjson headless "${headless}" --arg reason "${reason}" \
+    --argjson candidate "${candidate}" --argjson verified "${contract_verified}" \
+    --argjson service_credentialed "${service_credentialed}" \
+    --arg interface "${interface}" --argjson owner_login_required "${owner_login_required}" \
+    --arg supported_mode "${supported_mode}" \
+    --arg probe_fingerprint "${probe_fingerprint}" \
     '{
-       interface: (if $headless then "cli" else "none" end),
+       interface: $interface,
        headless_available: $headless,
        reason: $reason,
-       owner_login_required: (if $headless then false else true end),
-       supported_mode: (if $headless then "direct" else "export_import" end),
-       degradation: (if $headless then null else "repository_design_bundle" end)
+       candidate_binary_observed: $candidate,
+       contract_verified: $verified,
+       service_credentialed: $service_credentialed,
+       owner_login_required: $owner_login_required,
+       supported_mode: $supported_mode,
+       degradation: (if $headless then null else "repository_design_bundle" end),
+       probe_fingerprint: (if $probe_fingerprint == "" then null else $probe_fingerprint end)
      }'
 }
 

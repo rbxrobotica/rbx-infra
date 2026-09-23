@@ -94,6 +94,7 @@ done
 #    rather than implying Design participated.
 jq -e '.claude_design.interface == "none"
        and .claude_design.headless_available == false
+       and .claude_design.contract_verified == false
        and .claude_design.owner_login_required == true
        and .claude_design.supported_mode == "export_import"
        and .claude_design.degradation == "repository_design_bundle"' <<<"${report}" >/dev/null
@@ -109,5 +110,76 @@ PATH="${empty_path}" "$adapter" probe not-a-real-executor >/dev/null 2>&1
 rc=$?
 set -e
 test "$rc" -eq 64
+
+# 10. Merely placing a binary called claude-design on PATH must not activate a
+#     headless capability. It has to implement the structured RBX handshake.
+cat >"${tmp_dir}/bin/claude-design" <<'SH'
+#!/usr/bin/env bash
+if [[ "${1:-}" == "--version" ]]; then
+  echo "0.0.1 (Interactive-only lookalike)"
+  exit 0
+fi
+exit 64
+SH
+chmod +x "${tmp_dir}/bin/claude-design"
+candidate_report="$(PATH="${empty_path}" "$adapter" capabilities)"
+jq -e '.claude_design.headless_available == false
+       and .claude_design.candidate_binary_observed == true
+       and .claude_design.contract_verified == false
+       and .claude_design.reason == "headless_contract_unverified"
+       and .claude_design.supported_mode == "export_import"' \
+  <<<"${candidate_report}" >/dev/null
+
+# 11. A service-credentialed implementation can activate autonomously by
+#     satisfying the versioned, machine-readable contract. This preserves a
+#     path to more automation without trusting a filename.
+cat >"${tmp_dir}/bin/claude-design" <<'SH'
+#!/usr/bin/env bash
+if [[ "${1:-}" == "--version" ]]; then
+  echo "1.2.3 (Contract Test)"
+elif [[ "${1:-}" == "capabilities" && "${2:-}" == "--json" ]]; then
+  printf '%s\n' '{"schema_version":"1","interface":"cli","headless_available":true,"service_credentialed":true,"owner_login_required":false,"supported_mode":"direct"}'
+else
+  exit 64
+fi
+SH
+chmod +x "${tmp_dir}/bin/claude-design"
+verified_report="$(PATH="${empty_path}" "$adapter" capabilities)"
+jq -e '.claude_design.interface == "cli"
+       and .claude_design.headless_available == true
+       and .claude_design.contract_verified == true
+       and .claude_design.service_credentialed == true
+       and .claude_design.owner_login_required == false
+       and .claude_design.reason == "observed_verified_contract"
+       and .claude_design.supported_mode == "direct"
+       and (.claude_design.probe_fingerprint | test("^[0-9a-f]{64}$"))' \
+  <<<"${verified_report}" >/dev/null
+
+# 12. The whole capability response must be one valid JSON object emitted by a
+#     successful command. A valid prefix, a second document, or a nonzero exit
+#     cannot activate the interface.
+for mode in malformed multiple nonzero; do
+  cat >"${tmp_dir}/bin/claude-design" <<SH
+#!/usr/bin/env bash
+if [[ "\${1:-}" == "--version" ]]; then
+  echo "1.2.3 (Contract Test)"
+elif [[ "\${1:-}" == "capabilities" && "\${2:-}" == "--json" ]]; then
+  printf '%s\n' '{"schema_version":"1","interface":"cli","headless_available":true,"service_credentialed":true,"owner_login_required":false,"supported_mode":"direct"}'
+  case "${mode}" in
+    malformed) echo 'not-json' ;;
+    multiple) printf '%s\n' '{"schema_version":"1"}' ;;
+    nonzero) exit 1 ;;
+  esac
+else
+  exit 64
+fi
+SH
+  chmod +x "${tmp_dir}/bin/claude-design"
+  rejected_report="$(PATH="${empty_path}" "$adapter" capabilities)"
+  jq -e '.claude_design.headless_available == false
+         and .claude_design.contract_verified == false
+         and .claude_design.reason == "headless_contract_unverified"' \
+    <<<"${rejected_report}" >/dev/null
+done
 
 echo "runner-capability-probe-contract: all assertions passed"
