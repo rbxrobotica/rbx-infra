@@ -20,6 +20,9 @@ for a in "$@"; do prompt="$a"; done
 mission_dir="$(grep -oE 'missions/[A-Za-z0-9_-]+' <<<"${prompt}" | head -1 || true)"
 [[ "${mission_dir}" =~ ^missions/[A-Za-z0-9_-]+$ ]] || { echo '{"type":"result","is_error":true,"result":"no mission dir in prompt"}'; exit 1; }
 code="$(basename "${mission_dir}")"
+# Public Presence binds manifest.brand to the identity slug of the content item
+# (no brand field exists in the doctrine), so the E2E passes the identity here.
+brand="${E2E_BRAND:-psyctl}"
 mkdir -p "${mission_dir}/out" "${mission_dir}/design"
 printf 'RBX sovereign loop\n\nA deterministic creative produced by the E2E fake executor.\n' > "${mission_dir}/copy.md"
 cat > "${mission_dir}/out/${code}.svg" <<SVG
@@ -31,11 +34,11 @@ size() { stat -c %s "$1"; }
 svg="${mission_dir}/out/${code}.svg"
 now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 cat > "${mission_dir}/manifest.json" <<JSON
-{"mission":"${code}","brand":"rbx","format":"post-1x1","version":"1.0.0",
+{"mission":"${code}","brand":"${brand}","format":"post-1x1","version":"1.0.0",
  "artifacts":[{"file":"${code}.svg","sha256":"$(sha "${svg}")","sizeBytes":$(size "${svg}"),"mimeType":"image/svg+xml"}],
  "verdict":"PASSED",
  "qaSummary":{"wcagContrastRatio":"PASSED (12.0:1; minimum 4.5:1)","lexiconCheck":"PASSED","claimsCheck":"PASSED"},
- "qa":{"schemaVersion":"1","mission":"${code}","brand":"rbx","verdict":"PASSED",
+ "qa":{"schemaVersion":"1","mission":"${code}","brand":"${brand}","verdict":"PASSED",
        "checks":{"lexicon":"PASSED","claims":"PASSED","svgStructure":"PASSED","palette":"PASSED","typography":"PASSED","contrast":"PASSED"},
        "minimumContrastRatio":12.0,"violations":[],"warnings":[]},
  "createdAt":"${now}"}

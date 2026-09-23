@@ -184,7 +184,7 @@ export HOME="${work}/corbetti-home"; mkdir -p "${HOME}/rbx/repos/rbxrobotica" "$
 git clone -q --bare "${origin}" "${HOME}/rbx/repos/rbxrobotica/rbx-creatives.git"
 cp "${here}/fakes/claude" "${here}/fakes/gh" "${work}/fakebin/"; chmod +x "${work}/fakebin/"*
 export PATH="${work}/fakebin:${PATH}" RUNNER_ID=corbetti-e2e RUNNER_GIT_AUTHOR_NAME="RBX E2E Runner" RUNNER_GIT_AUTHOR_EMAIL="runner@example.invalid"
-export AGENT_LOOP_RUNNER_KEY="${RUNNER_KEY}" MAESTRO_URL GITHUB_PAT=e2e-fake-pat E2E_REPO="rbxrobotica/rbx-creatives"
+export AGENT_LOOP_RUNNER_KEY="${RUNNER_KEY}" MAESTRO_URL GITHUB_PAT=e2e-fake-pat E2E_REPO="rbxrobotica/rbx-creatives" E2E_BRAND="${PP_IDENTITY_SLUG:-psyctl}"
 claim="$(curl -fsS -H "Authorization: Bearer ${RUNNER_KEY}" -H "X-Runner-Id: ${RUNNER_ID}" "${MAESTRO_URL}/leases/next")"
 [[ -n "${claim}" ]] || { echo "runner got no lease (204)" >&2; exit 1; }
 echo "${claim}" > "${work}/claim.json"
