@@ -73,6 +73,10 @@ async function seed() {
 		sourceCommit: env('E2E_SOURCE_COMMIT'),
 		maxIntents: 4,
 		maxSpendCents: 2000,
+		// spend is measurable: 200k tokens per intent at 3,000,000 micro-cents per 1k tokens
+		// projects to 600 cents per intent, three intents inside the 2000-cent envelope
+		maxTokensPerIntent: 200000,
+		tokenPriceMicroCentsPer1k: 3000000,
 		validFrom: new Date(now.getTime() - 60_000),
 		validUntil: new Date(now.getTime() + 6 * 3_600_000),
 		authorizedAt: now
