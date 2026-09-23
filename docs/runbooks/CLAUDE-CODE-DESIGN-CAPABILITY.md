@@ -67,6 +67,30 @@ billable call, so they are listed under `unverified` and stay the caller's
 problem. A capability report must never contain credential material; the
 contract test asserts this with decoy environment variables.
 
+### Future headless interface handshake
+
+The presence of an executable named `claude-design` is discovery only. It does
+not activate the capability. A future service-credentialed implementation must
+support both:
+
+```bash
+claude-design --version
+claude-design capabilities --json
+```
+
+Both commands must exit successfully, and the second must return exactly one
+valid JSON object containing the versioned RBX handshake with a direct
+interface, `headless_available: true`, `service_credentialed: true`,
+`owner_login_required: false` and `supported_mode: "direct"`. The runner
+normalizes only those allowlisted fields and publishes their SHA-256 as
+`probe_fingerprint`; it never copies the provider's raw response or version
+text into the capability report.
+
+An executable without that handshake remains available through the existing
+`export_import` degradation and is reported with
+`reason: "headless_contract_unverified"`. This keeps missions moving while
+preventing a filename from becoming false evidence.
+
 ## What this unblocks, and what it does not
 
 Operational today:
