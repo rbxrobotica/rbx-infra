@@ -101,9 +101,10 @@ spec:
             # Flight Deck admission ingress (rbx-maestro ADR-0006; strategos-core
             # ADR-0010 §11: Flight Deck is the admission path, Strategos never is).
             # Admission stores dispatch_blocked=true. AGENT_LOOP_FLIGHTDECK_DISPATCH_KEY
-            # is intentionally absent: activation stays disabled in production until a
-            # Mandato/activation decision provisions it. Sourced from ESO-synced Secret
-            # maestro-flightdeck-key (rbx-ia-br → rbx-maestro namespace).
+            # is intentionally absent: activation is request-bound (Flight Deck dispatch
+            # approval for the exact request, resolved by Maestro; rbx-flightdeck
+            # docs/provider-neutral-execution.md) and is the next slice. Sourced from
+            # ESO-synced Secret maestro-flightdeck-key (rbx-ia-br → rbx-maestro namespace).
             - name: AGENT_LOOP_FLIGHTDECK_KEY
               valueFrom:
                 secretKeyRef:

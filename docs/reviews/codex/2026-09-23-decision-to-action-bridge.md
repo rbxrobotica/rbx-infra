@@ -10,6 +10,17 @@ ExternalSecret keys and worker CronJob, runbook and SECRETS.md.
 ## Result
 
 Round 3: no findings. VERDICT: APPROVE.
+Round 4 (after human review and rebase on main): no findings. VERDICT: APPROVE.
+
+### Post-review amendments (round 4)
+- Rebased on main; FlightDeck (`sha-f9a1c63`) and Maestro (`sha-2719183`) pins preserved
+  at their current prod values, no regression.
+- Public Presence pin moved to `sha-9ba13e2`, the main commit containing the replica
+  race fix `e6ca605` (the "flake" was a real race, reproduced 7 of 10 runs, now fixed).
+- Runbook: pre-merge order made explicit (secrets, pull secret and PAT visibility before
+  merge because ArgoCD auto-syncs); activation described as request-bound Flight Deck
+  dispatch approval resolved by Maestro, never a Strategos Mandato matter.
+- Merge order: rbx-infra#268 first, rbx-maestro#23 second.
 
 ## Findings resolved
 

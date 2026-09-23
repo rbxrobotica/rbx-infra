@@ -28,19 +28,31 @@ Corbetti    --(GET /leases/next every 30 s, runner key)------------>  Maestro
 | FlightDeck → Public Presence / Maestro config | Not configured in prod (5 env vars absent) | Env and ExternalSecret keys |
 | Maestro Flight Deck ingress | Disabled in prod (`AGENT_LOOP_FLIGHTDECK_KEY` absent) | Env and ExternalSecret; allowlist `rbxrobotica/rbx-creatives`; `MAESTRO_ENVIRONMENT=production` |
 | Corbetti runner | Alive, polling, always 204 (no work) | Nothing to do; work will appear once admission runs |
-| Activation | Not wired anywhere | Deliberately left disabled (see below) |
+| Activation | Not wired anywhere | Deliberately left disabled; request-bound dispatch approval is the next slice (see below) |
 
 ## What this change set does NOT do
 
 - It does not provision `AGENT_LOOP_FLIGHTDECK_DISPATCH_KEY`. Admission stores every
   Flight Deck mission as `dispatch_blocked=true`; nothing is activated and the runner
   keeps receiving 204. rbx-maestro ADR-0006 is explicit that setting keys does not
-  authorize production activation. Activation is the next decision (Strategos Mandato,
-  ADR-0010 §5) and gets its own change.
+  authorize production activation.
+- Activation is **request-bound**, not a Mandato matter. Per the Flight Deck contract
+  (`rbx-flightdeck` `docs/provider-neutral-execution.md`, Autonomy): an approved Action
+  plus a current standing authorization plus a separate dispatch approval for the exact
+  request lets later stages run unattended; Maestro activation resolves that
+  request-bound dispatch approval, and Action approval alone never clears the dispatch
+  block. Strategos and its Mandato only bound the standing authorization; they never
+  activate a Mission. The activation stage (dispatch key, FlightDeck dispatch approval,
+  creative job materialization, result reconciliation, publication) is the next slice.
 - It does not publish anything externally.
 - It does not create any secret value in Git.
 
 ## Owner steps (in order, all outside Git)
+
+Steps 1 to 5 happen **before** merging this change set. ArgoCD auto-syncs on merge;
+if the secrets or the pull secret are missing at that moment, FlightDeck and Maestro
+pods fail to start (missing `secretKeyRef` keys) and Public Presence stays blocked on
+the migrate hook.
 
 1. **Mint the two new keys and the Maestro copy** (hex only, per SECRETS.md):
    ```bash
@@ -95,8 +107,9 @@ FlightDeck env vars is still missing. `401 Unauthorized` means the CronJob key a
 FlightDeck key differ. Maestro `E-INVALID-FLIGHTDECK-V2: target_environment is not
 enabled` means `MAESTRO_ENVIRONMENT` and `MAESTRO_TARGET_ENVIRONMENT` differ.
 
-## Known flake
+## Image provenance note
 
-`TestVerifyPassClaimsAcrossReplicas` in rbx-public-presence `internal/publishing` failed
-once on the merge commit 38d9c91 and passed on rerun without code change. Treat a red CI
-on that test as a rerun candidate, and file the race as a follow-up in that repository.
+`TestVerifyPassClaimsAcrossReplicas` in rbx-public-presence `internal/publishing` exposed
+a real race between replicas (reproduced 7 of 10 runs), fixed in commit `e6ca605`
+("reject stale verification claims"). The pin in this change set is `9ba13e2`, the merge
+commit that contains that fix. Do not pin `38d9c91` or older.
