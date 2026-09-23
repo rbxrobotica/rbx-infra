@@ -62,6 +62,25 @@ mode is the explicit `repository_design_bundle` degradation.
 The same rule applies to any future design surface, browser controller or media
 generator: the compatibility profile name is never provenance.
 
+The executor runs `rbx-executor-adapter.sh capabilities` once per mission,
+after `describe` and before any repository mutation, and keeps the report as
+`capability.json` next to the other runner manifests. A MissionSpec may declare
+`capabilities.design {required, degraded_mode}`. When Design is required, no
+headless interface is observed and `degraded_mode` is null, the mission stops
+with `FailureManifest.phase = "capability"` after worktree setup and before the
+executor runs. When the contract declares `capabilities`, the
+`DeliveryManifest` gains `capabilities.design` recording what actually happened
+(`observed`, `mode` direct/degraded/unavailable, bundle path and hash at the
+head commit when one was consumed, `evidence_ref` pointing at the probe), and a
+`design` attestation only when the interface was observed and the executor
+staged a matching `<mission dir>/design/attestation.json`. The declaration is
+never proof of execution. See `docs/runbooks/CLAUDE-CODE-DESIGN-CAPABILITY.md`.
+
+Schemas: the capability report is owned here,
+`bootstrap/ansible/roles/agent-workbench/schemas/capability-report.v1.schema.json`;
+the runner result envelope is owned by rbx-maestro,
+`docs/schemas/runner-result.v1.schema.json`.
+
 ## Settlement
 
 Corbetti submits one `ExecutionManifest` and exactly one terminal
@@ -70,7 +89,9 @@ endpoint.
 
 The `ExecutionManifest` records the resolved base commit, executor, provider,
 model, adapter version, attempt and observed usage. The `DeliveryManifest`
-records policy, verify, branch, head commit and pull request evidence. The
+records policy, verify, branch, head commit and pull request evidence, plus
+`capabilities` evidence and, only with observed and attested use, a `design`
+attestation when the contract declared `capabilities`. The
 `FailureManifest` records the phase, structured stop reason and safe partial
 evidence.
 

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# Fake gh for the E2E: `gh pr view` fails (no PR yet), `gh pr create` prints a
+# deterministic PR URL for the admitted repository, `gh auth git-credential` no-op.
+set -euo pipefail
+case "${1:-} ${2:-}" in
+  "pr view") exit 1 ;;
+  "pr create") echo "https://github.com/${E2E_REPO:-rbxrobotica/rbx-creatives}/pull/${E2E_PR_NUMBER:-101}" ;;
+  "auth git-credential") cat >/dev/null; exit 0 ;;
+  *) exit 0 ;;
+esac

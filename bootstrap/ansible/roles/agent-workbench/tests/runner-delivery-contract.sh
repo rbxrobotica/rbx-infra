@@ -20,6 +20,34 @@ if [[ -z "$pr_line" || -z "$delivered_line" || "$pr_line" -ge "$delivered_line" 
   exit 1
 fi
 
+# The per-mission capability probe must be written before any repository
+# mutation, and the design gate must fail closed with its own phase.
+capability_line="$(grep -n '"${ADAPTER}" capabilities >"${capability_file}"' "$executor" | cut -d: -f1)"
+clone_line="$(grep -n 'git clone --bare' "$executor" | cut -d: -f1)"
+if [[ -z "$capability_line" || -z "$clone_line" || "$capability_line" -ge "$clone_line" ]]; then
+  echo "capability contract violated: probe must precede repository setup" >&2
+  exit 1
+fi
+grep -q 'submit_failure capability ' "$executor"
+grep -Fq 'capabilities:$capabilities' "$executor"
+grep -Fq 'design:$design' "$executor"
+# A `design` attestation may only be built from an attestation the executor
+# staged and the runner matched against the probe; `status:"used"` must appear
+# exactly once, inside that guarded builder.
+test "$(grep -c 'status:"used"' "$executor")" -eq 1
+grep -Fq 'design_attested=true' "$executor"
+# Design evidence is validated from the staged Git object, never the working
+# tree: the mode check and the blob read must both be present.
+grep -Fq 'ls-files -s -- "$1"' "$executor"
+grep -Fq '== 100644\ *' "$executor"
+grep -Fq 'show ":${design_attestation_ref}"' "$executor"
+grep -Fq 'design/attestation' "$executor"
+# The owned capability-report schema must be well-formed JSON Schema 2020-12.
+schema="${role_dir}/schemas/capability-report.v1.schema.json"
+jq -e '."$schema" == "https://json-schema.org/draft/2020-12/schema" and (."$id" | test("capability-report\\.v1\\.schema\\.json$"))
+       and .properties.schema_version.const == "1" and (.properties | has("executors") and has("claude_design"))' \
+  "$schema" >/dev/null
+
 grep -q 'claim_token' "$runner"
 grep -q 'rbx-mission-executor.sh' "$runner"
 grep -Fq "printf '%s|%s\\n'" "$runner"

@@ -6,7 +6,7 @@
 set -euo pipefail
 
 usage() {
-  echo "usage: $0 describe EXECUTOR | probe EXECUTOR | capabilities | run EXECUTOR WORKTREE PROMPT_FILE LOG_FILE TIMEOUT_S RESULT_FILE" >&2
+  echo "usage: $0 describe EXECUTOR | probe EXECUTOR | capabilities | run EXECUTOR WORKTREE PROMPT_FILE LOG_FILE TIMEOUT_S RESULT_FILE RAW_OUTPUT" >&2
   exit 64
 }
 
