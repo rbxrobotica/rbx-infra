@@ -86,6 +86,32 @@ spec:
             # window, without a rollout. Env vars would freeze at pod start.
             - name: OIDC_ALLOWED_EMAILS_FILE
               value: /etc/rbx-flightdeck/allowed-emails
+            # Public Presence outbox worker (rbx-flightdeck ADR 0010; strategos-core
+            # ADR-0010 §11). One-shot stage driven by public-presence-worker-cronjob.yml.
+            # Both remote URLs must be HTTPS (the service rejects plain http except
+            # loopback), hence the public hosts rather than cluster-local Services.
+            # Admission only: Maestro stores dispatch_blocked=true; activation is not wired.
+            - name: PUBLIC_PRESENCE_URL
+              value: "https://presence.rbx.ia.br"
+            - name: MAESTRO_URL
+              value: "https://agents.rbx.ia.br"
+            - name: MAESTRO_TARGET_ENVIRONMENT
+              value: "production"
+            - name: PUBLIC_PRESENCE_WORKER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-flightdeck-secrets
+                  key: PUBLIC_PRESENCE_WORKER_KEY
+            - name: PUBLIC_PRESENCE_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-flightdeck-secrets
+                  key: PUBLIC_PRESENCE_SERVICE_KEY
+            - name: MAESTRO_ADMIT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-flightdeck-secrets
+                  key: MAESTRO_ADMIT_KEY
           volumeMounts:
             - name: allowlist
               mountPath: /etc/rbx-flightdeck

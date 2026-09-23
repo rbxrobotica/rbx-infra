@@ -41,6 +41,16 @@ spec:
               value: production
             - name: PRESENCE_ASSET_STORE
               value: s3
+            # config.Load() runs before `migrate` and validates the production S3
+            # configuration (rbx-public-presence ADR 0009 amendment 2026-09-06), so the
+            # hook needs the same S3 values as api-deploy.yml or it fails before
+            # applying a single migration and ArgoCD stays blocked on the hook.
+            - name: PRESENCE_S3_BUCKET
+              value: rbx-presence
+            - name: CONTABO_S3_ENDPOINT
+              value: https://eu2.contabostorage.com
+            - name: PRESENCE_S3_PUBLIC_URL
+              value: https://presence.rbx.ia.br/assets
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:

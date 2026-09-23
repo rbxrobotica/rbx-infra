@@ -140,6 +140,9 @@ pass_rbx_commerce_payrexx_instance: "rbx/commerce/payrexx-instance"
 pass_rbx_commerce_payrexx_api_key: "rbx/commerce/payrexx-api-key"
 pass_rbx_commerce_payrexx_webhook_secret: "rbx/commerce/payrexx-webhook-secret"
 
+# rbx-public-presence (namespace: rbx-public-presence — presence.rbx.ia.br). Needs ghcr-pull-secret.
+rbx_public_presence_namespace: "rbx-public-presence"
+
 # rbx-public-presence-secrets (in rbx-ia-br — feeds rbx-public-presence ExternalSecrets)
 # DATABASE_URL points at the selectorless Service to jaguar (postgres-svc.yml in
 # rbx-infra apps/prod/rbx-public-presence); the role/db bootstrap itself is

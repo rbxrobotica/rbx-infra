@@ -23,8 +23,10 @@ labels:
     includeSelectors: false
 images:
   # Promoted by rbx-public-presence CI on each main build (sha-<commit>; docs/infra/IMAGE-PROMOTION.md).
-  # Placeholder tags until the first image is published; ArgoCD sync must wait for real tags.
+  # First real pin (2026-09-23): rbx-public-presence main 38d9c91, CI green, both images
+  # built by publish-images run 35832551116. The CI self-push step failed only because
+  # RBX_INFRA_PAT is not visible to that repository yet (docs/runbooks/DECISION-TO-ACTION-BRIDGE.md).
   - name: ghcr.io/rbxrobotica/rbx-public-presence-api
-    newTag: sha-0000000000000000000000000000000000000000
+    newTag: sha-38d9c9148dca2368964da5b1095c3da04d3635d3
   - name: ghcr.io/rbxrobotica/rbx-public-presence-web
-    newTag: sha-0000000000000000000000000000000000000000
+    newTag: sha-38d9c9148dca2368964da5b1095c3da04d3635d3

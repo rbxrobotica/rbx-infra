@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# No namespace transformer on purpose: rbac-external-secrets.yml defines a Role and
+# RoleBinding in rbx-ia-br (ESO reads the source Secrets there). A global
+# `namespace:` would rewrite them into rbx-maestro and ArgoCD would prune the real
+# ones. Every manifest below carries its own metadata.namespace.
+resources:
+  - deployment.yaml
+  - serviceaccount.yml
+  - rbac-external-secrets.yml
+  - secretstore.yml
+  - rbx-maestro-secret.yml
+  - corbetti-runner-key-secret.yml
+  - maestro-dashboard-key-secret.yml
+  - maestro-flightdeck-key-secret.yml
+  - deployment-app.yaml
+  - service.yaml
+  - ingress.yaml
+images:
+  # Promoted by rbx-maestro CI on each main build (sha-<commit>; fleet standard,
+  # docs/infra/IMAGE-PROMOTION.md). Moved here from a hardcoded tag in
+  # deployment-app.yaml on 2026-09-23 (Pattern R rule 2); the rbx-maestro
+  # publish workflow bumps this newTag with yq.
+  - name: ghcr.io/rbxrobotica/rbx-maestro
+    newTag: sha-271918361ba68082c2e34e43646d512b43951892
