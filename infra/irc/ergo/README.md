@@ -26,6 +26,8 @@ RBX_IRC_HOST=corbetti ../scripts/bootstrap-ergo-internal.sh
 
 O bootstrap recusa iniciar se faltar a configuração final, se o hash conhecido
 de demonstração ainda estiver presente ou se faltarem certificados.
+Cada execução validada recria somente o container `rbx-ergo`, aplicando mudanças
+do arquivo montado sem alterar dados persistentes.
 
 Como o estado final não isenta nem loopback do SASL, a primeira conta exige uma
 janela controlada: adicione temporariamente `localhost` a
