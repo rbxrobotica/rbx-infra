@@ -140,6 +140,13 @@ When something breaks:
   AXFR. Read before operating DNS.
 - `docs/runbooks/CERT-MANAGER-DEBUG.md` — TLS challenges stuck
   or failed.
+- `docs/runbooks/DECISION-TO-ACTION-BRIDGE.md` — the FlightDeck
+  → Public Presence → Maestro → Corbetti chain: prod wiring
+  status, required config, admission-only scope (dispatch key
+  withheld).
+- `docs/runbooks/CLAUDE-CODE-DESIGN-CAPABILITY.md` — what the
+  `claude_code_design` creative adapter can and cannot do on a
+  Corbetti host, and how a caller detects that without guessing.
 - `docs/incidents/` — case studies. Required context for the
   runbooks above.
 
@@ -149,6 +156,9 @@ Architectural reference:
   baseline services, environment tiers, Postgres-external
   constraint.
 - `docs/infra/DNS.md` — day-to-day DNS operations.
+- `docs/infra/CORBETTI-EXECUTION.md` — Corbetti's provider-neutral
+  repository mission lifecycle and its contract boundary with
+  Maestro.
 
 ## Postgres constraint (non-negotiable)
 
