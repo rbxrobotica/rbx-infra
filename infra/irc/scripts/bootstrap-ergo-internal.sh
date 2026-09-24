@@ -139,7 +139,7 @@ if ! grep -Eq "127\\.0\\.0\\.1:${irc_port}([[:space:]]|$)" <<<"$listeners"; then
     exit 1
 fi
 tls_listeners="$(ss -ltnH "sport = :${ircs_port}" || true)"
-if grep -Eq '(^|[[:space:]])(0\.0\.0\.0|\*|\[::\]):' <<<"$tls_listeners"; then
+if awk '{print $4}' <<<"$tls_listeners" | grep -Eq '^(0\.0\.0\.0|\*|\[::\]):'; then
     printf '[ERROR] Ergo TLS has a public wildcard bind; refusing.\n' >&2
     exit 1
 fi
