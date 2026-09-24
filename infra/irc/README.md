@@ -14,8 +14,8 @@ Maestro, Git e o ledger continuam sendo os sistemas canônicos.
 A auditoria de 2026-09-24 encontrou Linux Mint 22.3 XFCE no desktop, `tmux`
 instalado, WeeChat ausente e Podman Compose disponível. A Corbetti responde pelo
 alias SSH `corbetti`, é Ubuntu 24.04, tem Docker Compose e Tailscale, e não tinha
-listeners ou containers IRC. O firewall do host não pôde ser lido sem elevação;
-nenhuma regra foi alterada.
+listeners ou containers IRC. O UFW está ativo com política de entrada `deny` e
+permite publicamente apenas SSH em `22/tcp`; nenhuma regra foi alterada.
 
 ## Componentes
 
