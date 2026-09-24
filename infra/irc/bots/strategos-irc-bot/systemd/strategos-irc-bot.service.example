@@ -1,0 +1,45 @@
+[Unit]
+Description=RBX Strategos read-only IRC adapter
+Documentation=file:/srv/rbx/irc/bots/strategos-irc-bot/app/README.md
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+Type=simple
+DynamicUser=yes
+WorkingDirectory=/srv/rbx/irc/bots/strategos-irc-bot/app
+Environment=PYTHONPATH=/srv/rbx/irc/bots/strategos-irc-bot/app/src
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/srv/rbx/irc/bots/strategos-irc-bot/bot.env
+ExecStart=/usr/bin/python3 -m strategos_irc_bot --config /srv/rbx/irc/bots/strategos-irc-bot/config.yaml
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+UMask=0077
+
+CapabilityBoundingSet=
+AmbientCapabilities=
+LockPersonality=yes
+NoNewPrivileges=yes
+PrivateDevices=yes
+PrivateTmp=yes
+ProtectClock=yes
+ProtectControlGroups=yes
+ProtectHome=yes
+ProtectHostname=yes
+ProtectKernelLogs=yes
+ProtectKernelModules=yes
+ProtectKernelTunables=yes
+ProtectSystem=strict
+RestrictAddressFamilies=AF_INET AF_INET6
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target

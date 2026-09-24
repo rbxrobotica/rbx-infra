@@ -90,7 +90,7 @@ for _attempt in {1..15}; do
     [[ -n "$listeners" ]] && break
     sleep 1
 done
-if grep -Eq '(^|[[:space:]])(0\.0\.0\.0|\*|\[::\]):' <<<"$listeners"; then
+if awk '{print $4}' <<<"$listeners" | grep -Eq '^(0\.0\.0\.0|\*|\[::\]):'; then
     printf '[ERROR] ZNC has a public wildcard bind on port %s.\n' "$port" >&2
     exit 1
 fi

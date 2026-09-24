@@ -26,12 +26,16 @@ RBX_IRC_HOST=corbetti ../scripts/bootstrap-ergo-internal.sh
 
 O bootstrap recusa iniciar se faltar a configuração final, se o hash conhecido
 de demonstração ainda estiver presente ou se faltarem certificados.
+Cada execução validada recria somente o container `rbx-ergo`, aplicando mudanças
+do arquivo montado sem alterar dados persistentes.
 
 Como o estado final não isenta nem loopback do SASL, a primeira conta exige uma
-janela controlada: adicione temporariamente `localhost` a
-`accounts.require-sasl.exempted`, suba o serviço, use `/OPER` e `SAREGISTER`, e
-restaure imediatamente `exempted: []`. A implantação só está concluída depois
-de reiniciar e confirmar que uma conexão sem SASL é recusada.
+janela controlada. Adicione temporariamente `localhost` e o gateway `/32` da
+bridge do container a `accounts.require-sasl.exempted`; obtenha o endereço com
+`docker inspect -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}'
+rbx-ergo`. Não isente uma faixa RFC1918 inteira. Suba o serviço, use `/OPER` e
+`SAREGISTER`, restaure imediatamente `exempted: []`, reinicie e confirme que
+uma conexão sem SASL é recusada.
 
 Para publicar TLS numa VPN, altere apenas `ERGO_TLS_BIND_ADDRESS` para o endereço
 privado da Corbetti. A porta plaintext permanece forçada a `127.0.0.1` pelo
