@@ -142,6 +142,13 @@ python3 -m venv .venv
 Use conta dedicada, sem oper, e mantenha `strategos.enabled: false`. A lista
 `auth.allowed_accounts` é comparada à tag de conta autenticada do IRCv3.
 
+Para execução persistente na Corbetti, crie `bot.env` conforme o README do bot e
+execute:
+
+```bash
+RBX_IRC_HOST=corbetti ./infra/irc/scripts/bootstrap-strategos-bot-corbetti.sh
+```
+
 ## 7. Saúde e diagnóstico
 
 ```bash
@@ -189,6 +196,8 @@ RBX_IRC_CONFIRM=rollback-znc RBX_IRC_HOST=corbetti \
   ./infra/irc/scripts/rollback-znc.sh
 RBX_IRC_CONFIRM=rollback-ergo RBX_IRC_HOST=corbetti \
   ./infra/irc/scripts/rollback-ergo.sh
+RBX_IRC_CONFIRM=rollback-strategos-bot RBX_IRC_HOST=corbetti \
+  ./infra/irc/scripts/rollback-strategos-bot.sh
 ```
 
 Os comandos param e removem somente o container correspondente. Configuração,

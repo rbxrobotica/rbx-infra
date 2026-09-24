@@ -38,3 +38,24 @@ seja implementado e revisado. Uma implementação futura deve manter a interface
 
 O processo não registra mensagens ou senhas. Nunca dê oper à conta do bot e não
 adicione canais públicos à configuração.
+
+## Serviço persistente na Corbetti
+
+O bootstrap de infraestrutura copia o código para `/srv/rbx/irc/bots`, preserva
+`config.yaml`/`bot.env` e instala uma unidade systemd com `DynamicUser` e
+hardening. O secret deve existir previamente, fora do Git:
+
+```bash
+sudo install -d -m 0700 /srv/rbx/irc/bots/strategos-irc-bot
+sudoedit /srv/rbx/irc/bots/strategos-irc-bot/bot.env
+# STRATEGOS_IRC_PASSWORD=<senha-da-conta-dedicada>
+sudo chmod 0600 /srv/rbx/irc/bots/strategos-irc-bot/bot.env
+
+RBX_IRC_HOST=corbetti ../../scripts/bootstrap-strategos-bot-corbetti.sh
+```
+
+Rollback preservando código/configuração:
+
+```bash
+RBX_IRC_CONFIRM=rollback-strategos-bot ../../scripts/rollback-strategos-bot.sh
+```
