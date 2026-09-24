@@ -1,4 +1,6 @@
-# IngressRoutes: presence.rbx.ia.br routes to the web console only. The API stays cluster-internal.
+# IngressRoutes: presence.rbx.ia.br routes to the web console; /api/v1 on the same host routes
+# to the API so machine callers that require HTTPS (the Flight Deck outbox worker, rbx-flightdeck
+# ADR 0010) can reach it. The API enforces its own bearer/OIDC auth on every /api/v1 route.
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -28,8 +30,17 @@ spec:
   routes:
     - match: Host(`presence.rbx.ia.br`)
       kind: Rule
+      priority: 10
       services:
         - name: rbx-public-presence-web
           port: 80
+    # Machine API (Flight Deck source events, creative job results). Higher priority than
+    # the console rule so /api/v1/* never reaches the SvelteKit web app.
+    - match: Host(`presence.rbx.ia.br`) && PathPrefix(`/api/v1`)
+      kind: Rule
+      priority: 20
+      services:
+        - name: rbx-public-presence-api
+          port: 8080
   tls:
     secretName: rbx-public-presence-tls

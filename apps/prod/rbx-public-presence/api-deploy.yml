@@ -1,4 +1,5 @@
-# rbx-public-presence api: Go service with the outbox worker in-process. Cluster-internal only.
+# rbx-public-presence api: Go service with the outbox worker in-process. Reached in-cluster by the
+# web console and over HTTPS at presence.rbx.ia.br/api/v1 by machine callers (ingressroute.yml).
 apiVersion: apps/v1
 kind: Deployment
 metadata:

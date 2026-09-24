@@ -1665,6 +1665,36 @@
   no_log: true
 
 # ---------------------------------------------------------------------------
+# rbx-public-presence namespace (Public Presence — presence.rbx.ia.br)
+# Only needs ghcr-pull-secret here. The app secret (rbx-public-presence-secrets)
+# lives in rbx-ia-br (created above) and is synced via ExternalSecret. Without
+# this pull secret the ArgoCD db-migrate hook never pulls its image and the sync
+# stays "waiting for completion of hook" forever (observed 2026-09-23).
+# ---------------------------------------------------------------------------
+
+- name: Ensure rbx-public-presence namespace exists
+  shell: >
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    create namespace {{ rbx_public_presence_namespace }}
+    --dry-run=client -o yaml
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  changed_when: false
+
+- name: Create ghcr-pull-secret in rbx-public-presence
+  shell: |
+    kubectl --kubeconfig {{ kubeconfig_path }} create secret docker-registry ghcr-pull-secret \
+      --namespace {{ rbx_public_presence_namespace }} \
+      --docker-server=ghcr.io \
+      --docker-username="{{ ghcr_username }}" \
+      --docker-password="$GHCR_TOKEN" \
+      --dry-run=client -o yaml \
+    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+  environment:
+    GHCR_TOKEN: "{{ ghcr_token_result.stdout | trim }}"
+  changed_when: true
+  no_log: true
+
+# ---------------------------------------------------------------------------
 # rbx-flightdeck namespace secrets (Flight Deck — flightdeck.rbxsystems.ch)
 # Only needs ghcr-pull-secret here. The app secret (rbx-flightdeck-secrets)
 # lives in rbx-ia-br and is synced via ExternalSecret; the operator creates it

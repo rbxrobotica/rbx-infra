@@ -105,6 +105,16 @@ rbx/
   data/
     warehouse-db-password       # PostgreSQL password for user `rbx_data` on jaguar — rbx_data_warehouse DB
     warehouse-dsn               # Full DSN postgres://rbx_data:<password>@161.97.147.76:5432/rbx_data_warehouse (k8s ExternalSecret source)
+  flightdeck/
+    public-presence-worker-key  # Bearer the in-cluster CronJob presents to POST /internal/workers/public-presence — hex, 32+ bytes
+                                # (rbx-flightdeck-secrets key PUBLIC_PRESENCE_WORKER_KEY; docs/runbooks/DECISION-TO-ACTION-BRIDGE.md)
+  maestro/
+    dashboard-key               # MAESTRO_DASHBOARD_KEY, Éden portal read proxy (ExternalSecret maestro-dashboard-key)
+    flightdeck-key              # AGENT_LOOP_FLIGHTDECK_KEY on Maestro AND MAESTRO_ADMIT_KEY on Flight Deck (same value) — hex, 32+ bytes.
+                                # Admission only. The dispatch key that activates work is NOT provisioned (rbx-maestro ADR-0006).
+  public-presence/
+    service-key                 # PRESENCE_SERVICE_KEY (machine callers). Also copied into rbx-flightdeck-secrets as PUBLIC_PRESENCE_SERVICE_KEY.
+    bff-key, session-secret, db-password, oidc-*, instagram-*, linkedin-*   # see k8s-secrets defaults (pass_rbx_public_presence_*)
   btcpay/
     db-password                 # PostgreSQL password for user `rbx_btcpay` on jaguar — rbx_btcpay DB (BTCPay Server's own EF Core store)
     bitcoind-rpc-user            # Shared RPC username, bitcoind <-> NBXplorer only (never exposed outside rbx-payments)
