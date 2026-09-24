@@ -157,7 +157,10 @@ class IrcBot:
             return
         if message.command == "CAP" and len(message.params) >= 2:
             subcommand = message.params[1].upper()
-            capabilities = set((message.trailing or "").split())
+            capabilities = {
+                capability.split("=", 1)[0]
+                for capability in (message.trailing or "").split()
+            }
             if subcommand == "LS":
                 self._capabilities.update(capabilities)
                 if "*" in message.params[2:]:
