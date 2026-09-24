@@ -73,6 +73,15 @@ check_dir() {
 
 check_container rbx-znc znc
 check_container rbx-ergo ergo
+if systemctl is-enabled --quiet strategos-irc-bot.service 2>/dev/null; then
+    if systemctl is-active --quiet strategos-irc-bot.service; then
+        ok 'Strategos IRC bot systemd service is enabled and active'
+    else
+        fail 'Strategos IRC bot systemd service is enabled but not active'
+    fi
+else
+    warn 'Strategos IRC bot systemd service is not enabled'
+fi
 check_file "$root/znc/.env" 'ZNC .env'
 check_file "$root/ergo/.env" 'Ergo .env'
 check_file "$root/ergo/config/ircd.yaml" 'Ergo final config'

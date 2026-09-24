@@ -62,9 +62,19 @@ install -m 0644 "$stage/systemd/strategos-irc-bot.service.example" "$unit"
 
 systemd-analyze verify "$unit"
 systemctl daemon-reload
+systemctl reset-failed strategos-irc-bot.service 2>/dev/null || true
 systemctl enable --now strategos-irc-bot.service
-sleep 2
-systemctl is-active --quiet strategos-irc-bot.service
+for _attempt in {1..20}; do
+    if systemctl is-active --quiet strategos-irc-bot.service; then
+        break
+    fi
+    sleep 1
+done
+if ! systemctl is-active --quiet strategos-irc-bot.service; then
+    systemctl --no-pager --full status strategos-irc-bot.service || true
+    journalctl -u strategos-irc-bot.service --no-pager -n 50 || true
+    exit 23
+fi
 systemctl --no-pager --full status strategos-irc-bot.service | sed -n '1,20p'
 printf '[OK] Strategos IRC bot is active under systemd hardening.\n'
 REMOTE

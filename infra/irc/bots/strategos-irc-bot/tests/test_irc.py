@@ -40,6 +40,8 @@ def test_multiline_cap_ls_is_accumulated_before_request() -> None:
     assert output.getvalue() == ""
 
     bot._handle_message(
-        parse_irc_line(":irc.internal.rbx CAP * LS :batch sasl server-time")
+        parse_irc_line(
+            ":irc.internal.rbx CAP * LS :batch sasl=PLAIN,EXTERNAL server-time"
+        )
     )
     assert output.getvalue() == "CAP REQ :account-tag sasl\r\n"
