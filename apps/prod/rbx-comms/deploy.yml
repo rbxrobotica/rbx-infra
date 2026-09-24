@@ -17,10 +17,14 @@ spec:
       labels:
         app.kubernetes.io/name: rbx-comms
         app.kubernetes.io/component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
     spec:
       containers:
         - name: api
-          image: ghcr.io/rbxrobotica/rbx-comms:sha-1f487d2
+          image: ghcr.io/rbxrobotica/rbx-comms
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -43,8 +47,37 @@ spec:
                 secretKeyRef:
                   name: rbx-contact-secrets
                   key: D360_API_KEY
+            # Dark deployment gate: direct Meta support is present in the
+            # image, but all outbound traffic remains explicitly on D360.
+            - name: WHATSAPP_PROVIDER
+              value: d360
             - name: WHATSAPP_NUMBER
               value: "5511913734954"
+            - name: META_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: META_ACCESS_TOKEN
+            - name: META_PHONE_NUMBER_ID
+              value: "1146865621843756"
+            - name: META_WABA_ID
+              value: "1548856947041685"
+            - name: META_BUSINESS_ID
+              value: "26595290966821009"
+            - name: META_APP_ID
+              value: "978295375287050"
+            - name: META_APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: META_APP_SECRET
+            - name: META_WEBHOOK_VERIFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: META_WEBHOOK_VERIFY_TOKEN
+            - name: META_GRAPH_API_VERSION
+              value: v26.0
             - name: ALTCHA_SECRET
               valueFrom:
                 secretKeyRef:
