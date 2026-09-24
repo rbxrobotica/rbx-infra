@@ -22,4 +22,4 @@ images:
   # deployment-app.yaml on 2026-09-23 (Pattern R rule 2); the rbx-maestro
   # publish workflow bumps this newTag with yq.
   - name: ghcr.io/rbxrobotica/rbx-maestro
-    newTag: sha-93bf248f5ee908b07e1b8c05a49915988e8d1930
+    newTag: sha-4fb69a3eab910093607c59090761b433072d4854
