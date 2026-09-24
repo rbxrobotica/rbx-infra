@@ -121,7 +121,7 @@ fi
 docker compose --env-file .env -f compose.yaml config --quiet
 docker compose --env-file .env -f compose.yaml run --rm --no-deps -T \
     --entrypoint /ircd-bin/ergo ergo run --conf /ircd/ircd.yaml --smoke </dev/null
-docker compose --env-file .env -f compose.yaml up -d ergo
+docker compose --env-file .env -f compose.yaml up -d --force-recreate ergo
 docker compose --env-file .env -f compose.yaml ps ergo
 
 irc_port="$(sed -n 's/^ERGO_IRC_PORT=\([0-9][0-9]*\)$/\1/p' .env | tail -1)"
