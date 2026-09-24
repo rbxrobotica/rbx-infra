@@ -72,7 +72,16 @@ sudo chmod 0600 config/ircd.yaml config/tls/privkey.pem
 ```
 
 Substitua o hash de demonstração, não uma senha em texto claro. Para a primeira
-conta, altere temporariamente apenas este bloco:
+conta, descubra o gateway exato da rede Docker depois da primeira subida:
+
+```bash
+sudo docker inspect -f '{{range .NetworkSettings.Networks}}{{.Gateway}}{{end}}' rbx-ergo
+```
+
+Conexões feitas ao bind publicado em `127.0.0.1` podem chegar ao processo no
+container com esse gateway como origem. Altere temporariamente apenas o bloco
+abaixo, usando o endereço retornado como um `/32` (não isente uma faixa RFC1918
+inteira):
 
 ```yaml
 accounts:
@@ -80,6 +89,7 @@ accounts:
     enabled: true
     exempted:
       - localhost
+      - "<gateway-da-bridge>/32"
 ```
 
 Rode o bootstrap com a trava explícita, conecte pelo túnel local e crie as contas
@@ -200,5 +210,7 @@ RBX_IRC_CONFIRM=rollback-strategos-bot RBX_IRC_HOST=corbetti \
   ./infra/irc/scripts/rollback-strategos-bot.sh
 ```
 
-Os comandos param e removem somente o container correspondente. Configuração,
-dados, `.env`, certificados, imagens e backups permanecem no host.
+Os dois primeiros comandos param e removem somente o container correspondente;
+o terceiro para e desabilita somente a unidade systemd do bot. Configuração,
+aplicação, dados, `.env`, credenciais, certificados, imagens e backups
+permanecem no host.
