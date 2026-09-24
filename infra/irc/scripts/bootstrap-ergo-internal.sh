@@ -119,8 +119,19 @@ if [[ ! "$tls_bind" =~ ^127\.0\.0\.1$ && \
     exit 23
 fi
 docker compose --env-file .env -f compose.yaml config --quiet
-docker compose --env-file .env -f compose.yaml run --rm --no-deps -T \
-    --entrypoint /ircd-bin/ergo ergo run --conf /ircd/ircd.yaml --smoke </dev/null
+ergo_image="$(sed -n 's/^ERGO_IMAGE=\([^[:space:]]*\)$/\1/p' .env | tail -1)"
+ergo_image="${ergo_image:-ghcr.io/ergochat/ergo:v2.19.1}"
+validation_dir="$(mktemp -d /tmp/rbx-ergo-validate.XXXXXX)"
+cleanup_validation() { rm -rf -- "$validation_dir"; }
+trap cleanup_validation EXIT
+install -m 0600 "$config_dir/ircd.yaml" "$validation_dir/ircd.yaml"
+install -m 0644 "$config_dir/ergo.motd" "$validation_dir/ergo.motd"
+install -d -m 0700 "$validation_dir/tls"
+install -m 0644 "$config_dir/tls/fullchain.pem" "$validation_dir/tls/fullchain.pem"
+install -m 0600 "$config_dir/tls/privkey.pem" "$validation_dir/tls/privkey.pem"
+docker run --rm --network none --entrypoint /ircd-bin/ergo \
+    -v "$validation_dir:/ircd" "$ergo_image" \
+    run --conf /ircd/ircd.yaml --smoke </dev/null
 docker compose --env-file .env -f compose.yaml up -d --force-recreate ergo
 docker compose --env-file .env -f compose.yaml ps ergo
 
@@ -148,6 +159,8 @@ if [[ -z "$tls_listeners" ]]; then
     exit 1
 fi
 printf '[OK] Ergo plaintext is loopback-only and TLS has no wildcard bind.\n'
+cleanup_validation
+trap - EXIT
 REMOTE
 then
     :
