@@ -22,6 +22,19 @@ ssh -N -T -L 6667:127.0.0.1:6667 corbetti
 # Revise ~/.config/rbx-irc/servers-ergo.commands.example e cole no WeeChat.
 ```
 
+Para manter o túnel como serviço do usuário, sem privilégios de root:
+
+```bash
+install -Dm0644 ~/.config/rbx-irc/rbx-irc-tunnel.service.example \
+  ~/.config/systemd/user/rbx-irc-tunnel.service
+systemctl --user daemon-reload
+systemctl --user enable --now rbx-irc-tunnel.service
+```
+
+O modelo Ergo grava apenas uma referência ao cofre do WeeChat. Execute primeiro
+`/secure set rbx_ergo_password <senha-da-conta-ergo>`; a senha não deve aparecer
+em `irc.conf`.
+
 ## 2. Implantar ZNC na Corbetti
 
 ```bash

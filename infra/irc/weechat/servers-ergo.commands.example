@@ -10,7 +10,8 @@
 /set irc.server.rbxnet.username "<conta-ergo>"
 /set irc.server.rbxnet.sasl_mechanism plain
 /set irc.server.rbxnet.sasl_username "<conta-ergo>"
-/set irc.server.rbxnet.sasl_password "${sec.data.rbx_ergo_password}"
+# The backslash stores the secure-data expression instead of its expanded value.
+/set irc.server.rbxnet.sasl_password "\${sec.data.rbx_ergo_password}"
 /set irc.server.rbxnet.autojoin "#strategos,#missions"
 /save
 /connect rbxnet

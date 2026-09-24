@@ -21,6 +21,9 @@ fi
 packages=(tmux weechat ca-certificates netcat-openbsd)
 missing=()
 for package in "${packages[@]}"; do
+    if [[ "$package" == "weechat" ]] && command -v weechat >/dev/null 2>&1; then
+        continue
+    fi
     if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -q 'ok installed'; then
         missing+=("$package")
     fi
@@ -49,7 +52,8 @@ for example in \
     weechat-bootstrap.commands.example \
     servers-public.commands.example \
     servers-znc.commands.example \
-    servers-ergo.commands.example; do
+    servers-ergo.commands.example \
+    rbx-irc-tunnel.service.example; do
     if [[ -e "${TARGET_DIR}/${example}" ]]; then
         printf '[SKIP] Preserving existing %s\n' "${TARGET_DIR}/${example}"
     else

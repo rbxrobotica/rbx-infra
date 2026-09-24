@@ -244,6 +244,11 @@ class IrcBot:
         else:
             connection = raw_socket
 
+        # The timeout passed to create_connection is only a connection deadline.
+        # IRC sessions are intentionally idle between messages and PINGs, so keeping
+        # it on the established socket would disconnect a healthy bot every 15s.
+        connection.settimeout(None)
+
         LOGGER.info("connected to configured IRC server")
         with connection:
             reader = connection.makefile(

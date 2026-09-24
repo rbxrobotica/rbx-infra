@@ -20,3 +20,8 @@ Para o Ergo interno via túnel, use `127.0.0.1:6667` sem TLS apenas dentro do SS
 Revise e aplique `servers-ergo.commands.example`; ele mantém a senha no
 armazenamento seguro do WeeChat. Por VPN ou outra rede, conecte à porta `6697`
 com TLS e SASL obrigatórios.
+
+`servers-ergo.commands.example` preserva a expressão `sec.data` no arquivo de
+configuração, para que a senha permaneça exclusivamente no cofre do WeeChat.
+O modelo `rbx-irc-tunnel.service.example` mantém o encaminhamento SSH como uma
+unidade systemd do usuário; instale-o somente após confirmar o alias `corbetti`.
