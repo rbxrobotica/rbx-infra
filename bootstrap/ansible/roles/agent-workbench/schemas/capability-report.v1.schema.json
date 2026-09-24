@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rbxrobotica.github.io/rbx-infra/schemas/capability-report.v1.schema.json",
+  "title": "Corbetti capability report v1",
+  "description": "Output of `rbx-executor-adapter.sh capabilities` on an agent-workbench host. The report describes what the probe observed; it never proves that a mission will succeed and never contains credential material. The runner stores it per mission as capability.json and references it from DeliveryManifest.capabilities.<name>.evidence_ref as `capability:<probe_fingerprint or sha256 of this document>` (rbx-maestro docs/schemas/runner-result.v1.schema.json).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "executors", "claude_design"],
+  "properties": {
+    "schema_version": { "const": "1" },
+    "executors": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/executorProbe" }
+    },
+    "claude_design": { "$ref": "#/$defs/claudeDesignProbe" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "executorProbe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["executor", "provider", "adapter", "model", "cli", "available", "reason", "cli_version", "structured_output", "unverified"],
+      "properties": {
+        "executor": { "type": "string", "enum": ["claude-haiku", "claude-sonnet", "codex", "glm", "kimi"] },
+        "provider": { "type": "string", "minLength": 1 },
+        "adapter": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "cli": { "type": "string", "minLength": 1 },
+        "available": { "type": "boolean" },
+        "reason": {
+          "type": "string",
+          "enum": ["observed", "cli_not_on_path", "cli_version_check_failed", "structured_output_unsupported"]
+        },
+        "cli_version": { "type": ["string", "null"] },
+        "structured_output": { "type": "boolean" },
+        "unverified": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["credentials", "network", "quota", "model_availability"] },
+          "uniqueItems": true
+        }
+      }
+    },
+    "claudeDesignProbe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interface", "headless_available", "reason", "candidate_binary_observed", "contract_verified", "service_credentialed", "owner_login_required", "supported_mode", "degradation", "probe_fingerprint"],
+      "properties": {
+        "interface": { "type": "string", "enum": ["none", "cli", "design_sync"] },
+        "headless_available": { "type": "boolean" },
+        "reason": {
+          "type": "string",
+          "enum": ["no_headless_claude_design_interface_on_host", "headless_contract_unverified", "observed_verified_contract"]
+        },
+        "candidate_binary_observed": { "type": "boolean" },
+        "contract_verified": { "type": "boolean" },
+        "service_credentialed": { "type": "boolean" },
+        "owner_login_required": { "type": "boolean" },
+        "supported_mode": { "type": "string", "enum": ["export_import", "direct"] },
+        "degradation": { "type": ["string", "null"], "enum": ["repository_design_bundle", null] },
+        "probe_fingerprint": { "oneOf": [ { "$ref": "#/$defs/sha256" }, { "type": "null" } ] }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "headless_available": { "const": true } } },
+          "then": {
+            "properties": {
+              "interface": { "enum": ["cli", "design_sync"] },
+              "contract_verified": { "const": true },
+              "service_credentialed": { "const": true },
+              "owner_login_required": { "const": false },
+              "supported_mode": { "const": "direct" },
+              "degradation": { "const": null },
+              "probe_fingerprint": { "$ref": "#/$defs/sha256" }
+            }
+          },
+          "else": {
+            "properties": {
+              "interface": { "const": "none" },
+              "supported_mode": { "const": "export_import" },
+              "degradation": { "const": "repository_design_bundle" },
+              "probe_fingerprint": { "const": null }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -31,6 +31,9 @@ verify_result="${manifest_dir}/verify.json"
 result_file="${manifest_dir}/result.json"
 response_file="${manifest_dir}/maestro-response.json"
 prompt_file="${manifest_dir}/prompt.txt"
+capability_file="${manifest_dir}/capability.json"
+capabilities_file="${manifest_dir}/capabilities.json"
+design_file="${manifest_dir}/design.json"
 
 mkdir -p "${LOG_DIR}" "${MANIFEST_ROOT}" "${manifest_dir}"
 printf 'null\n' >"${policy_result}"
@@ -142,18 +145,154 @@ submit_failure() {
   return 1
 }
 
+# Capability evidence (runner-result contract v1, section B rev 2).
+#
+# The mission contract's `capabilities.design` declares whether Design is
+# required or optional. It is never proof of execution. The runner records what
+# actually happened in `delivery.capabilities.design` and emits a
+# `delivery.design` attestation ONLY when the probe observed a headless
+# interface AND the executor produced corresponding evidence: a staged
+# `<mission dir>/design/attestation.json` carrying the same interface and the
+# same probe_fingerprint the probe published. Anything less is recorded as
+# mode "degraded" (permitted degraded_mode taken) or "unavailable" (optional
+# capability), never as used. Legacy contracts without `capabilities` keep a
+# byte-identical delivery shape.
+design_mode=""
+design_bundle_ref=""
+design_bundle_hash=""
+design_attestation_ref=""
+design_attested=false
+
+# staged_regular_blob PATH succeeds only when PATH is staged exactly once as a
+# regular non-executable file (mode 100644). Symlinks (120000), executables
+# and gitlinks are rejected: evidence is read from the staged blob, never from
+# the working tree, so a link to an out-of-tree file cannot stand in for it.
+staged_regular_blob() {
+  local entry
+  entry="$(git -C "${worktree}" ls-files -s -- "$1" 2>>"${log_file}")" || return 1
+  [[ "${entry}" == 100644\ * && "${entry}" != *$'\n'* ]]
+}
+
+resolve_design_evidence() {
+  [[ "${design_contract}" != "null" ]] || return 0
+  local prefix probe_fp interface candidate
+  prefix="${design_mission_dir:+${design_mission_dir}/design/}"
+  design_attestation_ref="$(jq -r --arg prefix "${prefix}" '
+    [ (.changed_files // [])[]
+      | select(if $prefix == "" then test("^missions/[^/]+/design/attestation\\.json$")
+               else . == ($prefix + "attestation.json") end)
+      | select(test("(^|/)\\.\\.(/|$)") | not) ]
+    | first // empty' "${policy_result}")"
+  # The bundle is the first staged regular blob under <mission dir>/design/
+  # other than the attestation. Its hash is taken from the staged blob, which
+  # is what the mission commit will contain.
+  while IFS= read -r candidate; do
+    [[ -n "${candidate}" ]] || continue
+    if staged_regular_blob "${candidate}"; then
+      design_bundle_ref="${candidate}"
+      design_bundle_hash="$(git -C "${worktree}" show ":${candidate}" 2>>"${log_file}" | sha256sum | awk '{print $1}')"
+      [[ "${design_bundle_hash}" =~ ^[0-9a-f]{64}$ ]] && break
+      design_bundle_ref=""
+      design_bundle_hash=""
+    else
+      log "DESIGN ${code}: ${candidate} is not a staged regular file; not counted as a design bundle"
+    fi
+  done < <(jq -r --arg prefix "${prefix}" --arg attestation "${design_attestation_ref}" '
+    (.changed_files // [])[]
+      | select(if $prefix == "" then test("^missions/[^/]+/design/[^/]") else (startswith($prefix) and . != $prefix) end)
+      | select(. != $attestation)
+      | select(test("(^|/)\\.\\.(/|$)") | not)' "${policy_result}")
+  if [[ "${design_headless}" == "true" && -n "${design_attestation_ref}" ]]; then
+    probe_fp="$(jq -r '.claude_design.probe_fingerprint // empty' "${capability_file}")"
+    interface="$(jq -r '.claude_design.interface // "none"' "${capability_file}")"
+    if ! staged_regular_blob "${design_attestation_ref}"; then
+      log "DESIGN ${code}: attestation at ${design_attestation_ref} is not a staged regular file (symlink or non-blob); not counted as evidence"
+    elif [[ "${probe_fp}" =~ ^[0-9a-f]{64}$ ]] &&
+       git -C "${worktree}" show ":${design_attestation_ref}" 2>>"${log_file}" |
+       jq -e --arg interface "${interface}" --arg fp "${probe_fp}" '
+         type == "object"
+         and (.interface == "cli" or .interface == "design_sync")
+         and .interface == $interface
+         and .probe_fingerprint == $fp' >/dev/null 2>>"${log_file}"; then
+      design_attested=true
+    else
+      log "DESIGN ${code}: attestation at ${design_attestation_ref} does not match the probe; not counted as evidence"
+    fi
+  fi
+  if [[ "${design_attested}" == "true" ]]; then
+    design_mode="direct"
+  elif [[ "${design_degraded_mode}" == "repository_design_bundle" ]]; then
+    design_mode="degraded"
+  elif [[ "${design_required}" != "true" && "${design_headless}" != "true" ]]; then
+    design_mode="unavailable"
+  else
+    # Either required, observed, unattested and no permitted degradation; or
+    # optional, observed, unattested and no permitted degradation. The runner
+    # result schema has no honest mode for an observed-but-unused optional
+    # capability without a degraded_mode ("unavailable" requires observed
+    # false), so both cases fail closed rather than misreport observation.
+    design_mode=""
+  fi
+}
+
+capabilities_json() {
+  local evidence probe_fp bundle_ref="${design_bundle_ref}" bundle_hash="${design_bundle_hash}"
+  if [[ "${design_contract}" == "null" ]]; then
+    echo null
+    return 0
+  fi
+  probe_fp="$(jq -r '.claude_design.probe_fingerprint // empty' "${capability_file}")"
+  if [[ "${probe_fp}" =~ ^[0-9a-f]{64}$ ]]; then
+    evidence="capability:${probe_fp}"
+  else
+    evidence="capability:$(sha256sum "${capability_file}" | awk '{print $1}')"
+  fi
+  # Bundle fields belong to degraded mode only: Maestro fails closed on a
+  # direct delivery that also carries a bundle, and unavailable has none.
+  if [[ "${design_mode}" != "degraded" ]]; then
+    bundle_ref=""
+    bundle_hash=""
+  fi
+  jq -n --argjson required "${design_required}" --argjson observed "${design_headless}" \
+    --arg mode "${design_mode}" --arg degraded_mode "${design_degraded_mode}" \
+    --arg evidence "${evidence}" --arg bundle_ref "${bundle_ref}" --arg bundle_hash "${bundle_hash}" \
+    '{design:({required:$required,observed:$observed,mode:$mode}
+      + (if $mode == "degraded" then {degraded_mode:$degraded_mode} else {} end)
+      + (if $bundle_ref == "" then {} else {bundle_ref:$bundle_ref,bundle_hash:$bundle_hash} end)
+      + {evidence_ref:$evidence})}'
+}
+
+design_attestation_json() {
+  if [[ "${design_contract}" == "null" || "${design_attested}" != "true" ]]; then
+    echo null
+    return 0
+  fi
+  jq -n --slurpfile cap "${capability_file}" \
+    '{interface:$cap[0].claude_design.interface,status:"used",
+      evidence_ref:("capability:" + $cap[0].claude_design.probe_fingerprint)}'
+}
+
 submit_delivery() {
-  local branch="$1" head_commit="$2" pr_url="$3" finished execution
+  local branch="$1" head_commit="$2" pr_url="$3" finished execution capabilities design
   finished="$(ts)"
   execution="$(execution_json "${finished}")"
+  capabilities="$(capabilities_json)"
+  design="$(design_attestation_json)"
+  if [[ "${design_contract}" != "null" ]]; then
+    printf '%s\n' "${capabilities}" | jq '.' >"${capabilities_file}"
+    printf '%s\n' "${design}" | jq '.' >"${design_file}"
+  fi
   jq -n --arg lease_id "${lease_id}" --arg claim_token "${claim_token}" \
     --argjson execution "${execution}" --arg branch "${branch}" --arg head_commit "${head_commit}" \
     --arg pr_url "${pr_url}" --slurpfile policy "${policy_result}" --slurpfile verify "${verify_result}" \
+    --argjson capabilities "${capabilities}" --argjson design "${design}" \
     '{schema_version:"1",lease_id:$lease_id,claim_token:$claim_token,execution:$execution,
-      delivery:{schema_version:"1",outcome:"delivered",branch:$branch,head_commit:$head_commit,
+      delivery:({schema_version:"1",outcome:"delivered",branch:$branch,head_commit:$head_commit,
         pull_request_url:$pr_url,changed_files:$policy[0].changed_files,diff_files:$policy[0].diff_files,
         diff_lines:$policy[0].diff_lines,path_policy:{status:$policy[0].status,violations:$policy[0].violations},
-        verify:$verify[0]}}' >"${result_file}"
+        verify:$verify[0]}
+        + (if $capabilities == null then {} else {capabilities:$capabilities} end)
+        + (if $design == null then {} else {design:$design} end))}' >"${result_file}"
   jq '.execution' "${result_file}" >"${manifest_dir}/execution.json"
   jq '.delivery' "${result_file}" >"${manifest_dir}/delivery.json"
   if submit_result_file delivered; then
@@ -206,6 +345,25 @@ if ! "${ADAPTER}" describe "${executor}" >"${adapter_meta}"; then
   log "unknown executor ${executor}; no repository mutation performed"
   exit 65
 fi
+
+# Probe host capabilities per mission, before any repository mutation. The
+# report is evidence for the delivery attestation and the input to the design
+# gate below. A failed probe is refused like an unknown executor: nothing has
+# been mutated yet, so there is no manifest to submit.
+if ! "${ADAPTER}" capabilities >"${capability_file}"; then
+  log "capability probe failed; no repository mutation performed"
+  exit 65
+fi
+design_contract="$(jq -c '.capabilities.design // null' "${contract_file}")"
+design_required="$(jq -r '(.capabilities.design.required // false) == true' "${contract_file}")"
+design_degraded_mode="$(jq -r '.capabilities.design.degraded_mode // empty' "${contract_file}")"
+design_headless="$(jq -r '.claude_design.headless_available // false' "${capability_file}")"
+design_mission_dir="$(jq -r '(.allowed_paths[0] // "") | if endswith("/**") then .[:-3] else empty end' "${contract_file}")"
+design_degraded=false
+if [[ "${design_required}" == "true" && "${design_headless}" != "true" ]]; then
+  design_degraded=true
+fi
+log "CAPABILITY ${code}: claude_design headless=${design_headless} required=${design_required} degraded_mode=${design_degraded_mode:-null}"
 
 log "START ${code} type=${mtype} repo=${repo} executor=${executor} timeout=${timeout_s}s"
 {
@@ -266,6 +424,15 @@ if [[ -n "${source_commit}" && "${base_commit}" != "${source_commit}" ]]; then
   exit $?
 fi
 
+# Design capability gate. A mission that requires Claude Design cannot run on
+# a host without a headless interface unless the contract explicitly permits
+# the repository_design_bundle degradation. The worktree exists so the
+# FailureManifest carries a valid base; nothing else has been mutated.
+if [[ "${design_degraded}" == "true" && "${design_degraded_mode}" != "repository_design_bundle" ]]; then
+  submit_failure capability "claude_code_design requires a headless Claude Design interface and no degraded mode is permitted" persistent_failure
+  exit $?
+fi
+
 done_bullets="$(jq -r '(.done_criteria // .success_criteria // [])[]? | "  - \(.)"' "${contract_file}")"
 allowed_paths="$(jq -r '.allowed_paths[]?' "${contract_file}" | tr '\n' ' ')"
 forbidden_paths="$(jq -r '.forbidden_paths[]?' "${contract_file}" | tr '\n' ' ')"
@@ -286,6 +453,32 @@ Do not push, merge, deploy, or modify files outside the allowed paths.
 EOF
 if [[ -n "${verify_cmd}" ]]; then
   printf '\nVerify command (executed by the runner):\n  %s\n' "${verify_cmd}" >>"${prompt_file}"
+fi
+if [[ "${design_contract}" != "null" ]]; then
+  design_dir_hint="${design_mission_dir:-missions/<mission directory>}/design/"
+  if [[ "${design_headless}" != "true" ]]; then
+    cat >>"${prompt_file}" <<EOF
+
+Design capability: Claude Design is unavailable on this host (no headless
+interface). Work from repository design inputs only. Do not try to reach Claude
+Design, claude.ai, or any interactive design tool, and do not ask for
+credentials. If you consume an owner-exported design bundle, place or keep it
+under ${design_dir_hint} so the runner can attest it in the delivery manifest.
+EOF
+  else
+    # The probe fingerprint is a hash of the normalized capability handshake,
+    # not credential material. The executor echoes it back so the runner can
+    # tie the attestation to this mission's probe.
+    cat >>"${prompt_file}" <<EOF
+
+Design capability: a headless Claude Design interface ($(jq -r '.claude_design.interface' "${capability_file}")) was observed on
+this host (probe fingerprint $(jq -r '.claude_design.probe_fingerprint' "${capability_file}")).
+If and only if you actually use it, write ${design_dir_hint}attestation.json
+containing {"interface":"<interface>","probe_fingerprint":"<that fingerprint>"}.
+Never write that file if Design did not participate; the runner records the
+honest mode either way.
+EOF
+  fi
 fi
 
 agent_exit=0
@@ -386,6 +579,15 @@ fi
 
 if git -C "${worktree}" diff --cached --quiet; then
   submit_failure git_publish "executor produced no repository diff" persistent_failure
+  exit $?
+fi
+
+# Resolve design evidence from the final staged state. A required capability
+# that the probe observed but the executor never attested, with no permitted
+# degradation, cannot be delivered honestly: stop before any branch exists.
+resolve_design_evidence
+if [[ "${design_contract}" != "null" && -z "${design_mode}" ]]; then
+  submit_failure capability "claude_code_design was observed but the executor produced no valid design attestation and no degraded mode is permitted" persistent_failure
   exit $?
 fi
 

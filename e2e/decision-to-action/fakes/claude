@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Fake Claude Code CLI for the decision-to-action E2E. It behaves like the
+# Corbetti adapter expects (`claude --print --output-format stream-json ...`),
+# and produces a compliant rbx-creatives mission under the single allowed
+# mission directory: manifest.json (sha256-pinned artifacts + QA), out/
+# artifacts, copy.md and an owner-exported design bundle under design/.
+# It never touches anything outside the mission directory and never reads env.
+set -euo pipefail
+# The adapter probes every executor CLI with --version and --help before any
+# mission runs; answer those without touching the tree.
+case "${1:-}" in
+  --version) echo "0.0.0 (fake claude for the decision-to-action E2E)"; exit 0 ;;
+  --help)    echo "  --print  --output-format <fmt>"; exit 0 ;;
+esac
+# The adapter passes the prompt TEXT as the last argument. Refuse to guess
+# from anything that looks like an option, and never treat it as a file path.
+prompt=""
+for a in "$@"; do prompt="$a"; done
+[[ "${prompt}" == --* ]] && { echo '{"type":"result","is_error":true,"result":"no prompt argument"}'; exit 1; }
+mission_dir="$(grep -oE 'missions/[A-Za-z0-9_-]+' <<<"${prompt}" | head -1 || true)"
+[[ "${mission_dir}" =~ ^missions/[A-Za-z0-9_-]+$ ]] || { echo '{"type":"result","is_error":true,"result":"no mission dir in prompt"}'; exit 1; }
+code="$(basename "${mission_dir}")"
+# Public Presence binds manifest.brand to the identity slug of the content item
+# (no brand field exists in the doctrine), so the E2E passes the identity here.
+brand="${E2E_BRAND:-psyctl}"
+mkdir -p "${mission_dir}/out" "${mission_dir}/design"
+printf 'RBX sovereign loop\n\nA deterministic creative produced by the E2E fake executor.\n' > "${mission_dir}/copy.md"
+# A channel-compliant raster: Instagram single image accepts JPEG only (doctrine),
+# so the fake ships a pre-generated 1080x1080 baseline JPEG (base64, no image
+# library needed on the host). Public Presence confirms the MIME from the bytes.
+base64 -d "$(dirname "${BASH_SOURCE[0]}")/artifact-1080x1080.jpg.b64" > "${mission_dir}/out/${code}.jpg"
+printf '{"schema_version":"1","exported_from":"claude-design","frames":[{"name":"post-1x1","width":1080,"height":1080}]}\n' > "${mission_dir}/design/bundle.json"
+sha() { sha256sum "$1" | awk '{print $1}'; }
+size() { stat -c %s "$1"; }
+jpg="${mission_dir}/out/${code}.jpg"
+now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+cat > "${mission_dir}/manifest.json" <<JSON
+{"mission":"${code}","brand":"${brand}","format":"post-1x1","version":"1.0.0",
+ "artifacts":[{"file":"${code}.jpg","sha256":"$(sha "${jpg}")","sizeBytes":$(size "${jpg}"),"mimeType":"image/jpeg"}],
+ "verdict":"PASSED",
+ "qaSummary":{"wcagContrastRatio":"PASSED (12.0:1; minimum 4.5:1)","lexiconCheck":"PASSED","claimsCheck":"PASSED"},
+ "qa":{"schemaVersion":"1","mission":"${code}","brand":"${brand}","verdict":"PASSED",
+       "checks":{"lexicon":"PASSED","claims":"PASSED","palette":"PASSED","typography":"PASSED","contrast":"PASSED"},
+       "minimumContrastRatio":12.0,"violations":[],"warnings":[]},
+ "createdAt":"${now}"}
+JSON
+echo '{"type":"system","subtype":"init"}'
+echo '{"type":"result","is_error":false,"result":"mission produced","usage":{"input_tokens":120,"output_tokens":80,"cache_creation_input_tokens":0,"cache_read_input_tokens":0}}'
