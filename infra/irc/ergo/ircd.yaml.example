@@ -1,0 +1,186 @@
+# RBXNet baseline for Ergo v2.19.1. Copy to ircd.yaml, replace the operator
+# password hash, and provide tls/fullchain.pem plus tls/privkey.pem out-of-band.
+network:
+  name: RBXNet
+
+server:
+  name: irc.internal.rbx
+  listeners:
+    ":6667":
+    ":6697":
+      tls:
+        cert: tls/fullchain.pem
+        key: tls/privkey.pem
+      proxy: false
+      min-tls-version: 1.2
+  casemapping: ascii
+  enforce-utf8: true
+  lookup-hostnames: false
+  check-ident: false
+  coerce-ident: "~u"
+  motd: ergo.motd
+  motd-formatting: true
+  max-sendq: 96k
+  idle-timeouts:
+    registration: 60s
+    ping: 1m30s
+    disconnect: 2m30s
+  relaymsg:
+    enabled: false
+    separators: "/"
+    available-to-chanops: false
+  proxy-allowed-from:
+    - localhost
+  ip-cloaking:
+    enabled: true
+    enabled-for-always-on: true
+    netname: rbx
+    cidr-len-ipv4: 32
+    cidr-len-ipv6: 64
+    num-bits: 64
+  secure-nets:
+    - "100.64.0.0/10"
+
+accounts:
+  authentication-enabled: true
+  registration:
+    enabled: false
+    allow-before-connect: false
+    throttling:
+      enabled: true
+      duration: 10m
+      max-attempts: 10
+    bcrypt-cost: 12
+  login-throttling:
+    enabled: true
+    duration: 1m
+    max-attempts: 3
+  skip-server-password: false
+  login-via-pass-command: false
+  advertise-scram: true
+  require-sasl:
+    enabled: true
+    exempted: []
+  nick-reservation:
+    enabled: true
+    additional-nick-limit: 0
+    method: strict
+    allow-custom-enforcement: false
+    guest-nickname-format: "Guest-*"
+    force-guest-format: true
+    force-nick-equals-account: true
+    forbid-anonymous-nick-changes: true
+  multiclient:
+    enabled: true
+    allowed-by-default: false
+    always-on: opt-in
+    auto-away: opt-in
+  default-user-modes: +i
+
+channels:
+  # New rooms are secret and invite-only. Operators create and register rooms.
+  default-modes: +ntCsi
+  max-channels-per-client: 100
+  operator-only-creation: true
+  registration:
+    enabled: true
+    operator-only: true
+    max-channels-per-account: 50
+  list-delay: 0s
+  invite-expiration: 24h
+
+oper-classes:
+  server-admin:
+    title: Server Admin
+    capabilities:
+      - kill
+      - ban
+      - nofakelag
+      - relaymsg
+      - vhosts
+      - sajoin
+      - samode
+      - snomasks
+      - roleplay
+      - accreg
+      - chanreg
+      - history
+      - defcon
+      - massmessage
+      - metadata
+
+opers:
+  admin:
+    class: server-admin
+    hidden: true
+    whois-line: is the RBXNet administrator
+    # Refused by bootstrap until replaced with output from `ergo genpasswd`.
+    password: "$2a$04$0123456789abcdef0123456789abcdef0123456789abcdef01234"
+
+logging:
+  - method: stderr
+    type: "* -userinput -useroutput -connect-ip"
+    level: info
+
+lock-file: ircd.lock
+
+datastore:
+  path: ircd.db
+  autoupgrade: true
+
+languages:
+  enabled: true
+  default: en
+  path: /ircd-bin/languages
+
+limits:
+  nicklen: 32
+  identlen: 20
+  realnamelen: 150
+  channellen: 64
+  awaylen: 390
+  kicklen: 390
+  topiclen: 390
+  monitor-entries: 100
+  whowas-entries: 100
+  chan-list-modes: 100
+  registration-messages: 1024
+  multiline:
+    max-bytes: 4096
+    max-lines: 100
+
+fakelag:
+  enabled: true
+  window: 1s
+  burst-limit: 5
+  messages-per-window: 2
+  cooldown: 2s
+
+history:
+  enabled: true
+  channel-length: 2048
+  client-length: 256
+  autoresize-window: 3d
+  autoreplay-on-join: 0
+  chathistory-maxmessages: 500
+  znc-maxmessages: 500
+  restrictions:
+    expire-time: 7d
+    query-cutoff: join-time
+    grace-period: 0s
+  persistent:
+    enabled: false
+    unregistered-channels: false
+    registered-channels: disabled
+    direct-messages: disabled
+  retention:
+    allow-individual-delete: true
+    enable-account-indexing: false
+  tagmsg-storage:
+    default: false
+
+roleplay:
+  enabled: false
+
+authtoken:
+  enabled: false

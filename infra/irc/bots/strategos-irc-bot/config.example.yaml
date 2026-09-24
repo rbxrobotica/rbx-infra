@@ -1,0 +1,21 @@
+irc:
+  server: "127.0.0.1:6667"
+  tls: false
+  tls_verify: true
+  nick: "strategos-bot"
+  username: "strategos-bot"
+  realname: "RBX Strategos ChatOps Bot"
+  channels:
+    - "#strategos"
+    - "#missions"
+  password_env: "STRATEGOS_IRC_PASSWORD"
+
+auth:
+  allowed_accounts:
+    - "leandro"
+  read_only: true
+
+strategos:
+  api_base_url: "http://127.0.0.1:8080"
+  api_token_env: "STRATEGOS_API_TOKEN"
+  enabled: false

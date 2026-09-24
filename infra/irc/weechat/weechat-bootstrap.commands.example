@@ -1,0 +1,9 @@
+# Identidade local (substitua os placeholders antes de executar).
+/set irc.server_default.nicks "<nick>"
+/set irc.server_default.username "<username>"
+/set irc.server_default.realname "<real name>"
+
+# Evita persistir senhas em texto claro nas configurações de servidor.
+/secure passphrase <uma-frase-local-forte>
+
+/save

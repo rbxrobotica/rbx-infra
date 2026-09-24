@@ -1,0 +1,9 @@
+# Primeiro, no WeeChat, grave a senha no armazenamento seguro:
+# /secure passphrase <uma-frase-local-forte>
+# /secure set rbx_znc_password <senha-do-znc>
+
+/server add znc-local 127.0.0.1/6501
+/set irc.server.znc-local.autoconnect on
+/set irc.server.znc-local.username "<znc-user>/<network>"
+/set irc.server.znc-local.password "${sec.data.rbx_znc_password}"
+/save

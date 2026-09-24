@@ -1,0 +1,22 @@
+name: rbx-ergo
+
+services:
+  ergo:
+    image: ${ERGO_IMAGE:-ghcr.io/ergochat/ergo:v2.19.1}
+    container_name: rbx-ergo
+    init: true
+    env_file:
+      - .env
+    volumes:
+      - ${ERGO_CONFIG_DIR:-/srv/rbx/irc/ergo/config}:/ircd
+    ports:
+      - "127.0.0.1:${ERGO_IRC_PORT:-6667}:6667/tcp"
+      - "${ERGO_TLS_BIND_ADDRESS:-127.0.0.1}:${ERGO_IRCS_PORT:-6697}:6697/tcp"
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

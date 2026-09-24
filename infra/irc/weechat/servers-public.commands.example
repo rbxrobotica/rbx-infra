@@ -1,0 +1,11 @@
+/server add libera irc.libera.chat/6697 -tls
+/server add oftc irc.oftc.net/6697 -tls
+/server add hackint irc.hackint.org/6697 -tls
+/server add tilde irc.tilde.chat/6697 -tls
+
+/set irc.server.libera.autoconnect on
+/set irc.server.oftc.autoconnect on
+/set irc.server.hackint.autoconnect on
+/set irc.server.tilde.autoconnect on
+
+/save
