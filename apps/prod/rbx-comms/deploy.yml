@@ -47,10 +47,10 @@ spec:
                 secretKeyRef:
                   name: rbx-contact-secrets
                   key: D360_API_KEY
-            # Dark deployment gate: direct Meta support is present in the
-            # image, but all outbound traffic remains explicitly on D360.
+            # Direct Meta Cloud API is the active WhatsApp provider.
+            # Keep the D360 settings available only for an authorized rollback.
             - name: WHATSAPP_PROVIDER
-              value: d360
+              value: meta
             - name: WHATSAPP_NUMBER
               value: "5511913734954"
             - name: META_ACCESS_TOKEN
