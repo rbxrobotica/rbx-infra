@@ -30,6 +30,7 @@ class StrategosConfig:
     api_base_url: str
     api_token_env: str
     enabled: bool
+    tenant_id: str
 
 
 @dataclass(frozen=True)
@@ -93,5 +94,8 @@ def load_config(path: Path) -> BotConfig:
                 strategos.get("api_token_env"), "strategos.api_token_env"
             ),
             enabled=bool(strategos.get("enabled", False)),
+            tenant_id=_nonempty(
+                strategos.get("tenant_id", "rbx"), "strategos.tenant_id"
+            ),
         ),
     )

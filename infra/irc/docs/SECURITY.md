@@ -32,6 +32,8 @@ de bind: o firewall do sistema operacional sozinho não define a exposição.
 - O bot autoriza pela tag IRCv3 `account`, nunca por nick/hostmask.
 - A lista de contas autorizadas é explícita e o padrão é negar.
 - Credenciais de bot devem ser exclusivas e sem privilégios de operador.
+- O piloto IRC é single-tenant. Integração multi-tenant exige mapa imutável de
+  canal para tenant e autorização conjunta de conta, canal e tenant.
 
 Comandos destrutivos futuros precisam passar por RBAC, policy engine, confirmação
 fora de banda quando aplicável e gravação de decisão/resultado no ledger. O stub
@@ -58,6 +60,11 @@ pela versão do Ergo ou usar mensagens efêmeras fora do IRC.
 Nunca registre payloads, senhas SASL, mensagens privadas ou conteúdo integral de
 comandos no bot. Revise backups como dados sensíveis e aplique a mesma política de
 retenção do serviço.
+
+Não conecte o ZNC à RBXNet sensível sem revisar e desabilitar buffers/logs
+independentes. Uma integração futura do OpenClaw deve ignorar conversa ambiente,
+DMs e replay por padrão, tratar IRC como entrada não confiável e nunca enviar
+transcrições integrais a um modelo.
 
 ## Backup e resposta
 
