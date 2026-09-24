@@ -17,6 +17,10 @@ spec:
       labels:
         app.kubernetes.io/name: rbx-comms
         app.kubernetes.io/component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
     spec:
       containers:
         - name: api
@@ -43,6 +47,10 @@ spec:
                 secretKeyRef:
                   name: rbx-contact-secrets
                   key: D360_API_KEY
+            # Dark deployment gate: direct Meta support is present in the
+            # image, but all outbound traffic remains explicitly on D360.
+            - name: WHATSAPP_PROVIDER
+              value: d360
             - name: WHATSAPP_NUMBER
               value: "5511913734954"
             - name: ALTCHA_SECRET
