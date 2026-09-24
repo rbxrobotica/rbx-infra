@@ -53,6 +53,31 @@ spec:
               value: d360
             - name: WHATSAPP_NUMBER
               value: "5511913734954"
+            - name: META_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: META_ACCESS_TOKEN
+            - name: META_PHONE_NUMBER_ID
+              value: "1146865621843756"
+            - name: META_WABA_ID
+              value: "1548856947041685"
+            - name: META_BUSINESS_ID
+              value: "26595290966821009"
+            - name: META_APP_ID
+              value: "978295375287050"
+            - name: META_APP_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: META_APP_SECRET
+            - name: META_WEBHOOK_VERIFY_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: META_WEBHOOK_VERIFY_TOKEN
+            - name: META_GRAPH_API_VERSION
+              value: v26.0
             - name: ALTCHA_SECRET
               valueFrom:
                 secretKeyRef:
