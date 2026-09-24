@@ -120,7 +120,7 @@ if [[ ! "$tls_bind" =~ ^127\.0\.0\.1$ && \
 fi
 docker compose --env-file .env -f compose.yaml config --quiet
 docker compose --env-file .env -f compose.yaml run --rm --no-deps -T \
-    --entrypoint /ircd-bin/ergo ergo run --conf /ircd/ircd.yaml --smoke
+    --entrypoint /ircd-bin/ergo ergo run --conf /ircd/ircd.yaml --smoke </dev/null
 docker compose --env-file .env -f compose.yaml up -d ergo
 docker compose --env-file .env -f compose.yaml ps ergo
 
