@@ -25,4 +25,4 @@ images:
   # standard, docs/infra/IMAGE-PROMOTION.md). Initial pin: deploy-branch
   # build, verified to exist in GHCR before this PR.
   - name: ghcr.io/rbxrobotica/rbx-flightdeck
-    newTag: sha-f9a1c63d5a25d60f9fff8d8ef1b896b72037e5ae
+    newTag: sha-15223abeed76ddacb2f9d5bd0785ce5f47357519
