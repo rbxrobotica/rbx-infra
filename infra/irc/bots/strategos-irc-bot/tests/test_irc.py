@@ -28,7 +28,7 @@ def test_multiline_cap_ls_is_accumulated_before_request() -> None:
         password_env="STRATEGOS_IRC_PASSWORD",
     )
     dispatcher = CommandDispatcher(
-        AuthorizationPolicy.from_accounts(["leandro"]), MockStrategosClient()
+        AuthorizationPolicy.from_accounts(["leandro"]), MockStrategosClient(), "rbx"
     )
     bot = IrcBot(config, "test-password", dispatcher)
     output = io.StringIO()
@@ -45,3 +45,28 @@ def test_multiline_cap_ls_is_accumulated_before_request() -> None:
         )
     )
     assert output.getvalue() == "CAP REQ :account-tag sasl\r\n"
+
+
+def test_messages_outside_configured_channels_are_ignored() -> None:
+    config = IrcConfig(
+        server="127.0.0.1:6667",
+        tls=False,
+        tls_verify=True,
+        nick="strategos-bot",
+        username="strategos-bot",
+        realname="RBX Strategos ChatOps Bot",
+        channels=("#strategos",),
+        password_env="STRATEGOS_IRC_PASSWORD",
+    )
+    dispatcher = CommandDispatcher(
+        AuthorizationPolicy.from_accounts(["leandro"]), MockStrategosClient(), "rbx"
+    )
+    bot = IrcBot(config, "test-password", dispatcher)
+    output = io.StringIO()
+    bot._writer = output
+
+    bot._handle_message(
+        parse_irc_line("@account=leandro :leandro!~u@rbx PRIVMSG #incidents :!status")
+    )
+
+    assert output.getvalue() == ""

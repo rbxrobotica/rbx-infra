@@ -17,4 +17,6 @@ túnel SSH. Qualquer acesso ao ZNC pela rede deve usar TLS com verificação de
 certificado.
 
 Para o Ergo interno via túnel, use `127.0.0.1:6667` sem TLS apenas dentro do SSH.
-Por VPN ou outra rede, conecte à porta `6697` com TLS e SASL obrigatórios.
+Revise e aplique `servers-ergo.commands.example`; ele mantém a senha no
+armazenamento seguro do WeeChat. Por VPN ou outra rede, conecte à porta `6697`
+com TLS e SASL obrigatórios.

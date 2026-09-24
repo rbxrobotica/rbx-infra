@@ -13,6 +13,15 @@ rbx-irc
 Desanexe do tmux com `Ctrl-b d` e reanexe com `tmux attach -t irc`. Os modelos
 copiados para `~/.config/rbx-irc` devem ser revisados e colados dentro do WeeChat.
 
+Para conversar imediatamente na RBXNet sem depender de uma rede configurada no
+ZNC, abra um túnel direto e aplique o modelo SASL do Ergo:
+
+```bash
+ssh -N -T -L 6667:127.0.0.1:6667 corbetti
+# Em outro terminal: rbx-irc
+# Revise ~/.config/rbx-irc/servers-ergo.commands.example e cole no WeeChat.
+```
+
 ## 2. Implantar ZNC na Corbetti
 
 ```bash

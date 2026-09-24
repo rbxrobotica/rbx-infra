@@ -1,0 +1,16 @@
+# Abra antes o túnel: ssh -N -T -L 6667:127.0.0.1:6667 corbetti
+# Substitua a conta antes de colar estes comandos no WeeChat.
+# A senha fica no armazenamento seguro local, não na configuração do servidor.
+/secure passphrase <uma-frase-local-forte>
+/secure set rbx_ergo_password <senha-da-conta-ergo>
+
+/server add rbxnet 127.0.0.1/6667
+/set irc.server.rbxnet.autoconnect on
+/set irc.server.rbxnet.nicks "<conta-ergo>"
+/set irc.server.rbxnet.username "<conta-ergo>"
+/set irc.server.rbxnet.sasl_mechanism plain
+/set irc.server.rbxnet.sasl_username "<conta-ergo>"
+/set irc.server.rbxnet.sasl_password "${sec.data.rbx_ergo_password}"
+/set irc.server.rbxnet.autojoin "#strategos,#missions"
+/save
+/connect rbxnet

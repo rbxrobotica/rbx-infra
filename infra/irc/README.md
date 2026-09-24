@@ -38,7 +38,8 @@ RBX_IRC_HOST=corbetti ./infra/irc/scripts/irc-healthcheck.sh
 O Ergo exige uma configuração final revisada, credencial de operador com hash e
 certificados externos antes de subir. Consulte [docs/RUNBOOK.md](docs/RUNBOOK.md)
 para o fluxo completo e [docs/SECURITY.md](docs/SECURITY.md) para os limites de
-segurança.
+segurança. A fronteira de identidade e o plano para Android, ZITADEL, tenants e
+OpenClaw estão em [docs/IDENTITY-CHATOPS.md](docs/IDENTITY-CHATOPS.md).
 
 ## Portas
 

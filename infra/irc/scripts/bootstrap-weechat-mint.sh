@@ -48,7 +48,8 @@ mkdir -p "$(dirname "$HELPER")"
 for example in \
     weechat-bootstrap.commands.example \
     servers-public.commands.example \
-    servers-znc.commands.example; do
+    servers-znc.commands.example \
+    servers-ergo.commands.example; do
     if [[ -e "${TARGET_DIR}/${example}" ]]; then
         printf '[SKIP] Preserving existing %s\n' "${TARGET_DIR}/${example}"
     else

@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import TextIO
 
 from .auth import AuthorizationPolicy
-from .client import StrategosClient
+from .client import ChatContext, StrategosClient
 from .commands import CommandError, CommandKind, parse_command, short_help
 from .config import IrcConfig
 
@@ -60,17 +60,30 @@ def parse_irc_line(line: str) -> IrcMessage:
 
 
 class CommandDispatcher:
-    def __init__(self, policy: AuthorizationPolicy, client: StrategosClient) -> None:
+    def __init__(
+        self,
+        policy: AuthorizationPolicy,
+        client: StrategosClient,
+        tenant_id: str,
+    ) -> None:
         self.policy = policy
         self.client = client
+        self.tenant_id = tenant_id
 
     def handle(
-        self, text: str, account: str | None, *, is_private: bool = False
+        self,
+        text: str,
+        account: str | None,
+        *,
+        channel: str,
+        is_private: bool = False,
     ) -> str | None:
-        if is_private:
+        if is_private or not text.lstrip().startswith("!"):
             return None
         if not self.policy.is_allowed(account):
             return "unauthorized: authenticated account is not allowed"
+        assert account is not None
+        context = ChatContext(account, channel, self.tenant_id)
         try:
             command = parse_command(text)
         except CommandError:
@@ -79,18 +92,18 @@ class CommandDispatcher:
         if command.kind is CommandKind.HELP:
             return short_help()
         if command.kind is CommandKind.STATUS:
-            return self.client.status()
+            return self.client.status(context)
         if command.kind is CommandKind.MISSION_LIST:
-            return self.client.mission_list()
+            return self.client.mission_list(context)
         if command.kind is CommandKind.MISSION_STATUS:
             assert command.argument is not None
-            return self.client.mission_status(command.argument)
+            return self.client.mission_status(context, command.argument)
         if command.kind is CommandKind.DEPLOY_STATUS:
-            return self.client.deploy_status()
+            return self.client.deploy_status(context)
         if command.kind is CommandKind.COST_TODAY:
-            return self.client.cost_today()
+            return self.client.cost_today(context)
         if command.kind is CommandKind.RISK_OPEN:
-            return self.client.risk_open()
+            return self.client.risk_open(context)
         if command.kind is CommandKind.MISSION_APPROVE:
             if self.policy.read_only:
                 return "blocked: approval is disabled in read-only mode"
@@ -125,6 +138,9 @@ class IrcBot:
         self._joined = False
         self._sasl_started = False
         self._capabilities: set[str] = set()
+        self._configured_channels = {
+            channel.casefold() for channel in self.config.channels
+        }
 
     def _send(self, line: str) -> None:
         if self._writer is None:
@@ -199,9 +215,12 @@ class IrcBot:
 
         target = message.params[0]
         is_private = not target.startswith("#")
+        if is_private or target.casefold() not in self._configured_channels:
+            return
         response = self.dispatcher.handle(
             message.trailing,
             message.tags.get("account"),
+            channel=target,
             is_private=is_private,
         )
         if response is not None:
