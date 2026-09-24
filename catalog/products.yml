@@ -70,7 +70,7 @@ products:
     description: Internal Developer Platform — RBX product creation and governance CLI
   - name: rbx-public-presence
     type: fullstack
-    phase: seed
+    phase: structuring
     namespace: rbx-public-presence
     domains:
       - presence.rbx.ia.br
@@ -93,3 +93,31 @@ products:
       rbx-session-bff instance with the commerce entitlement gate; reads
       briefing editions from the rbx-content S3 bucket (ADR-0014 canonical
       entrypoint app.merovelis.com/briefing-btc)
+  - name: rbx-maestro
+    type: api
+    phase: structuring
+    namespace: rbx-maestro
+    domains:
+      - agents.rbxsystems.ch
+      - maestro.rbxsystems.ch
+      - agents.rbx.ia.br
+    repo: https://github.com/rbxrobotica/rbx-maestro
+    owner: ldamasio
+    created: 2026-09-23
+    description: Agent-loop control plane — mission records and lifecycle
+      (ADR-0008/ADR-0009), Corbetti runner leasing (GET /leases/next), and
+      the Flight Deck admission surface for the decision-to-action bridge
+      (dispatch key intentionally withheld; docs/runbooks/DECISION-TO-ACTION-BRIDGE.md)
+  - name: rbx-flightdeck
+    type: fullstack
+    phase: structuring
+    namespace: rbx-flightdeck
+    domains:
+      - flightdeck.rbxsystems.ch
+    repo: https://github.com/rbxrobotica/rbx-flightdeck
+    owner: ldamasio
+    created: 2026-09-23
+    description: Weekly mission planning with a human approval gate (SvelteKit,
+      ZITADEL OIDC + email allowlist); admission path for the FlightDeck →
+      Public Presence → Maestro → Corbetti decision-to-action bridge
+      (admission only, dispatch withheld)
