@@ -124,6 +124,7 @@ class IrcBot:
         self._writer: TextIO | None = None
         self._joined = False
         self._sasl_started = False
+        self._capabilities: set[str] = set()
 
     def _send(self, line: str) -> None:
         if self._writer is None:
@@ -158,8 +159,11 @@ class IrcBot:
             subcommand = message.params[1].upper()
             capabilities = set((message.trailing or "").split())
             if subcommand == "LS":
+                self._capabilities.update(capabilities)
+                if "*" in message.params[2:]:
+                    return
                 needed = {"account-tag", "sasl"}
-                if not needed.issubset(capabilities):
+                if not needed.issubset(self._capabilities):
                     raise RuntimeError("server must support IRCv3 account-tag and SASL")
                 self._send("CAP REQ :account-tag sasl")
             elif (
