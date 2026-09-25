@@ -6,6 +6,7 @@ resources:
   - rbac-external-secrets.yml
   - secretstore.yml
   - rbx-commerce-secret.yml
+  - externalsecret-consumption.yml
   - rbx-commerce-ingress.yml
   - rbx-commerce-deploy.yml
   - rbx-commerce-svc.yml
