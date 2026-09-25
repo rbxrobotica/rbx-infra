@@ -5,10 +5,9 @@ rehearsal. It does not set credentials, turn on email verification, configure
 the Asaas webhook, promote an image, or apply database migrations. The
 production `rbx-commerce` Deployment and Secret are outside this overlay.
 
-Before merging any Satwake Commerce feature, separately approve and merge
-Commerce #52. Its current `main` CI still writes the sandbox **and production**
-image pins directly to Infra `main`; #52 removes that automatic deployment
-path. Sandbox image promotion then needs its own reviewed Infra change.
+Commerce #52 removed the CI path that wrote sandbox and production image pins
+directly to Infra `main`. It was merged on 2026-09-25. Sandbox image promotion
+now needs its own reviewed Infra change; the prepared pin is Infra #286.
 
 ## Configuration before this overlay is reconciled
 
