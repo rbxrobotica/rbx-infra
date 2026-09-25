@@ -26,6 +26,15 @@ merging this PR can immediately roll the Deployment.
    intact. Once the source key exists, a specifically approved merge of this
    mapping PR lets ExternalSecret sync it and ArgoCD roll Commerce. Verify
    ExternalSecret readiness and the new Commerce pod before proceeding.
+   Before enabling the flag, check the copied key against **each running
+   Comms replica**, not only the Secret object: port-forward to each ready
+   Comms pod and send `POST /api/v1/outbound/satwake-email-code` with the
+   Commerce key and JSON `{}`. A matching live service key returns HTTP 422
+   for the invalid body; a missing or stale key returns HTTP 401. Keep the
+   credential in process memory, never in a shell argument, URL, file, or
+   log. This validation does not send an email. If a replica fails, reconcile
+   the Comms key and rollout before activation. Recheck after either service
+   key rotates.
 5. Deploy both buyer interfaces: the satwake landing email-verification PR and
    the institutional frontend email-verification PR. Verify the same opaque
    challenge ID passes through start, verify, checkout, and recovery.
@@ -43,6 +52,12 @@ merging this PR can immediately roll the Deployment.
    `SATWAKE_EMAIL_VERIFICATION_REQUIRED=true`. Request specific approval for
    that activation only after steps 1–6 pass. Confirm both interfaces use the
    new flow before enabling it globally for BRL/Pix.
+
+If the source `rbx-ia-br/rbx-commerce-secrets` is recreated, reapply the
+approved narrow key patch before any Commerce rollout and monitor
+ExternalSecret and pod readiness. The current `k8s-secrets` role does not
+declare this property; incorporate it into that role only when its Comms
+source task safely retains the active Meta credentials.
 
 If the email endpoint or Asaas live check fails, keep the flag off and use the
 existing operator reconciliation path for legacy pending invoices. Disabling
