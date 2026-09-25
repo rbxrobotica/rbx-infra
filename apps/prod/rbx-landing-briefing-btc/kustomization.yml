@@ -1,4 +1,4 @@
-# Isolated Briefing BTC landing page (briefingbtc.merovelis.com).
+# One landing service for the preserved Briefing BTC host and Satwake brand.
 # Spec: rbx-growth marketing/2026-h2-growth/landing-pages/briefing-btc-isolated-lp.md
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -9,6 +9,7 @@ resources:
   - rbx-landing-briefing-btc-deploy.yml
   - rbx-landing-briefing-btc-svc.yml
   - rbx-landing-briefing-btc-ingress.yml
+  - rbx-landing-satwake-ingress.yml
 labels:
   - pairs:
       app.kubernetes.io/part-of: rbx-landing-briefing-btc
