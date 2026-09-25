@@ -20,10 +20,12 @@ in place during this cutover.
 
 ## Proposed controlled sequence
 
-1. Review the Satwake landing image from the landing repository and promote
-   it while preserving the legacy host. The current Kustomization pins an
-   older Briefing BTC image; adding the Ingress by itself would serve that
-   older image on the new domain.
+1. Review the Satwake landing image from the landing repository. Landing PR
+   #2 removes the app CI's automatic push to this Infra repository: its merge
+   builds and publishes a commit-tagged image without promoting it. Pin that
+   verified image in a separate reviewed Infra change while preserving the
+   legacy host. The current Kustomization pins an older Briefing BTC image;
+   adding the Ingress by itself would serve that older image on the new domain.
 2. With exact approval for the production GitOps sync, apply the separate
    Satwake Ingress for `satwake.com` and `www.satwake.com`. It requests its own
    certificate from the existing `letsencrypt-prod` HTTP-01 issuer. It does

@@ -16,7 +16,7 @@ labels:
       environment: production
     includeSelectors: false
 images:
-  # Tag promoted by the app repo CI (RBX_INFRA_PAT self-push, issue #168).
-  # Pinned to the bootstrap commit of rbx-landing-briefing-btc (15f6510).
+  # Promote a reviewed app image in a separate Infra change before syncing.
+  # Currently pinned to the pre-Satwake bootstrap image.
   - name: ghcr.io/rbxrobotica/rbx-landing-briefing-btc
     newTag: sha-8a02318
