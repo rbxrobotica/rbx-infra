@@ -41,6 +41,23 @@ spec:
                 secretKeyRef:
                   name: rbx-commerce-sandbox-secrets
                   key: COMMS_API_URL
+            - name: COMMS_SERVICE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-sandbox-secrets
+                  key: COMMS_SERVICE_API_KEY
+            - name: ALTCHA_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-sandbox-secrets
+                  key: ALTCHA_SECRET
+            # Sandbox tenant must match the isolated product/BFF test tenant.
+            # Never copy the production public tenant into this source Secret.
+            - name: COMMERCE_PUBLIC_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-sandbox-secrets
+                  key: COMMERCE_PUBLIC_TENANT_ID
             - name: ASAAS_ENV
               value: "sandbox"
             - name: ASAAS_API_KEY
