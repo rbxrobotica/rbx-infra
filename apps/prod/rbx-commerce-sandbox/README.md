@@ -49,12 +49,23 @@ a separate reviewed change before relying on this as a repeatable environment.
    email verification changes (Commerce PRs #43, #45, #46, #48, #49, #50,
    #53, and their #44/#47 integration), plus the Asaas sandbox API host and
    first-charge due-date fixes (#54 and #55). Keep `ASAAS_ENV=sandbox`.
-2. Inspect the **sandbox database only** and apply its missing Commerce
-   migrations through `000023` in order under an approved migration plan.
-   First parse the effective `DATABASE_URL` without printing the password and
+2. First parse the effective `DATABASE_URL` without printing the password and
    verify its database is `rbx_commerce_sandbox` on the sandbox PostgreSQL
-   service. Verify the actual schema after application; do not rely solely on the
-   historical `schema_migrations` tracker. Never run this against production.
+   service. Inspect the **sandbox database only** and apply its missing Commerce
+   migrations through `000023` under an approved, schema-aware plan. Follow the
+   read-only [Commerce migration preflight](https://github.com/rbxrobotica/rbx-commerce/pull/56),
+   including verification of `000015`–`000018`; the repository does not prove
+   those migrations ran in this database. `000018` hardcodes the **production**
+   public tenant as its data-move target. Never use that tenant for this
+   sandbox: inspect eligible zero-tenant subscriptions and invites, existing
+   `000018` markers, and related-row tenant consistency before deciding whether
+   the migration is a no-op here or needs a separate sandbox data repair plan.
+   Do not replay it blindly or advance the tracker merely to match a version.
+   The live sandbox Deployment inspected on 2026-09-25 did not define
+   `COMMERCE_PUBLIC_TENANT_ID`, so its current API uses the zero tenant until
+   the source Secret and this overlay are reconciled. Verify the actual schema
+   after application; do not rely solely on the historical
+   `schema_migrations` tracker. Never run this against production.
 3. Deploy Comms #19 and confirm the instance named by `COMMS_API_URL` has a
    working Postmark sender. Probe the configured service key against its
    Satwake email route with invalid JSON and no destination: an authenticated
