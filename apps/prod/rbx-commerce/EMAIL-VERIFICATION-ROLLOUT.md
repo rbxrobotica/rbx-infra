@@ -43,7 +43,10 @@ merging this PR can immediately roll the Deployment.
    Asaas HTTP fixtures. The existing `rbx-commerce-sandbox` namespace does
    **not** have `ALTCHA_SECRET`, the Comms service key or the public tenant
    contract, so it cannot serve as this gate without another approved
-   configuration change. Test one challenge email, a new pending Pix,
+   configuration change. Before any live Asaas sandbox observation, include
+   Commerce #54, which corrects the sandbox API host to
+   `api-sandbox.asaas.com`; the previous host returned HTML to an authenticated
+   read-only API request. Test one challenge email, a new pending Pix,
    idempotent retry, a lost-browser recovery, wrong-code/expired-code limits,
    and a paid or changed Asaas invoice that refuses recovery. Check that the
    email address and code do not appear in request logs or Comms persistence.
