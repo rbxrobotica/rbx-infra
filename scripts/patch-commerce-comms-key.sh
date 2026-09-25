@@ -16,6 +16,6 @@ kubectl --kubeconfig "$KUBECONFIG_FILE" --namespace rbx-ia-br \
 # Patch one data key only. The service key flows over stdin into kubectl, not
 # into an argv value, shell tracing, a repository file, or command output.
 pass show rbx/comms/service-api-key \
-  | python3 -c 'import base64,json,sys; lines=sys.stdin.read().splitlines(); key=lines[0].strip() if lines else ""; sys.exit("empty Comms service key") if not key else None; print(json.dumps({"data":{"COMMS_SERVICE_API_KEY":base64.b64encode(key.encode()).decode()}}))' \
+  | python3 -c 'import base64,json,sys; key=sys.stdin.read().strip(); sys.exit("Comms service key must be exactly one nonempty line") if not key or len(key.splitlines()) != 1 else None; print(json.dumps({"data":{"COMMS_SERVICE_API_KEY":base64.b64encode(key.encode()).decode()}}))' \
   | kubectl --kubeconfig "$KUBECONFIG_FILE" --namespace rbx-ia-br \
       patch secret rbx-commerce-secrets --type merge --patch-file=/dev/stdin

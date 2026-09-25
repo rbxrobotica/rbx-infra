@@ -17,7 +17,9 @@ Graph sender.
 Before running the script, inspect the kubeconfig context and confirm it
 targets the intended production cluster. Confirm that the `pass` entry
 `rbx/comms/service-api-key` is present and that Commerce and Comms currently
-have healthy pods. After specific approval, run:
+have healthy pods. The `pass` entry must contain exactly one nonempty line;
+the script rejects a multiline entry rather than silently selecting a value
+different from the one configured for Comms. After specific approval, run:
 
 ```sh
 scripts/patch-commerce-comms-key.sh ~/.kube/config-rbx
@@ -31,3 +33,10 @@ healthy. Then the separate mapping PR may be merged under deployment
 approval. ArgoCD auto-syncs Commerce, so this source preparation must happen
 **before** that merge; otherwise the mandatory env reference can stall the
 Commerce rollout.
+
+This narrow patch is temporary until the `k8s-secrets` role can safely
+provision the active Meta credentials and this Commerce property together.
+If `rbx-ia-br/rbx-commerce-secrets` is recreated or restored, rerun the
+approved patch before allowing a Commerce rollout; watch the Commerce
+ExternalSecret readiness and pod readiness. Do not assume the source property
+survives a Secret recreation.
