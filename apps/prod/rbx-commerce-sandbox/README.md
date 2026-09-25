@@ -54,10 +54,13 @@ a separate reviewed change before relying on this as a repeatable environment.
    sandbox: inspect eligible zero-tenant subscriptions and invites, existing
    `000018` markers, and related-row tenant consistency before deciding whether
    the migration is a no-op here or needs a separate sandbox data repair plan.
-   Quiesce sandbox checkout and invite writes before the final `000018` check;
-   recheck immediately before its DML, then resume writes only after the
-   nonzero sandbox tenant configuration is effective. A prior zero count alone
-   is not a safe no-op guarantee while the old API can still write zero-tenant
+   Quiesce writes to all affected Commerce tables, including checkout,
+   invites, provider callbacks, reconciliation and seat assignment, or use a
+   reviewed transactionally safe exclusion. Preserve provider deliveries for
+   retry. Repeat the eligible-row and related-row checks immediately before
+   `000018` DML, then resume writes only after migration and the nonzero
+   sandbox tenant configuration are verified. A prior zero count alone is not
+   a safe no-op guarantee while the old API can still write zero-tenant
    records.
    Do not replay it blindly or advance the tracker merely to match a version.
    The live sandbox Deployment inspected on 2026-09-25 did not define
