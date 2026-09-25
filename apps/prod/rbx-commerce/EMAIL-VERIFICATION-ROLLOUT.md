@@ -46,11 +46,17 @@ merging this PR can immediately roll the Deployment.
    configuration change. Before any live Asaas sandbox observation, include
    Commerce #54, which corrects the sandbox API host to
    `api-sandbox.asaas.com`; the previous host returned HTML to an authenticated
-   read-only API request. Test one challenge email, a new pending Pix,
+   read-only API request. Include Commerce #55 before testing the financial
+   flow: Asaas ignored the old `dueDate` property, while its documented
+   `nextDueDate` generated a first charge due on the next Brazilian calendar
+   day. Test one challenge email, a new pending Pix,
    idempotent retry, a lost-browser recovery, wrong-code/expired-code limits,
    and a paid or changed Asaas invoice that refuses recovery. Check that the
    email address and code do not appear in request logs or Comms persistence.
-   Observe an Asaas sandbox flow separately before production activation.
+   Observe an Asaas sandbox flow separately before production activation. The
+   sandbox webhook was disabled at the 2026-09-25 read-only check, so provider
+   subscription and payment probes alone cannot verify Commerce webhook
+   reconciliation; callback configuration requires a separate approval.
 7. Prepare a separate Infra change setting
    `SATWAKE_EMAIL_VERIFICATION_REQUIRED=true`. Request specific approval for
    that activation only after steps 1–6 pass. Confirm both interfaces use the
