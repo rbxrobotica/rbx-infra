@@ -14,9 +14,12 @@ merging this PR can immediately roll the Deployment.
 2. Merge and deploy Comms #19. Confirm that its service-key-protected email
    endpoint returns Postmark acceptance in an isolated test. A 202 is not
    proof of mailbox delivery.
-3. Merge Commerce #50 and then #53. Apply migration `000023` under a separate
-   production-migration approval. Deploy the new Commerce image with the
-   verification flag still off.
+3. Merge Commerce #50 and then #53. Review and merge Commerce #54 and #55
+   before promoting the Commerce image used for any Asaas exercise. The
+   payment owner must approve #55's change to the first charge due date for
+   new Pix, boleto and BRL card subscriptions. Apply migration `000023` under
+   a separate production-migration approval. Deploy the new Commerce image
+   with the verification flag still off.
 4. **Before merging this mapping PR**, under a separate production-secret
    approval, run the narrow operation prepared by the Satwake Commerce key
    source PR. It patches only `COMMS_SERVICE_API_KEY` in the source
@@ -43,20 +46,24 @@ merging this PR can immediately roll the Deployment.
    Asaas HTTP fixtures. The existing `rbx-commerce-sandbox` namespace does
    **not** have `ALTCHA_SECRET`, the Comms service key or the public tenant
    contract, so it cannot serve as this gate without another approved
-   configuration change. Before any live Asaas sandbox observation, include
-   Commerce #54, which corrects the sandbox API host to
+   configuration change. The image used for the Asaas sandbox exercise must
+   contain Commerce #54, which corrects the sandbox API host to
    `api-sandbox.asaas.com`; the previous host returned HTML to an authenticated
-   read-only API request. Include Commerce #55 before testing the financial
-   flow: Asaas ignored the old `dueDate` property, while its documented
+   read-only API request. It must also contain Commerce #55: Asaas ignored
+   the old `dueDate` property, while its documented
    `nextDueDate` generated a first charge due on the next Brazilian calendar
    day. Test one challenge email, a new pending Pix,
    idempotent retry, a lost-browser recovery, wrong-code/expired-code limits,
    and a paid or changed Asaas invoice that refuses recovery. Check that the
    email address and code do not appear in request logs or Comms persistence.
-   Observe an Asaas sandbox flow separately before production activation. The
-   sandbox webhook was disabled at the 2026-09-25 read-only check, so provider
-   subscription and payment probes alone cannot verify Commerce webhook
-   reconciliation; callback configuration requires a separate approval.
+   Before production activation, run a controlled Commerce-to-Asaas sandbox
+   checkout with an authenticated provider callback. Verify deduplication,
+   payment/status reconciliation, the dated entitlement, and pause/deletion
+   behavior through Commerce. The sandbox webhook was disabled at the
+   2026-09-25 read-only check; enabling or changing callback configuration
+   requires a separate approval. Direct provider probes and HTTP fixtures do
+   not satisfy this gate. Keep the verification flag off while the callback is
+   disabled or any reconciliation check remains unverified.
 7. Prepare a separate Infra change setting
    `SATWAKE_EMAIL_VERIFICATION_REQUIRED=true`. Request specific approval for
    that activation only after steps 1–6 pass. Confirm both interfaces use the
