@@ -14,6 +14,6 @@ resources:
   - renewals-cronjob.yml
 images:
   - name: ghcr.io/rbxrobotica/rbx-commerce
-    newTag: sha-9d6a837961473bf7e4eda7825047d6a2083fbe7c
+    newTag: sha-61b781d6bfffc9b51497f18272d1c1c464a9b424
   - name: ghcr.io/rbxrobotica/rbx-commerce-web
-    newTag: sha-9d6a837961473bf7e4eda7825047d6a2083fbe7c
+    newTag: sha-61b781d6bfffc9b51497f18272d1c1c464a9b424
