@@ -47,7 +47,7 @@ a separate reviewed change before relying on this as a repeatable environment.
    verify its database is `rbx_commerce_sandbox` on the sandbox PostgreSQL
    service. Inspect the **sandbox database only** and apply its missing Commerce
    migrations through `000023` under an approved, schema-aware plan. Follow the
-   read-only [Commerce migration preflight](https://github.com/rbxrobotica/rbx-commerce/pull/56),
+   read-only [Commerce migration preflight](https://github.com/rbxrobotica/rbx-commerce/blob/main/docs/runbooks/satwake-commerce-migration-preflight.md),
    including verification of `000015`–`000018`; the repository does not prove
    those migrations ran in this database. `000018` hardcodes the **production**
    public tenant as its data-move target. Never use that tenant for this
