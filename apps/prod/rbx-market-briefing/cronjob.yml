@@ -88,10 +88,11 @@ spec:
                   value: "binance-futures"
                 - name: COMMERCE_BASE_URL
                   value: "http://rbx-commerce.rbx-commerce.svc.cluster.local"
-                # briefing_btc_daily_en is Meta-approved but categorized MARKETING,
-                # not the UTILITY it was submitted as (appeal sent to 360dialog
-                # support 2026-09-14, outcome pending). Operator decision: ship
-                # English delivery now regardless of the appeal's outcome.
+                # Match the tenant configured for Commerce public checkout.
+                - name: COMMERCE_DELIVERY_TENANT_ID
+                  value: "885f24d2-1217-534e-bb1b-53440a3c04bb"
+                # Verify the English template in the selected Meta account before
+                # releasing a delivery build. The 360dialog review was historical.
                 - name: EN_DELIVERY_ENABLED
                   value: "true"
               securityContext:
