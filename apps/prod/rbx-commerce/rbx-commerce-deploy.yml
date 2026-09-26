@@ -9,9 +9,9 @@ metadata:
     app.kubernetes.io/component: api
     app.kubernetes.io/part-of: rbx-commerce
 spec:
-  # Temporary Satwake schema maintenance: pause all API writers before 000017-000023.
-  # Restore to 2 only after the migration and runtime checks pass.
-  replicas: 0
+  # Resume after the approved schema migration and Commerce image promotion.
+  # Keep renewals suspended until the restored API passes its runtime checks.
+  replicas: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: rbx-commerce
