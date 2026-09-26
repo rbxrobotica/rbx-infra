@@ -29,7 +29,7 @@ labels:
     includeSelectors: false
 images:
   - name: ghcr.io/rbxrobotica/rbx-briefing-btc
-    newTag: sha-c2cffb5
-    digest: sha256:f7d4c4990d7ea7ca50b121c2484faafb9d97f8cb20a66384d456ae4f52e83ee9
+    newTag: sha-03b98ea
+    digest: sha256:4553264aba07eabe25898c819ebff9bf3366a2fdf4f9dac66d423a13d8038153
   - name: ghcr.io/rbxrobotica/rbx-session-bff
     newTag: sha-515765f
