@@ -2,7 +2,9 @@
 
 Adaptador IRCv3 somente leitura para o Ergo interno. Ele usa SASL PLAIN,
 solicita `account-tag`, ignora mensagens privadas e autoriza pela conta
-autenticada. Não há função de shell ou cliente de API real.
+autenticada. Conversa normal na sala é ignorada: somente mensagens iniciadas
+por `!` nos canais configurados são processadas. Não há função de shell ou
+cliente de API real.
 
 ## Executar
 
@@ -35,6 +37,16 @@ Respostas são mockadas enquanto `strategos.enabled` for `false`. Definir essa
 opção como `true` faz o processo recusar a inicialização até que um cliente real
 seja implementado e revisado. Uma implementação futura deve manter a interface
 `StrategosClient`, aplicar RBAC/policy e escrever evidência no ledger.
+
+O piloto atual é single-tenant (`RBX`). Antes de habilitar uma API real, cada
+canal deve possuir um tenant imutável e todos os métodos do cliente devem exigir
+o contexto `(conta, canal, tenant)`. Isso impede que o modo Holding transforme
+uma sala em atalho acidental para dados de outro tenant. O valor atual vem de
+`strategos.tenant_id` e é `rbx` no arquivo de exemplo.
+
+Não use `MAESTRO_DASHBOARD_KEY` no bot: a superfície atual também permite
+admitir missões e criar leases. A integração real permanece bloqueada até haver
+uma credencial de serviço e rotas estritamente read-only.
 
 O processo não registra mensagens ou senhas. Nunca dê oper à conta do bot e não
 adicione canais públicos à configuração.
