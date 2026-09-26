@@ -122,6 +122,11 @@ spec:
                 secretKeyRef:
                   name: rbx-commerce-secrets
                   key: COMMERCE_SERVICE_KEY
+            - name: COMMERCE_CONSUMPTION_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-consumption-key
+                  key: COMMERCE_CONSUMPTION_SERVICE_KEY
             # Public checkout anti-abuse (internal/checkout). optional=true so this
             # manifest can merge ahead of the pass/k8s-secrets sync — until the key
             # exists, the public checkout endpoints 503 rather than crash the pod.
