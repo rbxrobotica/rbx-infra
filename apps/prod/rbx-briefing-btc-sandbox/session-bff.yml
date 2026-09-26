@@ -50,6 +50,8 @@ spec:
               value: briefing-btc
             - name: RBX_SESSION_BFF_ACCESS_MODE
               value: annotate
+            - name: RBX_SESSION_BFF_REQUIRE_PRODUCT_ACCESS_GATE
+              value: "true"
             - name: RBX_COMMERCE_BASE_URL
               value: http://rbx-commerce-sandbox.rbx-commerce-sandbox.svc.cluster.local
             - name: RBX_COMMERCE_TOKEN_ENDPOINT
