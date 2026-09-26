@@ -9,7 +9,6 @@ resources:
   - rbx-commerce-sandbox-ingress.yml
   - rbx-commerce-sandbox-deploy.yml
   - rbx-commerce-sandbox-svc.yml
-  - satwake-email-sink-external-secrets.yml
   - satwake-email-sink-deploy.yml
   - satwake-email-sink-svc.yml
   - satwake-email-sink-network-policy.yml
