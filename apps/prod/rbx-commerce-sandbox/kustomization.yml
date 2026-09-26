@@ -12,7 +12,7 @@ resources:
   - satwake-email-sink-external-secrets.yml
 images:
   - name: ghcr.io/rbxrobotica/rbx-commerce
-    newTag: sha-61b781d6bfffc9b51497f18272d1c1c464a9b424
+    newTag: sha-720f951965688a366c35d0d7af7a82a87a8ced2c
 labels:
   - pairs:
       app.kubernetes.io/part-of: rbx-commerce
