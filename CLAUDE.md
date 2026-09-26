@@ -14,6 +14,26 @@ Application Repos (robson, strategos, thalamus)  →  rbx-infra (THIS REPO)  →
                                                      - TLS, DNS, Gateway API
 ```
 
+## Autonomous public-presence chain
+
+The current provider-neutral chain is Flight Deck for plan and bounded
+authorization, Public Presence for communication and publication truth, Maestro
+for Mission lifecycle, and Corbetti for repository execution. Strategos sets
+direction by reference and never admits or activates Missions. Provider profile
+names are routing keys, not proof that a named design or media tool ran.
+
+Read these before changing any part of that chain:
+
+- `docs/runbooks/DECISION-TO-ACTION-BRIDGE.md` for code, GitOps and production
+  state;
+- `docs/infra/CORBETTI-EXECUTION.md` for the runner boundary;
+- `docs/runbooks/CLAUDE-CODE-DESIGN-CAPABILITY.md` for honest Design evidence;
+- `e2e/decision-to-action/README.md` for the cross-repository contract harness.
+
+A merged application feature does not imply a deployed image, applied Ansible
+role, configured dispatch credential, live channel effect or receipt. All of
+those are distinct evidence and authorization surfaces.
+
 ## Key Directories
 
 | Directory | Purpose |
