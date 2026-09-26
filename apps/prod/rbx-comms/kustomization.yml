@@ -25,4 +25,4 @@ labels:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-comms
-    newTag: sha-30cf5d9
+    newTag: sha-752b3db
