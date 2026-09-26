@@ -31,7 +31,8 @@ def require(condition: bool, message: str) -> None:
 
 
 def derived_tenant(subject: str) -> uuid.UUID:
-    require(bool(subject) and subject == subject.strip(), "invalid service subject")
+    require(bool(subject) and len(subject) <= 255 and subject == subject.strip(),
+            "invalid service subject")
     require(not any(ord(char) < 32 or ord(char) == 127 for char in subject),
             "invalid service subject")
     return uuid.uuid5(TENANT_NAMESPACE, subject)
