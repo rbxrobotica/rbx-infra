@@ -122,6 +122,7 @@ def verify_preparation(contract: dict, manifests: list[dict]) -> None:
         "RBX_COMMERCE_TOKEN_ENDPOINT": contract["issuer"] + "/oauth/v2/token",
         "RBX_PRODUCT_KEY": "briefing-btc",
         "RBX_SESSION_BFF_ACCESS_MODE": "annotate",
+        "RBX_SESSION_BFF_REQUIRE_PRODUCT_ACCESS_GATE": "true",
         "RBX_SESSION_COOKIE_SECURE": "true",
         "RBX_SESSION_BFF_DISCOVER_OIDC": "true",
         "RBX_AUTHZ_GATEWAY_URL": contract["sandbox_policy_gateway"],
