@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: satwake-email-sink
+  namespace: rbx-commerce-sandbox
+  labels:
+    app.kubernetes.io/name: satwake-email-sink
+    app.kubernetes.io/component: email-sink
+    app.kubernetes.io/part-of: rbx-commerce
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: satwake-email-sink
+  ports:
+    - name: dispatch
+      port: 80
+      targetPort: dispatch
+      protocol: TCP

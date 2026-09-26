@@ -1,0 +1,23 @@
+# Only the sandbox Commerce API may reach dispatch. The sink needs no egress.
+# Authorized kubectl port-forward reaches the pod's loopback-only operator
+# listener without exposing it through a Service.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: satwake-email-sink
+  namespace: rbx-commerce-sandbox
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: satwake-email-sink
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: rbx-commerce-sandbox
+      ports:
+        - protocol: TCP
+          port: 8080
