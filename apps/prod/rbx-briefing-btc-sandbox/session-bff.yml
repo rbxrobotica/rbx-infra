@@ -1,0 +1,110 @@
+# Dedicated session BFF. Its Commerce service token must derive exactly the
+# sandbox COMMERCE_PUBLIC_TENANT_ID; see the README before enabling replicas.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rbx-briefing-btc-sandbox-session-bff
+  namespace: rbx-briefing-btc-sandbox
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-briefing-btc-sandbox-session-bff
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rbx-briefing-btc-sandbox-session-bff
+    spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      containers:
+        - name: session-bff
+          image: ghcr.io/rbxrobotica/rbx-session-bff
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8081
+              name: http
+          envFrom:
+            - secretRef:
+                name: rbx-briefing-btc-sandbox-oidc
+            - secretRef:
+                name: rbx-briefing-btc-sandbox-commerce
+          env:
+            - name: RBX_IDENTITY_ISSUER
+              value: https://auth.merovelis.com
+            - name: RBX_SESSION_BFF_DISCOVER_OIDC
+              value: "true"
+            - name: RBX_SESSION_BFF_BIND_ADDR
+              value: 0.0.0.0:8081
+            - name: RBX_SESSION_BFF_REDIRECT_URI
+              value: https://briefing-btc-sandbox.invalid/briefing-btc/api/auth/callback
+            - name: RBX_SESSION_BFF_SCOPES
+              value: openid profile email
+            - name: RBX_SESSION_COOKIE_NAME
+              value: __Host-rbx_briefing_sandbox_session
+            - name: RBX_SESSION_CSRF_COOKIE_NAME
+              value: __Host-rbx_briefing_sandbox_csrf
+            - name: RBX_SESSION_COOKIE_SECURE
+              value: "true"
+            - name: RBX_PRODUCT_KEY
+              value: briefing-btc
+            - name: RBX_SESSION_BFF_ACCESS_MODE
+              value: annotate
+            - name: RBX_COMMERCE_BASE_URL
+              value: http://rbx-commerce-sandbox.rbx-commerce-sandbox.svc.cluster.local
+            - name: RBX_COMMERCE_TOKEN_ENDPOINT
+              value: https://auth.merovelis.com/oauth/v2/token
+            - name: RBX_COMMERCE_SCOPES
+              value: openid service:commerce.read service:commerce.entitlement.claim
+            - name: RBX_COMMERCE_TOKEN_EXCHANGE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-briefing-btc-sandbox-oidc
+                  key: RBX_SESSION_BFF_CLIENT_ID
+            # No policy decision until the gateway is reviewed for this
+            # sandbox tenant; the loopback URL intentionally fails closed.
+            - name: RBX_AUTHZ_GATEWAY_URL
+              value: http://127.0.0.1:1/authorize
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1001
+            capabilities:
+              drop: [ALL]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rbx-briefing-btc-sandbox-session-bff
+  namespace: rbx-briefing-btc-sandbox
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: rbx-briefing-btc-sandbox-session-bff
+  ports:
+    - name: http
+      port: 8081
+      targetPort: http
