@@ -1411,22 +1411,40 @@
 
 - name: Create rbx-commerce-secrets in rbx-ia-br
   shell: |
-    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-commerce-secrets \
-      --namespace {{ rbx_ia_br_namespace }} \
-      --from-literal=DATABASE_URL="postgres://{{ rbx_comms_db_user }}:${RBX_COMMS_DB_PASSWORD}@{{ rbx_comms_db_host }}:{{ rbx_comms_db_port }}/{{ rbx_comms_db_name }}?sslmode=disable" \
-      --from-literal=COMMS_API_URL="{{ rbx_commerce_comms_api_url }}" \
-      --from-literal=ASAAS_API_KEY="$ASAAS_API_KEY" \
-      --from-literal=ASAAS_WEBHOOK_TOKEN="$ASAAS_WEBHOOK_TOKEN" \
-      --from-literal=COMMERCE_SERVICE_KEY="$COMMERCE_SERVICE_KEY" \
-      --from-literal=ALTCHA_SECRET="$ALTCHA_SECRET" \
-      --from-literal=BTCPAY_API_KEY="$BTCPAY_API_KEY" \
-      --from-literal=BTCPAY_STORE_ID="$BTCPAY_STORE_ID" \
-      --from-literal=BTCPAY_WEBHOOK_SECRET="$BTCPAY_WEBHOOK_SECRET" \
-      --from-literal=PAYREXX_INSTANCE="$PAYREXX_INSTANCE" \
-      --from-literal=PAYREXX_API_KEY="$PAYREXX_API_KEY" \
-      --from-literal=PAYREXX_WEBHOOK_SECRET="$PAYREXX_WEBHOOK_SECRET" \
-      --dry-run=client -o yaml \
-    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+    set -euo pipefail
+    make_secret() {
+      kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-commerce-secrets \
+        --namespace {{ rbx_ia_br_namespace }} \
+        --from-literal=DATABASE_URL="postgres://{{ rbx_comms_db_user }}:${RBX_COMMS_DB_PASSWORD}@{{ rbx_comms_db_host }}:{{ rbx_comms_db_port }}/{{ rbx_comms_db_name }}?sslmode=disable" \
+        --from-literal=COMMS_API_URL="{{ rbx_commerce_comms_api_url }}" \
+        --from-literal=ASAAS_API_KEY="$ASAAS_API_KEY" \
+        --from-literal=ASAAS_WEBHOOK_TOKEN="$ASAAS_WEBHOOK_TOKEN" \
+        --from-literal=COMMERCE_SERVICE_KEY="$COMMERCE_SERVICE_KEY" \
+        --from-literal=ALTCHA_SECRET="$ALTCHA_SECRET" \
+        --from-literal=BTCPAY_API_KEY="$BTCPAY_API_KEY" \
+        --from-literal=BTCPAY_STORE_ID="$BTCPAY_STORE_ID" \
+        --from-literal=BTCPAY_WEBHOOK_SECRET="$BTCPAY_WEBHOOK_SECRET" \
+        --from-literal=PAYREXX_INSTANCE="$PAYREXX_INSTANCE" \
+        --from-literal=PAYREXX_API_KEY="$PAYREXX_API_KEY" \
+        --from-literal=PAYREXX_WEBHOOK_SECRET="$PAYREXX_WEBHOOK_SECRET" \
+        --dry-run=client -o json
+    }
+    _existing_secret=$(kubectl --kubeconfig {{ kubeconfig_path }} get secret rbx-commerce-secrets \
+      --namespace {{ rbx_ia_br_namespace }} --ignore-not-found -o name)
+    if [[ -n "$_existing_secret" ]]; then
+      # Merge only role-owned properties; preserve separately provisioned
+      # Comms email and Meta credentials in the source Secret.
+      make_secret \
+        | python3 -c 'import json,sys; json.dump({"data": json.load(sys.stdin)["data"]}, sys.stdout)' \
+        | kubectl --kubeconfig {{ kubeconfig_path }} patch secret rbx-commerce-secrets \
+            --namespace {{ rbx_ia_br_namespace }} --type merge --patch-file=/dev/stdin
+    else
+      # Fail if another actor creates the Secret after the read. Applying a
+      # full object here could remove keys provisioned by that actor.
+      make_secret | kubectl --kubeconfig {{ kubeconfig_path }} create -f -
+    fi
+  args:
+    executable: /bin/bash
   environment:
     RBX_COMMS_DB_PASSWORD: "{{ rbx_comms_db_password_result.stdout | trim }}"
     ASAAS_API_KEY: "{{ rbx_commerce_asaas_api_key_result.stdout | trim }}"
