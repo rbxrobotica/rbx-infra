@@ -13,8 +13,8 @@ metadata:
     app.kubernetes.io/name: rbx-commerce-renewals
     app.kubernetes.io/part-of: rbx-commerce
 spec:
-  # No renewal Job may start while the API and schema are quiesced.
-  suspend: true
+  # Resume only after the migrated Commerce API and ledger have been verified.
+  suspend: false
   schedule: "10 6 * * *"
   timeZone: Etc/UTC
   startingDeadlineSeconds: 600
