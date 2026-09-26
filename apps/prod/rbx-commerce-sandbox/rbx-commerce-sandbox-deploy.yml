@@ -37,10 +37,9 @@ spec:
                   name: rbx-commerce-sandbox-secrets
                   key: DATABASE_URL
             - name: COMMS_API_URL
-              valueFrom:
-                secretKeyRef:
-                  name: rbx-commerce-sandbox-secrets
-                  key: COMMS_API_URL
+              # Permanent fail-closed baseline. A separate approved cutover
+              # may point to the isolated sandbox sink after it is ready.
+              value: "http://127.0.0.1:1"
             - name: COMMS_SERVICE_API_KEY
               valueFrom:
                 secretKeyRef:
