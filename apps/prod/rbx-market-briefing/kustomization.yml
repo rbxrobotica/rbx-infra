@@ -12,5 +12,5 @@ resources:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-market-briefing
-    newTag: sha-6a22032
-    digest: sha256:ff4be67452e5ac9b553eada3eec98fe22a8f15bba6ffa16008944ee71e39a126
+    newTag: sha-e05a6a0
+    digest: sha256:b17bf8f6bd45abfe4b227e25abc79b6de35fb9145806d6e599af60b110209ec2
