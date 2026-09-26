@@ -30,6 +30,39 @@ Corbetti    --(GET /leases/next every 30 s, runner key)------------>  Maestro
 | Corbetti runner | Alive, polling, always 204 (no work) | Nothing to do; work will appear once admission runs |
 | Activation | Not wired anywhere | Deliberately left disabled; request-bound dispatch approval is the next slice (see below) |
 
+## State observed on 2026-09-24 02:10 UTC, right after the merges
+
+PRs rbx-infra#268 and #269, rbx-maestro#23 and #24, rbx-public-presence#6 and
+rbx-flightdeck#15 were merged without owner steps 1 to 5 below having been executed
+first. ArgoCD auto-synced and the cluster is in the failure mode this runbook warned
+about (read-only observation, nothing was changed by hand):
+
+| Application | ArgoCD | Observed cause |
+|---|---|---|
+| `rbx-flightdeck` | OutOfSync, Degraded, sync retrying | New ReplicaSet cannot start; the worker CronJob pod fails with `couldn't find key PUBLIC_PRESENCE_WORKER_KEY in Secret rbx-flightdeck/rbx-flightdeck-secrets` (step 2 missing). The old pods (`sha-f9a1c63`) keep serving. |
+| `rbx-maestro` | Synced, Degraded | New pod (`sha-cf3d94b`) fails with `secret "maestro-flightdeck-key" not found`; the ExternalSecret reports `UpdateFailed` (step 3 missing). Maestro is down until the key exists or the rollout is reverted. |
+| `rbx-public-presence` | OutOfSync, waiting for the migrate hook | The hook job still pulls the placeholder `sha-000…` image and `ghcr-pull-secret` is missing (step 4). The kustomization pin is `9ba13e2`; the merged PR #6 (`31ade92`) has not been promoted (step 5). |
+
+Recovery is the owner steps below, in order. Two additions since the first version of
+this runbook, brought by the activation slice (rbx-flightdeck#15, rbx-maestro#24):
+
+- `rbx-flightdeck-secrets` also needs `MAESTRO_DISPATCH_KEY`, distinct from
+  `MAESTRO_ADMIT_KEY`; the worker fails closed if any two of `MAESTRO_ADMIT_KEY`,
+  `MAESTRO_DISPATCH_KEY`, `PUBLIC_PRESENCE_WORKER_KEY`, `PUBLIC_PRESENCE_SERVICE_KEY`
+  are equal. Mint it with `openssl rand -hex 32 | pass insert -e rbx/maestro/flightdeck-dispatch-key`.
+- Maestro activation stays blocked until `AGENT_LOOP_FLIGHTDECK_DISPATCH_KEY` is
+  provisioned with that same value (rbx-maestro ADR-0006: provisioning a key never
+  authorizes activation by itself; the governance decision is rbx-governance ADR-0614).
+- After steps 4 and 5, bump `apps/prod/rbx-public-presence` to the image of merge
+  commit `31ade92` (rbx-public-presence#6) through a normal PR; do not hand-edit tags in
+  the cluster.
+
+Once the pods are green, the first end-to-end proof in production is the four-repository
+E2E's path with a real standing authorization: expect `{"stage":"idle"}` from the worker
+until an Action is approved and a standing authorization exists, then policy dispatch,
+admission, materialization, activation, Corbetti delivery, import and a SCHEDULED
+publication whose outbox worker is still off until the owner enables it.
+
 ## What this change set does NOT do
 
 - It does not provision `AGENT_LOOP_FLIGHTDECK_DISPATCH_KEY`. Admission stores every
@@ -42,14 +75,16 @@ Corbetti    --(GET /leases/next every 30 s, runner key)------------>  Maestro
   request lets later stages run unattended; Maestro activation resolves that
   request-bound dispatch approval, and Action approval alone never clears the dispatch
   block. Strategos and its Mandato only bound the standing authorization; they never
-  activate a Mission. The activation stage (dispatch key, FlightDeck dispatch approval,
-  creative job materialization, result reconciliation, publication) is the next slice.
+  activate a Mission. The activation stage (dispatch key, policy-produced dispatch
+  decision, creative job materialization, result reconciliation, publication) was merged
+  on 2026-09-24 as rbx-flightdeck#15, rbx-public-presence#6, rbx-maestro#24 and
+  rbx-infra#269; it runs only with the keys above provisioned.
 - It does not publish anything externally.
 - It does not create any secret value in Git.
 
 ## Owner steps (in order, all outside Git)
 
-Steps 1 to 5 happen **before** merging this change set. ArgoCD auto-syncs on merge;
+Steps 1 to 5 were meant to happen **before** merging this change set (they did not; see the state observed on 2026-09-24 above, so they are now the recovery path). ArgoCD auto-syncs on merge;
 if the secrets or the pull secret are missing at that moment, FlightDeck and Maestro
 pods fail to start (missing `secretKeyRef` keys) and Public Presence stays blocked on
 the migrate hook.
