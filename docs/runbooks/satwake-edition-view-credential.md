@@ -18,7 +18,10 @@ the consumption key. The source Secret must contain only the
 property into separate dedicated Secrets in the Commerce and Briefing BTC
 namespaces. Neither existing workload Secret is changed.
 Kubernetes RBAC grants the Briefing BTC reader access only to the dedicated
-source Secret, not to `rbx-ia-br/rbx-commerce-secrets`.
+source Secret, not to `rbx-ia-br/rbx-commerce-secrets`. The Commerce reader's
+Role and RoleBinding are rendered by the `rbx-ia-br` overlay so that the
+grant remains in the source namespace; the Commerce overlay owns only its
+reader ServiceAccount.
 
 No key value or Secret is created by this repository change.
 
@@ -36,6 +39,11 @@ No key value or Secret is created by this repository change.
    Deployment. Check that both ExternalSecrets report `Ready=True` and that
    both target Secrets contain the expected **key name only**. If either
    mirror is unready, stop; do not merge stage 2.
+   Check the rendered and live `read-commerce-secret` Role in `rbx-ia-br`:
+   the Commerce reader must be able to get the dedicated source Secret there.
+   The Briefing BTC reader must be able to get that source but must not be able
+   to get `rbx-commerce-secrets`. These checks inspect authorization only,
+   never Secret values.
 3. Merge and promote the reviewed Commerce consumption code (#44) and Briefing
    BTC page-open code (#4), after their respective direct-deploy CI release
    gates (#52 and #5). Pin each image through a separately approved Infra PR.
