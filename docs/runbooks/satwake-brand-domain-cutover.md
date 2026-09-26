@@ -6,14 +6,18 @@ for an operator-approved production change. The campaign
 The existing `briefingbtc.merovelis.com` Ingress and product identifiers stay
 in place during this cutover.
 
-## Observed state on 2026-09-25
+## Observed state on 2026-09-26
 
 - Public `satwake.com` NS: `launch1.spaceship.net` and `launch2.spaceship.net`.
-  Its A records returned `34.216.117.25` and `54.149.79.189`.
+  An authoritative query to `launch1.spaceship.net` returned apex A records
+  `34.216.117.25` and `54.149.79.189`. The domain owner reports making no DNS
+  configuration since purchase; these records are not evidence of an existing
+  Satwake site. Inspect the Spaceship zone before replacing them.
 - `www.satwake.com` and `ritual.satwake.com` returned no A/CNAME record.
 - The existing landing host `briefingbtc.merovelis.com` resolved to
-  `158.220.116.31` (the current cluster ingress address). Recheck all of
-  these immediately before approval; DNS observations can change.
+  `158.220.116.31` and returned HTTPS 200. The current landing Ingress reports
+  multiple node addresses; this is the address used by the working legacy host.
+  Recheck all of these immediately before approval; DNS observations can change.
 - The infrastructure Terraform PowerDNS tree does not control this domain
   while its authoritative nameservers are Spaceship. A GitOps PR alone cannot
   perform the DNS change.
@@ -30,11 +34,12 @@ in place during this cutover.
    Satwake Ingress for `satwake.com` and `www.satwake.com`. It requests its own
    certificate from the existing `letsencrypt-prod` HTTP-01 issuer. It does
    not replace the legacy host's certificate.
-3. With exact DNS approval in the authoritative Spaceship zone, replace the
-   apex A records with the current cluster ingress IP (observed as
-   `158.220.116.31`) and create `www` as a CNAME to `satwake.com`. Coordinate
-   this with certificate issuance: HTTP-01 cannot complete until the names
-   resolve to the Ingress. Plan for propagation and temporary TLS failure;
+3. With exact DNS approval in the authoritative Spaceship zone, inspect the
+   zone for any unreported records or services, then replace the two observed
+   apex A records with one A record for the verified working ingress IP
+   (currently `158.220.116.31`) and create `www` as a CNAME to `satwake.com`.
+   Coordinate this with certificate issuance: HTTP-01 cannot complete until
+   the names resolve to the Ingress. Plan for propagation and temporary TLS failure;
    do not present the host as live before the certificate is ready.
 4. Verify authoritative and recursive DNS, certificate SANs, HTTPS on the
    apex, the `www` redirect to the apex, static assets, health endpoint,
