@@ -9,9 +9,9 @@ metadata:
     app.kubernetes.io/component: api
     app.kubernetes.io/part-of: rbx-commerce
 spec:
-  # Maintenance fallback: pause API after the runtime renewal probe returned 500.
-  # Keep stopped until the new table ownership is repaired and verified.
-  replicas: 0
+  # Resume only after the six new tables are owned by the runtime DB role.
+  # Verify a clean renewal smoke before un-suspending the CronJob.
+  replicas: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: rbx-commerce
