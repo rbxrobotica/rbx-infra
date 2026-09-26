@@ -9,6 +9,7 @@ resources:
   - svc.yml
   - ingress.yml
   - rbac-external-secrets-reader.yml
+  - rbac-external-secrets-commerce.yml
   - cronjob-submit-sitemap.yml
 
 commonLabels:

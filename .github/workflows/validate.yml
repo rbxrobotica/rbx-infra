@@ -18,7 +18,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup yamllint
-        run: pip install yamllint
+        run: pip install yamllint pyyaml
 
       - name: Lint YAML files
         run: |
@@ -102,6 +102,10 @@ jobs:
           kubectl kustomize apps/prod/kulinaryos-v1-proxy >/dev/null
           kubectl kustomize apps/prod/rbx-market-graph >/dev/null
           kubectl kustomize apps/prod/rbx-briefing-btc >/dev/null
+          kubectl kustomize apps/prod/rbx-briefing-btc-sandbox >/dev/null
+
+      - name: Validate inert sandbox buyer identity contract locally
+        run: python3 scripts/validate-satwake-sandbox-identity.py
 
   validate-argocd:
     runs-on: ubuntu-latest
@@ -138,6 +142,18 @@ jobs:
           exit-code: '0'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
+
+  sandbox-email-key-source-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test sandbox email key staging without a cluster or pass store
+        run: python3 -m unittest discover -s scripts/tests -p 'test_stage_satwake_sandbox_email_keys.py' -v
+
+      - name: Test sandbox core source staging without a cluster or pass store
+        run: python3 -m unittest discover -s scripts/tests -p 'test_stage_satwake_sandbox_core_secrets.py' -v
 
   convention-lint:
     # Pattern R enforcement on the app manifests a PR changes (blocks NEW
