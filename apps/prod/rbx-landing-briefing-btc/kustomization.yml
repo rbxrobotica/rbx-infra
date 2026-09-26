@@ -16,7 +16,8 @@ labels:
       environment: production
     includeSelectors: false
 images:
-  # Promote the digest-pinned Satwake image in separate Infra PR #299 first.
-  # This branch keeps the current production image until that release gate.
+  # Match Infra #299 so merging this Ingress second cannot restore the old pin.
+  # Deploy #299 first, then merge this PR only after its separate release gate.
   - name: ghcr.io/rbxrobotica/rbx-landing-briefing-btc
-    newTag: sha-8a02318
+    newTag: sha-c6f6b58
+    digest: sha256:43532143771bb5a90f2b8205c2b2faf384f06c78fb7b7ceb50ae770535d3a765

@@ -34,12 +34,14 @@ in place during this cutover.
    `sha256:43532143771bb5a90f2b8205c2b2faf384f06c78fb7b7ceb50ae770535d3a765`.
    The digest identifies the analytics-and-attribution artifact. Its
    email-verification UI still needs the Commerce-to-Comms release gates before
-   deployment. The current production
-   Kustomization pins the older Briefing BTC image `sha-8a02318`; adding the
-   Ingress by itself would serve that image on the new domain. Promote #299
-   under its own deployment approval before syncing this Ingress. Merge current
-   main into the second PR so the Kustomization retains both this Ingress and the
-   exact image digest. Preserve the legacy host during the transition.
+   deployment. The current production Kustomization pins the older Briefing BTC
+   image `sha-8a02318`. This draft carries #299's **same immutable pin** so a
+   second merge cannot restore that older image. Promote #299 under its own
+   deployment approval **first**, then sync this Ingress under its separate
+   approval. If this PR were merged first, it would deploy both the new image
+   and Ingress at once. Merge current `main` into whichever PR is merged second
+   and verify the rendered Kustomization retains this Ingress and exact digest.
+   Preserve the legacy host during the transition.
 2. With exact approval for the production GitOps sync, apply the separate
    Satwake Ingress for `satwake.com` and `www.satwake.com`. It requests its own
    certificate from the existing `letsencrypt-prod` HTTP-01 issuer. It does
