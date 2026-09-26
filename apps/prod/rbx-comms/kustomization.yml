@@ -25,4 +25,7 @@ labels:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-comms
-    newTag: sha-d49cc01
+    # Version-13-compatible rollback candidate. Deploy only under an
+    # incident-specific approval after the Satwake image is promoted.
+    newTag: sha-9436b8b
+    digest: sha256:f622b9be1e31d41109e713c763dc4dfd39560469fbeea6f4747efee3288e5fad
