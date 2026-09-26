@@ -25,18 +25,20 @@ in place during this cutover.
 ## Proposed controlled sequence
 
 1. Review the Satwake landing image from the landing repository. Landing PRs
-   #2 through #5 merged on 2026-09-26. A `satwake.com` Plausible site and its
+   #2 through #6 merged on 2026-09-26. A `satwake.com` Plausible site and its
    dedicated build variable are configured; the analytics check and the
-   [main image build](https://github.com/rbxrobotica/rbx-landing-briefing-btc/actions/runs/36219779196)
-   passed. Infra PR #299 prepares the image tag `sha-a2466c2` pinned to digest
-   `sha256:b11f78506b8a9b700329d4af1b76f9ead392c265f4b2521fa77eda607be9a95b`.
-   The tag was reused by the build workflow, so the digest identifies the
-   analytics-enabled artifact. Its email-verification UI still needs the
-   Commerce-to-Comms release gates before deployment. The current production
+   [main image build](https://github.com/rbxrobotica/rbx-landing-briefing-btc/actions/runs/36225311661)
+   passed. PR #6 added the missing `campaign_id` to browser contact submissions
+   for attribution. Infra PR #299 prepares the image tag `sha-c6f6b58` pinned
+   to digest
+   `sha256:43532143771bb5a90f2b8205c2b2faf384f06c78fb7b7ceb50ae770535d3a765`.
+   The digest identifies the analytics-and-attribution artifact. Its
+   email-verification UI still needs the Commerce-to-Comms release gates before
+   deployment. The current production
    Kustomization pins the older Briefing BTC image `sha-8a02318`; adding the
    Ingress by itself would serve that image on the new domain. Promote #299
-   under its own deployment approval before syncing this Ingress. Rebase the
-   second PR merged so the Kustomization retains both this Ingress and the
+   under its own deployment approval before syncing this Ingress. Merge current
+   main into the second PR so the Kustomization retains both this Ingress and the
    exact image digest. Preserve the legacy host during the transition.
 2. With exact approval for the production GitOps sync, apply the separate
    Satwake Ingress for `satwake.com` and `www.satwake.com`. It requests its own
