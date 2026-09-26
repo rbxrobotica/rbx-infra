@@ -17,8 +17,10 @@ Commerce credential or policy gateway setting must prevent it from listening.
 The `annotate` mode still permits Free login while returning the policy
 decision for the product to enforce on Pro content. This startup check does
 not prove that Commerce or the policy gateway is reachable or correctly
-decides access; verify both before scaling above zero. Pin a BFF image with
-`RBX_SESSION_BFF_REQUIRE_PRODUCT_ACCESS_GATE` support before activation.
+decides access; verify both before scaling above zero. The BFF image is pinned
+to the digest published from rbx-identity PR #16 at `e715d9a`; that code
+supports `RBX_SESSION_BFF_REQUIRE_PRODUCT_ACCESS_GATE`. This pin alone does
+not activate the sandbox.
 The existing production app and BFF continue to use production Commerce and
 are outside this overlay.
 
