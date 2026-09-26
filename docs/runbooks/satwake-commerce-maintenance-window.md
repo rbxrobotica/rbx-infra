@@ -15,6 +15,8 @@ The Commerce API is the writer for public checkout, provider callbacks, reconcil
 3. Inspect the Asaas webhook queue before the window and arrange a post-window reconciliation. [Asaas' webhook FAQ](https://docs.asaas.com/docs/webhooks-faq) says only HTTP 200 confirms delivery and repeated failures can pause the queue after 15 attempts. Do not assume callbacks were delivered while the API was down.
 4. Confirm no active Commerce checkout or operator operation is in progress. Keep paid traffic off. A fresh restricted backup and tracker recovery record are required before DDL/DML; the 2026-09-26 preparatory Commerce-only backup is not a substitute for a final maintenance-window snapshot.
 
+On 2026-09-26 UTC, an authenticated read-only Asaas production query found one Commerce webhook at `commerce.rbx.ia.br/webhooks/asaas`, enabled and not interrupted, subscribed to 15 events. Kubernetes showed zero active renewal Jobs. These are point-in-time entry observations and must be checked again immediately before the window and after restoration.
+
 ## Controlled sequence
 
 1. With the exact deploy approval, merge this PR and wait for Argo to sync. Verify API and web have zero ready pods, the renewal CronJob is suspended, no renewal Job is active and no affected writer remains. Stop if any writer is still live.
