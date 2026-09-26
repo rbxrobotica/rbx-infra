@@ -12,6 +12,7 @@ resources:
   - satwake-email-sink-deploy.yml
   - satwake-email-sink-svc.yml
   - satwake-email-sink-network-policy.yml
+  - satwake-email-sink-external-secrets.yml
 images:
   - name: ghcr.io/rbxrobotica/rbx-commerce
     newTag: sha-61b781d6bfffc9b51497f18272d1c1c464a9b424

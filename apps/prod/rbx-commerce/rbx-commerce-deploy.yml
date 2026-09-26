@@ -43,6 +43,11 @@ spec:
                 secretKeyRef:
                   name: rbx-commerce-secrets
                   key: COMMS_API_URL
+            - name: COMMS_SERVICE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-secrets
+                  key: COMMS_SERVICE_API_KEY
             # Payment provider configuration (ADR-0009)
             - name: ASAAS_ENV
               value: "production"
