@@ -9,8 +9,8 @@ metadata:
     app.kubernetes.io/component: web
     app.kubernetes.io/part-of: rbx-commerce
 spec:
-  # Keep the operator UI unavailable while its API is in maintenance.
-  replicas: 0
+  # Restore the operator UI after the Commerce API image is ready.
+  replicas: 2
   selector:
     matchLabels:
       app.kubernetes.io/name: rbx-commerce-web
