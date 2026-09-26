@@ -34,6 +34,16 @@ now needs its own reviewed Infra change; the prepared pin is Infra #286.
   `PAYMENT_RECEIVED`. The read-only listing does not return its authentication
   token, so it cannot establish a token match with the receiver.
 
+An independent read-only check at 2026-09-26 06:23 UTC again found no
+`commerce` schema, no `public.schema_migrations`, and no Commerce tables in
+`rbx_commerce_sandbox`. The sandbox API was still on the old image and the
+Argo CD Application was Synced/Healthy. Its active database session uses the
+`rbx_commerce_sandbox` role; that role has `CONNECT` and `CREATE` on the
+database and `USAGE` and `CREATE` on `public`. The database itself is owned by
+`postgres`, so run the migrations as the sandbox runtime role and verify the
+resulting object ownership and API grants. This is a point-in-time preflight,
+not a migration or a frozen write window.
+
 ## Configuration before this overlay is reconciled
 
 First deploy and verify [Infra #306](https://github.com/rbxrobotica/rbx-infra/pull/306).
@@ -58,7 +68,7 @@ a missing property prevents a new sandbox pod from becoming ready.
 | --- | --- |
 | `ALTCHA_SECRET` | Nonempty sandbox-only signing secret; do not copy the production Commerce value. |
 | `COMMS_SERVICE_API_KEY` | New sandbox-only key shared with the isolated email sink through [Infra #307](https://github.com/rbxrobotica/rbx-infra/pull/307). Use an unrelated value of at least 32 bytes; never copy the production Comms service key. |
-| `COMMERCE_PUBLIC_TENANT_ID` | Nonzero UUID reserved for this isolated sandbox journey. Configure any sandbox product/BFF access check for this same tenant; never use the production public tenant UUID. |
+| `COMMERCE_PUBLIC_TENANT_ID` | The exact UUIDv5 that Commerce derives from the `sub` of a token **issued to a dedicated sandbox buyer BFF service account**: `UUIDv5(UUIDv5(NAMESPACE_URL, "https://rbx.ia.br/tenant"), sub)`. It must differ from zero and the production public tenant. A random UUIDv4, a copied production tenant, or a value inferred from an unissued subject will not establish the buyer's authenticated tenant. Infra #315 checks this relationship before staging the source Secret; it does not create the service account. |
 
 Provision a second, unrelated `SATWAKE_EMAIL_SINK_OPERATOR_KEY` of at least
 32 bytes for the sink's loopback-only claim route. Infra #307 maps the two
@@ -86,13 +96,16 @@ ExternalSecret target is not a durable source.
 ## Code and database gates
 
 1. Reconfirm the effective `DATABASE_URL` target, without printing the
-   password, immediately before migration. With sandbox writers quiesced and
-   a restorable backup or equivalent recovery point verified, bootstrap the
-   **sandbox database only** with the complete Commerce `000001`–`000023`
-   migration sequence under a separately approved, schema-aware plan. Verify
-   the resulting objects and tracker `(23, false)` before Infra #286 pins the
-   new Commerce image. Do not promote that image against the empty schema.
-   Follow the read-only
+   password, immediately before migration. With sandbox API and callback
+   writers quiesced through a reviewed GitOps hold and a restricted backup
+   restored in a temporary database, bootstrap the **sandbox database only**
+   under a separately approved, schema-aware plan. The corrected Commerce
+   `000013` and the staged `000001`–`000017`, zero-row gate, then
+   `000018`–`000023` sequence are documented in the
+   [Commerce sandbox bootstrap runbook](https://github.com/rbxrobotica/rbx-commerce/blob/main/docs/runbooks/satwake-commerce-sandbox-bootstrap.md).
+   Verify the resulting objects, ownership or runtime grants, and tracker
+   `(23, false)` before Infra #286 pins the new Commerce image. Do not promote
+   that image against the empty schema. Also follow the read-only
    [Commerce migration preflight](https://github.com/rbxrobotica/rbx-commerce/blob/main/docs/runbooks/satwake-commerce-migration-preflight.md),
    including verification of `000015`–`000018`. `000018` hardcodes the **production**
    public tenant as its data-move target. Never use that tenant for this
@@ -103,10 +116,10 @@ ExternalSecret target is not a durable source.
    invites, provider callbacks, reconciliation and seat assignment, or use a
    reviewed transactionally safe exclusion. Preserve provider deliveries for
    retry. Repeat the eligible-row and related-row checks immediately before
-   `000018` DML, then resume writes only after migration and the nonzero
-   sandbox tenant configuration are verified. A prior zero count alone is not
-   a safe no-op guarantee while the old API can still write zero-tenant
-   records.
+   `000018` DML, then resume writes only after migration and the exact
+   subject-derived sandbox tenant configuration are verified. A prior zero
+   count alone is not a safe no-op guarantee while the old API can still write
+   zero-tenant records.
    Do not replay it blindly or advance the tracker merely to match a version.
    The live sandbox Deployment inspected on 2026-09-26 does not define
    `COMMERCE_PUBLIC_TENANT_ID`, so its current API uses the zero tenant until
@@ -125,8 +138,11 @@ ExternalSecret target is not a durable source.
    request without the service key must return `401`; a valid sandbox request
    returns `202`, and a code can be claimed once. This proves only isolated
    acceptance, not real mailbox delivery. Then reconcile this overlay's
-   Commerce key and tenant properties while the URL stays inert. Move the URL
-   to the sink only in a separate, approved cutover after all those checks.
+   Commerce key and tenant properties while the URL stays inert. Check that
+   the configured Commerce tenant equals the tenant derived from an **issued**
+   token of the dedicated sandbox BFF service account, and that this BFF calls
+   the sandbox Commerce API. Move the URL to the sink only in a separate,
+   approved cutover after all those checks.
 4. Keep `SATWAKE_EMAIL_VERIFICATION_REQUIRED` unset until the checkout UI,
    sink, key, and migration are verified together. This flag does not gate
    `/checkout/email/start`. Activating the flag for the isolated sandbox is

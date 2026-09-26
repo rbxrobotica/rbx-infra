@@ -50,8 +50,8 @@ spec:
                 secretKeyRef:
                   name: rbx-commerce-sandbox-secrets
                   key: ALTCHA_SECRET
-            # Sandbox tenant must match the isolated product/BFF test tenant.
-            # Never copy the production public tenant into this source Secret.
+            # Use the exact UUIDv5 derived from the dedicated sandbox BFF
+            # service token subject. Never use a random or production tenant.
             - name: COMMERCE_PUBLIC_TENANT_ID
               valueFrom:
                 secretKeyRef:
