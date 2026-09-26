@@ -17,4 +17,4 @@ labels:
 images:
   # Promote only after Satwake checkout, email and analytics release gates pass.
   - name: ghcr.io/rbxrobotica/rbx-landing-briefing-btc
-    newTag: sha-23d7ef8
+    newTag: sha-a2466c2
