@@ -36,6 +36,17 @@ now needs its own reviewed Infra change; the prepared pin is Infra #286.
 
 ## Configuration before this overlay is reconciled
 
+First deploy and verify [Infra #306](https://github.com/rbxrobotica/rbx-infra/pull/306).
+The **running** Commerce sandbox pod must have
+`COMMS_API_URL=http://127.0.0.1:1`, and its ExternalSecret must no longer map
+the production Comms URL. This baseline remains in place throughout this
+overlay's rollout. The public `/checkout/email/start` route is mounted even
+when `SATWAKE_EMAIL_VERIFICATION_REQUIRED` is unset, so the flag does not
+prevent email dispatch to a configured Comms endpoint. Do not add a service
+key, Altcha Secret, or promote an email-capable Commerce image while the
+effective URL still points to production Comms. Reverting #306 to the legacy
+Secret reference is not an allowed rollback.
+
 Obtain separate approval for the sandbox source Secret change. Add the three
 properties below to **`rbx-ia-br/rbx-commerce-sandbox-secrets`**, preserving its
 existing properties. The ExternalSecret copies only from that named source
@@ -46,12 +57,17 @@ a missing property prevents a new sandbox pod from becoming ready.
 | Property | Requirement |
 | --- | --- |
 | `ALTCHA_SECRET` | Nonempty sandbox-only signing secret; do not copy the production Commerce value. |
-| `COMMS_SERVICE_API_KEY` | Key accepted by the Comms instance in this sandbox's `COMMS_API_URL`. If the existing shared Comms service is used, approve that controlled sandbox-to-Comms access and limit the rehearsal to a controlled mailbox. Do not use a key from an unrelated instance. |
+| `COMMS_SERVICE_API_KEY` | New sandbox-only key shared with the isolated email sink through [Infra #307](https://github.com/rbxrobotica/rbx-infra/pull/307). Use an unrelated value of at least 32 bytes; never copy the production Comms service key. |
 | `COMMERCE_PUBLIC_TENANT_ID` | Nonzero UUID reserved for this isolated sandbox journey. Configure any sandbox product/BFF access check for this same tenant; never use the production public tenant UUID. |
 
-Using the shared Comms service and its existing service key does not isolate
-that service from production. Treat its broader access as an explicit part of
-the approved rehearsal scope; this overlay does not narrow Comms permissions.
+Provision a second, unrelated `SATWAKE_EMAIL_SINK_OPERATOR_KEY` of at least
+32 bytes for the sink's loopback-only claim route. Infra #307 maps the two
+source properties to separate runtime Secrets; [Infra #304](https://github.com/rbxrobotica/rbx-infra/pull/304)
+deploys the sink workload only after both ExternalSecrets are Ready. Verify
+the sink and live NetworkPolicy enforcement before this overlay is merged.
+This overlay must not restore a shared production Comms URL or key. A separate
+later PR may cut over from the inert URL to the ready sink after this overlay
+is healthy; its rollback returns to the inert URL.
 
 The source Secret change must be prepared before merging this overlay because
 the Commerce sandbox Argo CD Application synchronizes automatically. Review
@@ -59,12 +75,13 @@ the resulting ExternalSecret `Ready` condition and target Secret **key names
 only**; do not print secret values. A healthy `/health` alone says nothing
 about the new checkout route, migrations, or provider callback.
 
-The current Ansible `k8s-secrets` role recreates this source Secret with only
-its four original fields. A rebootstrap therefore removes these three new
-properties. Record the approved sandbox values in the operator secret store
-and reapply them after any role run, before rolling Commerce; do not assume
-that a prior ExternalSecret sync makes the source durable. Update the role in
-a separate reviewed change before relying on this as a repeatable environment.
+Infra #301 changed the normal Ansible update to preserve additional source
+Secret properties, but creating a new source Secret from scratch still omits
+the four Satwake properties (`ALTCHA_SECRET`, `COMMS_SERVICE_API_KEY`,
+`COMMERCE_PUBLIC_TENANT_ID`, and `SATWAKE_EMAIL_SINK_OPERATOR_KEY`). Record
+the approved values in the operator secret store and re-provision them after
+source Secret recreation, before rolling Commerce or the sink. A synced
+ExternalSecret target is not a durable source.
 
 ## Code and database gates
 
@@ -102,15 +119,19 @@ a separate reviewed change before relying on this as a repeatable environment.
    (Commerce PRs #43, #45, #46, #48, #49, #50, #53, and their #44/#47
    integration), plus the Asaas sandbox API host and first-charge due-date
    fixes (#54 and #55). Keep `ASAAS_ENV=sandbox`.
-3. Deploy Comms #19 and confirm the instance named by `COMMS_API_URL` has a
-   working Postmark sender. Probe the configured service key against its
-   Satwake email route with invalid JSON and no destination: an authenticated
-   validation error must differ from `401`, without sending an email. Then
-   use a controlled inbox for the actual challenge test.
+3. Confirm #306 keeps the effective Commerce URL inert. Reconcile #307's two
+   sandbox-only keys, then deploy #304's sink and verify its dispatch and
+   loopback operator routes with reserved `example.invalid` addresses. A
+   request without the service key must return `401`; a valid sandbox request
+   returns `202`, and a code can be claimed once. This proves only isolated
+   acceptance, not real mailbox delivery. Then reconcile this overlay's
+   Commerce key and tenant properties while the URL stays inert. Move the URL
+   to the sink only in a separate, approved cutover after all those checks.
 4. Keep `SATWAKE_EMAIL_VERIFICATION_REQUIRED` unset until the checkout UI,
-   Comms sender, key, and migration are verified together. Activating this
-   flag for the isolated sandbox is a separate reviewed configuration change;
-   activate it before testing rejection of an unverified checkout.
+   sink, key, and migration are verified together. This flag does not gate
+   `/checkout/email/start`. Activating the flag for the isolated sandbox is
+   a separate reviewed configuration change. Activate it before testing
+   rejection of an unverified checkout.
 5. `GET /api/public/altcha-challenge` must return a challenge. Exercise a
    browser Origin expected by the checkout policy; Satwake campaign hosts
    need an exact active Commerce campaign registry entry. A direct API call
@@ -129,7 +150,7 @@ matches the sandbox receiver before relying
 on delivery; do not point this webhook at production Commerce.
 
 With the callback approved and enabled, use fictitious sandbox customer data
-and a controlled email address. Record one rejected unverified checkout, one
+and a reserved test address handled only by the sink. Record one rejected unverified checkout, one
 verified R$39 Pix checkout, its immutable attempt retry, the Asaas subscription
 and first charge, the authenticated raw webhook, the paid-period ledger, the
 dated entitlement, and the matching sandbox product access decision. Confirm
