@@ -1,0 +1,14 @@
+[Unit]
+Description=pgBackRest weekly full backup to the local repo (ADR-0012)
+# Managed by Ansible (rbx-infra: roles/pgbackrest). Do not edit on the host.
+After=postgresql.service
+Requisite=postgresql.service
+
+[Service]
+Type=oneshot
+User=postgres
+Group=postgres
+ExecStart=/usr/bin/pgbackrest --stanza={{ pgbackrest_stanza }} --repo=1 --type=full backup
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

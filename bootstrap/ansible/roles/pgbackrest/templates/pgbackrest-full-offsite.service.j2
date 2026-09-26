@@ -1,0 +1,16 @@
+[Unit]
+Description=pgBackRest weekly full backup to the off-site repo (ADR-0012)
+# Managed by Ansible (rbx-infra: roles/pgbackrest). Do not edit on the host.
+# pgBackRest backs up one repository per invocation; repo2 needs its own
+# schedule or the off-site repo would hold WAL but no base backups.
+After=postgresql.service
+Requisite=postgresql.service
+
+[Service]
+Type=oneshot
+User=postgres
+Group=postgres
+ExecStart=/usr/bin/pgbackrest --stanza={{ pgbackrest_stanza }} --repo=2 --type=full backup
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

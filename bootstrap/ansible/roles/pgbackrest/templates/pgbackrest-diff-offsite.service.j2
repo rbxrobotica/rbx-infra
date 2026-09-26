@@ -1,0 +1,14 @@
+[Unit]
+Description=pgBackRest daily differential backup to the off-site repo (ADR-0012)
+# Managed by Ansible (rbx-infra: roles/pgbackrest). Do not edit on the host.
+After=postgresql.service
+Requisite=postgresql.service
+
+[Service]
+Type=oneshot
+User=postgres
+Group=postgres
+ExecStart=/usr/bin/pgbackrest --stanza={{ pgbackrest_stanza }} --repo=2 --type=diff backup
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

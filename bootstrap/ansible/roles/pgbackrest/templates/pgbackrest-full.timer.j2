@@ -1,0 +1,14 @@
+[Unit]
+Description=pgBackRest weekly full backup timer, local repo (ADR-0012)
+# Managed by Ansible (rbx-infra: roles/pgbackrest). Do not edit on the host.
+
+[Timer]
+OnCalendar={{ pgbackrest_full_on_calendar }}
+# Persistent deliberately off: a missed run must not fire at boot and
+# race crash recovery on the shared disk. WAL archiving carries the RPO;
+# the next scheduled slot takes the backup.
+Persistent=false
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

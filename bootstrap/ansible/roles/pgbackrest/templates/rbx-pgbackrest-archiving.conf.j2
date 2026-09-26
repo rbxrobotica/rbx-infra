@@ -1,0 +1,12 @@
+# Managed by Ansible (rbx-infra: roles/pgbackrest, ADR-0012). Do not edit
+# on the host. Loaded via postgresql.conf include_dir = 'conf.d'.
+#
+# Enabling archive_mode REQUIRES a PostgreSQL restart (human-scheduled
+# window: brief ZITADEL login and PDNS-write outage). archive_command
+# changes afterwards only need a reload. Emergency stop without a second
+# restart: set archive_command = '/bin/true' and reload; note that WAL
+# recycled while /bin/true is active is permanently missing from the
+# archive, so take a new full backup after restoring the real command.
+archive_mode = on
+archive_command = 'pgbackrest --stanza={{ pgbackrest_stanza }} archive-push %p'
+archive_timeout = 60s
