@@ -9,9 +9,15 @@ resources:
   - rbx-commerce-sandbox-ingress.yml
   - rbx-commerce-sandbox-deploy.yml
   - rbx-commerce-sandbox-svc.yml
+  - satwake-email-sink-external-secrets.yml
+  - satwake-email-sink-deploy.yml
+  - satwake-email-sink-svc.yml
+  - satwake-email-sink-network-policy.yml
 images:
   - name: ghcr.io/rbxrobotica/rbx-commerce
     newTag: sha-61b781d6bfffc9b51497f18272d1c1c464a9b424
+  - name: ghcr.io/rbxrobotica/rbx-comms
+    newTag: sha-752b3db
 labels:
   - pairs:
       app.kubernetes.io/part-of: rbx-commerce
