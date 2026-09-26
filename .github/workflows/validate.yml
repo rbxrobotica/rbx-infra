@@ -139,6 +139,18 @@ jobs:
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
 
+  sandbox-email-key-source-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test sandbox email key staging without a cluster or pass store
+        run: python3 -m unittest discover -s scripts/tests -p 'test_stage_satwake_sandbox_email_keys.py' -v
+
+      - name: Test sandbox core source staging without a cluster or pass store
+        run: python3 -m unittest discover -s scripts/tests -p 'test_stage_satwake_sandbox_core_secrets.py' -v
+
   convention-lint:
     # Pattern R enforcement on the app manifests a PR changes (blocks NEW
     # non-conformance; the pre-existing backlog is untouched).
