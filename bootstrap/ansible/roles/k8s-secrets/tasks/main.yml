@@ -1433,7 +1433,7 @@
       --namespace {{ rbx_ia_br_namespace }} --ignore-not-found -o name)
     if [[ -n "$_existing_secret" ]]; then
       # Merge only role-owned properties; preserve separately provisioned
-      # Comms email and Meta credentials in the source Secret.
+      # Comms email credentials and other source Secret extensions.
       make_secret \
         | python3 -c 'import json,sys; json.dump({"data": json.load(sys.stdin)["data"]}, sys.stdout)' \
         | kubectl --kubeconfig {{ kubeconfig_path }} patch secret rbx-commerce-secrets \
