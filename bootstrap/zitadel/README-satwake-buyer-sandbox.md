@@ -31,8 +31,13 @@ Before a separate, specifically approved ZITADEL provisioning operation:
    project, grant it only the audience/scopes used by the BFF, and retain
    its private-key JWT credential in the approved secret store. Do not
    borrow `rbx-session-bff-commerce` from production. Confirm that the
-   actual signed token accepted by Commerce has the expected `sub`, audience
-   and scopes. Store the verified `sub` in
+   actual signed token has the expected `sub`, audience and scopes. The BFF
+   selects public-client token exchange when
+   `RBX_COMMERCE_TOKEN_EXCHANGE_CLIENT_ID` is set, so it needs no Commerce
+   client secret. Commerce currently skips token audience validation; a
+   signed token with a wrong audience can still pass its OIDC middleware.
+   Treat audience enforcement as a separate Commerce release gate before
+   exposing buyer access. Store the verified `sub` in
    `rbx/identity/session-bff-commerce-sandbox/service-subject`; this is the
    input to Commerce's deterministic UUIDv5 tenant derivation.
 3. Derive the public sandbox tenant from that actual token `sub`. The same
@@ -45,10 +50,16 @@ Before a separate, specifically approved ZITADEL provisioning operation:
    that the recorded subject equals a live token, so inspect the issued
    token independently before staging.
 4. Add the dedicated source Secrets and narrow cross-namespace reader RBAC
-   in a separate review, then verify ExternalSecrets `Ready=True`. Test
-   wrong-audience, missing-scope, unpaid, paid and cross-tenant decisions
-   before replacing the inert policy URL or scaling the overlay. Register
-   TLS/DNS/Ingress only in the separate activation sequence.
+   in a separate review, then verify ExternalSecrets `Ready=True`. In an
+   isolated internal canary with the sandbox policy gateway, test
+   missing-scope, unpaid, paid and cross-tenant decisions. Establish a passing
+   wrong-audience rejection test after Commerce enforces audience. The BFF's
+   Commerce entitlement gate is optional in the current binary: missing
+   credential configuration disables it rather than failing startup. Before
+   any public route, verify the running BFF has no
+   `entitlement_gate_disabled` event and an unpaid sandbox session is denied
+   Pro access. Register TLS/DNS/Ingress only in the separate activation
+   sequence.
 
 No IdP account, client, project grant, token, credential, Secret, DNS record
 or deployment is created by this contract.

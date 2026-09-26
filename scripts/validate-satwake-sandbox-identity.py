@@ -86,6 +86,9 @@ def verify_preparation(contract: dict, manifests: list[dict]) -> None:
             and client["pkce_method"] == "S256", "unexpected public PKCE contract")
     require(machine["authentication"] == "private_key_jwt", "unexpected machine auth")
     require(machine["project_grant_role_keys"] == [], "unexpected project roles")
+    require(machine["source_properties"] == [
+        "RBX_COMMERCE_CLIENT_ID", "RBX_COMMERCE_MACHINE_KEY_JSON",
+        "RBX_COMMERCE_AUDIENCE"], "unexpected Commerce credential properties")
     require(machine["source_secret"] != "rbx-session-bff-commerce",
             "production service account reuse")
     require(client["source_secret"] != "rbx-briefing-btc-session-bff-oidc",
