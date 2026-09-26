@@ -23,6 +23,10 @@ PASS_ENTRIES = {
     "ALTCHA_SECRET": "rbx/commerce-sandbox/altcha-secret",
     "COMMERCE_PUBLIC_TENANT_ID": "rbx/commerce-sandbox/public-tenant-id",
 }
+# Commerce's OIDCAuth derives a tenant from the service token `sub` with two
+# UUIDv5 operations. A random UUIDv4 can never match the BFF's tenant.
+SERVICE_SUBJECT_ENTRY = "rbx/identity/session-bff-commerce-sandbox/service-subject"
+TENANT_NAMESPACE = uuid.uuid5(uuid.NAMESPACE_URL, "https://rbx.ia.br/tenant")
 REQUIRED_EXISTING_KEYS = {
     "DATABASE_URL", "COMMS_API_URL", "ASAAS_API_KEY", "ASAAS_WEBHOOK_TOKEN",
     "COMMS_SERVICE_API_KEY", "SATWAKE_EMAIL_SINK_OPERATOR_KEY",
@@ -99,10 +103,19 @@ def read_tenant_id() -> bytes:
         value = raw.decode("ascii")
         tenant_id = uuid.UUID(value)
     except (UnicodeDecodeError, ValueError) as exc:
-        raise StagingError("sandbox tenant must be a canonical UUIDv4") from exc
-    if (value != str(tenant_id) or tenant_id.version != 4
+        raise StagingError("sandbox tenant must be a canonical derived UUIDv5") from exc
+    subject_raw = read_pass_entry(SERVICE_SUBJECT_ENTRY)
+    try:
+        subject = subject_raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise StagingError("sandbox BFF service subject is invalid") from exc
+    if (not subject or len(subject) > 255 or subject != subject.strip()
+            or any(ord(char) < 32 or ord(char) == 127 for char in subject)):
+        raise StagingError("sandbox BFF service subject is invalid")
+    derived_tenant = uuid.uuid5(TENANT_NAMESPACE, subject)
+    if (value != str(tenant_id) or tenant_id != derived_tenant
             or tenant_id in (uuid.UUID(int=0), PRODUCTION_TENANT_ID)):
-        raise StagingError("sandbox tenant must be a unique canonical UUIDv4")
+        raise StagingError("sandbox tenant does not match the dedicated BFF service subject")
     return raw
 
 

@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import subprocess
 import unittest
+import uuid
 from unittest import mock
 
 
@@ -21,6 +22,8 @@ def encoded(value: bytes) -> str:
 
 class FakeCommands:
     def __init__(self):
+        self.service_subject = "synthetic-sandbox-machine-subject"
+        self.derived_tenant = str(uuid.uuid5(MODULE.TENANT_NAMESPACE, self.service_subject))
         self.secret = {
             "metadata": {"name": MODULE.SECRET_NAME, "namespace": MODULE.NAMESPACE,
                          "resourceVersion": "17"},
@@ -34,7 +37,8 @@ class FakeCommands:
         self.values = {
             MODULE.PASS_ENTRIES["ALTCHA_SECRET"]: b"a" * 64 + b"\n",
             MODULE.PASS_ENTRIES["COMMERCE_PUBLIC_TENANT_ID"]:
-                b"aabbccdd-1234-4abc-8abc-123456789abc\n",
+                self.derived_tenant.encode() + b"\n",
+            MODULE.SERVICE_SUBJECT_ENTRY: self.service_subject.encode() + b"\n",
         }
         self.calls = []
         self.concurrent_update = False
@@ -43,6 +47,8 @@ class FakeCommands:
     def run(self, argv, *, input_bytes=None):
         self.calls.append(argv)
         if argv[0] == "pass":
+            if argv[2] not in self.values:
+                raise MODULE.StagingError("synthetic missing pass entry")
             return self.values[argv[2]]
         if "get" in argv:
             return json.dumps(self.secret).encode()
@@ -82,10 +88,11 @@ class StagingTests(unittest.TestCase):
         self.assertEqual({op["path"] for op in self.fake.patch[1:]},
                          {"/data/ALTCHA_SECRET", "/data/COMMERCE_PUBLIC_TENANT_ID"})
         self.assertEqual(base64.b64decode(self.fake.secret["data"]["COMMERCE_PUBLIC_TENANT_ID"]),
-                         b"aabbccdd-1234-4abc-8abc-123456789abc")
+                         self.fake.derived_tenant.encode())
         for argv in self.fake.calls:
             self.assertNotIn("a" * 64, " ".join(argv))
-            self.assertNotIn("aabbccdd", " ".join(argv))
+            self.assertNotIn(self.fake.derived_tenant, " ".join(argv))
+            self.assertNotIn(self.fake.service_subject, " ".join(argv))
 
     def test_refuses_existing_property_before_reading_pass(self):
         for key in MODULE.PASS_ENTRIES:
@@ -122,10 +129,11 @@ class StagingTests(unittest.TestCase):
                         MODULE.stage("/tmp/synthetic-kubeconfig")
                 self.assertIsNone(fake.patch)
 
-    def test_refuses_zero_production_non_v4_and_noncanonical_tenants(self):
+    def test_refuses_zero_production_random_v4_and_noncanonical_tenants(self):
         invalid = (
             b"00000000-0000-0000-0000-000000000000\n",
             b"885f24d2-1217-534e-bb1b-53440a3c04bb\n",
+            b"aabbccdd-1234-4abc-8abc-123456789abc\n",
             b"aaaaaaaa-aaaa-5aaa-8aaa-aaaaaaaaaaaa\n",
             b"AABBCCDD-1234-4ABC-8ABC-123456789ABC\n",
             b"aabbccdd12344abc8abc123456789abc\n",
@@ -135,6 +143,19 @@ class StagingTests(unittest.TestCase):
             with self.subTest(value=value[:8]):
                 fake = FakeCommands()
                 fake.values[MODULE.PASS_ENTRIES["COMMERCE_PUBLIC_TENANT_ID"]] = value
+                with mock.patch.object(MODULE, "run_command", side_effect=fake.run):
+                    with self.assertRaises(MODULE.StagingError):
+                        MODULE.stage("/tmp/synthetic-kubeconfig")
+                self.assertIsNone(fake.patch)
+
+    def test_refuses_missing_or_changed_service_subject_without_patching(self):
+        for subject in (None, b"different-subject\n", b"\n", b"subject\nextra\n"):
+            with self.subTest(subject=subject):
+                fake = FakeCommands()
+                if subject is None:
+                    fake.values.pop(MODULE.SERVICE_SUBJECT_ENTRY)
+                else:
+                    fake.values[MODULE.SERVICE_SUBJECT_ENTRY] = subject
                 with mock.patch.object(MODULE, "run_command", side_effect=fake.run):
                     with self.assertRaises(MODULE.StagingError):
                         MODULE.stage("/tmp/synthetic-kubeconfig")
