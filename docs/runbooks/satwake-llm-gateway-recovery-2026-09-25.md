@@ -19,12 +19,26 @@ The [Groq deprecation table](https://console.groq.com/docs/deprecations) describ
 
    A read-only check is `kubectl -n rbx-market-briefing get cronjob rbx-market-briefing -o json | jq '{schedule:.spec.schedule,suspend:.spec.suspend,script:.spec.jobTemplate.spec.template.spec.containers[0].args[0]}'`. Do not change `suspend` without approval for that production operation.
 
+   The reviewed GitOps hold sets `spec.suspend: true` in
+   `apps/prod/rbx-market-briefing/cronjob.yml`. Because this Argo Application
+   auto-syncs and self-heals, **merging the hold is a production operation**.
+   Obtain specific approval for that merge, wait for the Application to sync,
+   then verify the live field is `true` and that no active Job is running.
+   Suspension prevents future schedules; it does not stop an existing Job.
+   If a Job is active, decide separately whether to let it complete or stop it.
+
 3. Choose an operator window for the one-replica outage and a check for the site chat's return. In ArgoCD, sync **only** `ConfigMap/llm-gateway/litellm-config` from the reviewed `main` revision. Do not include the unrelated namespace drift in this recovery action. Verify that the live ConfigMap now maps both aliases to `groq/openai/gpt-oss-120b`. The Application may remain globally `OutOfSync` because of the namespace; use the ConfigMap resource's own sync status as the gate.
 
    The installed ArgoCD CLI supports `argocd --core app sync llm-gateway -N argocd --resource ':ConfigMap:llm-gateway/litellm-config' --revision <verified-main-SHA>`. Core mode requires a kubeconfig context whose default namespace is `argocd`; validate that with a protected temporary kubeconfig instead of changing the operator's normal context. The read-only `argocd --core app get` check succeeded with that temporary context on 2026-09-26; `-N argocd` alone did not fix a default-namespace context. Omit `--prune`. The sync command is for the specifically authorized maintenance window, not an instruction to execute on PR merge.
 4. Restart only `deployment/litellm` in `llm-gateway`, then wait for 1/1 ready and check the site chat returns. Verify the new pod actually mounted the current config; a healthy old pod or updated ConfigMap alone is insufficient. If sync or rollout fails, stop and diagnose rather than running a briefing.
 5. With an approved, non-sensitive minimal request through the gateway, check `groq-test` and `groq-prod` separately. Record provider status without logging keys or full prompts. Confirm the provider account can use the replacement model; GitOps configuration and public model documentation alone do not prove this.
 6. **Separate approval required:** run generation for one exact date in a controlled job, inspect its artifacts and manifest, then separately authorize publishing and delivery. The existing CronJob command chains `run`, `publish` and `deliver`, so do not trigger it unchanged as a smoke test. Reconcile any missed editions and subscriber notices before claiming timely service. Resume the scheduled CronJob only after deciding how its full chain will be governed.
+
+   Resume through a separately reviewed GitOps change that removes the hold.
+   Its merge can trigger the full chain at the next schedule. Confirm the
+   CronJob's `startingDeadlineSeconds` and missed schedules before resuming;
+   the current value is 600 seconds. Do not use a direct `kubectl patch` as a
+   lasting hold or resume while Argo self-heal is enabled.
 
 Record the Argo revision, ConfigMap resource version, new pod UID, probe outcomes and any edition publication IDs in the Satwake execution checkpoint. Do not count a generated test edition, test purchase or manual send as a commercial acquisition.
 
