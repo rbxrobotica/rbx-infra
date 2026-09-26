@@ -40,6 +40,23 @@ spec:
               # Permanent fail-closed baseline. A separate approved cutover
               # may point to the isolated sandbox sink after it is ready.
               value: "http://127.0.0.1:1"
+            - name: COMMS_SERVICE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-sandbox-secrets
+                  key: COMMS_SERVICE_API_KEY
+            - name: ALTCHA_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-sandbox-secrets
+                  key: ALTCHA_SECRET
+            # Use the exact UUIDv5 derived from the dedicated sandbox BFF
+            # service token subject. Never use a random or production tenant.
+            - name: COMMERCE_PUBLIC_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-sandbox-secrets
+                  key: COMMERCE_PUBLIC_TENANT_ID
             - name: ASAAS_ENV
               value: "sandbox"
             - name: ASAAS_API_KEY
