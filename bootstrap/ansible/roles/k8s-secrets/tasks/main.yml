@@ -718,7 +718,9 @@
         | kubectl --kubeconfig {{ kubeconfig_path }} patch secret rbx-commerce-sandbox-secrets \
             --namespace {{ rbx_ia_br_namespace }} --type merge --patch-file=/dev/stdin
     else
-      make_secret | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+      # Create fails if another actor creates the Secret after the read. An
+      # apply here could replace extensions provisioned by the other actor.
+      make_secret | kubectl --kubeconfig {{ kubeconfig_path }} create -f -
     fi
   args:
     executable: /bin/bash
