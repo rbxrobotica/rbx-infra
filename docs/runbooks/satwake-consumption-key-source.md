@@ -18,6 +18,9 @@ pass generate -n rbx/commerce/consumption-service-key 64 >/dev/null
 scripts/create-commerce-consumption-key-source.sh ~/.kube/config-rbx
 ```
 
+Keep the redirect on `pass generate`; without it, the new credential appears
+in terminal output and scrollback.
+
 The script refuses an existing Secret, a missing/multiline/short `pass` entry,
 or a failed Kubernetes read. It uses `kubectl create`, so a concurrent Secret
 creation fails without replacing data. It never puts the key in a command

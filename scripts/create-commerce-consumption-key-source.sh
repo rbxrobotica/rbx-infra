@@ -28,5 +28,5 @@ pass show "$SOURCE_PATH" \
 lines=sys.stdin.read().splitlines()
 if len(lines)!=1 or len(lines[0])<32 or any(ch.isspace() for ch in lines[0]):
     sys.exit("pass entry must be one whitespace-free line of at least 32 characters")
-print(json.dumps({"apiVersion":"v1","kind":"Secret","metadata":{"name":"rbx-commerce-consumption-key","namespace":"rbx-ia-br"},"type":"Opaque","data":{"COMMERCE_CONSUMPTION_SERVICE_KEY":base64.b64encode(lines[0].encode()).decode()}}))' \
+print(json.dumps({"apiVersion":"v1","kind":"Secret","metadata":{"name":sys.argv[2],"namespace":sys.argv[1]},"type":"Opaque","data":{"COMMERCE_CONSUMPTION_SERVICE_KEY":base64.b64encode(lines[0].encode()).decode()}}))' "$NAMESPACE" "$SOURCE_SECRET" \
   | kubectl --kubeconfig "$KUBECONFIG_FILE" create -f -
