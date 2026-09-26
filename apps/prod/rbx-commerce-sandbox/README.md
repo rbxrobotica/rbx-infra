@@ -9,6 +9,31 @@ Commerce #52 removed the CI path that wrote sandbox and production image pins
 directly to Infra `main`. It was merged on 2026-09-25. Sandbox image promotion
 now needs its own reviewed Infra change; the prepared pin is Infra #286.
 
+## Live read-only preflight (2026-09-26 03:42 UTC)
+
+- The effective sandbox `DATABASE_URL` resolves to
+  `rbx-commerce-postgres.rbx-commerce-sandbox.svc.cluster.local/rbx_commerce_sandbox`.
+  A `BEGIN READ ONLY` query in that database found no
+  `public.schema_migrations`, `commerce.subscriptions`, `provider_invoices`,
+  `asaas_payment_periods`, or `checkout_email_challenges`. This is an **initial
+  bootstrap through `000001`–`000023`**, not a catch-up from the production
+  schema. No database write was made by this preflight.
+- The live sandbox pod is 1/1 on the old Commerce image
+  `sha-61b781d6bfffc9b51497f18272d1c1c464a9b424` with `ASAAS_ENV=sandbox`.
+  `/health` returns 200, but `/api/public/altcha-challenge` returns 500.
+  The Deployment has no `COMMERCE_PUBLIC_TENANT_ID` environment variable.
+- The source Secret `rbx-ia-br/rbx-commerce-sandbox-secrets` and its synced
+  ExternalSecret contain only `DATABASE_URL`, `COMMS_API_URL`, `ASAAS_API_KEY`,
+  and `ASAAS_WEBHOOK_TOKEN`. The three required properties below are absent.
+  The Argo CD Application is Synced/Healthy with automated self-heal, so a
+  merge of this overlay before preparing the source Secret can roll a pod
+  whose mandatory references cannot resolve. Secret values were not printed.
+- The Asaas sandbox account's sole webhook points to
+  `https://commerce-sandbox.rbx.ia.br/webhooks/asaas`, but is `enabled=false`
+  and `interrupted=true`. Its event set includes `PAYMENT_CONFIRMED` and
+  `PAYMENT_RECEIVED`. The read-only listing does not return its authentication
+  token, so it cannot establish a token match with the receiver.
+
 ## Configuration before this overlay is reconciled
 
 Obtain separate approval for the sandbox source Secret change. Add the three
@@ -43,13 +68,16 @@ a separate reviewed change before relying on this as a repeatable environment.
 
 ## Code and database gates
 
-1. First parse the effective `DATABASE_URL` without printing the password and
-   verify its database is `rbx_commerce_sandbox` on the sandbox PostgreSQL
-   service. Inspect the **sandbox database only** and apply its missing Commerce
-   migrations through `000023` under an approved, schema-aware plan. Follow the
-   read-only [Commerce migration preflight](https://github.com/rbxrobotica/rbx-commerce/blob/main/docs/runbooks/satwake-commerce-migration-preflight.md),
-   including verification of `000015`–`000018`; the repository does not prove
-   those migrations ran in this database. `000018` hardcodes the **production**
+1. Reconfirm the effective `DATABASE_URL` target, without printing the
+   password, immediately before migration. With sandbox writers quiesced and
+   a restorable backup or equivalent recovery point verified, bootstrap the
+   **sandbox database only** with the complete Commerce `000001`–`000023`
+   migration sequence under a separately approved, schema-aware plan. Verify
+   the resulting objects and tracker `(23, false)` before Infra #286 pins the
+   new Commerce image. Do not promote that image against the empty schema.
+   Follow the read-only
+   [Commerce migration preflight](https://github.com/rbxrobotica/rbx-commerce/blob/main/docs/runbooks/satwake-commerce-migration-preflight.md),
+   including verification of `000015`–`000018`. `000018` hardcodes the **production**
    public tenant as its data-move target. Never use that tenant for this
    sandbox: inspect eligible zero-tenant subscriptions and invites, existing
    `000018` markers, and related-row tenant consistency before deciding whether
@@ -63,7 +91,7 @@ a separate reviewed change before relying on this as a repeatable environment.
    a safe no-op guarantee while the old API can still write zero-tenant
    records.
    Do not replay it blindly or advance the tracker merely to match a version.
-   The live sandbox Deployment inspected on 2026-09-25 did not define
+   The live sandbox Deployment inspected on 2026-09-26 does not define
    `COMMERCE_PUBLIC_TENANT_ID`, so its current API uses the zero tenant until
    the source Secret and this overlay are reconciled. Verify the actual schema
    after application; do not rely solely on the historical
@@ -86,14 +114,18 @@ a separate reviewed change before relying on this as a repeatable environment.
 5. `GET /api/public/altcha-challenge` must return a challenge. Exercise a
    browser Origin expected by the checkout policy; Satwake campaign hosts
    need an exact active Commerce campaign registry entry. A direct API call
-   cannot prove browser CORS or paid attribution.
+   cannot prove browser CORS or paid attribution. The Landing #4 image
+   defaults to `https://commerce.rbx.ia.br`; use an isolated build or preview
+   explicitly configured for the sandbox Commerce base URL for browser E2E.
+   Do not use the production landing image as evidence of a sandbox checkout.
 
 ## Provider and access rehearsal
 
-The sandbox Asaas webhook targeting `commerce-sandbox.rbx.ia.br` was disabled
-in the 2026-09-25 read-only inspection. Enabling it or changing its token or
-destination needs a separate approved provider-account operation. Confirm the
-configured `asaas-access-token` matches the sandbox receiver before relying
+The sandbox Asaas webhook targeting `commerce-sandbox.rbx.ia.br` was still
+disabled and interrupted in the 2026-09-26 read-only API inspection. Enabling
+or resuming it, or changing its token or destination, needs a separate approved
+provider-account operation. Confirm the configured `asaas-access-token`
+matches the sandbox receiver before relying
 on delivery; do not point this webhook at production Commerce.
 
 With the callback approved and enabled, use fictitious sandbox customer data
