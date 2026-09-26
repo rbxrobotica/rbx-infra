@@ -1318,14 +1318,32 @@
 
 - name: Create rbx-contact-secrets in rbx-ia-br
   shell: |
-    kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-contact-secrets \
-      --namespace {{ rbx_ia_br_namespace }} \
-      --from-literal=ALTCHA_SECRET="$ALTCHA_SECRET" \
-      --from-literal=COMMS_SERVICE_KEY="$COMMS_SERVICE_KEY" \
-      --from-literal=D360_API_KEY="$D360_API_KEY" \
-      --from-literal=POSTMARK_SERVER_TOKEN="$POSTMARK_SERVER_TOKEN" \
-      --dry-run=client -o yaml \
-    | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
+    set -euo pipefail
+    make_secret() {
+      kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-contact-secrets \
+        --namespace {{ rbx_ia_br_namespace }} \
+        --from-literal=ALTCHA_SECRET="$ALTCHA_SECRET" \
+        --from-literal=COMMS_SERVICE_KEY="$COMMS_SERVICE_KEY" \
+        --from-literal=D360_API_KEY="$D360_API_KEY" \
+        --from-literal=POSTMARK_SERVER_TOKEN="$POSTMARK_SERVER_TOKEN" \
+        --dry-run=client -o json
+    }
+    _existing_secret=$(kubectl --kubeconfig {{ kubeconfig_path }} get secret rbx-contact-secrets \
+      --namespace {{ rbx_ia_br_namespace }} --ignore-not-found -o name)
+    if [[ -n "$_existing_secret" ]]; then
+      # Refresh only role-owned keys; preserve separately provisioned Meta
+      # credentials and other extensions in the source Secret.
+      make_secret \
+        | python3 -c 'import json,sys; json.dump({"data": json.load(sys.stdin)["data"]}, sys.stdout)' \
+        | kubectl --kubeconfig {{ kubeconfig_path }} patch secret rbx-contact-secrets \
+            --namespace {{ rbx_ia_br_namespace }} --type merge --patch-file=/dev/stdin
+    else
+      # Fail if another actor creates the Secret after the read; an apply
+      # here could remove keys provisioned by that actor.
+      make_secret | kubectl --kubeconfig {{ kubeconfig_path }} create -f -
+    fi
+  args:
+    executable: /bin/bash
   environment:
     ALTCHA_SECRET: "{{ altcha_hmac_secret_result.stdout | trim }}"
     COMMS_SERVICE_KEY: "{{ comms_service_api_key_result.stdout | trim }}"
