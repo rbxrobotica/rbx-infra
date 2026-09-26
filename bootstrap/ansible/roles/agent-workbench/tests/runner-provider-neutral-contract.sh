@@ -33,6 +33,52 @@ set -e
 test "$policy_rc" -eq 3
 jq -e '.status == "failed" and .stop_reason == "forbidden_action_attempted" and (.violations | index("secrets/key.txt:forbidden_path"))' "${tmp_dir}/policy.json" >/dev/null
 
+# A detected rename must authorize the removed source and the added destination.
+# Keep NUL-delimited filenames intact, including tabs and newlines, and count
+# both affected paths for file bounds without inflating Git's line statistics.
+check_rename_policy() {
+  local label="$1" source="$2" destination="$3" expected_rc="$4" violation="$5"
+  local bound="${6:-5 lines}" rename_repo="${tmp_dir}/rename-${1}" actual_rc=0
+  git init -q -b main "${rename_repo}"
+  git -C "${rename_repo}" config user.name test
+  git -C "${rename_repo}" config user.email test@example.invalid
+  git -C "${rename_repo}" config diff.renames true
+  mkdir -p "${rename_repo}/$(dirname "${source}")" "${rename_repo}/$(dirname "${destination}")"
+  printf 'rename fixture\n' >"${rename_repo}/${source}"
+  git -C "${rename_repo}" add -A
+  git -C "${rename_repo}" commit -qm base
+  git -C "${rename_repo}" mv -- "${source}" "${destination}"
+  jq -n --arg bound "${bound}" \
+    '{allowed_paths:["src/**"],forbidden_paths:["secrets/**"],max_diff_size:$bound}' \
+    >"${tmp_dir}/rename-contract.json"
+
+  python3 "$policy" "${tmp_dir}/rename-contract.json" "${rename_repo}" \
+    "${tmp_dir}/rename-policy.json" || actual_rc=$?
+  if [[ "${actual_rc}" -ne "${expected_rc}" ]]; then
+    echo "rename policy ${label}: expected exit ${expected_rc}, got ${actual_rc}" >&2
+    exit 1
+  fi
+  jq -e --arg source "${source}" --arg destination "${destination}" \
+    '.changed_files == ([$source, $destination] | sort) and .diff_files == 2 and .diff_lines == 0' \
+    "${tmp_dir}/rename-policy.json" >/dev/null
+  if [[ "${expected_rc}" -eq 0 ]]; then
+    jq -e '.status == "passed" and .violations == [] and .stop_reason == null' \
+      "${tmp_dir}/rename-policy.json" >/dev/null
+  else
+    jq -e --arg violation "${violation}" '.status == "failed" and (.violations | index($violation))' \
+      "${tmp_dir}/rename-policy.json" >/dev/null
+  fi
+}
+
+check_rename_policy forbidden-source secrets/key.txt src/key.txt 3 'secrets/key.txt:forbidden_path'
+check_rename_policy forbidden-destination src/key.txt secrets/key.txt 3 'secrets/key.txt:forbidden_path'
+check_rename_policy outside-source docs/key.txt src/key.txt 3 'docs/key.txt:outside_allowed_paths'
+check_rename_policy allowed src/old.txt src/new.txt 0 ''
+check_rename_policy file-bound src/old.txt src/new.txt 3 'diff:2_files_exceeds_1' '1 files'
+check_rename_policy tab-source $'secrets/key\tname.txt' $'src/key\tname.txt' 3 $'secrets/key\tname.txt:forbidden_path'
+check_rename_policy tab-allowed $'src/old\tname.txt' $'src/new\tname.txt' 0 ''
+check_rename_policy newline-source $'docs/key\nname.txt' src/key.txt 3 $'docs/key\nname.txt:outside_allowed_paths'
+
 mkdir -p "${tmp_dir}/bin" "${tmp_dir}/worktree"
 printf 'prompt\n' >"${tmp_dir}/prompt.txt"
 cat >"${tmp_dir}/bin/claude" <<'SH'
