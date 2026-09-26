@@ -59,7 +59,9 @@ def main() -> int:
     if not isinstance(forbidden, list) or not all(isinstance(v, str) and v for v in forbidden):
         raise ValueError("contract forbidden_paths must be a string array")
 
-    raw_names = git(worktree, "diff", "--cached", "--name-only", "-z")
+    # Authorize both the removed source and added destination of a rename.
+    # Rename detection otherwise hides the source from --name-only output.
+    raw_names = git(worktree, "diff", "--cached", "--name-only", "--no-renames", "-z")
     changed = sorted(name.decode("utf-8") for name in raw_names.split(b"\0") if name)
     violations: list[str] = []
     for name in changed:
