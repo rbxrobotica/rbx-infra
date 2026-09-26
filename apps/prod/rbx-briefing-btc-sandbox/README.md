@@ -35,8 +35,8 @@ are outside this overlay.
    `get` Role and RoleBinding for this namespace's
    `external-secrets-reader`: `rbx-briefing-btc-sandbox-oidc`
    (`RBX_SESSION_BFF_CLIENT_ID`), `rbx-briefing-btc-sandbox-commerce`
-   (`RBX_COMMERCE_CLIENT_ID`, `RBX_COMMERCE_CLIENT_SECRET`,
-   `RBX_COMMERCE_MACHINE_KEY_JSON`, `RBX_COMMERCE_AUDIENCE`),
+   (`RBX_COMMERCE_CLIENT_ID`, `RBX_COMMERCE_MACHINE_KEY_JSON`,
+   `RBX_COMMERCE_AUDIENCE`),
    `rbx-briefing-btc-sandbox-consumption`
    (`COMMERCE_CONSUMPTION_SERVICE_KEY`), and
    `rbx-briefing-btc-sandbox-content` (S3 credentials, endpoint, bucket and

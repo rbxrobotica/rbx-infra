@@ -31,7 +31,6 @@
     "source_secret": "rbx-briefing-btc-sandbox-commerce",
     "source_properties": [
       "RBX_COMMERCE_CLIENT_ID",
-      "RBX_COMMERCE_CLIENT_SECRET",
       "RBX_COMMERCE_MACHINE_KEY_JSON",
       "RBX_COMMERCE_AUDIENCE"
     ],
