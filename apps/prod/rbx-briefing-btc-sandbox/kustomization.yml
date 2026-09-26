@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yml
+  - secretstore.yml
+  - external-secrets.yml
+  - web.yml
+  - session-bff.yml
+images:
+  - name: ghcr.io/rbxrobotica/rbx-briefing-btc
+    newTag: sha-9e2913e
+  - name: ghcr.io/rbxrobotica/rbx-session-bff
+    newTag: sha-e715d9a
+    digest: sha256:be13fe8a3be446ee7247611ba584763a6c4aab26a6ea4ab9decfd7c142219ad0
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: rbx-briefing-btc
+      environment: sandbox
+    includeSelectors: false
