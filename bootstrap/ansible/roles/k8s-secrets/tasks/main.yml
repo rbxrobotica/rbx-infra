@@ -703,7 +703,7 @@
       kubectl --kubeconfig {{ kubeconfig_path }} create secret generic rbx-commerce-sandbox-secrets \
         --namespace {{ rbx_ia_br_namespace }} \
         --from-literal=DATABASE_URL="${_db_url}" \
-        --from-literal=COMMS_API_URL="http://rbx-comms.rbx-comms.svc.cluster.local" \
+        --from-literal=COMMS_API_URL="http://127.0.0.1:1" \
         --from-literal=ASAAS_API_KEY="$RBX_COMMERCE_SANDBOX_ASAAS_API_KEY" \
         --from-literal=ASAAS_WEBHOOK_TOKEN="$RBX_COMMERCE_SANDBOX_ASAAS_WEBHOOK_TOKEN" \
         --dry-run=client -o json
