@@ -122,6 +122,7 @@ def verify_preparation(contract: dict, manifests: list[dict]) -> None:
         "RBX_COMMERCE_TOKEN_ENDPOINT": contract["issuer"] + "/oauth/v2/token",
         "RBX_PRODUCT_KEY": "briefing-btc",
         "RBX_SESSION_BFF_ACCESS_MODE": "annotate",
+        "RBX_SESSION_BFF_REQUIRE_PRODUCT_ACCESS_GATE": "true",
         "RBX_SESSION_COOKIE_SECURE": "true",
         "RBX_SESSION_BFF_DISCOVER_OIDC": "true",
         "RBX_AUTHZ_GATEWAY_URL": contract["sandbox_policy_gateway"],
@@ -141,6 +142,9 @@ def verify_preparation(contract: dict, manifests: list[dict]) -> None:
         "name": client["source_secret"], "key": client["source_property"]},
         "token-exchange client ID source drift")
     bff_container = deployments["rbx-briefing-btc-sandbox-session-bff"]["spec"]["template"]["spec"]["containers"][0]
+    require(bff_container["image"].startswith("ghcr.io/rbxrobotica/rbx-session-bff:sha-")
+            and "@sha256:" in bff_container["image"],
+            "BFF image must be pinned to a published immutable digest")
     bff_secrets = bff_container["envFrom"]
     require({entry["secretRef"]["name"] for entry in bff_secrets} == {
         client["source_secret"], machine["source_secret"]},
