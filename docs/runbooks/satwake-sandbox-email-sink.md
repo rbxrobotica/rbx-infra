@@ -23,8 +23,14 @@ This overlay runs the [Comms sandbox email sink](https://github.com/rbxrobotica/
   a connection to the sink pod IP on operator port 8081 was refused. These
   paired probes support ingress isolation and loopback-only operator binding.
 - The configured no-egress policy has **not** been tested from the sink's
-  network namespace. Do not call egress enforcement verified or issue a
-  synthetic code until a separately approved diagnostic probe establishes it.
+  own network namespace. A temporary, deliberately unready pod on the same
+  node with the sink's `app.kubernetes.io/name` label could not reach the
+  Commerce `/health` endpoint (connection refused), while a different-label
+  control pod on that node received 200. The unready pod was not a ready
+  endpoint of the sink Service, and both diagnostic pods were removed. This
+  supports enforcement for the policy's pod selector, but does not replace the
+  separately approved probe inside the real sink pod. Do not call its egress
+  enforcement fully verified or issue a synthetic code before that probe.
   No positive dispatch, operator claim, email, Commerce URL cutover, provider
   callback, or buyer checkout occurred in this rollout.
 
