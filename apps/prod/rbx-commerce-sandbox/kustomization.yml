@@ -15,7 +15,8 @@ resources:
   - satwake-email-sink-external-secrets.yml
 images:
   - name: ghcr.io/rbxrobotica/rbx-commerce
-    newTag: sha-61b781d6bfffc9b51497f18272d1c1c464a9b424
+    newTag: sha-b441f8ede96ec1f3fa43f062de3f2993bea81229
+    digest: sha256:8dc5419bad6b3fcaba0cee77a296d4b682aa935b3ae240941376f585c2e856a7
   - name: ghcr.io/rbxrobotica/rbx-comms
     newTag: sha-752b3db
     digest: sha256:271e8f8c4764dc5dab2578edd6a007e5d749b39b5d4238191d470586ee322d06
