@@ -106,9 +106,21 @@ resource "powerdns_record" "sito_kulinaryos_com_a" {
 # (hostname kulinaryos-social-prod-fra1-01, a historical name).
 #
 # test.kulinaryos.com and api-test.kulinaryos.com were published outside
-# Terraform (PRs #229 and #230 never merged); they are adopted here with their
-# live values. api-test is kept only while UAT moves to test.api and is removed
+# Terraform (PRs #229 and #230 never merged). The import blocks below bring the
+# live rrsets into state instead of overwriting them; their declared values
+# match what is live (A 157.230.125.23, TTL 300), so the plan shows no change
+# for them. api-test is kept only while UAT moves to test.api and is removed
 # afterwards; test.kulinaryos.com becomes the UAT of the institutional site.
+
+import {
+  to = powerdns_record.test_kulinaryos_com_a
+  id = jsonencode({ zone = "kulinaryos.com.", id = "test.kulinaryos.com.:::A" })
+}
+
+import {
+  to = powerdns_record.api_test_kulinaryos_com_a
+  id = jsonencode({ zone = "kulinaryos.com.", id = "api-test.kulinaryos.com.:::A" })
+}
 
 locals {
   kulinaryos_uat_ingress_ip = "157.230.125.23"
