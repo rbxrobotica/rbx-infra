@@ -14,7 +14,7 @@ not alter production or the isolated sink.
 2. Confirm the Asaas sandbox webhook remains disabled and no checkout, callback, reconciliation, migration Job or other writer is running. A read-only Asaas API check at 2026-09-27 03:58 UTC found one webhook and confirmed it disabled by individual detail lookup; repeat this immediately before the hold. Record a plan to recover any inbound request that arrives while the API is paused.
 3. Confirm the isolated `satwake-email-sink` remains healthy and that its NetworkPolicy is unchanged. This PR must render only the Commerce API replica change.
 
-## Approved execution sequence and outcome
+## Historical approved sequence
 
 1. Merge this hold only after separate deployment approval. Wait for Argo `Synced/Healthy` with Commerce API zero pods and sink one healthy pod. Recheck database sessions and stop if any writer remains.
 2. Take a restricted backup of the sandbox database, including any tracker, verify its checksum/listing and restore it into a separate temporary database. Do not infer a backup is valid from file existence.
