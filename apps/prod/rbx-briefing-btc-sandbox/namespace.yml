@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rbx-briefing-btc-sandbox
+  labels:
+    app.kubernetes.io/name: rbx-briefing-btc-sandbox
+    app.kubernetes.io/part-of: rbx-briefing-btc
+    environment: sandbox

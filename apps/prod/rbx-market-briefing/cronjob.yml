@@ -15,6 +15,9 @@ metadata:
     environment: production
 spec:
   schedule: "0 9 * * 1-5"
+  # Hold the run -> publish -> deliver chain until gateway and delivery gates pass.
+  # Resuming is a separate production decision; see the Satwake recovery runbook.
+  suspend: true
   timeZone: Etc/UTC
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 600

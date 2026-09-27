@@ -23,7 +23,7 @@ spec:
         - name: ghcr-pull-secret
       containers:
         - name: api
-          image: ghcr.io/rbxrobotica/rbx-commerce:sha-9a8d06c62d6828b4a4ef342db467cf6306cfae4f
+          image: ghcr.io/rbxrobotica/rbx-commerce
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -37,10 +37,9 @@ spec:
                   name: rbx-commerce-sandbox-secrets
                   key: DATABASE_URL
             - name: COMMS_API_URL
-              valueFrom:
-                secretKeyRef:
-                  name: rbx-commerce-sandbox-secrets
-                  key: COMMS_API_URL
+              # Permanent fail-closed baseline. A separate approved cutover
+              # may point to the isolated sandbox sink after it is ready.
+              value: "http://127.0.0.1:1"
             - name: ASAAS_ENV
               value: "sandbox"
             - name: ASAAS_API_KEY

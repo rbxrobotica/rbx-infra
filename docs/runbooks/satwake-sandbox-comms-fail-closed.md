@@ -1,0 +1,17 @@
+# Commerce sandbox Comms fail-closed baseline
+
+The Commerce sandbox currently reads `COMMS_API_URL` from a source Secret that points to production Comms. Its `/api/public/briefing-btc/checkout/email/start` route is mounted regardless of `SATWAKE_EMAIL_VERIFICATION_REQUIRED`; the flag gates checkout, not this dispatch route. Giving the sandbox a service key or promoting the email-capable Commerce image before changing the URL could send a real Postmark message. This change makes the **effective pod URL** `http://127.0.0.1:1`, an inert loopback destination, removes the legacy URL from the sandbox ExternalSecret, and changes future Ansible source updates to the same inert value. The current source Secret remains unchanged until the separately approved narrow patch is run.
+
+This is a permanent safety baseline for the rehearsal. Do not revert it to the previous production Comms URL. Later rollback targets this inert URL, or an intentionally paused sandbox API.
+
+## Approved deployment sequence
+
+The `rbx-commerce-sandbox` Argo CD Application auto-syncs `main`. A merge is a deployment and needs specific operator approval. The source Secret patch and any API restart are separate cluster operations that also need approval. This PR only prepares them; it does not execute them.
+
+1. Confirm the kubeconfig context and namespace, the current Commerce sandbox image, and whether the email start route exists. Keep sandbox checkout traffic quiescent during the change. Do not enable the email verification flag or issue a Commerce service key yet.
+2. After approval, run `scripts/patch-commerce-sandbox-comms-inert-url.sh /path/to/reviewed-kubeconfig`. It updates only `data.COMMS_API_URL` on `rbx-ia-br/rbx-commerce-sandbox-secrets`, preserving all other properties. The script verifies the new value without printing other Secret data. Do not run the broad `k8s-secrets` role solely for this patch.
+3. Wait for the sandbox ExternalSecret to refresh and confirm its target URL is inert without printing other Secret values. Under the approved maintenance window, restart or otherwise replace the old API pod so its effective process environment is inert; existing pod environments do not change when a Secret changes. Verify `COMMS_API_URL=http://127.0.0.1:1` in the running sandbox pod. If this cannot be established, keep checkout quiescent and stop.
+4. With approval, merge this PR and observe Argo sync. Confirm the rendered Deployment has the literal inert URL, the new pod is Ready with that effective value, and the ExternalSecret no longer maps `COMMS_API_URL`. The Kustomize image pin is unchanged. A missing legacy URL in the target Secret must not block the new pod because its URL is literal.
+5. Only after the effective URL is verified inert may the separate sink workload and keys be staged, followed by [Infra #282](https://github.com/rbxrobotica/rbx-infra/pull/282)'s Commerce key and tenant mapping. Rebase #282 onto this baseline and ensure it does not restore the Secret reference or production URL. The final URL cutover to the ready sandbox sink needs its own PR and approval. Its rollback is this inert URL.
+
+If any rollout step fails, pause the sandbox checkout/API and repair toward the inert state. Reverting this PR to its former Secret reference is not an allowed rollback while email dispatch can be reached. `SATWAKE_EMAIL_VERIFICATION_REQUIRED` being unset does not make that revert safe.

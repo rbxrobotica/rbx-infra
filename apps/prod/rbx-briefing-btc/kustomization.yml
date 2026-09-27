@@ -14,6 +14,7 @@ resources:
   - secretstore.yml
   - externalsecret.yml
   - externalsecret-s3.yml
+  - externalsecret-consumption.yml
   - externalsecret-session-bff.yml
   - session-bff.yml
   - middleware.yml
