@@ -76,6 +76,10 @@ spec:
               memory: 64Mi
           securityContext:
             runAsNonRoot: true
+            # Distroless nonroot is UID/GID 65532. Kubelet cannot verify the
+            # image's named USER (nonroot) without a numeric runAsUser.
+            runAsUser: 65532
+            runAsGroup: 65532
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
