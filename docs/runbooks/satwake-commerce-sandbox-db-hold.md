@@ -4,7 +4,7 @@ Status: **draft only**. The [Commerce sandbox bootstrap runbook](https://github.
 
 ## Entry gate
 
-1. Obtain specific approval for the sandbox hold and database window. Confirm the effective database target is `rbx_commerce_sandbox`, current tracker/schema state, image and source Secret property names without printing credentials. On 2026-09-27 03:49 UTC, a read-only query as `postgres` found no `commerce` schema or `public.schema_migrations` and zero active sessions; this observation is not a frozen state.
+1. Obtain specific approval for the sandbox hold and database window. Confirm the effective database target is `rbx_commerce_sandbox`, current tracker/schema state, image and source Secret property names without printing credentials. On 2026-09-27 03:49 UTC, a read-only query as `postgres` found no `commerce` schema or `public.schema_migrations` and zero active sessions; the database was 7,567 kB on PostgreSQL 16.15. A second read-only query using the actual `rbx_commerce_sandbox` runtime role over a short-lived SSH tunnel confirmed the same missing schema/tracker. These observations are not a frozen state. The host had over 346 GB free on `/var/backups` at preflight, and no sandbox backup directory yet.
 2. Confirm the Asaas sandbox webhook remains disabled and no checkout, callback, reconciliation, migration Job or other writer is running. Record a plan to recover any inbound request that arrives while the API is paused.
 3. Confirm the isolated `satwake-email-sink` remains healthy and that its NetworkPolicy is unchanged. This PR must render only the Commerce API replica change.
 
