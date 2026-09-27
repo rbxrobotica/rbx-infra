@@ -279,8 +279,12 @@ until it is explicitly removed; the role does not prune it.
 
 `COMMERCE_PUBLIC_TENANT_ID` is a non-secret UUID and may be configured directly
 as an environment value in the sandbox Commerce Deployment, as it is in
-production. Choose a stable, nonzero sandbox tenant distinct from production
-and ensure the sandbox buyer identity/session BFF resolves the same tenant.
+production. Derive the stable, nonzero sandbox tenant from the dedicated
+sandbox Commerce service token's verified `sub` using the two UUIDv5 operations
+in `rbx-commerce/internal/middleware/auth.go`; a random UUIDv4 cannot match
+the tenant of an authenticated BFF request. It must differ from production.
+The sandbox buyer session BFF must use that dedicated service account and
+query the sandbox Commerce API, never the production BFF credentials or API.
 Neither that tenant nor a sandbox buyer identity/BFF path is configured here
 yet. Without both, an Asaas sandbox payment cannot prove buyer access or
 edition consumption through the published product.
