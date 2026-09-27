@@ -90,6 +90,67 @@ resource "powerdns_record" "digitalmenu_kulinaryos_com_a" {
   records = ["157.230.125.23"]
 }
 
+resource "powerdns_record" "sito_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "sito.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = ["157.230.125.23"]
+}
+
+# --- Kulinaryos environments ---
+#
+# Two isolated Food Process clusters. PROD serves the real names above; UAT
+# serves the same names prefixed with "test." and runs on its own cluster,
+# database and repositories. The UAT cluster is the existing k3s Droplet
+# (hostname kulinaryos-social-prod-fra1-01, a historical name).
+#
+# test.kulinaryos.com and api-test.kulinaryos.com were published outside
+# Terraform (PRs #229 and #230 never merged); they are adopted here with their
+# live values. api-test is kept only while UAT moves to test.api and is removed
+# afterwards; test.kulinaryos.com becomes the UAT of the institutional site.
+
+locals {
+  kulinaryos_uat_ingress_ip = "157.230.125.23"
+
+  kulinaryos_uat_hosts = toset([
+    "test.app",
+    "test.api",
+    "test.crm",
+    "test.adm",
+    "test.sito",
+    "test.digitalmenu",
+    "test.ficgara",
+    "test.social",
+  ])
+}
+
+resource "powerdns_record" "test_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "test.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_uat_ingress_ip]
+}
+
+resource "powerdns_record" "api_test_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "api-test.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_uat_ingress_ip]
+}
+
+resource "powerdns_record" "kulinaryos_uat_a" {
+  for_each = local.kulinaryos_uat_hosts
+
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "${each.key}.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_uat_ingress_ip]
+}
+
 resource "powerdns_record" "localhost_kulinaryos_com_a" {
   zone    = powerdns_zone.kulinaryos_com.name
   name    = "localhost.kulinaryos.com."
