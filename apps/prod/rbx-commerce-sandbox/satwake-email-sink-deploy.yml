@@ -1,0 +1,83 @@
+# In-memory checkout-code sink. The operator listener binds only to pod
+# loopback; port 8081 is deliberately absent from the Service and Ingress.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: satwake-email-sink
+  namespace: rbx-commerce-sandbox
+  labels:
+    app.kubernetes.io/name: satwake-email-sink
+    app.kubernetes.io/component: email-sink
+    app.kubernetes.io/part-of: rbx-commerce
+spec:
+  replicas: 1
+  # A rolling update would allow two independent in-memory code stores.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: satwake-email-sink
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: satwake-email-sink
+        app.kubernetes.io/component: email-sink
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ghcr-pull-secret
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: email-sink
+          image: ghcr.io/rbxrobotica/rbx-comms
+          imagePullPolicy: Always
+          command:
+            - /satwake-email-sink
+          ports:
+            - containerPort: 8080
+              name: dispatch
+          env:
+            - name: SATWAKE_SANDBOX_EMAIL_SINK
+              value: enabled
+            - name: SATWAKE_EMAIL_SINK_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: satwake-email-sink-service-key
+                  key: SATWAKE_EMAIL_SINK_SERVICE_KEY
+            - name: SATWAKE_EMAIL_SINK_OPERATOR_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: satwake-email-sink-operator-key
+                  key: SATWAKE_EMAIL_SINK_OPERATOR_KEY
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: dispatch
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: dispatch
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            runAsNonRoot: true
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
