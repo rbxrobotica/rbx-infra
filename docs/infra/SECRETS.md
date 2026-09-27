@@ -246,6 +246,53 @@ The Ansible `k8s-secrets` role (Phase 10 in `site.yml`) creates Kubernetes secre
 from pass after the cluster is running. It runs on `localhost` and uses
 `~/.kube/config-rbx` (fetched by the `k3s-server` role).
 
+For a production Robson Binance credential rotation, create a system-generated
+HMAC key in Binance API Management. Restrict it to the verified outbound IPv4
+addresses of every node where `robsond` may be scheduled. Enable Reading, Spot
+& Margin Trading, Futures, and Universal Transfer; keep Withdrawals disabled.
+Re-verify the live node egress addresses instead of copying a historical
+allowlist.
+
+Store the complete replacement pair interactively in `pass`:
+
+```bash
+pass insert rbx/robson/binance-api-key
+pass insert rbx/robson/binance-api-secret
+```
+
+The Binance values are sourced directly from `pass`; do not edit
+`bootstrap/ansible/group_vars/all/vault.yml`. Reconcile the production Secret
+with the scoped tag:
+
+```bash
+ansible-playbook bootstrap/ansible/bootstrap-k8s-secrets-only.yml \
+  -i bootstrap/ansible/inventory/hosts.yml \
+  --tags robson-prod-secret
+```
+
+Use that tag by itself. The role fails before reading application secrets if
+`robson-prod-secret` is requested together with any additional tag.
+
+This scoped tag reads the production Robson database password, tenant ID,
+Binance credentials, and legacy API token from their existing `pass` entries,
+then reconstructs `robsond-secret`. Before reading those values, it verifies the
+immutable production-cluster identity marker. It also fails closed when the
+existing tenant ID is unavailable, a value is empty or malformed, or the
+candidate Binance key matches the key already deployed. `robsond-secret` is the
+only Kubernetes Secret it writes. Do not run the unfiltered role for a
+single-service rotation, and do not patch the Kubernetes Secret directly.
+
+Environment-backed Secret values reach `robsond` only after a separately
+authorized restart or rollout. Keep the account flat, restart the Deployment,
+then verify startup reconciliation, advancing reconciliation metrics, and
+signed Binance access with the replacement key; `/readyz` alone is not proof
+of exchange authentication. Confirm the replacement key identity in Binance
+API Management before revoking anything. For a planned rotation, revoke the
+superseded key after that validation. For a suspected credential exposure,
+revoke it promptly and never restore it as a rollback; accept a brief
+authentication outage while the account is flat if the replacement is not
+ready yet.
+
 Secrets created per namespace:
 
 | Namespace | Secret name | Keys | pass source |
