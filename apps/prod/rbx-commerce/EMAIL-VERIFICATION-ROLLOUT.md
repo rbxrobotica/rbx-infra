@@ -1,58 +1,68 @@
 # Satwake buyer email verification rollout
 
-The Commerce code defaults `SATWAKE_EMAIL_VERIFICATION_REQUIRED` to off. This
-configuration PR mirrors an already prepared Comms service key into the
-Commerce namespace and exposes it to the pod. It does not activate the public
-checkout gate. The Commerce ArgoCD Application has auto-sync/self-heal, so
-merging this PR can immediately roll the Deployment.
+The Commerce code defaults `SATWAKE_EMAIL_VERIFICATION_REQUIRED` to off. Infra
+#281 already mirrored the Comms service key into Commerce and exposed it to the
+pod. The public checkout gate remains off: the production Commerce Deployment
+does not set `SATWAKE_EMAIL_VERIFICATION_REQUIRED`. The Commerce ArgoCD
+Application has auto-sync/self-heal, so a future activation PR can immediately
+roll the Deployment.
+
+## Verified checkpoint, 2026-09-26
+
+- Production Commerce API and web Deployments were each 2/2. Commerce references
+  `COMMS_API_URL` and `COMMS_SERVICE_API_KEY` from `rbx-commerce-secrets`.
+  Comms was 2/2 with `POSTMARK_SERVER_TOKEN` and `COMMS_SERVICE_KEY` referenced
+  from its Secrets. These checks establish wiring, not provider delivery.
+- Each ready Comms pod was reached separately by localhost port-forward. For
+  `POST /api/v1/outbound/satwake-email-code` with the invalid body `{}`, no key
+  returned HTTP 401 and the existing Commerce service key returned HTTP 422.
+  No recipient or code was supplied, so the handler did not call Postmark. The
+  key was held only in process memory and its value was not logged or printed.
+- The Comms #288 image and Commerce database migrations `000017`–`000023` are
+  deployed. Prior local Asaas sandbox rehearsal confirmed one fictitious Pix
+  payment, paid entitlement, buyer claim and an idempotent `edition.viewed`.
+  It did not test a remote provider callback or a delivered verification email.
+- The cluster Commerce sandbox still has an inert `COMMS_API_URL` of
+  `http://127.0.0.1:1`; it lacks its public tenant, `ALTCHA_SECRET`, dedicated
+  identity and schema. Key mirrors alone do not make this a live email/checkout
+  test environment. Do not point it at production Comms as a shortcut.
+
+The next gates are a controlled email sink or explicitly approved test email,
+browser challenge and recovery against an isolated Commerce instance, provider
+callback and reconciliation, and a separately approved activation of the flag.
 
 ## Dependencies and order
 
-1. Merge the direct-deploy release gates before merging buyer-facing code:
-   Commerce #52, Market Briefing #13, Briefing BTC #5, and Systems Frontend
-   #100. Each merge and later image pin needs its own approval.
-2. Merge and deploy Comms #19. Confirm that its service-key-protected email
-   endpoint returns Postmark acceptance in an isolated test. A 202 is not
-   proof of mailbox delivery.
-3. Merge Commerce #50 and then #53. Review and merge Commerce #54 and #55
-   before promoting the Commerce image used for any Asaas exercise. The
-   payment owner must approve #55's change to the first charge due date for
-   new Pix, boleto and BRL card subscriptions. Apply migration `000023` under
-   a separate production-migration approval. Deploy the new Commerce image
-   with the verification flag still off.
-4. **Before merging this mapping PR**, under a separate production-secret
-   approval, run the narrow operation prepared by the Satwake Commerce key
-   source PR. It patches only `COMMS_SERVICE_API_KEY` in the source
-   `rbx-ia-br/rbx-commerce-secrets`; confirm key presence without printing it.
-   Do not run the broad `k8s-secrets` role here: its current Comms source task
-   omits the active Meta keys. Confirm those Meta keys and Comms health remain
-   intact. Once the source key exists, a specifically approved merge of this
-   mapping PR lets ExternalSecret sync it and ArgoCD roll Commerce. Verify
-   ExternalSecret readiness and the new Commerce pod before proceeding.
-   Before enabling the flag, check the copied key against **each running
-   Comms replica**, not only the Secret object: port-forward to each ready
-   Comms pod and send `POST /api/v1/outbound/satwake-email-code` with the
-   Commerce key and JSON `{}`. A matching live service key returns HTTP 422
-   for the invalid body; a missing or stale key returns HTTP 401. Keep the
-   credential in process memory, never in a shell argument, URL, file, or
-   log. This validation does not send an email. If a replica fails, reconcile
-   the Comms key and rollout before activation. Recheck after either service
-   key rotates.
-5. Deploy both buyer interfaces: the satwake landing email-verification PR and
-   the institutional frontend email-verification PR. Verify the same opaque
-   challenge ID passes through start, verify, checkout, and recovery.
+1. The direct-deploy release gates in Commerce #52, Market Briefing #13,
+   Briefing BTC #5 and Systems Frontend #100 were merged before buyer-facing
+   code. Their later image pins remain separate deployment decisions.
+2. Comms #19 and the newer Comms #288 image were deployed. The key check above
+   passed, but the service-key-protected email endpoint still needs an
+   explicitly approved positive Postmark test and mailbox observation. A 202
+   is provider acceptance, not proof of mailbox delivery.
+3. Commerce #50, #53, #54 and #55 were merged; the corrected Asaas sandbox host
+   and first-charge `nextDueDate` behavior are in the deployed Commerce image.
+   Migration `000023` was applied with the approved production schema window.
+   The email-verification flag remains off.
+4. The narrow source-key patch and Infra #281 rollout are complete. The copied
+   key passed the per-pod 401/422 check described above. Keep the credential in
+   process memory, never in a shell argument, URL, file, or log. Recheck each
+   ready replica after either service key rotates or Comms rolls again. Do not
+   run the broad `k8s-secrets` role merely for this key: its Comms source task
+   must preserve the active Meta credentials.
+5. The landing and institutional frontend email-verification code is merged,
+   but their new images have not both been promoted. Deploy both under their
+   separate release gates. Verify the same opaque challenge ID passes through
+   start, verify, checkout, and recovery.
 6. Build an isolated integration environment with a disposable PostgreSQL
    database, the branch Commerce and Comms binaries, a test email sink, and
-   Asaas HTTP fixtures. The existing `rbx-commerce-sandbox` namespace does
-   **not** have `ALTCHA_SECRET`, the Comms service key or the public tenant
-   contract, so it cannot serve as this gate without another approved
-   configuration change. The image used for the Asaas sandbox exercise must
-   contain Commerce #54, which corrects the sandbox API host to
-   `api-sandbox.asaas.com`; the previous host returned HTML to an authenticated
-   read-only API request. It must also contain Commerce #55: Asaas ignored
-   the old `dueDate` property, while its documented
-   `nextDueDate` generated a first charge due on the next Brazilian calendar
-   day. Test one challenge email, a new pending Pix,
+   Asaas HTTP fixtures. The existing `rbx-commerce-sandbox` namespace cannot
+   serve as this gate yet: its URL is deliberately inert, and its public
+   tenant, `ALTCHA_SECRET`, dedicated identity and schema are not prepared.
+   Its Comms key mirrors do not change that. The image used for the Asaas
+   sandbox exercise contains Commerce #54, which corrects the sandbox API host
+   to `api-sandbox.asaas.com`, and #55, which uses `nextDueDate` for the first
+   charge. Test one challenge email, a new pending Pix,
    idempotent retry, a lost-browser recovery, wrong-code/expired-code limits,
    and a paid or changed Asaas invoice that refuses recovery. Check that the
    email address and code do not appear in request logs or Comms persistence.
