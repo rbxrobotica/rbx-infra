@@ -34,6 +34,33 @@ This overlay runs the [Comms sandbox email sink](https://github.com/rbxrobotica/
   No positive dispatch, operator claim, email, Commerce URL cutover, provider
   callback, or buyer checkout occurred in this rollout.
 
+## Controlled diagnostic and local rehearsal on 2026-09-27
+
+- Under separate operator approval, a temporary BusyBox container joined the
+  **real sink pod's** network namespace. A control request from the Commerce
+  pod reached its own internal `/health` endpoint (200); the diagnostic
+  container's request to that same Service was refused and exited with code 1.
+  The diagnostic container terminated. Only the sink pod was then deleted;
+  its Deployment recreated a ready 1/1 pod with zero ephemeral containers and
+  zero restarts. Commerce remained 1/1 with
+  `COMMS_API_URL=http://127.0.0.1:1`, and Argo remained `Synced/Healthy`.
+  This probes one harmless destination from the actual pod network namespace
+  and supports enforcement of the configured deny-all egress policy.
+- A local operator port-forward to that replacement pod exercised the sink
+  with the reserved address `buyer@example.invalid`. The two sandbox keys
+  were read into process memory from their separate target Secrets without
+  printing them. A randomly generated six-digit code was accepted by dispatch
+  (202); a wrong operator key returned 401 without consuming it; one authorized
+  claim returned the same code (200); a second claim returned 404. All four
+  responses had `Cache-Control: no-store`. The code and keys were not printed,
+  and the port-forward was terminated. The sink remained ready with no logs
+  or restarts observed.
+- This is evidence for the **isolated sink**, not for a Commerce email
+  challenge, real mailbox delivery, provider callback, browser checkout, or
+  buyer access. Do not cut Commerce over from its inert URL until the schema,
+  sandbox tenant, credential mapping, and image gates in Infra #282/#286 pass
+  under their separate approvals.
+
 ## Reconciliation gates for future changes
 
 `rbx-commerce-sandbox` is an Argo CD Application with automated sync. The initial merge deployed the sink but did **not** route Commerce to it. For further changes to this workload, obtain exact deployment approval and recheck the applicable gates below before merge.
