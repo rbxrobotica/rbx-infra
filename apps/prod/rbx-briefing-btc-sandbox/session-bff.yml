@@ -57,12 +57,7 @@ spec:
             - name: RBX_COMMERCE_TOKEN_ENDPOINT
               value: https://auth.merovelis.com/oauth/v2/token
             - name: RBX_COMMERCE_SCOPES
-              value: openid service:commerce.read service:commerce.entitlement.claim
-            - name: RBX_COMMERCE_TOKEN_EXCHANGE_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: rbx-briefing-btc-sandbox-oidc
-                  key: RBX_SESSION_BFF_CLIENT_ID
+              value: openid urn:zitadel:iam:org:projects:roles
             # No policy decision until the gateway is reviewed for this
             # sandbox tenant; the loopback URL intentionally fails closed.
             - name: RBX_AUTHZ_GATEWAY_URL

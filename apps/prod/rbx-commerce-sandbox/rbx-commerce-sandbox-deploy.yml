@@ -9,8 +9,8 @@ metadata:
     app.kubernetes.io/component: api
     app.kubernetes.io/part-of: rbx-commerce
 spec:
-  # Temporary GitOps hold for the separately approved sandbox-only schema
-  # bootstrap. Restore to one replica only after tracker/owner checks pass.
+  # Preserve the approved schema hold while credentials and image are staged.
+  # Restoring the API needs a separate, reviewed deployment decision.
   replicas: 0
   selector:
     matchLabels:
@@ -42,6 +42,29 @@ spec:
               # Permanent fail-closed baseline. A separate approved cutover
               # may point to the isolated sandbox sink after it is ready.
               value: "http://127.0.0.1:1"
+            - name: COMMS_SERVICE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-sandbox-secrets
+                  key: COMMS_SERVICE_API_KEY
+            - name: ALTCHA_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-sandbox-secrets
+                  key: ALTCHA_SECRET
+            # Use the exact UUIDv5 derived from the dedicated sandbox BFF
+            # service token subject. Never use a random or production tenant.
+            - name: COMMERCE_PUBLIC_TENANT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-sandbox-secrets
+                  key: COMMERCE_PUBLIC_TENANT_ID
+            # Commerce #78 maps only two signed roles from this isolated
+            # ZITADEL project; it refuses a different or additional audience.
+            - name: OIDC_ALLOWED_AUDIENCES
+              value: "392558889029076638"
+            - name: OIDC_ZITADEL_ROLE_PROJECT_ID
+              value: "392558889029076638"
             - name: ASAAS_ENV
               value: "sandbox"
             - name: ASAAS_API_KEY

@@ -81,11 +81,17 @@ def verify_preparation(contract: dict, manifests: list[dict]) -> None:
     require(client["app_type"] == "OIDC_APP_TYPE_USER_AGENT"
             and client["auth_method"] == "OIDC_AUTH_METHOD_TYPE_NONE"
             and client["response_types"] == ["OIDC_RESPONSE_TYPE_CODE"]
-            and set(client["grant_types"]) == {
-                "OIDC_GRANT_TYPE_AUTHORIZATION_CODE", "OIDC_GRANT_TYPE_TOKEN_EXCHANGE"}
+            and client["grant_types"] == ["OIDC_GRANT_TYPE_AUTHORIZATION_CODE"]
             and client["pkce_method"] == "S256", "unexpected public PKCE contract")
     require(machine["authentication"] == "private_key_jwt", "unexpected machine auth")
-    require(machine["project_grant_role_keys"] == [], "unexpected project roles")
+    require(machine["access_token_type"] == "ACCESS_TOKEN_TYPE_JWT",
+            "sandbox machine user must issue JWT access tokens")
+    require(machine["requested_scopes"] == [
+        "openid", "urn:zitadel:iam:org:projects:roles"],
+        "unexpected machine scopes")
+    require(machine["project_grant_role_keys"] == [
+        "service:commerce.read", "service:commerce.entitlement.claim"],
+        "unexpected sandbox Commerce roles")
     require(machine["source_properties"] == [
         "RBX_COMMERCE_CLIENT_ID", "RBX_COMMERCE_MACHINE_KEY_JSON",
         "RBX_COMMERCE_AUDIENCE"], "unexpected Commerce credential properties")
@@ -138,9 +144,8 @@ def verify_preparation(contract: dict, manifests: list[dict]) -> None:
             env_value(bff, "RBX_SESSION_CSRF_COOKIE_NAME"), "CSRF cookie mismatch")
     require("sandbox" in env_value(web, "RBX_SESSION_COOKIE_NAME"),
             "session cookie is not sandbox-specific")
-    require(bff["RBX_COMMERCE_TOKEN_EXCHANGE_CLIENT_ID"]["valueFrom"]["secretKeyRef"] == {
-        "name": client["source_secret"], "key": client["source_property"]},
-        "token-exchange client ID source drift")
+    require("RBX_COMMERCE_TOKEN_EXCHANGE_CLIENT_ID" not in bff,
+            "public sandbox client must not authorize machine-token exchange")
     bff_container = deployments["rbx-briefing-btc-sandbox-session-bff"]["spec"]["template"]["spec"]["containers"][0]
     require(bff_container["image"].startswith("ghcr.io/rbxrobotica/rbx-session-bff:sha-")
             and "@sha256:" in bff_container["image"],
