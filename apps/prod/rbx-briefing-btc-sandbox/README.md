@@ -26,12 +26,15 @@ are outside this overlay.
 
 ## Preconditions for a later activation PR
 
-1. Provision a dedicated ZITADEL public PKCE client with an exact HTTPS
+1. Verify the dedicated ZITADEL public PKCE client with the exact HTTPS
    callback on the chosen sandbox host at
-   `/briefing-btc/api/auth/callback`. Provision a dedicated sandbox Commerce
-   service account with `service:commerce.read` and
-   `service:commerce.entitlement.claim`. Verify the actual issued service
-   token's `sub`. Record it in
+   `/briefing-btc/api/auth/callback`, and the dedicated sandbox Commerce
+   machine user granted only `service:commerce.read` and
+   `service:commerce.entitlement.claim` as project roles. The issued JWT
+   contained those signed roles but no OAuth `scope`/`scp` claim. Before
+   activation, Commerce must validate the dedicated project audience and map
+   only its verified role claim to the existing scope checks. The token's
+   verified `sub` is recorded in
    `rbx/identity/session-bff-commerce-sandbox/service-subject`, and derive
    `COMMERCE_PUBLIC_TENANT_ID` with the two UUIDv5 operations in
    `rbx-commerce/internal/middleware/auth.go`. The tenant must be nonzero,
