@@ -34,3 +34,12 @@ labels:
       app.kubernetes.io/part-of: robson
       environment: production
     includeSelectors: false
+
+patches:
+  - target:
+      kind: Deployment
+      name: robsond
+    patch: |-
+      - op: add
+        path: /spec/template/metadata/annotations/robson.rbx.ia~1config-revision
+        value: legacy-position-monitor-disabled-v1

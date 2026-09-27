@@ -28,7 +28,6 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "8080"
         prometheus.io/path: "/metrics"
-        robson.rbx.ia/config-revision: "legacy-position-monitor-disabled-v1"
     spec:
       serviceAccountName: robsond
       imagePullSecrets:
