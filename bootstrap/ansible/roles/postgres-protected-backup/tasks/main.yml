@@ -40,9 +40,9 @@
     group: root
     mode: "{{ item.mode }}"
   loop:
-    - { path: /root/.config/rclone, mode: "0700" }
-    - { path: /var/backups/postgres-protected, mode: "0700" }
-    - { path: /var/lib/node-exporter/textfile, mode: "0755" }
+    - {path: /root/.config/rclone, mode: "0700"}
+    - {path: /var/backups/postgres-protected, mode: "0700"}
+    - {path: /var/lib/node-exporter/textfile, mode: "0755"}
 
 - name: Materialize dedicated backup rclone config
   ansible.builtin.template:
