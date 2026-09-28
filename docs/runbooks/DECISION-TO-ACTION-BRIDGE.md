@@ -1,115 +1,143 @@
-# Decision-to-Action Bridge: FlightDeck → Public Presence → Maestro → Corbetti
+# Decision-to-Action Bridge: Flight Deck, Public Presence, Maestro and Corbetti
 
-**Owner:** rbx-infra (GitOps) with rbx-flightdeck, rbx-public-presence, rbx-maestro.
-**Governance:** strategos-core ADR-0010 §11 (command by reference), rbx-governance ADR-0015
-and ADR-0500, rbx-flightdeck ADR 0010, rbx-maestro ADR-0006.
+**Owner:** rbx-infra (GitOps), with rbx-flightdeck, rbx-public-presence and
+rbx-maestro.
 
-## What this chain is
+**Governance:** rbx-governance ADR-0015 and ADR-0614, rbx-flightdeck ADR 0010,
+rbx-maestro ADR-0006 and ADR-0007. strategos-core ADR-0010 section 11 is Draft
+context, not ratified authority.
 
-Strategos decides direction and never admits work. FlightDeck plans the week and holds
-the limited authorization. Public Presence materializes content and creative jobs.
-Maestro admits missions. Corbetti executes them repository-bound and opens PRs.
-Outcomes flow back as evidence.
+## Responsibility chain
 
+Strategos decides direction and never admits work. Flight Deck plans the week,
+records the Action and holds the bounded standing authorization. Public Presence
+materializes content and creative jobs, imports outputs, applies owner-side
+policy and owns publication truth. Maestro admits and activates immutable
+Missions. Corbetti executes repository work and opens pull requests. Each owner
+keeps its own evidence.
+
+```text
+Flight Deck  -- source event and materialization --> Public Presence
+Flight Deck  -- V2 admission and activation ------> Maestro
+Corbetti     -- claim, heartbeat and result ------> Maestro
+Flight Deck  -- result projection and reconcile --> Maestro
+Flight Deck  -- delivery or failure --------------> Public Presence
+Public Presence -- outbox and receipt ------------> channel adapter
 ```
-FlightDeck  --(source event, HTTPS, PUBLIC_PRESENCE_SERVICE_KEY)-->  Public Presence API
-FlightDeck  --(V2 admission, HTTPS, MAESTRO_ADMIT_KEY)------------->  Maestro (dispatch_blocked=true)
-CronJob     --(POST, PUBLIC_PRESENCE_WORKER_KEY)------------------->  FlightDeck /internal/workers/public-presence
-Corbetti    --(GET /leases/next every 30 s, runner key)------------>  Maestro
-```
 
-## State found on 2026-09-23 (why this runbook exists)
+The repository profile name is routing, not provenance. Capability evidence
+comes from the Corbetti probe and terminal manifest. `SCHEDULED` is a Public
+Presence plan, not evidence that a channel accepted or displayed anything.
 
-| Link | State | Fix in this change set |
-|---|---|---|
-| rbx-public-presence in prod | Namespace empty; ArgoCD stuck on the db-migrate hook because the image tag was a placeholder and `ghcr-pull-secret` was missing | Real image pin; Ansible task for the pull secret |
-| Public Presence API reachability | Cluster-internal only; FlightDeck rejects non-HTTPS URLs | `/api/v1` path rule on `presence.rbx.ia.br` to the API Service |
-| FlightDeck worker endpoint | No caller anywhere | CronJob every 5 minutes |
-| FlightDeck → Public Presence / Maestro config | Not configured in prod (5 env vars absent) | Env and ExternalSecret keys |
-| Maestro Flight Deck ingress | Disabled in prod (`AGENT_LOOP_FLIGHTDECK_KEY` absent) | Env and ExternalSecret; allowlist `rbxrobotica/rbx-creatives`; `MAESTRO_ENVIRONMENT=production` |
-| Corbetti runner | Alive, polling, always 204 (no work) | Nothing to do; work will appear once admission runs |
-| Activation | Not wired anywhere | Deliberately left disabled; request-bound dispatch approval is the next slice (see below) |
+## Repository state after the 2026-09-23 merges
 
-## What this change set does NOT do
+The implementation repositories now contain the complete request-bound slice:
 
-- It does not provision `AGENT_LOOP_FLIGHTDECK_DISPATCH_KEY`. Admission stores every
-  Flight Deck mission as `dispatch_blocked=true`; nothing is activated and the runner
-  keeps receiving 204. rbx-maestro ADR-0006 is explicit that setting keys does not
-  authorize production activation.
-- Activation is **request-bound**, not a Mandato matter. Per the Flight Deck contract
-  (`rbx-flightdeck` `docs/provider-neutral-execution.md`, Autonomy): an approved Action
-  plus a current standing authorization plus a separate dispatch approval for the exact
-  request lets later stages run unattended; Maestro activation resolves that
-  request-bound dispatch approval, and Action approval alone never clears the dispatch
-  block. Strategos and its Mandato only bound the standing authorization; they never
-  activate a Mission. The activation stage (dispatch key, FlightDeck dispatch approval,
-  creative job materialization, result reconciliation, publication) is the next slice.
-- It does not publish anything externally.
-- It does not create any secret value in Git.
+1. Flight Deck writes an immutable intent, admits the blocked request, records a
+   policy decision for an exact fingerprint inside a live authorization,
+   materializes the item and job, activates and reconciles.
+2. Maestro admits and activates with separate credentials, leases atomically,
+   validates capability evidence, projects results without lease credentials and
+   reconciles silent or expired work without inventing runner evidence.
+3. Corbetti probes capabilities before repository mutation, runs the admitted
+   executor in an isolated worktree, applies path and verify policy, opens a pull
+   request and submits one terminal manifest.
+4. Public Presence imports the committed delivery from the repository owner
+   side, verifies hashes and format constraints, settles failure or expiry, and
+   may approve and plan a publication under the projected authorization.
+5. `e2e/decision-to-action/run.sh` proves the four-repository
+   `claude_code_design` degraded-bundle path through `SCHEDULED`. The harness
+   deliberately runs no live channel adapter.
 
-## Owner steps (in order, all outside Git)
+This is code and contract evidence. It is not proof that production has been
+activated.
 
-Steps 1 to 5 happen **before** merging this change set. ArgoCD auto-syncs on merge;
-if the secrets or the pull secret are missing at that moment, FlightDeck and Maestro
-pods fail to start (missing `secretKeyRef` keys) and Public Presence stays blocked on
-the migrate hook.
+## Current production posture
 
-1. **Mint the two new keys and the Maestro copy** (hex only, per SECRETS.md):
-   ```bash
-   openssl rand -hex 32 | pass insert -e rbx/flightdeck/public-presence-worker-key
-   openssl rand -hex 32 | pass insert -e rbx/maestro/flightdeck-key
-   ```
-2. **Extend `rbx-ia-br/rbx-flightdeck-secrets`** with the three new keys. The service key
-   is the existing Public Presence one; the admit key is the value minted above:
-   ```bash
-   kubectl -n rbx-ia-br patch secret rbx-flightdeck-secrets --type=merge -p "$(python3 - <<'PY'
-   import base64, json, subprocess
-   def b(p): return base64.b64encode(subprocess.check_output(['pass','show',p]).strip()).decode()
-   print(json.dumps({"data": {
-     "PUBLIC_PRESENCE_WORKER_KEY": b('rbx/flightdeck/public-presence-worker-key'),
-     "PUBLIC_PRESENCE_SERVICE_KEY": b('rbx/public-presence/service-key'),
-     "MAESTRO_ADMIT_KEY": b('rbx/maestro/flightdeck-key')}}))
-   PY
-   )"
-   ```
-3. **Create `rbx-ia-br/maestro-flightdeck-key`** (same value as `MAESTRO_ADMIT_KEY`):
-   ```bash
-   kubectl -n rbx-ia-br create secret generic maestro-flightdeck-key \
-     --from-literal=key="$(pass show rbx/maestro/flightdeck-key)"
-   ```
-4. **Run the k8s-secrets role** so `ghcr-pull-secret` lands in `rbx-public-presence`
-   (or, as a one-off, copy the Ansible task's `kubectl create secret docker-registry`
-   command by hand; the role is canonical).
-5. **Add `rbx-public-presence` to the `RBX_INFRA_PAT` org-secret repository visibility**
-   (GitHub org settings). Until then every merge to that repo builds images but fails the
-   promote step with `Input required and not supplied: token`, and tags must be bumped by
-   hand as this change set did.
-6. Merge this change set. ArgoCD converges: Public Presence syncs (migration hook, api,
-   web), FlightDeck and Maestro roll to pick up the new env.
+The GitOps state on `main` remains admission-only by construction:
 
-## Verification
+| Surface | Current Git state | Operational consequence |
+| --- | --- | --- |
+| Flight Deck | image `sha-15223abe...`, worker CronJob present | activation code exists |
+| Maestro | image `sha-93bf248f...` | result projection and reconciliation exist |
+| Public Presence | image `sha-9ba13e29...`, before PR 6 | owner-side import and autonomous continuation from PR 6 are not in the pinned image |
+| Dispatch credential | `AGENT_LOOP_FLIGHTDECK_DISPATCH_KEY` and `MAESTRO_DISPATCH_KEY` are absent from manifests | activation fails closed and Corbetti continues to receive no newly activated Flight Deck work |
+| Corbetti capability slice | Ansible role code and contract tests are merged | host application of the role is a separate, owner-gated operation |
+| Channel publication | existing outbox and adapters remain owner controlled | no remote effect is proven by the repository E2E |
+
+Do not describe this state as live autonomous publication. Merging application
+code did not create credentials, apply the Corbetti role, change the Public
+Presence image pin or execute an ArgoCD sync.
+
+## Admission prerequisites
+
+Before changing activation state, verify rather than assume that the admission
+prerequisites from PR 268 were completed:
+
+- Public Presence is healthy and reachable at its HTTPS `/api/v1` ingress;
+- the Flight Deck CronJob can call its purpose-specific worker route;
+- Flight Deck has its Public Presence service key and Maestro admission key;
+- Maestro has the matching Flight Deck admission key and the repository
+  allowlist;
+- the Public Presence namespace has the GHCR pull secret;
+- the image-promotion token can update the rbx-infra pin for
+  rbx-public-presence.
+
+Read-only verification:
 
 ```bash
-export KUBECONFIG=~/.kube/config-rbx
-kubectl get application -n argocd rbx-public-presence rbx-flightdeck rbx-maestro
-kubectl get pods -n rbx-public-presence
-kubectl get externalsecret -n rbx-flightdeck
-kubectl get externalsecret -n rbx-maestro
-kubectl get cronjob -n rbx-flightdeck rbx-flightdeck-public-presence-worker
-# first worker runs: expect {"stage":"idle"} until an Action is approved in FlightDeck
-kubectl logs -n rbx-flightdeck job/$(kubectl get job -n rbx-flightdeck -o name | grep public-presence-worker | tail -1 | cut -d/ -f2)
-# Maestro side: admissions appear as POST .../flightdeck/v2/execution-requests:admit 200
-kubectl logs -n rbx-maestro deploy/rbx-maestro --since=1h | grep 'execution-requests:admit'
+kubectl --kubeconfig <operator-kubeconfig> get application -n argocd rbx-public-presence rbx-flightdeck rbx-maestro
+kubectl --kubeconfig <operator-kubeconfig> get pods -n rbx-public-presence
+kubectl --kubeconfig <operator-kubeconfig> get externalsecret -n rbx-flightdeck
+kubectl --kubeconfig <operator-kubeconfig> get externalsecret -n rbx-maestro
+kubectl --kubeconfig <operator-kubeconfig> get cronjob -n rbx-flightdeck rbx-flightdeck-public-presence-worker
 ```
 
-A worker response of `503 Public Presence worker is disabled` means one of the three
-FlightDeck env vars is still missing. `401 Unauthorized` means the CronJob key and the
-FlightDeck key differ. Maestro `E-INVALID-FLIGHTDECK-V2: target_environment is not
-enabled` means `MAESTRO_ENVIRONMENT` and `MAESTRO_TARGET_ENVIRONMENT` differ.
+These commands inspect state only. Any secret change, Ansible application,
+manifest merge, ArgoCD sync or production canary needs its own current operator
+authorization.
 
-## Image provenance note
+## Activation promotion order
 
-`TestVerifyPassClaimsAcrossReplicas` in rbx-public-presence `internal/publishing` exposed
-a real race between replicas (reproduced 7 of 10 runs), fixed in commit `e6ca605`
-("reject stale verification claims"). The pin in this change set is `9ba13e2`, the merge
-commit that contains that fix. Do not pin `38d9c91` or older.
+Activation is one later, separately reviewed GitOps change. Its safe order is:
+
+1. Build and verify the rbx-public-presence image containing PR 6, then prepare
+   its immutable image pin.
+2. Prepare one distinct dispatch credential and project it to Maestro as
+   `AGENT_LOOP_FLIGHTDECK_DISPATCH_KEY` and to Flight Deck as
+   `MAESTRO_DISPATCH_KEY`. Do not reuse the admission credential.
+3. Apply the current Corbetti agent-workbench role and verify the capability
+   report contract on the host.
+4. Keep the first production authorization narrow: one identity, profile,
+   format, repository and source commit, one intent, short validity and no paid
+   budget increase.
+5. Rehearse through repository delivery and `SCHEDULED` with the channel remote
+   effect disabled or directed to an explicitly admitted non-live target.
+6. Reconcile every Mission, creative job and publication row and verify that
+   the repository PR, imported hashes, QA record and authorization fingerprint
+   agree.
+7. Admit the live channel effect only as a separate operator decision after the
+   rehearsal evidence is accepted. Completion is the owner-side verified or
+   attested receipt, never the runner result or `SCHEDULED` state.
+
+## Stop conditions
+
+Stop activation and preserve evidence when any of these occurs:
+
+- the standing authorization is missing, expired, revoked or exhausted;
+- the request fingerprint or source commit differs at any layer;
+- a required capability is unavailable and no named degraded mode was admitted;
+- a provider name is being used as proof of a capability;
+- imported bytes, hashes, MIME, dimensions, QA or pull request binding disagree;
+- the result is terminal without the corresponding owner evidence;
+- the channel outcome is unknown, a credential challenge appears, or the
+  sender identity does not match the authorization.
+
+An unknown remote effect is reconciled before any retry.
+
+## Historical image provenance
+
+The `sha-9ba13e29...` Public Presence pin includes the fix for the real
+`TestVerifyPassClaimsAcrossReplicas` race from commit `e6ca605`. It does not
+include PR 6. The next pin must include both that fix and the owner-side import
+and autonomy changes; never regress to `38d9c91` or older.
