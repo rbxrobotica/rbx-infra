@@ -1,0 +1,87 @@
+---
+- name: Read dedicated backup S3 access key from pass
+  ansible.builtin.command: pass show rbx/backup/postgres/access-key
+  delegate_to: localhost
+  become: false
+  register: backup_s3_access_key
+  changed_when: false
+  no_log: true
+
+- name: Read dedicated backup S3 secret key from pass
+  ansible.builtin.command: pass show rbx/backup/postgres/secret-key
+  delegate_to: localhost
+  become: false
+  register: backup_s3_secret_key
+  changed_when: false
+  no_log: true
+
+- name: Read workload S3 access key from pass
+  ansible.builtin.command: pass show rbx/s3/access-key
+  delegate_to: localhost
+  become: false
+  register: workload_s3_access_key
+  changed_when: false
+  no_log: true
+
+- name: Refuse a backup credential shared with workloads
+  ansible.builtin.assert:
+    that:
+      - backup_s3_access_key.stdout | trim != workload_s3_access_key.stdout | trim
+      - backup_s3_access_key.stdout | trim | length > 0
+      - backup_s3_secret_key.stdout | trim | length > 0
+    fail_msg: Dedicated backup credentials must exist in pass and differ from the workload S3 key.
+  no_log: true
+
+- name: Ensure protected backup and metrics directories exist
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: /root/.config/rclone, mode: "0700" }
+    - { path: /var/backups/postgres-protected, mode: "0700" }
+    - { path: /var/lib/node-exporter/textfile, mode: "0755" }
+
+- name: Materialize dedicated backup rclone config
+  ansible.builtin.template:
+    src: rclone.conf.j2
+    dest: /root/.config/rclone/postgres-backup.conf
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Install protected backup script
+  ansible.builtin.copy:
+    src: pg-backup-protected.sh
+    dest: /usr/local/sbin/pg-backup-protected.sh
+    owner: root
+    group: root
+    mode: "0750"
+
+- name: Install protected backup systemd units
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/etc/systemd/system/{{ item }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop:
+    - pg-backup-protected.service
+    - pg-backup-protected.timer
+  register: backup_units
+
+- name: Enable daily protected backup timer
+  ansible.builtin.systemd:
+    name: pg-backup-protected.timer
+    enabled: true
+    state: started
+    daemon_reload: "{{ backup_units.changed }}"
+
+- name: Retire legacy cron only after a verified protected restore
+  ansible.builtin.file:
+    path: /etc/cron.d/pg-backup-s3
+    state: absent
+  when: retire_legacy_postgres_backup_cron | default(false) | bool
