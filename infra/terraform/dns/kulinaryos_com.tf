@@ -29,9 +29,9 @@ resource "powerdns_record" "kulinaryos_com_a" {
   zone = powerdns_zone.kulinaryos_com.name
   name = "kulinaryos.com."
   type = "A"
-  # Food Process DigitalOcean Traefik edge for the restored WordPress site.
+  # Kulinaryos PROD cluster (kulinaryos-prod-k3s-fra1-01).
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "app_kulinaryos_com_a" {
@@ -39,7 +39,7 @@ resource "powerdns_record" "app_kulinaryos_com_a" {
   name    = "app.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["116.203.21.141"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "erp_kulinaryos_com_a" {
@@ -55,7 +55,7 @@ resource "powerdns_record" "adm_kulinaryos_com_a" {
   name    = "adm.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "crm_kulinaryos_com_a" {
@@ -63,7 +63,7 @@ resource "powerdns_record" "crm_kulinaryos_com_a" {
   name    = "crm.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "social_kulinaryos_com_a" {
@@ -71,7 +71,7 @@ resource "powerdns_record" "social_kulinaryos_com_a" {
   name    = "social.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "ficgara_kulinaryos_com_a" {
@@ -79,7 +79,7 @@ resource "powerdns_record" "ficgara_kulinaryos_com_a" {
   name    = "ficgara.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "digitalmenu_kulinaryos_com_a" {
@@ -87,7 +87,15 @@ resource "powerdns_record" "digitalmenu_kulinaryos_com_a" {
   name    = "digitalmenu.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
+}
+
+resource "powerdns_record" "api_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "api.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "sito_kulinaryos_com_a" {
@@ -95,12 +103,13 @@ resource "powerdns_record" "sito_kulinaryos_com_a" {
   name    = "sito.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 # --- Kulinaryos environments ---
 #
-# Two isolated Food Process clusters. PROD serves the real names above; UAT
+# Two isolated Food Process clusters. PROD (kulinaryos_prod_ingress_ip) serves
+# the real names above; UAT
 # serves the same names prefixed with "test." and runs on its own cluster,
 # database and repositories. The UAT cluster is the existing k3s Droplet
 # (hostname kulinaryos-social-prod-fra1-01, a historical name).
@@ -123,7 +132,9 @@ import {
 }
 
 locals {
-  kulinaryos_uat_ingress_ip = "157.230.125.23"
+  # PROD: kulinaryos-prod-k3s-fra1-01, cut over 2026-09-27.
+  kulinaryos_prod_ingress_ip = "165.245.211.178"
+  kulinaryos_uat_ingress_ip  = "157.230.125.23"
 
   kulinaryos_uat_hosts = toset([
     "test.app",
