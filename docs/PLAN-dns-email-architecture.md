@@ -622,7 +622,11 @@ Eagle (167.86.92.97) does NOT have Postgres access — it uses bind backend.
 
 ### Backup
 
-Daily `pg_dump` of `pdns` database on jaguar. 30-day retention.
+Superseded by ADR-0012: the pdns database is covered by the
+pgBackRest whole-cluster backup on jaguar (continuous WAL archiving,
+better RPO than the daily dump originally planned here). The original
+plan was: daily `pg_dump` of `pdns` database on jaguar, 30-day
+retention. Do not implement it.
 
 ### Monitoring
 
@@ -674,7 +678,7 @@ Daily `pg_dump` of `pdns` database on jaguar. 30-day retention.
 - [ ] SPF/DKIM/DMARC validation for all domains
 - [ ] `kubectl get nodes` — correct topology (tiger, altaica, sumatrae, jaguar)
 - [ ] `kubectl get pods -A` — no CrashLoopBackOff
-- [ ] pg_dump cron job configured on jaguar for pdns database
+- [x] pg_dump cron job for pdns: superseded by ADR-0012 (pgBackRest whole-cluster backup)
 - [ ] Monitor DMARC reports for 72h
 - [ ] Monitor Postmark bounce/delivery rates
 - [ ] Remove any stale DNS records pointing to old pantera/eagle IPs as k3s nodes

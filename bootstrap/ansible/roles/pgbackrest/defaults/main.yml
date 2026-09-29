@@ -1,0 +1,40 @@
+---
+# pgBackRest for the shared Postgres cluster on jaguar (ADR-0012).
+# Installed from the Ubuntu archive (2.50+ has SFTP support) and held;
+# upgrades are deliberate PRs.
+
+pgbackrest_stanza: "jaguar"
+pgbackrest_pg_version: "16"
+pgbackrest_pg_path: "/var/lib/postgresql/{{ pgbackrest_pg_version }}/main"
+pgbackrest_pg_conf_d: "/etc/postgresql/{{ pgbackrest_pg_version }}/main/conf.d"
+pgbackrest_pg_port: 5432
+
+# Local repository (runbook phase 1).
+pgbackrest_repo1_path: /var/lib/pgbackrest
+pgbackrest_repo1_retention_full: 2
+pgbackrest_spool_path: /var/spool/pgbackrest
+
+# Cipher passphrase is read from the operator's pass store at deploy
+# time and written only into the postgres-owned 0600 config on the
+# host. Create it once with: pass generate rbx/backup/pgbackrest-cipher 64
+pgbackrest_cipher_pass_key: "rbx/backup/pgbackrest-cipher"
+
+# Off-site repository (runbook phase 4; the off-site phase of
+# ADR-0012). Stays disabled until the rsync.net Zurich account exists.
+# Values come from the account welcome e-mail; only references, never
+# credentials, live in git. The fingerprint is the lowercase HEX sha256
+# of the host key (NOT the SHA256:base64 form; see the runbook).
+pgbackrest_offsite_enabled: false
+pgbackrest_offsite_host: ""
+pgbackrest_offsite_host_user: ""
+pgbackrest_offsite_repo_path: ""
+pgbackrest_offsite_retention_full: 4
+pgbackrest_offsite_host_fingerprint: ""
+
+# Backup schedule (systemd timers). Off-site repo2 runs its own units
+# on the same cadence, one hour later, because pgBackRest backs up one
+# repository per invocation.
+pgbackrest_full_on_calendar: "Sun *-*-* 03:00:00"
+pgbackrest_diff_on_calendar: "Mon..Sat *-*-* 03:00:00"
+pgbackrest_offsite_full_on_calendar: "Sun *-*-* 04:00:00"
+pgbackrest_offsite_diff_on_calendar: "Mon..Sat *-*-* 04:00:00"
