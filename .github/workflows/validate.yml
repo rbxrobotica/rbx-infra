@@ -24,6 +24,9 @@ jobs:
         run: |
           yamllint .
 
+      - name: Validate scoped production Robson Secret contract
+        run: python3 scripts/validate-robson-prod-secret-scope.py
+
       - name: Setup kubeconform
         # Authenticated download: anonymous release downloads from shared
         # Actions runner IPs get rate limited (HTTP 429 with a tiny body,

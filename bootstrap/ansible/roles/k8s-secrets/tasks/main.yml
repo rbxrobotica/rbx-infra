@@ -20,17 +20,30 @@
 # Preflight checks
 # ---------------------------------------------------------------------------
 
+- name: Require exclusive scoped production rotation tag
+  assert:
+    that:
+      - ansible_run_tags | length == 1
+      - ansible_run_tags | first == 'robson-prod-secret'
+    fail_msg: >-
+      Scoped production rotation requires --tags robson-prod-secret with no
+      additional requested tags.
+  when: "'robson-prod-secret' in ansible_run_tags"
+  tags: [robson-prod-secret]
+
 - name: Check pass is available
   command: which pass
   changed_when: false
   register: pass_check
   failed_when: pass_check.rc != 0
+  tags: [robson-prod-secret]
 
 - name: Check kubectl is available
   command: which kubectl
   changed_when: false
   register: kubectl_check
   failed_when: kubectl_check.rc != 0
+  tags: [robson-prod-secret]
 
 # ---------------------------------------------------------------------------
 # Populate kubeconfig from pass (pass is the source of truth)
@@ -41,6 +54,7 @@
     path: "{{ kubeconfig_path | dirname }}"
     state: directory
     mode: "0700"
+  tags: [robson-prod-secret]
 
 - name: Populate kubeconfig from pass
   shell: pass show {{ pass_kubeconfig_key }} > {{ kubeconfig_path }}
@@ -48,11 +62,33 @@
     executable: /bin/bash
   changed_when: false
   no_log: true
+  tags: [robson-prod-secret]
 
 - name: Restrict kubeconfig permissions
   file:
     path: "{{ kubeconfig_path }}"
     mode: "0600"
+  tags: [robson-prod-secret]
+
+- name: Read production cluster identity marker
+  command: >-
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    get namespace kube-system
+    -o jsonpath={.metadata.uid}
+  changed_when: false
+  register: production_cluster_identity
+  no_log: true
+  tags: [robson-prod-secret]
+
+- name: Validate production cluster identity marker
+  assert:
+    that:
+      - production_cluster_identity.stdout | trim == rbx_cluster_kube_system_uid
+    fail_msg: >-
+      Refusing to read or apply production secrets because the kubeconfig does
+      not identify the expected production cluster.
+  no_log: true
+  tags: [robson-prod-secret]
 
 # ---------------------------------------------------------------------------
 # Read secrets from pass
@@ -69,6 +105,7 @@
   changed_when: false
   register: robson_db_password_result
   no_log: true
+  tags: [robson-prod-secret]
 
 - name: Try to read robsond projection-tenant-id from pass
   command: pass show {{ pass_robson_tenant_id_key }}
@@ -76,6 +113,17 @@
   register: tenant_id_existing
   failed_when: false
   no_log: true
+  tags: [robson-prod-secret]
+
+- name: Require existing projection-tenant-id for scoped production rotation
+  assert:
+    that:
+      - tenant_id_existing.rc == 0
+    fail_msg: >-
+      Scoped production secret rotation refuses to generate a new projection tenant ID.
+      Restore {{ pass_robson_tenant_id_key }} in pass before retrying.
+  when: "'robson-prod-secret' in ansible_run_tags"
+  tags: [robson-prod-secret]
 
 - name: Generate and store new projection-tenant-id (first bootstrap only)
   shell: |
@@ -84,8 +132,11 @@
     printf '%s' "$NEW_UUID" | pass insert --echo {{ pass_robson_tenant_id_key }} >/dev/null 2>&1
     echo "$NEW_UUID"
   register: tenant_id_new
-  when: tenant_id_existing.rc != 0
+  when:
+    - tenant_id_existing.rc != 0
+    - "'robson-prod-secret' not in ansible_run_tags"
   no_log: true
+  tags: [robson-prod-secret]
 
 - name: Set tenant ID fact
   set_fact:
@@ -95,6 +146,8 @@
         if tenant_id_existing.rc == 0
         else (tenant_id_new.stdout | trim)
       }}
+  no_log: true
+  tags: [robson-prod-secret]
 
 - name: Validate projection-tenant-id is a canonical UUID
   assert:
@@ -104,24 +157,77 @@
       projection-tenant-id in pass ({{ pass_robson_tenant_id_key }}) is not a canonical UUID.
       Fix: pass insert {{ pass_robson_tenant_id_key }} (provide a valid lowercase UUID,
       e.g. output of: cat /proc/sys/kernel/random/uuid)
+  tags: [robson-prod-secret]
 
 - name: Read robsond Binance API key from pass
   command: pass show {{ pass_robson_binance_api_key }}
   changed_when: false
   register: robson_binance_api_key_result
   no_log: true
+  tags: [robson-prod-secret]
 
 - name: Read robsond Binance API secret from pass
   command: pass show {{ pass_robson_binance_api_secret }}
   changed_when: false
   register: robson_binance_api_secret_result
   no_log: true
+  tags: [robson-prod-secret]
 
 - name: Read robsond API token from pass
   command: pass show {{ pass_robson_api_token_key }}
   changed_when: false
   register: robson_api_token_result
   no_log: true
+  tags: [robson-prod-secret]
+
+- name: Validate robsond secret inputs
+  assert:
+    that:
+      - robson_db_password_result.stdout | trim | length > 0
+      - robson_binance_api_key_result.stdout | trim | length > 0
+      - robson_binance_api_secret_result.stdout | trim | length > 0
+      - robson_api_token_result.stdout | trim | length > 0
+      - robson_binance_api_key_result.stdout | trim | regex_search('^[A-Za-z0-9]{64}$')
+      - robson_binance_api_secret_result.stdout | trim | regex_search('^[A-Za-z0-9]{64}$')
+      - "'\n' not in (robson_db_password_result.stdout | trim)"
+      - "'\n' not in (robson_binance_api_key_result.stdout | trim)"
+      - "'\n' not in (robson_binance_api_secret_result.stdout | trim)"
+      - "'\n' not in (robson_api_token_result.stdout | trim)"
+      - "'\r' not in (robson_db_password_result.stdout | trim)"
+      - "'\r' not in (robson_binance_api_key_result.stdout | trim)"
+      - "'\r' not in (robson_binance_api_secret_result.stdout | trim)"
+      - "'\r' not in (robson_api_token_result.stdout | trim)"
+    fail_msg: >-
+      Refusing to apply an empty, multiline, or malformed production Robson
+      secret value.
+  no_log: true
+  tags: [robson-prod-secret]
+
+- name: Read deployed robsond Binance API key for scoped rotation
+  command: >-
+    kubectl --kubeconfig {{ kubeconfig_path }}
+    get secret robsond-secret
+    --namespace {{ robsond_namespace }}
+    -o jsonpath={.data.binance-api-key}
+  changed_when: false
+  register: deployed_robson_binance_api_key
+  no_log: true
+  when: "'robson-prod-secret' in ansible_run_tags"
+  tags: [robson-prod-secret]
+
+- name: Require replacement Binance API key for scoped rotation
+  assert:
+    that:
+      - deployed_robson_binance_api_key.stdout | length > 0
+      - >-
+        (deployed_robson_binance_api_key.stdout | b64decode | trim)
+        != (robson_binance_api_key_result.stdout | trim)
+    fail_msg: >-
+      Scoped production rotation requires a Binance API key that differs from
+      the key currently stored in robsond-secret.
+  no_log: true
+  when: "'robson-prod-secret' in ansible_run_tags"
+  tags: [robson-prod-secret]
 
 # ---------------------------------------------------------------------------
 # Ensure namespace exists
@@ -183,6 +289,7 @@
     ROBSON_API_TOKEN: "{{ robson_api_token_result.stdout | trim }}"
   changed_when: true
   no_log: true
+  tags: [robson-prod-secret]
 
 - name: Create ghcr-pull-secret in robson
   shell: |
