@@ -12,6 +12,11 @@ k3s_version: "v1.36.2+k3s1"
 # Tiger public IP — used as TLS SAN and join endpoint for server peers
 k3s_server_ip: "158.220.116.31"
 
+# Cluster identity, used by the k3s-agent preflight. The kube-system namespace
+# UID is created once at cluster birth and never changes, so it distinguishes
+# THIS cluster from any other healthy one a kubeconfig might point at.
+#   kubectl get ns kube-system -o jsonpath='{.metadata.uid}'
+k3s_expected_cluster_uid: "7c54362a-7c64-4d62-a6ec-a14d4843e8a5"
 # Inventory name of the cluster-init server (the one with cluster-init: true).
 # Joining servers use its node-token via hostvars[k3s_init_host]['k3s_token'].
 k3s_init_host: "tiger"
