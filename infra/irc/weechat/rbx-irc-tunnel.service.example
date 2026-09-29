@@ -1,0 +1,13 @@
+[Unit]
+Description=RBXNet IRC tunnel to Corbetti
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/ssh -N -T -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 127.0.0.1:6667:127.0.0.1:6667 corbetti
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
