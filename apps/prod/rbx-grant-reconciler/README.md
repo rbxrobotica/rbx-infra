@@ -16,10 +16,7 @@ open self-registration stops being safe. That is the thing to defend in review.
 
 ## Bring-up order
 
-1. Merge the service in `rbx-identity` so the image is published, then add the
-   `images:` transformer to `kustomization.yml` pinned to that `sha-*` tag.
-   Until that is done this overlay would pull the `:latest` placeholder, which
-   is why the Application must not be synced first.
+1. Done: the image is published and `kustomization.yml` pins `sha-3ee59ab`.
 2. Create the `rbx-grant-reconciler` Secret in `rbx-identity`
    (`RBX_GRANT_RECONCILER_API_TOKEN`, `RBX_GRANT_RECONCILER_SIGNING_KEY`). The
    signing key only exists after step 4, so the first sync uses a placeholder
