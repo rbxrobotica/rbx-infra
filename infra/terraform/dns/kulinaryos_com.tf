@@ -365,11 +365,14 @@ resource "powerdns_record" "kulinaryos_com_mx" {
 }
 
 resource "powerdns_record" "kulinaryos_com_spf" {
-  zone    = powerdns_zone.kulinaryos_com.name
-  name    = "kulinaryos.com."
-  type    = "TXT"
-  ttl     = 3600
-  records = ["\"v=spf1 include:_spf.aruba.it ~all\""]
+  zone = powerdns_zone.kulinaryos_com.name
+  name = "kulinaryos.com."
+  type = "TXT"
+  ttl  = 3600
+  records = [
+    "\"v=spf1 include:_spf.aruba.it ~all\"",
+    "\"brevo-code:a6b2176138b9d0206f816bfb57c2e6de\"",
+  ]
 }
 
 resource "powerdns_record" "kulinaryos_com_dmarc" {
@@ -377,7 +380,7 @@ resource "powerdns_record" "kulinaryos_com_dmarc" {
   name    = "_dmarc.kulinaryos.com."
   type    = "TXT"
   ttl     = 3600
-  records = ["\"v=DMARC1; p=none; adkim=r; aspf=r;\""]
+  records = ["\"v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com; adkim=r; aspf=r;\""]
 }
 
 resource "powerdns_record" "kulinaryos_com_dkim" {
@@ -388,4 +391,22 @@ resource "powerdns_record" "kulinaryos_com_dkim" {
   records = [
     "\"v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoOhAWzBuKQYXU6E3E9efq+DPvtkkvWPg3EtB+BT2cTrMGh6Xy00mXfPi/EzubRpbhHpv3b3k1d65Vyhmpp5O3HzTQyzIqYMMF5iF5y05D5aEux3pj/i1g5LkAOFE0Xdf+wnI8zppP2jP7IV4bwKPr1OnBqOjs8hfBWSEGaCSFD/aVbOdNldHiwS\" \"alzDL38E+IcT0KQB+BdutC2T9B5idcSPaBY57sC4hq31wpBlgNcYpIMDxOQN+E9E+TbgnlJYCOYsD5S0amYFivcJObjSGpdstMBfaM1ox5iEQVpEhLz5cwgohjrMst2us7G9eHZ6p2jR7X+/yTP8ryAAywzMJ5wIDAQAB\"",
   ]
+}
+
+# Brevo transactional email signs with independent selectors. The Aruba DKIM
+# selector above remains in place for mail sent through the existing mailbox.
+resource "powerdns_record" "brevo1_kulinaryos_com_dkim" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "brevo1._domainkey.kulinaryos.com."
+  type    = "CNAME"
+  ttl     = 300
+  records = ["b1.kulinaryos-com.dkim.brevo.com."]
+}
+
+resource "powerdns_record" "brevo2_kulinaryos_com_dkim" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "brevo2._domainkey.kulinaryos.com."
+  type    = "CNAME"
+  ttl     = 300
+  records = ["b2.kulinaryos-com.dkim.brevo.com."]
 }
