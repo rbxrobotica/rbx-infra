@@ -380,7 +380,7 @@ resource "powerdns_record" "kulinaryos_com_dmarc" {
   name    = "_dmarc.kulinaryos.com."
   type    = "TXT"
   ttl     = 3600
-  records = ["\"v=DMARC1; p=none; adkim=r; aspf=r;\""]
+  records = ["\"v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com; adkim=r; aspf=r;\""]
 }
 
 resource "powerdns_record" "kulinaryos_com_dkim" {
