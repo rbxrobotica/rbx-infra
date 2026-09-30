@@ -98,6 +98,14 @@ resource "powerdns_record" "api_kulinaryos_com_a" {
   records = [local.kulinaryos_prod_ingress_ip]
 }
 
+resource "powerdns_record" "auth_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "auth.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_prod_ingress_ip]
+}
+
 resource "powerdns_record" "sito_kulinaryos_com_a" {
   zone    = powerdns_zone.kulinaryos_com.name
   name    = "sito.kulinaryos.com."
