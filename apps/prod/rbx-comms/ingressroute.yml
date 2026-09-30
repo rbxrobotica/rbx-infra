@@ -8,7 +8,9 @@
 # external route. /health has no external route either (Kubernetes probes hit the
 # pod directly); confirm no external uptime monitor depends on it before merging.
 #
-# MERGE GATE (auto-sync applies on merge — every item below precedes the merge):
+# Provider BasicAuth activation gates (Meta uses application token/HMAC auth):
+# Recovery sequence: docs/runbooks/comms-webhook-ingress-recovery.md
+# These legacy-provider prerequisites do not gate an isolated Meta route repair.
 # 1. The two htpasswd Secrets `comms-webhook-basic-auth-postmark` and
 #    `comms-webhook-basic-auth-d360` exist in the rbx-comms namespace AND are
 #    well-formed: Opaque, with a non-empty `users` key holding a valid htpasswd
@@ -75,6 +77,14 @@ spec:
       services:
         - name: rbx-comms
           port: 80
+    # Meta verifies GET tokens and POST HMAC signatures in the application.
+    # Never attach the legacy provider BasicAuth middleware to this route.
+    - match: Host(`api.comms.rbxsystems.ch`) && Path(`/api/webhooks/meta/whatsapp`) && (Method(`GET`) || Method(`POST`))
+      kind: Rule
+      priority: 100
+      services:
+        - name: rbx-comms
+          port: 80
     - match: Host(`api.comms.rbxsystems.ch`) && PathPrefix(`/api/webhooks/postmark/`)
       kind: Rule
       priority: 100
@@ -99,7 +109,7 @@ spec:
       services:
         - name: rbx-comms
           port: 80
-    # --- same five routes for api.comms.rbx.ia.br ---
+    # --- same six routes for api.comms.rbx.ia.br ---
     - match: Host(`api.comms.rbx.ia.br`) && Path(`/api/contact`)
       kind: Rule
       priority: 100
@@ -110,6 +120,14 @@ spec:
         - name: rbx-comms
           port: 80
     - match: Host(`api.comms.rbx.ia.br`) && Path(`/api/altcha-challenge`)
+      kind: Rule
+      priority: 100
+      services:
+        - name: rbx-comms
+          port: 80
+    # Meta verifies GET tokens and POST HMAC signatures in the application.
+    # Never attach the legacy provider BasicAuth middleware to this route.
+    - match: Host(`api.comms.rbx.ia.br`) && Path(`/api/webhooks/meta/whatsapp`) && (Method(`GET`) || Method(`POST`))
       kind: Rule
       priority: 100
       services:
