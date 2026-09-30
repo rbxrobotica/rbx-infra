@@ -37,6 +37,16 @@ spec:
                 secretKeyRef:
                   name: rbx-comms-secrets
                   key: DATABASE_URL
+            - name: POSTMARK_WEBHOOK_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: POSTMARK_WEBHOOK_USERNAME
+            - name: POSTMARK_WEBHOOK_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-contact-secrets
+                  key: POSTMARK_WEBHOOK_PASSWORD
             - name: POSTMARK_SERVER_TOKEN
               valueFrom:
                 secretKeyRef:
