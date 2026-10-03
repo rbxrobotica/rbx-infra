@@ -154,6 +154,7 @@ locals {
 
   kulinaryos_uat_hosts = toset([
     "test.app",
+    "test.prova",
     "test.api",
     "test.crm",
     "test.adm",
