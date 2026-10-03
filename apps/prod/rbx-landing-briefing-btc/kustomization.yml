@@ -1,4 +1,4 @@
-# Isolated Briefing BTC landing page (briefingbtc.merovelis.com).
+# One landing service for the preserved Briefing BTC host and Satwake brand.
 # Spec: rbx-growth marketing/2026-h2-growth/landing-pages/briefing-btc-isolated-lp.md
 ---
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -9,13 +9,15 @@ resources:
   - rbx-landing-briefing-btc-deploy.yml
   - rbx-landing-briefing-btc-svc.yml
   - rbx-landing-briefing-btc-ingress.yml
+  - rbx-landing-satwake-ingress.yml
 labels:
   - pairs:
       app.kubernetes.io/part-of: rbx-landing-briefing-btc
       environment: production
     includeSelectors: false
 images:
-  # Tag promoted by the app repo CI (RBX_INFRA_PAT self-push, issue #168).
-  # Pinned to the bootstrap commit of rbx-landing-briefing-btc (15f6510).
+  # Match Infra #299 so merging this Ingress second cannot restore the old pin.
+  # Deploy #299 first, then merge this PR only after its separate release gate.
   - name: ghcr.io/rbxrobotica/rbx-landing-briefing-btc
-    newTag: sha-8a02318
+    newTag: sha-c6f6b58
+    digest: sha256:43532143771bb5a90f2b8205c2b2faf384f06c78fb7b7ceb50ae770535d3a765
