@@ -1,0 +1,8 @@
+[postgres-backup]
+type = s3
+provider = Other
+access_key_id = {{ backup_s3_access_key.stdout | trim }}
+secret_access_key = {{ backup_s3_secret_key.stdout | trim }}
+endpoint = https://eu2.contabostorage.com
+acl = private
+no_check_bucket = true
