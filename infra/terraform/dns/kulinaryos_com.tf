@@ -42,6 +42,14 @@ resource "powerdns_record" "app_kulinaryos_com_a" {
   records = [local.kulinaryos_prod_ingress_ip]
 }
 
+resource "powerdns_record" "prova_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "prova.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_prod_ingress_ip]
+}
+
 resource "powerdns_record" "erp_kulinaryos_com_a" {
   zone    = powerdns_zone.kulinaryos_com.name
   name    = "erp.kulinaryos.com."
