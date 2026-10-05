@@ -75,6 +75,10 @@ Before unsuspending the 03:30 `America/Sao_Paulo` schedule:
    content or personal data. Record and encrypt a separate restore proof with
    `--artifact-kind restore-proof`. Only then add `restore_tested_at` to an
    enriched receipt; preserve the original runner receipt unchanged.
+   Keep outbound workers disabled during recovery. Before enabling them against
+   a restored database, reconcile in-flight and uncertain messages with provider
+   evidence: restoring an older outbox snapshot can otherwise resend accepted
+   notifications.
 5. Observe the first controller-scheduled Job and its receipt. A manual Job can
    update `lastSuccessfulTime`; that field alone does not prove the schedule ran.
    Confirm CronJob ownership and scheduled timestamp as well.
