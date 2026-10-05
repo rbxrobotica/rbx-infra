@@ -2,6 +2,8 @@
 """Collect aggregate-only Plausible evidence and write a local weekly snapshot.
 
 One bounded SELECT per run: no raw identifiers, paths, query strings or writes.
+The transport must return a complete JSON envelope with matching row count;
+exit status zero alone does not prove kubectl delivered the complete response.
 Unknown deployment dates remain unknown, even when the query succeeds. Pass the
 deployment timestamp for each verified site; omitted sites are never reported as
 zero. For the initially verified Swiss release, use:
@@ -37,13 +39,14 @@ except ImportError:
 
 
 SITE_IDS = {"rbx.ia.br": 1, "rbxsystems.ch": 2}
-QUERY_VERSION = "partnership-minute-aggregate-v1"
+QUERY_VERSION = "partnership-minute-aggregate-v2"
 OFFER_VERSION = "2026-10-05"
 NAMESPACE = "plausible"
 POD = "plausible-clickhouse-0"
 DIMENSIONS = ("locale", "surface", "entry", "destination", "product", "error")
 PARAMETER_NAMES = frozenset({"as_of_epoch", "window_start_epoch", "site_1_start_epoch", "site_2_start_epoch",
                              "site_1_enabled", "site_2_enabled", "offer", "offer_version"})
+RESULT_COLUMNS = ("site", "event", "bucket_start", "bucket_seconds", "count", "watermark", *DIMENSIONS)
 
 
 class CollectionError(Exception):
@@ -133,7 +136,7 @@ def build_query():
         "ORDER BY site, bucket_at, event, " + ", ".join(DIMENSIONS),
         "SETTINGS max_execution_time=20, max_memory_usage=268435456, max_result_bytes=33554432, "
         "max_result_rows=250000, result_overflow_mode='throw', timeout_overflow_mode='throw', max_threads=2",
-        "FORMAT JSONEachRow",
+        "FORMAT JSON",
     ]
     return "\n".join(clauses)
 
@@ -161,10 +164,23 @@ def parse_result(raw, instrumented, as_of):
         raise CollectionError("invalid aggregate result")
     events, watermarks = [], {}
     try:
-        for line in raw.decode("utf-8").splitlines():
-            if not line.strip():
-                continue
-            row = json.loads(line)
+        # FORMAT JSONEachRow cannot distinguish zero rows or a complete-line
+        # prefix from a truncated kubectl exec stream that still exits zero.
+        # The enclosing object and its footer must both arrive before any row
+        # becomes evidence. Reject ClickHouse's exception envelope as failure.
+        envelope = json.loads(raw)
+        if not isinstance(envelope, dict) or "exception" in envelope:
+            raise ValueError("incomplete or failed aggregate envelope")
+        rows, declared, metadata = envelope.get("data"), envelope.get("rows"), envelope.get("meta")
+        if (not isinstance(rows, list) or type(declared) is not int
+                or not 0 <= declared <= report.MAX_ROWS or declared != len(rows)):
+            raise ValueError("aggregate envelope row count does not match")
+        if (not isinstance(metadata, list) or len(metadata) != len(RESULT_COLUMNS)
+                or any(not isinstance(column, dict) or not isinstance(column.get("type"), str)
+                       for column in metadata)
+                or tuple(column.get("name") for column in metadata) != RESULT_COLUMNS):
+            raise ValueError("aggregate envelope has unexpected columns")
+        for row in rows:
             if not isinstance(row, dict) or row.get("site") not in instrumented:
                 raise ValueError("unexpected site")
             if row.get("event") not in report.EVENTS:

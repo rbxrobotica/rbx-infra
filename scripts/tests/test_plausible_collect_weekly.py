@@ -18,24 +18,36 @@ EXTRACTED = datetime(2026, 10, 11, 21, 1, tzinfo=timezone.utc)
 LAUNCH = MODULE.report.timestamp("2026-10-05T18:34:48Z", "test")
 
 
-def aggregate(**changes):
+def aggregate_row(**changes):
     row = {"site": "rbxsystems.ch", "event": "evidence_code_open", "count": "4",
            "bucket_start": "2026-10-05T18:34:48Z", "bucket_seconds": 12,
            "watermark": "2026-10-05T18:34:59Z", "locale": "en", "surface": "products",
            "entry": "gallery", "product": "robson", "error": "", "destination": ""}
     row.update(changes)
-    return json.dumps(row).encode() + b"\n"
+    return row
+
+
+def envelope(records, **changes):
+    value = {"meta": [{"name": name, "type": "String"} for name in MODULE.RESULT_COLUMNS],
+             "data": records, "rows": len(records), "statistics": {"elapsed": 0.001}}
+    value.update(changes)
+    return json.dumps(value, indent=2).encode() + b"\n"
+
+
+def aggregate(**changes):
+    return envelope([aggregate_row(**changes)])
 
 
 class CollectWeeklyTests(unittest.TestCase):
-    def collect(self, raw=b"", instrumented=None, runner=None):
+    def collect(self, raw=None, instrumented=None, runner=None):
+        raw = envelope([]) if raw is None else raw
         return MODULE.collect(AS_OF, {"rbxsystems.ch": LAUNCH} if instrumented is None else instrumented,
                               "/unused/kubeconfig", runner=runner or (lambda query, config, parameters: raw),
                               clock=lambda: EXTRACTED)
 
     def test_query_is_one_bounded_select_and_never_exports_identifiers(self):
         calls = []
-        self.collect(runner=lambda query, config, parameters: calls.append((query, config, parameters)) or b"")
+        self.collect(runner=lambda query, config, parameters: calls.append((query, config, parameters)) or envelope([]))
         self.assertEqual(len(calls), 1)
         query = calls[0][0]
         for setting in ("max_execution_time=20", "max_memory_usage=268435456", "max_result_bytes=33554432",
@@ -50,6 +62,8 @@ class CollectWeeklyTests(unittest.TestCase):
         for forbidden in ("user_id", "session_id", "pathname", "hostname", "url", "INSERT", "ALTER", "DELETE"):
             self.assertNotIn(forbidden, query)
         self.assertNotIn("SELECT *", query)
+        self.assertTrue(query.endswith("FORMAT JSON"))
+        self.assertNotIn("FORMAT JSONEachRow", query)
 
     def test_first_deployment_bucket_is_partial_and_not_backdated(self):
         data = self.collect(aggregate())
@@ -103,6 +117,52 @@ class CollectWeeklyTests(unittest.TestCase):
                 data = self.collect(raw)
                 self.assertEqual(data["source"]["status"], "error")
                 self.assertEqual(data["events"], [])
+
+    def test_transport_truncation_after_a_complete_row_is_not_success(self):
+        rows = [aggregate_row(), aggregate_row(event="evidence_view", count="7")]
+        raw = envelope(rows)
+        # Retain the entire first row, including its closing brace/comma/newline,
+        # but lose the rest of stdout. A line-oriented parser could accept this
+        # kind of successful-exit truncation as a smaller valid result.
+        data_start = raw.index(b'"data": [')
+        boundary = raw.index(b"\n    },\n", data_start) + len(b"\n    },\n")
+        truncated = raw[:boundary]
+        self.assertIn(b'"count": "4"', truncated)
+        self.assertNotIn(b'"count": "7"', truncated)
+        data = self.collect(truncated)
+        self.assertEqual(data["source"]["status"], "error")
+        self.assertEqual(data["events"], [])
+        rendered = MODULE.report.build_report(data)
+        self.assertIsNone(rendered["sites"]["rbxsystems.ch"]["periods"]["current"]["metrics"]["evidence_code_open"])
+
+    def test_partial_line_empty_stream_and_missing_footer_are_failures(self):
+        raw = aggregate()
+        cuts = [b"", raw[:raw.index(b'"bucket_start"') + 8], raw[:raw.rfind(b"}")],
+                raw[:raw.index(b'"rows":')], json.dumps(aggregate_row()).encode() + b"\n"]
+        for truncated in cuts:
+            with self.subTest(length=len(truncated)):
+                data = self.collect(truncated)
+                self.assertEqual(data["source"]["status"], "error")
+                self.assertEqual(data["events"], [])
+
+    def test_closed_but_inconsistent_or_failed_envelope_is_rejected(self):
+        row = aggregate_row()
+        malformed = [envelope([row], rows=2), envelope([row], rows="1"), envelope([row], rows=True),
+                     envelope([], rows=MODULE.report.MAX_ROWS + 1), envelope([row], meta=[]),
+                     envelope([row], exception="private server error must not leak"),
+                     envelope([row, row])]
+        for raw in malformed:
+            with self.subTest(raw=raw[-80:]):
+                data = self.collect(raw)
+                self.assertEqual(data["source"]["status"], "error")
+                self.assertEqual(data["events"], [])
+                self.assertNotIn("private server error", json.dumps(data))
+
+    def test_complete_envelope_counts_all_rows_and_reconciles_footer(self):
+        data = self.collect(envelope([aggregate_row(), aggregate_row(event="evidence_view", count="7")]))
+        self.assertEqual(data["source"]["status"], "ok")
+        self.assertEqual(len(data["events"]), 2)
+        self.assertEqual(sum(row["count"] for row in data["events"]), 11)
 
     def test_extra_fields_and_invalid_optional_values_never_leave_collector(self):
         data = self.collect(aggregate(email="never-export@example.test", product="private-client"))

@@ -44,8 +44,12 @@ RUN apt-get update \
 COPY --from=kubectl-download /usr/local/bin/kubectl /usr/local/bin/kubectl
 COPY --chown=0:0 backup_runner.py s3_archive.py weekly_report.py collect_weekly.py /app/
 
+# The current Kubernetes exec path reset/truncated a WebSocket stream in a
+# verified transfer. Use SPDY while retaining TLS and the same RBAC. The runner
+# separately verifies native source size/SHA-256; transport exit code is not proof.
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    KUBECTL_REMOTE_COMMAND_WEBSOCKETS=false \
     HOME=/tmp
 
 WORKDIR /app

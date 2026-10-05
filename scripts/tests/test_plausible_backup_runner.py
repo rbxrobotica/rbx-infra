@@ -37,6 +37,11 @@ class FakeCommands:
         self.key = key_listing()
         self.secrets = b""
         self.server_version = b";     Dumped from database version: 16.15\n"
+        self.native = b"example native archive"
+        self.truncate_block = False
+        self.corrupt_block = False
+        self.changed_source = False
+        self.clock = None
 
     def __call__(self, argv, *, env, timeout, label, output=None, max_bytes=None):
         self.calls.append((label, argv, env))
@@ -52,9 +57,24 @@ class FakeCommands:
             return b'{"version":"24.12.6.70","source_bytes":"100"}'
         if label == "ClickHouse native backup":
             return json.dumps({"status": self.status}).encode()
+        if label.startswith("ClickHouse native size "):
+            return str(len(self.native)).encode() + b"\n"
+        if label.startswith("ClickHouse native hash "):
+            digest = ("0" * 64 if self.changed_source and label.endswith("after transfer")
+                      else hashlib.sha256(self.native).hexdigest())
+            return (digest + "  " + argv[-1] + "\n").encode()
         if label == "ClickHouse backup transfer":
             self._private_output(output)
-            output.write(b"example native archive")
+            block_size = int(next(arg[3:] for arg in argv if arg.startswith("bs=")))
+            index = int(next(arg[5:] for arg in argv if arg.startswith("skip=")))
+            block = self.native[index * block_size:(index + 1) * block_size]
+            if self.truncate_block:
+                block = block[:-1]
+            if self.corrupt_block:
+                block = bytes([block[0] ^ 1]) + block[1:]
+            output.write(block)
+            if self.clock is not None:
+                self.clock[0] += 2
         if label == "PostgreSQL snapshot":
             self._private_output(output)
             output.write(b"PGDMPexample custom archive")
@@ -127,11 +147,12 @@ class BackupRunnerTests(unittest.TestCase):
         self.assertEqual(receipt["location"], "s3://private-backups/plausible/backups/2026-10-05/test_uuid.gpg")
         self.assertEqual(fake.labels[-2:], ["Off-site archive verification", "Verified remote staging cleanup"])
         copy = next(call[1] for call in fake.calls if call[0] == "ClickHouse backup transfer")
+        source = next(arg[3:] for arg in copy if arg.startswith("if="))
         remove = fake.calls[-1][1]
-        self.assertEqual(remove[-3:], ["rm", "--", copy[-1]])
-        self.assertRegex(copy[-1], r"^/var/lib/clickhouse/backups/backups/plausible_[0-9]{8}T[0-9]{6}Z_[0-9a-f]{32}\.tar$")
+        self.assertEqual(remove[-3:], ["rm", "--", source])
+        self.assertRegex(source, r"^/var/lib/clickhouse/backups/backups/plausible_[0-9]{8}T[0-9]{6}Z_[0-9a-f]{32}\.tar$")
         backup = next(call[1] for call in fake.calls if call[0] == "ClickHouse native backup")
-        self.assertIn(copy[-1].removeprefix("/var/lib/clickhouse/backups/"), backup[-1])
+        self.assertIn(source.removeprefix("/var/lib/clickhouse/backups/"), backup[-1])
 
     def test_credentials_only_reach_appropriate_child_environment(self):
         fake = FakeCommands()
@@ -168,7 +189,9 @@ class BackupRunnerTests(unittest.TestCase):
     def test_failure_at_each_step_cleans_plaintext_and_does_not_claim_success(self):
         for failure in ("Public key inspection", "Public key import", "Private key exclusion",
                         "PostgreSQL client version", "ClickHouse source metadata", "ClickHouse native backup",
+                        "ClickHouse native size before transfer", "ClickHouse native hash before transfer",
                         "ClickHouse backup transfer", "PostgreSQL snapshot", "PostgreSQL archive inspection",
+                        "ClickHouse native size after transfer", "ClickHouse native hash after transfer",
                         "Backup encryption", "Off-site archive verification", "Verified remote staging cleanup"):
             with self.subTest(failure=failure):
                 fake = FakeCommands(fail=failure)
@@ -179,6 +202,47 @@ class BackupRunnerTests(unittest.TestCase):
                     self.assertNotIn("Verified remote staging cleanup", fake.labels)
                 if failure not in ("Off-site archive verification", "Verified remote staging cleanup"):
                     self.assertNotIn("Off-site archive verification", fake.labels)
+
+    def test_zero_exit_with_a_truncated_block_never_reaches_postgres_or_upload(self):
+        fake = FakeCommands()
+        fake.truncate_block = True
+        with self.assertRaisesRegex(MODULE.BackupError, "incomplete block"):
+            self.run_fake(fake)
+        self.assertNotIn("PostgreSQL snapshot", fake.labels)
+        self.assertNotIn("Off-site archive verification", fake.labels)
+        self.assertNotIn("Verified remote staging cleanup", fake.labels)
+        self.assert_staging_removed()
+
+    def test_same_size_corruption_and_changed_source_fail_hash_verification(self):
+        for flag in ("corrupt_block", "changed_source"):
+            with self.subTest(flag=flag):
+                fake = FakeCommands()
+                setattr(fake, flag, True)
+                with self.assertRaisesRegex(MODULE.BackupError, "SHA-256 verification"):
+                    self.run_fake(fake)
+                self.assertNotIn("PostgreSQL snapshot", fake.labels)
+                self.assertNotIn("Off-site archive verification", fake.labels)
+                self.assert_staging_removed()
+
+    def test_complete_blocks_and_partial_tail_reassemble_the_exact_native_archive(self):
+        self.env["BACKUP_MAX_BYTES"] = str(2 * 1024 * 1024)
+        fake = FakeCommands()
+        fake.native = b"a" * MODULE.TRANSFER_CHUNK_BYTES + b"final partial block"
+        self.run_fake(fake)
+        self.assertEqual(fake.manifest["files"]["clickhouse.tar"], {
+            "size_bytes": len(fake.native), "sha256": hashlib.sha256(fake.native).hexdigest()})
+        self.assert_staging_removed()
+
+    def test_transfer_commands_share_a_deadline_instead_of_resetting_the_budget(self):
+        self.env["BACKUP_COMMAND_TIMEOUT_SECONDS"] = "1"
+        fake = FakeCommands()
+        fake.clock = [0]
+        with mock.patch.object(MODULE.time, "monotonic", side_effect=lambda: fake.clock[0]):
+            with self.assertRaisesRegex(MODULE.BackupError, "total time limit"):
+                self.run_fake(fake)
+        self.assertNotIn("PostgreSQL snapshot", fake.labels)
+        self.assertNotIn("Off-site archive verification", fake.labels)
+        self.assert_staging_removed()
 
     def test_noncompleted_native_backup_is_not_copied_or_uploaded(self):
         fake = FakeCommands()
