@@ -8,6 +8,11 @@ resources:
   - rbac-external-secrets.yml
   - secretstore.yml
   - externalsecret.yml
+  - backup-rbac.yml
+  - backup-externalsecret.yml
+  - backup-recipient-configmap.yml
+  - backup-cronjob.yml
+  - backup-prometheusrule.yml
   - postgres-svc.yml
   - clickhouse-config.yml
   - clickhouse.yml
@@ -30,3 +35,8 @@ images:
     newTag: v3.2.1
   - name: clickhouse/clickhouse-server
     newTag: 24.12-alpine
+  # Published by the reviewed runner workflow; anonymous pull verified.
+  # Pin the registry digest so tag movement cannot change deployed content.
+  - name: ghcr.io/rbxrobotica/plausible-backup
+    newTag: sha-ded5a66
+    digest: sha256:b36914a75308099d534718b38f3fb18a550740937195a46f482f895a365a6f3d

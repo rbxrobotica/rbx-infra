@@ -124,6 +124,69 @@ Their durable local receipts are `initial-full.receipt.json` and
 The new full-prefix copy is discoverable by the bounded `latest` search while
 its date remains inside that search's lookback window.
 
+## Runner recovery rehearsal
+
+The corrected container runner completed a real backup in 118 seconds on
+2026-10-05. Its source transfer verified size/SHA-256 before and after transfer,
+used 14 ClickHouse exec invocations, and its S3 upload passed exact-version
+readback. The resulting archive was then downloaded, decrypted and restored
+with the same isolated database checks, successfully at
+`2026-10-05T20:09:53.875046Z`. Counts and logical fingerprints matched the
+initial proof and the live source. This is a complete runner rehearsal, not
+proof that the cluster CronJob has been deployed or triggered on schedule.
+
+- Full object: `plausible/backups/full/2026-10-05/20261005T195916Z_03e8918d755847b5b5bc842354f0849e.gpg`.
+- Version: `0aXVSScbxlNgqbiv6FZmW1bgk2bUpxC`; bytes: `3676755`.
+- Ciphertext SHA-256: `35bf696be94ab31143aad93b1c7c228e948f7ed9956914506baca3578d20642e`.
+- Manifest SHA-256: `12495eed1c2c334dd7d57235579be1da5fcd679f86ef652cafe96b9fcae7b15d`.
+- Owner-host evidence: `runner-smoke.restored.receipt.json`,
+  `runner-smoke.restore-proof.json` and `runner-smoke.cleanup.receipt.json`,
+  in `/home/psyctl/.local/share/rbx-backups/plausible/`.
+- The encrypted proof's S3 receipt is
+  `runner-smoke.restore-proof.archive-receipt.json` in that directory.
+
+## Published image and GitOps promotion
+
+The [main image workflow run](https://github.com/rbxrobotica/rbx-infra/actions/runs/37375370044)
+completed successfully for runner commit `ded5a66caf962cc2bd68ea7768bf1a033164847c`.
+On 2026-10-05, an anonymous pull with an explicitly empty registry auth file
+retrieved `ghcr.io/rbxrobotica/plausible-backup:sha-ded5a66` at digest
+`sha256:b36914a75308099d534718b38f3fb18a550740937195a46f482f895a365a6f3d`.
+The published image passed a local smoke check with networking disabled, a
+read-only root filesystem, all capabilities dropped and UID 10001. PostgreSQL
+16.15 tools, Python 3.11.2, GnuPG 2.2.40 and kubectl 1.36.5 were present, with
+the verified SPDY fallback selected. No registry credential is required for
+this image's observed anonymous pull.
+
+The promotion pins this digest and enables the 03:00 schedule. Reconcile the
+source S3-read RBAC in `rbx-ia-br` before the Plausible overlay, verify the
+ExternalSecret is ready, then observe the first Job receipt and independently
+verify its object version and hash. Image publication and these reviewed
+manifests do not establish that the recurring workload is already operational.
+
+## Scheduling ownership
+
+The daily backup is a native Kubernetes `CronJob` in `plausible`, deployed from
+Git by ArgoCD. These are separate responsibilities: ArgoCD reconciles the
+reviewed configuration; the Kubernetes CronJob controller starts a Job at
+03:00 `America/Sao_Paulo`. Once deployed, execution does not require an operator
+computer, a running Codex chat, or an ArgoCD reconciliation at each scheduled
+time. The Job reads its existing cluster Secret references and public recipient
+key, then writes directly to S3. No desktop kubeconfig or private GPG key is
+mounted in the workload.
+
+Argo Workflows is a different execution engine. The current repository configures
+its controller with `--managed-namespace=agent-missions` for the Agent Loop,
+not for Plausible backups. This workload does not introduce a `CronWorkflow`
+or expand that controller's namespace/RBAC boundary. RBX's PostgreSQL
+pgBackRest design separately uses host systemd timers; it is not an Argo
+Workflows backup pipeline either. Repository configuration is not proof that
+any scheduler is deployed or running: use the runtime evidence below.
+
+The Sunday Flight Deck review and isolated restore exercises described later
+are owner-host follow-ups. Their availability must not be confused with the
+cluster's independent daily backup schedule.
+
 ## Daily operation and evidence
 
 The intended daily cadence has a **24-hour recovery-point target** and a
@@ -157,10 +220,13 @@ python3 scripts/plausible/backup_runner.py > backup-receipt.json
 Plaintext staging uses private permissions and bounded temporary storage; encryption
 of the current node filesystem has not been established. These temporary files
 and the native ClickHouse staging file are not protected by the archive encryption.
-Use encrypted storage for staging where available. The default per-artifact limit is 1 GiB; limits and timeouts are bounded by the
-runner. A limit failure is visible and is not permission to remove the bound.
-Plaintext temporary files are unlinked after execution; unlinking is not secure
-erasure on an unencrypted filesystem.
+Use encrypted storage for staging where available. The default per-artifact
+limit is 1 GiB; limits and timeouts are bounded by the runner. A limit failure is visible and is not permission to remove the bound.
+Normal completion and handled errors unlink temporary files. SIGKILL, OOM or
+node failure can interrupt cleanup; inspect residual staging after failure.
+Unlinking is not secure erasure on an unencrypted filesystem. PostgreSQL dumps
+set `default_transaction_read_only=on` defensively; this does not reduce the
+underlying application credential permissions.
 
 ClickHouse native staging has a deliberately important path detail:
 
@@ -170,7 +236,22 @@ actual path: /var/lib/clickhouse/backups/backups/plausible_<run-id>.tar
 ```
 
 The second `backups/` is part of the current native path. The runner transfers
-that exact file. It removes only its own native staging file after verified
+that exact file in 512 KiB blocks. The real exec transport truncated full-stream
+output, sometimes with exit status zero; a successful process is not evidence
+of a complete archive. Every block must have its expected length, and native
+size/SHA-256 before and after transfer must equal the completed local copy.
+The image uses the tested SPDY transport with TLS and the same scoped RBAC.
+
+The transfer has one shared deadline (1,800 seconds by default), a fixed byte
+cap (1 GiB by default), and no per-block retries. Total ClickHouse exec
+invocations are `ceil(native_bytes / 524288) + 7`, recorded in the receipt:
+14 for the verified 3,345,408-byte source. Larger archives can exceed the usual small
+operation call budget; this is a deliberate, size-derived transfer bound, not
+unlimited polling. API HTTP calls can exceed exec invocations. Review duration
+and source growth before increasing either limit. The Job has a separate
+one-hour deadline.
+
+The runner removes only its own native staging file after verified
 off-site persistence; failed uploads leave it in place for investigation.
 Monitor this directory and PVC free space after failures. Do not delete a
 backup merely because its Job failed or delete other runs' files indiscriminately.
@@ -196,14 +277,18 @@ The destination of `download` must not already exist.
 
 ## Sunday Flight Deck review
 
-The planned review time is **Sunday at 18:00, America/Sao_Paulo**. Scheduling is
-managed separately and must be confirmed operationally. The collector itself
-does not install a scheduler. A Sunday review occurs before the calendar week
+A Codex chat follow-up was configured on 2026-10-05 for **Sunday at 18:00,
+America/Sao_Paulo**. It requires the owner computer and desktop app to remain
+available, along with the existing secure access. It preserves encrypted weekly
+reports and a local encrypted copy of the most recent verified backup. The
+collector itself does not install a scheduler. A Sunday review occurs before the calendar week
 ends; it must not be labeled a completed Monday-to-Sunday week.
 
 [`collect_weekly.py`](../../scripts/plausible/collect_weekly.py) executes one
 aggregate SELECT with a 20-second query limit, 256 MiB memory limit and 32 MiB
-result limit. It accepts no raw visitor identifiers, sessions, IP addresses,
+result limit. A complete JSON envelope, expected columns and matching row count
+are required; a truncated stream becomes unknown even if exec exits zero.
+It accepts no raw visitor identifiers, sessions, IP addresses,
 page paths, query strings or free-form event properties. Offer version
 `2026-10-05` excludes the QA version. Eight permitted events and fixed dimensions
 are used; timestamps, offer and version are typed ClickHouse parameters.
@@ -265,8 +350,11 @@ them in object storage, encrypt the bundle before
 ## Restore procedure and recurring test
 
 Perform a controlled restore test **monthly**, and after a database or Plausible
-upgrade, key change or archive-format change. This is a manual operating
-requirement; no monthly restore automation is claimed by this release.
+upgrade, key change or archive-format change. The Sunday chat follow-up is
+configured to attempt this isolated procedure when the latest proof is at least
+28 days old, and report a failure or proof older than 35 days. This is an
+owner-host agent workflow, not an unattended cluster restore Job; the private
+key must remain outside the cluster. Actual success still requires a new proof.
 
 1. Select a specific full-backup receipt. Download its exact object version and
    verify the ciphertext SHA-256 with the archive CLI.
