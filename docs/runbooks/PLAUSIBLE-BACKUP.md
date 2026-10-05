@@ -157,10 +157,13 @@ python3 scripts/plausible/backup_runner.py > backup-receipt.json
 Plaintext staging uses private permissions and bounded temporary storage; encryption
 of the current node filesystem has not been established. These temporary files
 and the native ClickHouse staging file are not protected by the archive encryption.
-Use encrypted storage for staging where available. The default per-artifact limit is 1 GiB; limits and timeouts are bounded by the
-runner. A limit failure is visible and is not permission to remove the bound.
-Plaintext temporary files are unlinked after execution; unlinking is not secure
-erasure on an unencrypted filesystem.
+Use encrypted storage for staging where available. The default per-artifact
+limit is 1 GiB; limits and timeouts are bounded by the runner. A limit failure is visible and is not permission to remove the bound.
+Normal completion and handled errors unlink temporary files. SIGKILL, OOM or
+node failure can interrupt cleanup; inspect residual staging after failure.
+Unlinking is not secure erasure on an unencrypted filesystem. PostgreSQL dumps
+set `default_transaction_read_only=on` defensively; this does not reduce the
+underlying application credential permissions.
 
 ClickHouse native staging has a deliberately important path detail:
 

@@ -1,0 +1,63 @@
+# Public encryption recipient only; the private recovery key stays outside k3s.
+# Fingerprint pinned independently by BACKUP_RECIPIENT_FINGERPRINT in the job.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: plausible-backup-recipient
+  namespace: plausible
+  annotations:
+    rbx.io/recipient-fingerprint: 88C7C5F7E0FB38128BAA46BC5807B2AAF43E3E41
+data:
+  recipient.asc: |
+    -----BEGIN PGP PUBLIC KEY BLOCK-----
+
+    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
+    /4FD
+    =4OUA
+    -----END PGP PUBLIC KEY BLOCK-----

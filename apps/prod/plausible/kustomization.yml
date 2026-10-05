@@ -8,6 +8,11 @@ resources:
   - rbac-external-secrets.yml
   - secretstore.yml
   - externalsecret.yml
+  - backup-rbac.yml
+  - backup-externalsecret.yml
+  - backup-recipient-configmap.yml
+  - backup-cronjob.yml
+  - backup-prometheusrule.yml
   - postgres-svc.yml
   - clickhouse-config.yml
   - clickhouse.yml
@@ -30,3 +35,7 @@ images:
     newTag: v3.2.1
   - name: clickhouse/clickhouse-server
     newTag: 24.12-alpine
+  # Pending promotion: do not deploy until this image exists and the CronJob
+  # is explicitly unsuspended after review of the first verified backup.
+  - name: ghcr.io/rbxrobotica/plausible-backup
+    newTag: sha-PENDING
