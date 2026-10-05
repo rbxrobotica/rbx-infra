@@ -1,5 +1,5 @@
-# DRAFT: keep suspended until the published image digest, anonymous pull,
-# first full archive and isolated PostgreSQL restore are verified.
+# Published image and anonymous pull are verified. Keep suspended until the
+# first full cluster archive and isolated PostgreSQL restore are verified.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -49,7 +49,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: backup
-              image: ghcr.io/rbxrobotica/comms-backup:sha-PENDING
+              image: ghcr.io/rbxrobotica/comms-backup:sha-a051b67@sha256:fc4a6037f035baa0d229bd86f744ceca1ddb720e672004d0b7ffad1209365124
               imagePullPolicy: IfNotPresent
               env:
                 - name: DATABASE_URL

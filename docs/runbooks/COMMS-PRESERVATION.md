@@ -1,9 +1,10 @@
 # Comms preservation and delivery monitoring
 
-Status: **staged, not active**. The PostgreSQL backup CronJob is suspended and
-its image tag is a placeholder. Publication, a reviewed digest promotion,
-first live archive/restore proof and observation of a scheduled run are separate
-gates. The existing Plausible backup and its cadence do not cover Comms.
+Status: **staged, not active**. The PostgreSQL backup CronJob is suspended.
+The main-published image has passed CI and an anonymous pull, and its digest is
+pinned below. First live archive/restore proof and observation of a scheduled
+run remain separate gates. The existing Plausible backup and its cadence do
+not cover Comms.
 
 ## Scope and boundaries
 
@@ -59,6 +60,19 @@ scan. Only a successful push to main publishes the exact scanned image to
 The synthetic restore has a stubbed S3 transport; it is not production archive
 or live storage evidence.
 
+The published `sha-a051b67` image from successful workflow run `37381784249`
+was pulled with an explicitly empty registry auth file. Its immutable digest is
+`sha256:fc4a6037f035baa0d229bd86f744ceca1ddb720e672004d0b7ffad1209365124`.
+The fetched image passed a network-isolated, read-only, capabilities-dropped
+smoke check as UID 10001 with PostgreSQL 16.15, Python 3.11.2 and GnuPG 2.2.40;
+it contains no kubectl. This establishes image availability and toolchain, not
+a successful production backup. The suspended GitOps staging may be reconciled
+to enable one controlled first Job before a separate schedule activation.
+The Job container is named `backup`; its safe JSON receipt is emitted to stdout.
+The ciphertext is uploaded to the exact versioned S3 key in that receipt, while
+local staging is removed when the runner exits. Preserve the receipt from Job
+logs before cleanup and independently download that exact object version.
+
 Before unsuspending the 03:30 `America/Sao_Paulo` schedule:
 
 1. Verify the published registry digest and actual pull access. Pin that digest
@@ -97,7 +111,7 @@ receipts; rehearse restoration monthly and after material schema/tool changes.
 
 ## Founder notification and internal monitoring
 
-The runtime recipient configuration is
+The subsequent API promotion will set the runtime recipient configuration to
 `FOUNDER_ALERT_RECIPIENTS=ceo@rbxsystems.ch,contact@rbxsystems.ch`. Preserving a
 submission and queueing a notification do not prove provider acceptance,
 delivery or human reading. The API's durable `contact-v1` outbox and provider
@@ -105,7 +119,7 @@ callbacks carry those separate states. Preserve the existing Postmark/Meta
 webhook security configuration and verify its credential prerequisites before
 promoting a new API image.
 
-The ServiceMonitor scrapes the existing internal Service's `/metrics` endpoint
+The subsequent API promotion will add a ServiceMonitor for the existing internal Service's `/metrics` endpoint
 on its `http` port every 30 seconds. The public HTTPS ingress remains an explicit
 allowlist with no route for `/metrics`. No ingress or webhook route is changed
 by the monitoring addition.
@@ -133,5 +147,5 @@ it is not an independent notification channel for an email-provider outage.
 
 The separate backup rules report missing CronJob, failed runs and no successful
 run in 26 hours. After activation verify rule evaluation, scrape target health
-and the operator notification route. Before activation the suspended placeholder
+and the operator notification route. Before activation the suspended schedule
 is not backup coverage; absence of a verified archive remains a known gap.
