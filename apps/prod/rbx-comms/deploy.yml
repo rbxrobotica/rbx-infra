@@ -22,6 +22,8 @@ spec:
         prometheus.io/path: /metrics
         prometheus.io/port: "8080"
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       containers:
         - name: api
           image: ghcr.io/rbxrobotica/rbx-comms
@@ -37,6 +39,18 @@ spec:
                 secretKeyRef:
                   name: rbx-comms-secrets
                   key: DATABASE_URL
+            - name: FOUNDER_ALERT_RECIPIENTS
+              value: "ceo@rbxsystems.ch,contact@rbxsystems.ch"
+            - name: POSTMARK_WEBHOOK_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: comms-postmark-webhook-auth
+                  key: username
+            - name: POSTMARK_WEBHOOK_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: comms-postmark-webhook-auth
+                  key: password
             - name: POSTMARK_SERVER_TOKEN
               valueFrom:
                 secretKeyRef:
