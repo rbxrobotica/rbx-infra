@@ -1,7 +1,7 @@
 # Comms preservation and delivery monitoring
 
-Status: **first cluster archive and isolated restore verified; daily schedule
-configured for activation**. The CronJob is configured for 03:30
+Status: **active in production; first cluster archive and isolated restore
+verified**. The CronJob is configured for 03:30
 `America/Sao_Paulo`, independent of a desktop. Observation of the first real
 scheduled run remains pending; the controlled initial Job does not prove that
 schedule. The existing Plausible backup and its cadence do not cover Comms.
@@ -21,7 +21,10 @@ manifest/dump hashes and isolated PostgreSQL 16.15 restore all passed at
 fingerprints without exposing personal data. It had no external network, ports,
 production credentials or workers. Its container and temporary plaintext were
 removed; the original ciphertext, unchanged receipt and separate encrypted
-restore proof are retained in that private evidence directory. There was no
+restore proof are retained in that private evidence directory. The encrypted
+restore proof was also stored and read back under `comms/backups/restore-proof/`;
+`cluster-initial-20261005.evidence-index.json` links the original and proof
+receipts. There was no
 logical row comparison against the mutable live source.
 
 First expected automatic run after activation: 2026-10-06 at 03:30 São Paulo
@@ -137,7 +140,9 @@ python3 scripts/comms/s3_archive.py latest --artifact-kind full --lookback-days 
 ```
 
 The intended cadence is daily, with a 24-hour recovery-point target and a
-26-hour freshness alert. Job success establishes neither indefinite retention
+26-hour freshness alert. The CronJob was observed with `suspend=false` and
+`lastScheduleTime=null` after activation; its only success so far is the
+controlled initial Job. Job success establishes neither indefinite retention
 nor current decryptability. Review the independent download and restore
 receipts; rehearse restoration monthly and after material schema/tool changes.
 
@@ -156,7 +161,18 @@ Pull using the existing namespace registry credential confirmed digest
 `sha256:ae3369b77d3f5779b864e6e82c3ee29dd9f1c58730bdc515d50d7d165c119f98`
 and the full source revision. The two dedicated callback ExternalSecrets were
 Ready before promotion. Configure the provider only after both new replicas are
-ready; that cutover and runtime observation remain separate checks.
+ready. On 2026-10-05 the promotion in PR #348 reconciled at revision
+`53b5b145ae6f7ea33445ce14cd4ef4a56a536788`: ArgoCD reports Synced/Healthy,
+both API replicas run the expected digest and report a fresh successful queue
+observation. The canonical `comms.schema_migrations` is version 14, clean; the
+separate public schema migration table is not the Comms migration gate.
+
+All seven backup/contact rules evaluate with `health=ok`; both contact scrape
+targets are up. All three Postmark routes reject unauthenticated requests inside
+both API pods, and public metrics/inbox routes return 404 on both API domains.
+The new contact-v1 queue baseline is empty. These observations do not exercise a
+real lead or prove a real email reached either recipient. No synthetic customer
+lead or email was sent as part of the rollout.
 
 The reviewed API promotion adds a ServiceMonitor for the existing internal Service's `/metrics` endpoint
 on its `http` port every 30 seconds. The public HTTPS ingress remains an explicit

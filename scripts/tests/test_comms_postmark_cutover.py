@@ -72,6 +72,52 @@ class CutoverContract(unittest.TestCase):
         with self.assertRaises(MOD.CutoverError):
             MOD.check_location(value.replace(MOD.NEW_HOST, MOD.OLD_HOST), 'inbound', self.credential)
 
+    def apply_with_readback(self, mutation):
+        updates = MOD.plans(self.server, self.hooks, self.credential)
+        current_server = copy.deepcopy(self.server)
+        current_server['InboundHookUrl'] = MOD.destination('inbound', self.credential)
+        current_hooks = copy.deepcopy(self.hooks)
+        for hook, (_, body) in zip(current_hooks, updates):
+            hook.update(copy.deepcopy(body))
+        mutation(current_hooks)
+        provider = mock.Mock()
+        provider.request.side_effect = [
+            self.server, {'Webhooks': self.hooks}, {}, {}, {}, {},
+            current_server, {'Webhooks': current_hooks},
+        ]
+        with mock.patch.object(MOD, 'Provider', return_value=provider), \
+             mock.patch.object(MOD, 'secret', side_effect=['synthetic-token', json.dumps(self.credential)]), \
+             mock.patch('builtins.print') as output:
+            result = MOD.main(['--apply'])
+        writes = [call for call in provider.request.call_args_list if len(call.args) == 2]
+        self.assertEqual(writes, [mock.call('/webhooks/' + str(key), body) for key, body in updates] + [
+            mock.call('/server', {'InboundHookUrl': MOD.destination('inbound', self.credential)})])
+        self.assertNotIn('synthetic-only', str(output.call_args_list))
+        self.assertNotIn('synthetic-token', str(output.call_args_list))
+        self.assertNotIn('never-print', str(output.call_args_list))
+        return result
+
+    def test_apply_readback_accepts_only_null_or_empty_array_headers(self):
+        for headers in (None, []):
+            with self.subTest(headers=headers):
+                self.assertEqual(self.apply_with_readback(
+                    lambda hooks: [hook.update(HttpHeaders=headers) for hook in hooks]), 0)
+
+    def test_apply_readback_rejects_nonempty_or_other_falsy_headers(self):
+        for headers in ([{'Name': 'Authorization', 'Value': 'never-print'}], {}, '', False, 0):
+            with self.subTest(headers_type=type(headers).__name__):
+                self.assertEqual(self.apply_with_readback(
+                    lambda hooks: hooks[0].update(HttpHeaders=headers)), 1)
+
+    def test_apply_readback_still_requires_exact_url_auth_and_trigger_flags(self):
+        for mutation in (
+            lambda hooks: hooks[0].update(Url=hooks[0]['Url'].replace(MOD.NEW_HOST, MOD.OLD_HOST)),
+            lambda hooks: hooks[0]['HttpAuth'].update(Password='never-print'),
+            lambda hooks: hooks[0]['Triggers']['Bounce'].update(IncludeContent=True),
+        ):
+            with self.subTest(mutation=mutation):
+                self.assertEqual(self.apply_with_readback(mutation), 1)
+
 
 if __name__ == '__main__':
     unittest.main()
