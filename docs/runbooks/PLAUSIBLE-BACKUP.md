@@ -145,6 +145,25 @@ proof that the cluster CronJob has been deployed or triggered on schedule.
 - The encrypted proof's S3 receipt is
   `runner-smoke.restore-proof.archive-receipt.json` in that directory.
 
+## Published image and GitOps promotion
+
+The [main image workflow run](https://github.com/rbxrobotica/rbx-infra/actions/runs/37375370044)
+completed successfully for runner commit `ded5a66caf962cc2bd68ea7768bf1a033164847c`.
+On 2026-10-05, an anonymous pull with an explicitly empty registry auth file
+retrieved `ghcr.io/rbxrobotica/plausible-backup:sha-ded5a66` at digest
+`sha256:b36914a75308099d534718b38f3fb18a550740937195a46f482f895a365a6f3d`.
+The published image passed a local smoke check with networking disabled, a
+read-only root filesystem, all capabilities dropped and UID 10001. PostgreSQL
+16.15 tools, Python 3.11.2, GnuPG 2.2.40 and kubectl 1.36.5 were present, with
+the verified SPDY fallback selected. No registry credential is required for
+this image's observed anonymous pull.
+
+The promotion pins this digest and enables the 03:00 schedule. Reconcile the
+source S3-read RBAC in `rbx-ia-br` before the Plausible overlay, verify the
+ExternalSecret is ready, then observe the first Job receipt and independently
+verify its object version and hash. Image publication and these reviewed
+manifests do not establish that the recurring workload is already operational.
+
 ## Scheduling ownership
 
 The daily backup is a native Kubernetes `CronJob` in `plausible`, deployed from

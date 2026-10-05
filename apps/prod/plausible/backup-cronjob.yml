@@ -1,5 +1,6 @@
-# DRAFT PROMOTION: replace sha-PENDING with a registry-verified immutable tag,
-# confirm GHCR pull access, then unsuspend in the same reviewed promotion.
+# Anonymous GHCR pull verified on 2026-10-05; the overlay pins the image digest.
+# Observe the first verified receipt after GitOps reconciliation before claiming
+# that scheduled protection is operational.
 # No decryption key is present in the cluster. Local staging is ephemeral, not
 # asserted to be encrypted at rest; only the remote object is GPG-encrypted.
 apiVersion: batch/v1
@@ -13,7 +14,7 @@ metadata:
 spec:
   schedule: "0 3 * * *"
   timeZone: America/Sao_Paulo
-  suspend: true
+  suspend: false
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 3600
   successfulJobsHistoryLimit: 2
@@ -55,7 +56,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: backup
-              image: ghcr.io/rbxrobotica/plausible-backup:sha-PENDING
+              image: ghcr.io/rbxrobotica/plausible-backup:sha-ded5a66
               imagePullPolicy: IfNotPresent
               workingDir: /app
               env:
