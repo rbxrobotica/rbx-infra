@@ -16,7 +16,7 @@ steps are kept because they are the recovery procedure if the instance is rebuil
 | Piece | Where | Why |
 | --- | --- | --- |
 | Plausible app | Deployment, 1 replica, node `jaguar` | Single writer, node-local PVC |
-| Postgres (sites, users, settings) | External `161.97.147.76:5432` | Postgres never runs inside k3s in production |
+| Postgres (sites, users, settings) | External to k3s at `161.97.147.76:5432`, on `jaguar` | Postgres never runs inside k3s in production; it still shares the host failure domain |
 | ClickHouse (events) | StatefulSet in-cluster, node `jaguar`, 20Gi | The Postgres rule does not cover ClickHouse; Langfuse set the precedent |
 | TLS | cert-manager `letsencrypt-prod` | Same as every other public host |
 | Ingress | Traefik IngressRoute | Forwards `X-Forwarded-For` and the WebSocket upgrade the dashboard needs |
@@ -25,6 +25,10 @@ Both pods are pinned to `jaguar` with a toleration for
 `robson.io/dedicated=analytics:NoSchedule`. jaguar has 24Gi RAM, 8 CPU and 394Gi
 of disk and sits near-idle, while altaica, sumatrae and tiger run at 60-86%
 memory. Pinning also keeps the Postgres traffic on the node that hosts Postgres.
+External PostgreSQL is not an independent recovery location: `161.97.147.76`
+is `jaguar`. A failure of that host or its disk can affect both databases.
+See [Plausible preservation and weekly review](PLAUSIBLE-BACKUP.md) for the
+encrypted archive, verified restore evidence and remaining failure-domain limits.
 
 This ClickHouse is **separate** from the Langfuse one: different image
 (`clickhouse/clickhouse-server:24.12-alpine` against the chart's Bitnami build),
@@ -284,11 +288,18 @@ to be reapplied.
   (`docs/PLAN-dns-email-architecture.md`, RBX Transactional on
   `tx.rbxsystems.ch`) but not built; see §2b for what it needs.
 - **No geolocation.** No country breakdown; needs a MaxMind licence.
-- **No backup of the event store.** ClickHouse data lives on a `local-path` PVC
-  on jaguar: no replication, and this StorageClass has **no volume expansion**.
-  Losing that disk loses the event history; sites, users and settings survive on
-  the external Postgres. 20Gi was chosen up front for that reason, and growing
-  it means recreating the PVC.
+- **Daily preservation still requires deployment verification.** On 2026-10-05,
+  both databases were encrypted, archived in private versioned object storage
+  and successfully restored in isolated containers. The recurring Job is not
+  established by that one successful backup. See
+  [PLAUSIBLE-BACKUP.md](PLAUSIBLE-BACKUP.md) for receipts, restore proof, the
+  planned 24-hour recovery-point target and the 26-hour freshness threshold.
+  ClickHouse still uses a non-replicated `local-path` PVC on `jaguar`, with
+  **no volume expansion**. PostgreSQL is outside Kubernetes but on the same host;
+  sites, users and settings are also exposed to its loss. The archive uses the
+  same provider and has no Object Lock, so it is not an independent-provider or
+  immutable-retention guarantee. Growing the 20Gi ClickHouse volume requires
+  recreating the PVC through the reviewed recovery/migration procedure.
 - **`http://` answers 404** instead of redirecting to HTTPS. The IngressRoute
   declares both entrypoints and the higher-priority route wins on `web` too.
   `cms.rbxsystems.ch` shares the pattern and the behaviour. HTTPS is unaffected.
