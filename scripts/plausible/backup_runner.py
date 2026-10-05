@@ -30,6 +30,7 @@ import uuid
 
 MAX_METADATA_BYTES = 64 * 1024
 DEFAULT_MAX_BYTES = 1024 * 1024 * 1024
+TRANSFER_CHUNK_BYTES = 512 * 1024
 
 
 class BackupError(Exception):
@@ -189,6 +190,27 @@ def file_metadata(path):
     return {"size_bytes": size, "sha256": digest.hexdigest()}
 
 
+def remote_file_metadata(invoke, kubectl, path, *, maximum, deadline, phase):
+    """Bind the native archive to its byte count and hash before and after copy."""
+    raw_size = invoke(kubectl + ["stat", "-c", "%s", "--", path],
+                      f"ClickHouse native size {phase}", deadline=deadline)
+    try:
+        size = int(raw_size.strip())
+    except ValueError:
+        raise BackupError("Invalid ClickHouse native archive size") from None
+    if not 1 <= size <= maximum:
+        raise BackupError("ClickHouse native archive exceeds its size bounds")
+    raw_hash = invoke(kubectl + ["sha256sum", "--", path],
+                      f"ClickHouse native hash {phase}", deadline=deadline)
+    try:
+        parts = raw_hash.decode("ascii").strip().split()
+    except UnicodeError:
+        raise BackupError("Invalid ClickHouse native archive hash") from None
+    if len(parts) != 2 or parts[1] != path or not re.fullmatch(r"[0-9a-f]{64}", parts[0]):
+        raise BackupError("Invalid ClickHouse native archive hash")
+    return {"size_bytes": size, "sha256": parts[0]}
+
+
 class LimitedWriter:
     def __init__(self, stream, maximum):
         self.stream, self.maximum, self.size = stream, maximum, 0
@@ -257,9 +279,13 @@ def create_backup(config):
     kubectl = ["kubectl", "exec", "-n", config.namespace, config.pod, "--"]
     clickhouse = kubectl + ["clickhouse-client", "--max_threads=2", "--max_memory_usage=536870912"]
 
-    def invoke(argv, label, *, output=None, maximum=MAX_METADATA_BYTES, postgres=False, archive=False):
+    def invoke(argv, label, *, output=None, maximum=MAX_METADATA_BYTES, postgres=False, archive=False,
+               deadline=None):
+        timeout = config.timeout if deadline is None else min(config.timeout, deadline - time.monotonic())
+        if timeout <= 0:
+            raise BackupError("ClickHouse archive transfer exceeded its total time limit")
         return run_command(argv, env=config.child_env(postgres=postgres, archive=archive),
-                           timeout=config.timeout, label=label, output=output, max_bytes=maximum)
+                           timeout=timeout, label=label, output=output, max_bytes=maximum)
 
     # TemporaryDirectory is mode 0700, including on a shared staging volume.
     # Plaintext remains on the staging filesystem only for this execution. Its
@@ -297,14 +323,31 @@ def create_backup(config):
         if result.get("status") != "BACKUP_CREATED":
             raise BackupError("ClickHouse did not confirm BACKUP_CREATED")
         ch_finished = utc_now()
+        transfer_deadline = time.monotonic() + config.timeout
+        native_before = remote_file_metadata(invoke, kubectl, remote_absolute, maximum=config.max_bytes,
+                                             deadline=transfer_deadline, phase="before transfer")
         ch_file = base / "clickhouse.tar"
+        transfer_chunks = (native_before["size_bytes"] + TRANSFER_CHUNK_BYTES - 1) // TRANSFER_CHUNK_BYTES
         with ch_file.open("xb") as stream:
             os.chmod(ch_file, 0o600)
-            invoke(kubectl + ["cat", remote_absolute], "ClickHouse backup transfer", output=stream,
-                   maximum=config.max_bytes)
+            # Full-stream exec truncated real archives even with exit status 0
+            # and a drain delay. Read bounded ranges instead; never trust exit
+            # status alone. No retry, shell interpolation, or unbounded buffer.
+            # Exec count is ceil(native bytes / 512 KiB) + four metadata checks;
+            # every range shares one total deadline and the declared byte cap.
+            for index in range(transfer_chunks):
+                expected = min(TRANSFER_CHUNK_BYTES, native_before["size_bytes"] - index * TRANSFER_CHUNK_BYTES)
+                before = stream.tell()
+                invoke(kubectl + ["dd", f"if={remote_absolute}", f"bs={TRANSFER_CHUNK_BYTES}",
+                                  f"skip={index}", "count=1", "iflag=fullblock", "status=none"],
+                       "ClickHouse backup transfer", output=stream, maximum=expected, deadline=transfer_deadline)
+                if stream.tell() - before != expected:
+                    raise BackupError("ClickHouse archive transfer returned an incomplete block")
         ch_meta = file_metadata(ch_file)
-        if ch_meta["size_bytes"] == 0:
-            raise BackupError("ClickHouse backup is empty")
+        native_after = remote_file_metadata(invoke, kubectl, remote_absolute, maximum=config.max_bytes,
+                                            deadline=transfer_deadline, phase="after transfer")
+        if native_before != native_after or ch_meta != native_before:
+            raise BackupError("ClickHouse archive transfer failed size or SHA-256 verification")
         pg_file = base / "postgres.dump"
         pg_started = utc_now()
         with pg_file.open("xb") as stream:
@@ -327,7 +370,10 @@ def create_backup(config):
             "sources": {
                 "clickhouse": {"database": config.database, "version": version,
                                "source_bytes_on_disk": source_size, "snapshot_started_at": ch_started,
-                               "snapshot_completed_at": ch_finished, "status": "BACKUP_CREATED"},
+                               "snapshot_completed_at": ch_finished, "status": "BACKUP_CREATED",
+                               "native_archive_integrity": "size_and_sha256_verified_before_and_after_transfer",
+                               "transfer_chunk_bytes": TRANSFER_CHUNK_BYTES,
+                               "transfer_exec_calls": transfer_chunks + 4},
                 "postgres": {"database": config.pg_env["PGDATABASE"], "major_version": 16,
                              "snapshot_started_at": pg_started, "snapshot_completed_at": pg_finished,
                              "format": "pg_dump_custom"}},
@@ -364,7 +410,8 @@ def create_backup(config):
                 "location": f"s3://{archived['bucket']}/{archived['key']}",
                 "manifest_sha256": manifest_hash, "verified_at": archived["verified_at"],
                 "restore_tested_at": None, "encryption_recipient": config.fingerprint,
-                "archive": archived, "remote_staging_removed": True}
+                "archive": archived, "remote_staging_removed": True,
+                "clickhouse_exec_calls": transfer_chunks + 7}
 
 
 def main():
