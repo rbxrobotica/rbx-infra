@@ -1,10 +1,32 @@
 # Comms preservation and delivery monitoring
 
-Status: **staged, not active**. The PostgreSQL backup CronJob is suspended.
-The main-published image has passed CI and an anonymous pull, and its digest is
-pinned below. First live archive/restore proof and observation of a scheduled
-run remain separate gates. The existing Plausible backup and its cadence do
-not cover Comms.
+Status: **first cluster archive and isolated restore verified; daily schedule
+configured for activation**. The CronJob is configured for 03:30
+`America/Sao_Paulo`, independent of a desktop. Observation of the first real
+scheduled run remains pending; the controlled initial Job does not prove that
+schedule. The existing Plausible backup and its cadence do not cover Comms.
+
+## Observed preservation proof — 2026-10-05
+
+The GitOps-managed CronJob produced controlled Job
+`rbx-comms-backup-initial-retry-20261005`, complete at 22:52:51 UTC after its
+placement fix in PR #347. The encrypted archive has 174,675 bytes and SHA-256
+`ee7f67c992dd37ec845165b8bfb9520c846e72f78cb18a8483644571dcf05a4d`.
+Its versioned S3 receipt is preserved privately on the owner host at
+`~/.local/share/rbx-backups/comms/cluster-initial-20261005.receipt.json`.
+
+An independent exact-version download, ciphertext hash, owner-host decryption,
+manifest/dump hashes and isolated PostgreSQL 16.15 restore all passed at
+22:53:58 UTC. The sandbox restored 46 tables and recorded counts and aggregate
+fingerprints without exposing personal data. It had no external network, ports,
+production credentials or workers. Its container and temporary plaintext were
+removed; the original ciphertext, unchanged receipt and separate encrypted
+restore proof are retained in that private evidence directory. There was no
+logical row comparison against the mutable live source.
+
+First expected automatic run after activation: 2026-10-06 at 03:30 São Paulo
+(06:30 UTC). Confirm CronJob ownership and scheduled timestamp, not only
+`lastSuccessfulTime`, then verify its receipt and exact remote version.
 
 ## Scope and boundaries
 
@@ -75,13 +97,13 @@ logs before cleanup and independently download that exact object version.
 
 The first controlled Job on 2026-10-05 failed before producing an archive:
 PostgreSQL rejected the connection from a backup pod on `jaguar` under the
-existing HBA policy. A bounded read-only probe on `tiger` confirmed PostgreSQL
+existing HBA policy. Bounded read-only probes on `tiger` and `altaica` confirmed PostgreSQL
 16.15, `default_transaction_read_only=on`, and a complete custom-format dump.
-Its temporary dump was removed and no S3 archive was created by the probe.
+Their temporary dumps were removed and no S3 archive was created by those probes.
 Diagnostic Jobs have no CronJob owner and must not count as backup success.
 The backup now selects verified application nodes rather than the analytics
 node; this does not broaden PostgreSQL authentication or network permissions.
-The schedule remains suspended until the real archive/restore gate below.
+The real cluster archive and isolated restore subsequently passed the gate below.
 
 Before unsuspending the 03:30 `America/Sao_Paulo` schedule:
 
@@ -103,9 +125,9 @@ Before unsuspending the 03:30 `America/Sao_Paulo` schedule:
    a restored database, reconcile in-flight and uncertain messages with provider
    evidence: restoring an older outbox snapshot can otherwise resend accepted
    notifications.
-5. Observe the first controller-scheduled Job and its receipt. A manual Job can
-   update `lastSuccessfulTime`; that field alone does not prove the schedule ran.
-   Confirm CronJob ownership and scheduled timestamp as well.
+After unsuspending, observe the first controller-scheduled Job and its receipt.
+A manual Job can update `lastSuccessfulTime`; that field alone does not prove
+the schedule ran. Confirm CronJob ownership and scheduled timestamp as well.
 
 Use the Comms wrapper when inspecting its storage. `latest` verifies presence
 and metadata, not a new content download or a successful restore:
@@ -121,7 +143,7 @@ receipts; rehearse restoration monthly and after material schema/tool changes.
 
 ## Founder notification and internal monitoring
 
-The subsequent API promotion will set the runtime recipient configuration to
+The reviewed API promotion sets the runtime recipient configuration to
 `FOUNDER_ALERT_RECIPIENTS=ceo@rbxsystems.ch,contact@rbxsystems.ch`. Preserving a
 submission and queueing a notification do not prove provider acceptance,
 delivery or human reading. The API's durable `contact-v1` outbox and provider
@@ -129,7 +151,14 @@ callbacks carry those separate states. Preserve the existing Postmark/Meta
 webhook security configuration and verify its credential prerequisites before
 promoting a new API image.
 
-The subsequent API promotion will add a ServiceMonitor for the existing internal Service's `/metrics` endpoint
+API main workflow `37383808267` tested, scanned and published `sha-588d8fd`.
+Pull using the existing namespace registry credential confirmed digest
+`sha256:ae3369b77d3f5779b864e6e82c3ee29dd9f1c58730bdc515d50d7d165c119f98`
+and the full source revision. The two dedicated callback ExternalSecrets were
+Ready before promotion. Configure the provider only after both new replicas are
+ready; that cutover and runtime observation remain separate checks.
+
+The reviewed API promotion adds a ServiceMonitor for the existing internal Service's `/metrics` endpoint
 on its `http` port every 30 seconds. The public HTTPS ingress remains an explicit
 allowlist with no route for `/metrics`. No ingress or webhook route is changed
 by the monitoring addition.
@@ -138,6 +167,8 @@ The contact metrics have no recipient, message-body or submission-ID labels:
 
 - `rbx_comms_contact_outbox_messages{status=...}`: contact-v1 queue state counts.
 - `rbx_comms_contact_outbox_oldest_pending_seconds`: age of the oldest pending notification.
+- `rbx_comms_contact_outbox_oldest_unconfirmed_seconds`: age of the oldest accepted
+  notification without a delivery or bounce receipt.
 - `rbx_comms_contact_outbox_observation_success`: zero when the database cannot be observed.
 - `rbx_comms_contact_outbox_observed_at_seconds`: timestamp of the last successful observation.
 
@@ -145,7 +176,10 @@ Both replicas observe the same database. Alerts use max/min rather than summing
 those gauges: a pending age over 15 minutes for five minutes, a missing/failed
 observation or scrape for five minutes, an observation over five minutes old
 for five minutes, and any failed/uncertain/bounced contact
-notification for five minutes. An uncertain send must be reconciled against
+notification for five minutes. `RBXCommsContactReceiptOverdue` warns when an
+accepted notification lacks a final provider receipt for over one hour, sustained
+for five minutes. Missing confirmation does not establish delivery failure or
+authorize replay. An uncertain send must be reconciled against
 provider evidence before retrying; otherwise a duplicate email is possible.
 An inactive alert does not prove email delivery, and registering rules does not
 prove that Alertmanager delivered a notification to an operator.

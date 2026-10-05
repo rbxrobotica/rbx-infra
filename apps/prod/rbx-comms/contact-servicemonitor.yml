@@ -1,0 +1,19 @@
+# Internal Service scrape only. The existing HTTPS ingress denies /metrics.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: rbx-comms-contact
+  namespace: rbx-comms
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rbx-comms
+  namespaceSelector:
+    matchNames: [rbx-comms]
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+      scrapeTimeout: 10s

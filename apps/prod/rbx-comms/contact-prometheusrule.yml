@@ -1,0 +1,73 @@
+# These gauges cover contact-v1 only. Both replicas observe the same DB queue:
+# use max/min rather than sum, and never put recipient or message PII in labels.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rbx-comms-contact
+  namespace: rbx-comms
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: rbx-comms.contact
+      rules:
+        - alert: RBXCommsContactObservationFailed
+          expr: |
+            (min by(namespace) (rbx_comms_contact_outbox_observation_success{namespace="rbx-comms"}) < 1)
+            or absent(rbx_comms_contact_outbox_observation_success{namespace="rbx-comms"})
+            or (time() - min by(namespace) (rbx_comms_contact_outbox_observed_at_seconds{namespace="rbx-comms"}) > 300)
+            or absent(rbx_comms_contact_outbox_observed_at_seconds{namespace="rbx-comms"})
+            or (up{namespace="rbx-comms", service="rbx-comms"} == 0)
+          for: 5m
+          labels:
+            severity: critical
+            rbx_workstream: comms-preservation
+          annotations:
+            summary: "Comms contact delivery observation is unavailable"
+            description: >-
+              The contact-v1 queue observation is missing, failed, over five minutes
+              old or cannot be scraped. Unknown delivery state must not be treated
+              as an empty or healthy queue.
+        - alert: RBXCommsContactBacklogOverdue
+          expr: |
+            (max by(namespace) (rbx_comms_contact_outbox_oldest_pending_seconds{namespace="rbx-comms"}) > 900)
+            and on(namespace)
+            (min by(namespace) (rbx_comms_contact_outbox_observation_success{namespace="rbx-comms"}) == 1)
+          for: 5m
+          labels:
+            severity: critical
+            rbx_workstream: comms-preservation
+          annotations:
+            summary: "Comms contact notification has waited over 15 minutes"
+            description: >-
+              A contact-v1 notification remains pending. Inspect worker health and
+              its safe status; verify persistence before retrying any delivery.
+        - alert: RBXCommsContactReceiptOverdue
+          expr: |
+            (max by(namespace) (rbx_comms_contact_outbox_oldest_unconfirmed_seconds{namespace="rbx-comms"}) > 3600)
+            and on(namespace)
+            (min by(namespace) (rbx_comms_contact_outbox_observation_success{namespace="rbx-comms"}) == 1)
+          for: 5m
+          labels:
+            severity: warning
+            rbx_workstream: comms-preservation
+          annotations:
+            summary: "Comms notification has no final provider receipt after one hour"
+            description: >-
+              Postmark accepted the message but no delivery or bounce has been
+              recorded. Check authenticated callbacks and provider history;
+              missing confirmation is not proof of delivery failure and does not
+              authorize replay.
+        - alert: RBXCommsContactDeliveryNeedsAttention
+          expr: |
+            max by(namespace, status) (rbx_comms_contact_outbox_messages{namespace="rbx-comms", status=~"failed|uncertain|bounced"}) > 0
+          for: 5m
+          labels:
+            severity: critical
+            rbx_workstream: comms-preservation
+          annotations:
+            summary: "Comms contact delivery needs attention"
+            description: >-
+              Contact-v1 has {{ $value }} message(s) in status {{ $labels.status }}.
+              Reconcile provider evidence before retrying an uncertain delivery;
+              a stored submission is not proof of email delivery.

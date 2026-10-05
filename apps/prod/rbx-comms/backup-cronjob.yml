@@ -1,5 +1,5 @@
-# Published image and anonymous pull are verified. Keep suspended until the
-# first full cluster archive and isolated PostgreSQL restore are verified.
+# Published image, first live cluster archive and isolated PostgreSQL restore
+# are verified. The daily schedule runs in Kubernetes, independent of a desktop.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -11,7 +11,7 @@ metadata:
 spec:
   schedule: "30 3 * * *"
   timeZone: America/Sao_Paulo
-  suspend: true
+  suspend: false
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 3600
   successfulJobsHistoryLimit: 2
