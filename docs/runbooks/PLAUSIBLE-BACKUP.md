@@ -145,6 +145,29 @@ proof that the cluster CronJob has been deployed or triggered on schedule.
 - The encrypted proof's S3 receipt is
   `runner-smoke.restore-proof.archive-receipt.json` in that directory.
 
+## Scheduling ownership
+
+The daily backup is a native Kubernetes `CronJob` in `plausible`, deployed from
+Git by ArgoCD. These are separate responsibilities: ArgoCD reconciles the
+reviewed configuration; the Kubernetes CronJob controller starts a Job at
+03:00 `America/Sao_Paulo`. Once deployed, execution does not require an operator
+computer, a running Codex chat, or an ArgoCD reconciliation at each scheduled
+time. The Job reads its existing cluster Secret references and public recipient
+key, then writes directly to S3. No desktop kubeconfig or private GPG key is
+mounted in the workload.
+
+Argo Workflows is a different execution engine. The current repository configures
+its controller with `--managed-namespace=agent-missions` for the Agent Loop,
+not for Plausible backups. This workload does not introduce a `CronWorkflow`
+or expand that controller's namespace/RBAC boundary. RBX's PostgreSQL
+pgBackRest design separately uses host systemd timers; it is not an Argo
+Workflows backup pipeline either. Repository configuration is not proof that
+any scheduler is deployed or running: use the runtime evidence below.
+
+The Sunday Flight Deck review and isolated restore exercises described later
+are owner-host follow-ups. Their availability must not be confused with the
+cluster's independent daily backup schedule.
+
 ## Daily operation and evidence
 
 The intended daily cadence has a **24-hour recovery-point target** and a
