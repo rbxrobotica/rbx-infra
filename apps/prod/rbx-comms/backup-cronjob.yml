@@ -32,13 +32,16 @@ spec:
           serviceAccountName: rbx-comms-backup
           automountServiceAccountToken: false
           enableServiceLinks: false
-          nodeSelector:
-            kubernetes.io/hostname: jaguar
-          tolerations:
-            - key: robson.io/dedicated
-              operator: Equal
-              value: analytics
-              effect: NoSchedule
+          # Use application nodes with proven PostgreSQL access. Jaguar's
+          # local pod traffic is rejected by the database's existing HBA.
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: kubernetes.io/hostname
+                        operator: In
+                        values: [tiger, altaica]
           securityContext:
             runAsNonRoot: true
             runAsUser: 10001

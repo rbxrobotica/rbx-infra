@@ -73,6 +73,16 @@ The ciphertext is uploaded to the exact versioned S3 key in that receipt, while
 local staging is removed when the runner exits. Preserve the receipt from Job
 logs before cleanup and independently download that exact object version.
 
+The first controlled Job on 2026-10-05 failed before producing an archive:
+PostgreSQL rejected the connection from a backup pod on `jaguar` under the
+existing HBA policy. A bounded read-only probe on `tiger` confirmed PostgreSQL
+16.15, `default_transaction_read_only=on`, and a complete custom-format dump.
+Its temporary dump was removed and no S3 archive was created by the probe.
+Diagnostic Jobs have no CronJob owner and must not count as backup success.
+The backup now selects verified application nodes rather than the analytics
+node; this does not broaden PostgreSQL authentication or network permissions.
+The schedule remains suspended until the real archive/restore gate below.
+
 Before unsuspending the 03:30 `America/Sao_Paulo` schedule:
 
 1. Verify the published registry digest and actual pull access. Pin that digest
