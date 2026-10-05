@@ -124,6 +124,27 @@ Their durable local receipts are `initial-full.receipt.json` and
 The new full-prefix copy is discoverable by the bounded `latest` search while
 its date remains inside that search's lookback window.
 
+## Runner recovery rehearsal
+
+The corrected container runner completed a real backup in 118 seconds on
+2026-10-05. Its source transfer verified size/SHA-256 before and after transfer,
+used 14 ClickHouse exec invocations, and its S3 upload passed exact-version
+readback. The resulting archive was then downloaded, decrypted and restored
+with the same isolated database checks, successfully at
+`2026-10-05T20:09:53.875046Z`. Counts and logical fingerprints matched the
+initial proof and the live source. This is a complete runner rehearsal, not
+proof that the cluster CronJob has been deployed or triggered on schedule.
+
+- Full object: `plausible/backups/full/2026-10-05/20261005T195916Z_03e8918d755847b5b5bc842354f0849e.gpg`.
+- Version: `0aXVSScbxlNgqbiv6FZmW1bgk2bUpxC`; bytes: `3676755`.
+- Ciphertext SHA-256: `35bf696be94ab31143aad93b1c7c228e948f7ed9956914506baca3578d20642e`.
+- Manifest SHA-256: `12495eed1c2c334dd7d57235579be1da5fcd679f86ef652cafe96b9fcae7b15d`.
+- Owner-host evidence: `runner-smoke.restored.receipt.json`,
+  `runner-smoke.restore-proof.json` and `runner-smoke.cleanup.receipt.json`,
+  in `/home/psyctl/.local/share/rbx-backups/plausible/`.
+- The encrypted proof's S3 receipt is
+  `runner-smoke.restore-proof.archive-receipt.json` in that directory.
+
 ## Daily operation and evidence
 
 The intended daily cadence has a **24-hour recovery-point target** and a
