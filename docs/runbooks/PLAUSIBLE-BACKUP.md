@@ -1,10 +1,13 @@
 # Plausible preservation and weekly review
 
-Status recorded on **2026-10-05**: the initial encrypted backup of both databases
-was uploaded, downloaded and hash-verified; an isolated restore succeeded.
-The daily Job and its monitoring are **not operational until their GitOps
-deployment and first verified receipt have been observed**. Building an image,
-merging manifests or scheduling a chat alone does not establish recurring backup.
+Status recorded on **2026-10-05**: the daily CronJob is deployed and three
+Prometheus alert rules have evaluated successfully. A first Job created manually
+from the CronJob completed; its exact encrypted S3 object version was
+independently downloaded and
+hash-verified. Earlier archives passed isolated database restores. The first
+controller-scheduled execution is still **pending**, expected on **2026-10-06
+at 03:00 America/Sao_Paulo (06:00 UTC)**. A successful manual trigger does not
+establish that the recurring schedule has executed.
 
 This runbook complements [Plausible bring-up](PLAUSIBLE-BRINGUP.md). Runtime
 manifests belong in `apps/prod/plausible/`; the build pipeline is
@@ -163,6 +166,61 @@ source S3-read RBAC in `rbx-ia-br` before the Plausible overlay, verify the
 ExternalSecret is ready, then observe the first Job receipt and independently
 verify its object version and hash. Image publication and these reviewed
 manifests do not establish that the recurring workload is already operational.
+
+## First cluster execution: manual trigger
+
+GitOps revision `f37744e91d465fcb744f766005ec6d873bbb6d9b`, merged in
+[PR #343](https://github.com/rbxrobotica/rbx-infra/pull/343), deployed the backup
+prerequisites followed by the CronJob and PrometheusRule on 2026-10-05. The
+source S3-reader RBAC was reconciled first. This deployment did not change the
+application databases, ClickHouse workload or PVC.
+
+The manually triggered Job `plausible-backup-initial-20261005`, created from the
+GitOps-managed CronJob, started at `2026-10-05T21:50:54Z` and reached `Complete`
+at `2026-10-05T21:51:38Z`. Its UID is
+`43eb06f2-e60c-4b79-978d-9a218a0e051f`. It used the published digest documented
+above, performed 14 ClickHouse exec invocations, and removed its own remote
+staging after verified persistence.
+
+- Backup ID: `20261005T215126Z_caf8f9f4b8954910b8555d7df60c22e2`.
+- Full object: `plausible/backups/full/2026-10-05/20261005T215134Z_aea76c4d446d497182930fdd063b2452.gpg`.
+- Version: `6HnrFn-E4nfiLxJvzazdLrySxdZXmPx`; bytes: `3707475`.
+- Ciphertext SHA-256: `f79c58499be8df6658e0f038c306013258bc426d97ba756c7f61c5b4cd3633b0`.
+- Manifest SHA-256: `fb917901f91f0b299955dd65e341f43c67a1448da57dbeb6561ffa77aa63d359`.
+- Runner verification: `2026-10-05T21:51:35.658631Z`.
+- Independent exact-version download and hash verification:
+  `2026-10-05T21:53:05.247956Z`.
+
+The owner-host evidence is `cluster-initial-20261005.receipt.json` and
+`cluster-initial-20261005.download-proof.json` under
+`/home/psyctl/.local/share/rbx-backups/plausible/`. A ciphertext copy is also
+preserved there as
+`20261005T215126Z_caf8f9f4b8954910b8555d7df60c22e2.cluster-initial.tar.gpg`.
+These files have mode `0600`. This cluster-produced object has not undergone
+an isolated restore (`restore_tested_at` remains null); the successful restore
+proofs above refer to earlier archives.
+
+Prometheus reported all three rules loaded at `2026-10-05T21:51:53.259760Z`:
+`RBXPlausibleBackupFailed`, `RBXPlausibleBackupMissing` and
+`RBXPlausibleBackupOverdue`. The evidence file is
+`prometheus-rules-20261005T215153Z.json` in the same owner-host directory.
+That snapshot preceded the first rule evaluation. A subsequent observation at
+`2026-10-05T21:54:36.681451Z`, recorded in
+`runtime-security-proof-20261005T215436Z.json`, found all three rules with
+`health: ok`, `state: inactive`, no errors and evaluations at `21:54:25Z`.
+Successful evaluation does not demonstrate notification delivery.
+
+The same runtime proof confirmed that the backup ServiceAccount can get the
+named ClickHouse pod and use GET/CREATE on its exec subresource. Reading the
+Plausible Secret, listing pods and executing in another pod were denied.
+The CronJob's `lastScheduleTime` was still null, although `lastSuccessfulTime`
+was `2026-10-05T21:51:38Z`: the manual Job counted as a successful execution.
+That success timestamp alone must not be interpreted as a scheduled run.
+
+The first scheduled Job remains pending for 2026-10-06 at 03:00
+`America/Sao_Paulo`. Confirm its CronJob ownership and scheduled timestamp,
+successful receipt, independent object version/hash verification and evaluated
+monitoring state before recording the recurring cadence as observed.
 
 ## Scheduling ownership
 
