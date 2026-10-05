@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Archive already encrypted Plausible backups in private, versioned S3 storage.
+"""Archive already encrypted backups in private, versioned S3 storage.
 
 This helper does not encrypt files or claim Object Lock protection. Credentials
 are read only from AWS_* environment variables. It never deletes objects. Each
@@ -69,8 +69,10 @@ class Config:
     timeout_seconds: int = 30
     transfer_seconds: int = 300
     max_bytes: int = DEFAULT_MAX_BYTES
+    scope: str = "plausible"
 
     def __post_init__(self):
+        scope_prefix(self.scope)
         url = urllib.parse.urlsplit(self.endpoint)
         if (url.scheme != "https" or not url.hostname or url.username or url.password
                 or url.query or url.fragment or url.path not in ("", "/")
@@ -92,7 +94,7 @@ class Config:
             raise ArchiveError("Archive size limit must be between 1 byte and 16 GiB")
 
     @classmethod
-    def from_env(cls, *, max_bytes: int = DEFAULT_MAX_BYTES) -> Config:
+    def from_env(cls, *, max_bytes: int = DEFAULT_MAX_BYTES, scope: str = "plausible") -> Config:
         return cls(
             endpoint=os.environ.get("S3_ARCHIVE_ENDPOINT", "https://eu2.contabostorage.com"),
             bucket=os.environ.get("S3_ARCHIVE_BUCKET", "rbx-data-lake"),
@@ -101,15 +103,25 @@ class Config:
             secret_key=os.environ.get("AWS_SECRET_ACCESS_KEY", ""),
             session_token=os.environ.get("AWS_SESSION_TOKEN", ""),
             max_bytes=max_bytes,
+            scope=scope,
         )
 
 
-def validate_key(key: str) -> str:
-    if (not key.startswith(PREFIX) or len(key) > 512
+def scope_prefix(scope: str) -> str:
+    # Explicit callers select the application; an environment variable cannot
+    # redirect the existing Plausible CLI into another backup collection.
+    if scope not in ("plausible", "comms"):
+        raise ArchiveError("Unsupported backup scope")
+    return f"{scope}/backups/"
+
+
+def validate_key(key: str, *, scope: str = "plausible") -> str:
+    prefix = scope_prefix(scope)
+    if (not key.startswith(prefix) or len(key) > 512
             or not re.fullmatch(r"[A-Za-z0-9_./-]+", key)
             or any(part in ("", ".", "..") for part in key.split("/"))
             or not key.endswith((".gpg", ".age"))):
-        raise ArchiveError("Object key must identify an encrypted file below plausible/backups/")
+        raise ArchiveError(f"Object key must identify an encrypted file below {prefix}")
     return key
 
 
@@ -122,17 +134,17 @@ def validate_version(version_id: str | None) -> dict[str, str]:
     return {"versionId": version_id}
 
 
-def artifact_prefix(artifact_kind: str) -> str:
+def artifact_prefix(artifact_kind: str, *, scope: str = "plausible") -> str:
     if artifact_kind not in ARTIFACT_KINDS:
         raise ArchiveError("Artifact kind must be full, weekly, or restore-proof")
-    return PREFIX + artifact_kind + "/"
+    return scope_prefix(scope) + artifact_kind + "/"
 
 
-def new_key(suffix: str, artifact_kind: str = "full") -> str:
+def new_key(suffix: str, artifact_kind: str = "full", *, scope: str = "plausible") -> str:
     if suffix not in (".gpg", ".age"):
         raise ArchiveError("Only already encrypted .gpg or .age files may be uploaded")
     now = dt.datetime.now(dt.timezone.utc)
-    return validate_key(f"{artifact_prefix(artifact_kind)}{now:%Y-%m-%d}/{now:%Y%m%dT%H%M%SZ}_{uuid.uuid4().hex}{suffix}")
+    return validate_key(f"{artifact_prefix(artifact_kind, scope=scope)}{now:%Y-%m-%d}/{now:%Y%m%dT%H%M%SZ}_{uuid.uuid4().hex}{suffix}", scope=scope)
 
 
 def parse_timestamp(value: str, *, http_date: bool = False) -> dt.datetime:
@@ -199,7 +211,7 @@ class ArchiveClient:
     def _signed_request(self, method, key, query, headers, payload_sha256, data):
         now = dt.datetime.now(dt.timezone.utc)
         stamp, day = now.strftime("%Y%m%dT%H%M%SZ"), now.strftime("%Y%m%d")
-        path = "/" + self.config.bucket + ("/" + validate_key(key) if key else "")
+        path = "/" + self.config.bucket + ("/" + validate_key(key, scope=self.config.scope) if key else "")
         path = urllib.parse.quote(path, safe="/-_.~")
         query_string = urllib.parse.urlencode(sorted(query.items()), quote_via=urllib.parse.quote)
         signed = {name.lower(): str(value).strip() for name, value in headers.items()}
@@ -287,7 +299,7 @@ class ArchiveClient:
             raise ArchiveError("Bucket versioning must be Enabled")
 
     def head(self, key: str, version_id: str | None = None, *, include_integrity_metadata: bool = False):
-        validate_key(key)
+        validate_key(key, scope=self.config.scope)
         with self._request("HEAD", key=key, query=validate_version(version_id)) as response:
             try:
                 size = int(response.headers["Content-Length"])
@@ -316,11 +328,11 @@ class ArchiveClient:
         new content-integrity check. Truncated or failed listings are unknown,
         never missing. No legacy unclassified prefix is treated as a full backup.
         """
-        prefix = artifact_prefix(artifact_kind)
+        prefix = artifact_prefix(artifact_kind, scope=self.config.scope)
         if isinstance(lookback_days, bool) or not isinstance(lookback_days, int) or not 1 <= lookback_days <= 31:
             raise ArchiveError("Lookback must be between 1 and 31 UTC calendar days")
         checked_at = dt.datetime.now(dt.timezone.utc)
-        result = {"schema": "rbx.plausible.archive-latest.v1", "artifact_kind": artifact_kind,
+        result = {"schema": f"rbx.{self.config.scope}.archive-latest.v1", "artifact_kind": artifact_kind,
                   "bucket": self.config.bucket, "endpoint": self.config.endpoint.rstrip("/"),
                   "checked_at": checked_at.isoformat(), "lookback_days": lookback_days,
                   "list_requests": 0}
@@ -351,7 +363,7 @@ class ArchiveClient:
                     raise ArchiveError("S3 listing is incomplete or inconsistent")
                 for item in objects:
                     key = item.findtext("Key", "")
-                    validate_key(key)
+                    validate_key(key, scope=self.config.scope)
                     if not key.startswith(daily_prefix):
                         raise ArchiveError("S3 returned an object outside the requested prefix")
                     modified = parse_timestamp(item.findtext("LastModified"))
@@ -405,7 +417,7 @@ class ArchiveClient:
             raise ArchiveError("Downloaded archive SHA-256 or size does not match")
 
     def upload(self, path: Path, artifact_kind: str = "full"):
-        key = new_key(path.suffix, artifact_kind)
+        key = new_key(path.suffix, artifact_kind, scope=self.config.scope)
         if not path.is_file() or path.is_symlink():
             raise ArchiveError("Archive must be a regular encrypted file")
         size, digest = 0, hashlib.sha256()
@@ -439,7 +451,7 @@ class ArchiveClient:
         if metadata["size_bytes"] != size:
             raise ArchiveError("Stored object size does not match the local archive")
         self._download_verified(key, metadata["version_id"], expected_hash, size, None)
-        return {"schema": "rbx.plausible.archive-receipt.v1", **metadata, "artifact_kind": artifact_kind,
+        return {"schema": f"rbx.{self.config.scope}.archive-receipt.v1", **metadata, "artifact_kind": artifact_kind,
                 "endpoint": self.config.endpoint.rstrip("/"), "sha256": expected_hash,
                 "verified_at": dt.datetime.now(dt.timezone.utc).isoformat(),
                 "recovered_after_ambiguous_put": recovered}
@@ -450,7 +462,7 @@ class ArchiveClient:
             raise ArchiveError("Download destination already exists")
         temporary = None
         try:
-            with tempfile.NamedTemporaryFile(prefix=".plausible-download-", dir=destination.parent, delete=False) as stream:
+            with tempfile.NamedTemporaryFile(prefix=f".{self.config.scope}-download-", dir=destination.parent, delete=False) as stream:
                 temporary = Path(stream.name)
                 self._download_verified(key, metadata["version_id"], expected_sha256, metadata["size_bytes"], stream)
                 stream.flush()
@@ -466,7 +478,7 @@ class ArchiveClient:
         return {**metadata, "sha256": expected_sha256, "verified": True}
 
 
-def main(argv=None):
+def main(argv=None, *, scope="plausible"):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--max-bytes", type=int, default=DEFAULT_MAX_BYTES)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -486,7 +498,7 @@ def main(argv=None):
     latest.add_argument("--lookback-days", type=int, default=3)
     args = parser.parse_args(argv)
     try:
-        client = ArchiveClient(Config.from_env(max_bytes=args.max_bytes))
+        client = ArchiveClient(Config.from_env(max_bytes=args.max_bytes, scope=scope))
         if args.command == "upload":
             result = client.upload(args.file, args.artifact_kind)
         elif args.command == "download":
