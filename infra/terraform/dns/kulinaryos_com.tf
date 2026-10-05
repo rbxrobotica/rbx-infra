@@ -173,6 +173,14 @@ resource "powerdns_record" "test_kulinaryos_com_a" {
   records = [local.kulinaryos_uat_ingress_ip]
 }
 
+resource "powerdns_record" "test_live_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "test.live.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_uat_ingress_ip]
+}
+
 resource "powerdns_record" "api_test_kulinaryos_com_a" {
   zone    = powerdns_zone.kulinaryos_com.name
   name    = "api-test.kulinaryos.com."
