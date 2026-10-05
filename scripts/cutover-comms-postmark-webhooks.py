@@ -133,7 +133,13 @@ def main(argv=None):
                 raise CutoverError('Inbound readback did not confirm the intended configuration')
             for hook in current_hooks:
                 expected = dict(updates)[hook['ID']]
-                if any(hook.get(k) != expected[k] for k in ('Url', 'HttpAuth', 'HttpHeaders', 'Triggers')):
+                # Postmark returns null for an empty custom-header collection.
+                # Normalize only null; every other value must match exactly.
+                readback_headers = hook.get('HttpHeaders')
+                if readback_headers is None:
+                    readback_headers = []
+                if (readback_headers != expected['HttpHeaders'] or
+                        any(hook.get(k) != expected[k] for k in ('Url', 'HttpAuth', 'Triggers'))):
                     raise CutoverError('Webhook readback did not confirm the intended configuration')
         print(json.dumps({'server_id': SERVER_ID, 'webhook_ids': sorted(HOOKS),
                           'target_host': NEW_HOST, 'mode': 'applied-and-readback-verified' if args.apply else 'read-only-plan',

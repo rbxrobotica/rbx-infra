@@ -1,10 +1,44 @@
 # Dedicated Comms Postmark webhook credential
 
-Prepared configuration, not evidence of provisioning or provider cutover. The
-2026-10-05 read-only inspection found the edge BasicAuth Secret absent and no
-application references to the new webhook username/password. API main verifies
-all three Postmark callbacks with dedicated BasicAuth; its outbound API token
-must not be reused as that credential.
+Status on 2026-10-05: dedicated credential provisioned, GitOps source RBAC and
+destination ExternalSecrets ready, new API replicas ready, provider URL/auth
+cutover applied and reconciled by readback. The earlier read-only inspection
+found missing edge authentication and callbacks configured to the UI host.
+All three Postmark callbacks now use dedicated BasicAuth; the outbound API token
+is not reused as that credential.
+
+## Observed rollout
+
+Source credential staging and both destination ExternalSecrets completed before
+API promotion. The API image `sha-588d8fd` was promoted through infra PR #348,
+with its verified digest and explicit Secret references. Both replicas reject
+unauthenticated Postmark requests; the public private API routes remain denied.
+
+The three existing webhook PUTs ran from 22:58:51 to 22:58:55 UTC, followed by the
+server inbound URL update at 22:58:55–56 UTC. No webhook IDs, enabled triggers or
+message stream changed. Readback confirmed exact URL and dedicated credentials
+for all three hooks, empty custom headers, and the exact authenticated inbound
+URL. Each enabled outbound trigger reports `verified`.
+
+The operation helper initially reported a readback mismatch because Postmark
+returns `HttpHeaders: null` for an empty supplied list. Independent read-only
+reconciliation proved the intended configuration; the writes were not retried.
+The helper now treats only null and an empty list as equivalent, while continuing
+to reject custom header drift. Evidence is private under
+`~/.local/share/rbx-backups/comms/postmark-cutover-*.json`.
+
+A read-only database snapshot at 23:00:16 UTC confirmed three receipts in that
+cutover window: Delivery, Bounce and SpamComplaint, each processed with no
+processing error or unexpected header key. Unknown synthetic provider IDs were
+covered by the durable receipt buffer. No contact, thread, submission, inbound
+message or outbound message was created in that window. The original evidence
+is retained in `diagnostics/rbx-comms-readonly-20261005230010-c15f90.result.json`
+under the private directory above.
+
+These callbacks prove receipt handling, not real email arrival. No real email,
+synthetic contact lead or inbound verification was sent. There is no claim that
+previously missed historical callbacks were recovered; 31 pre-existing sent
+messages remained unchanged in the aggregate snapshot.
 
 ## Fixed scope
 
