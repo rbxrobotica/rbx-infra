@@ -2,6 +2,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import tempfile
@@ -18,6 +19,13 @@ USERNAME = "rbx-postmark-0123456789abcdef"
 PASSWORD = "SyntheticPassword" + "A" * (64 - len("SyntheticPassword"))
 CREDENTIAL = {"username": USERNAME, "password": PASSWORD}
 HASH_LINE = (USERNAME + ":$2y$12$" + "A" * 53 + "\n").encode()
+CIPHERTEXT = b"\x85" + b"synthetic-encrypted-test-packet" * 4
+
+
+def key_listing(fingerprint=module.RECIPIENT_FINGERPRINT, validity="-", expiry="", capabilities="scESC"):
+    key = ["pub", validity, "4096", "1", "synthetic", "1", expiry, "", "", "", "", capabilities]
+    fpr = ["fpr", "", "", "", "", "", "", "", "", fingerprint]
+    return (":".join(key) + "\n" + ":".join(fpr) + "\n").encode()
 
 
 class PostmarkStagingTests(unittest.TestCase):
@@ -38,15 +46,91 @@ class PostmarkStagingTests(unittest.TestCase):
     def test_generate_stores_one_atomic_bundle_without_secret_arguments(self):
         missing = Path(self.temp.name) / "absent.gpg"
         with patch.object(module, "pass_path", return_value=missing), \
+                patch.object(module, "validate_recipient") as validate, \
                 patch.object(module.secrets, "token_hex", return_value="0123456789abcdef"), \
                 patch.object(module.secrets, "token_urlsafe", return_value=PASSWORD), \
-                patch.object(module, "run") as run:
+                patch.object(module, "run", return_value=CIPHERTEXT) as run:
             module.generate()
+            validate.assert_called_once_with(missing)
             args, kwargs = run.call_args
-            self.assertEqual(args[0], ["pass", "insert", "--multiline", module.PASS_ENTRY])
+            self.assertEqual(args[0][0], "gpg")
+            self.assertEqual(args[0][-2:], ["--recipient", module.RECIPIENT_FINGERPRINT])
+            self.assertIn("--no-options", args[0])
+            self.assertIn("--no-encrypt-to", args[0])
+            self.assertEqual(args[0][args[0].index("--trust-model") + 1], "always")
             self.assertEqual(json.loads(kwargs["data"]), CREDENTIAL)
             self.assertNotIn(PASSWORD, " ".join(args[0]))
-            self.assertNotIn("--force", args[0])
+            self.assertEqual(missing.read_bytes(), CIPHERTEXT)
+            self.assertEqual(missing.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(list(missing.parent.glob(".postmark-encrypted-*")), [])
+
+    def test_policy_resolution_requires_only_the_pinned_valid_encryption_key(self):
+        root = Path(self.temp.name)
+        (root / ".gpg-id").write_text("synthetic-policy-identity\n")
+        target = root / "rbx/comms/new.gpg"
+        for listing, accepted in [
+            (key_listing(), True),
+            (key_listing(fingerprint="A" * 40), False),
+            (key_listing(validity="r"), False),
+            (key_listing(validity="d"), False),
+            (key_listing(expiry="1"), False),
+            (key_listing(capabilities="scSC"), False),
+            (key_listing(capabilities="scESCD"), False),
+            (key_listing() + key_listing(), False),
+        ]:
+            with self.subTest(accepted=accepted, listing=listing[:12]), \
+                    patch.object(module, "pass_store", return_value=root), \
+                    patch.object(module, "run", return_value=listing):
+                if accepted:
+                    module.validate_recipient(target)
+                else:
+                    with self.assertRaises(module.ProvisioningError):
+                        module.validate_recipient(target)
+
+    def test_nearest_policy_cannot_add_another_recipient(self):
+        root = Path(self.temp.name)
+        nested = root / "rbx/comms"
+        nested.mkdir(parents=True)
+        (root / ".gpg-id").write_text(module.RECIPIENT_FINGERPRINT)
+        (nested / ".gpg-id").write_text("first\nsecond\n")
+        with patch.object(module, "pass_store", return_value=root), \
+                patch.object(module, "run") as run:
+            with self.assertRaises(module.ProvisioningError):
+                module.validate_recipient(nested / "new.gpg")
+            run.assert_not_called()
+
+    def test_generation_leaves_unrelated_staged_index_untouched(self):
+        root = Path(self.temp.name)
+        index = root / ".git/index"
+        index.parent.mkdir()
+        index.write_bytes(b"synthetic unrelated staged index")
+        target = root / "rbx/comms/new.gpg"
+        with patch.object(module, "pass_path", return_value=target), \
+                patch.object(module, "validate_recipient"), \
+                patch.object(module, "run", return_value=CIPHERTEXT) as run:
+            module.generate()
+        self.assertEqual(index.read_bytes(), b"synthetic unrelated staged index")
+        self.assertEqual([call.args[0][0] for call in run.call_args_list], ["gpg"])
+
+    def test_atomic_publish_refuses_concurrent_creation_and_cleans_ciphertext_temp(self):
+        target = Path(self.temp.name) / "new.gpg"
+        original_link = os.link
+
+        def race(source, destination):
+            target.write_bytes(b"other actor's entry")
+            original_link(source, destination)
+
+        with patch.object(module.os, "link", side_effect=race):
+            with self.assertRaises(module.ProvisioningError):
+                module.publish_ciphertext(target, CIPHERTEXT)
+        self.assertEqual(target.read_bytes(), b"other actor's entry")
+        self.assertEqual(list(target.parent.glob(".postmark-encrypted-*")), [])
+
+    def test_invalid_ciphertext_never_creates_a_file(self):
+        target = Path(self.temp.name) / "new.gpg"
+        with self.assertRaises(module.ProvisioningError):
+            module.publish_ciphertext(target, json.dumps(CREDENTIAL).encode())
+        self.assertFalse(target.exists())
 
     @patch.object(module.shutil, "which", return_value="/usr/bin/htpasswd")
     def test_existing_source_secret_aborts_before_decrypting_pass(self, _which):
@@ -111,6 +195,7 @@ class PostmarkStagingTests(unittest.TestCase):
     def test_command_failure_cannot_expose_provider_credentials(self):
         error = subprocess.CalledProcessError(1, ["tool"], output=PASSWORD, stderr=PASSWORD)
         with patch.object(module.subprocess, "run", side_effect=error), \
+                patch.object(module, "validate_recipient"), \
                 contextlib.redirect_stderr(io.StringIO()) as stderr:
             with patch.object(module, "pass_path", return_value=Path(self.temp.name) / "absent"):
                 self.assertEqual(module.main(["generate"]), 1)

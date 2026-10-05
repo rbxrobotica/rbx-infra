@@ -108,12 +108,14 @@ def plans(server, hooks, credential=None):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--apply', action='store_true')
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument('--apply', action='store_true')
+    mode.add_argument('--inspect-auth', action='store_true', help='read and reconcile the dedicated credential without writing to the provider')
     args = parser.parse_args(argv)
     try:
         provider = Provider(secret('rbx/postmark/rbx-institutional-server-token').splitlines()[0])
         credential = None
-        if args.apply:
+        if args.apply or args.inspect_auth:
             credential = json.loads(secret('rbx/comms/postmark-webhook-auth'))
             if set(credential) != {'username', 'password'} or not all(isinstance(v, str) and v for v in credential.values()):
                 raise CutoverError('Invalid dedicated credential bundle')
@@ -135,7 +137,10 @@ def main(argv=None):
                     raise CutoverError('Webhook readback did not confirm the intended configuration')
         print(json.dumps({'server_id': SERVER_ID, 'webhook_ids': sorted(HOOKS),
                           'target_host': NEW_HOST, 'mode': 'applied-and-readback-verified' if args.apply else 'read-only-plan',
-                          'email_sent': False}))
+                          'email_sent': False,
+                          'observed_webhooks': [{'id': h['ID'], 'target_host_configured': urllib.parse.urlsplit(h['Url']).hostname == NEW_HOST,
+                                                 'dedicated_auth_configured': bool((h.get('HttpAuth') or {}).get('Username'))}
+                                                for h in (current_hooks if args.apply else hooks)]}))
         return 0
     except CutoverError as exc:
         print(str(exc), file=sys.stderr)

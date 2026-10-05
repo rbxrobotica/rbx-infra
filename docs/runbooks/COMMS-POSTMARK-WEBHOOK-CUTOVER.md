@@ -38,7 +38,21 @@ ansible-playbook -i localhost, bootstrap/ansible/stage-comms-postmark-webhook-on
 ```
 
 The first command creates one new encrypted pass entry. It prints no value and
-refuses an existing entry. The standalone playbook uses `no_log: true` and invokes
+refuses an existing entry. It resolves the nearest `.gpg-id` policy and requires
+exactly the valid encryption key `88C7C5F7E0FB38128BAA46BC5807B2AAF43E3E41`.
+Encryption uses that fingerprint explicitly, with `--trust-model always` only
+for this invocation after validation; it changes no global owner-trust setting.
+GPG options and implicit extra encryption recipients are disabled. Only the
+encrypted bytes reach a mode-0600 temporary file, published with a create-only
+hard link. Existing entries, including a concurrent create, are never replaced.
+
+Generation does not invoke `pass insert` or any Git operation: unrelated staged
+work and the password-store index remain untouched. The new encrypted entry is
+left uncommitted for a separately scoped password-store archival operation;
+never commit the whole pre-existing index as part of this cutover. Subsequent
+staging continues to decrypt the entry with the normal `pass show` command.
+
+The standalone playbook uses `no_log: true` and invokes
 only the source-Secret provisioner. It does not import `site.yml` or any broad
 secret role. `--check` skips provisioning; `--syntax-check` performs no operation.
 
@@ -100,6 +114,8 @@ server, hook, stream, trigger, header or credential drift:
 ```sh
 # Read-only plan; requires only the existing institutional server token.
 python3 scripts/cutover-comms-postmark-webhooks.py
+# Reconcile partial/completed auth configuration read-only after staging the pair.
+python3 scripts/cutover-comms-postmark-webhooks.py --inspect-auth
 # Only after steps 1–4: preserves IDs/triggers, changes URL/auth, verifies readback.
 python3 scripts/cutover-comms-postmark-webhooks.py --apply
 ```
@@ -107,7 +123,8 @@ python3 scripts/cutover-comms-postmark-webhooks.py --apply
 Provider webhook verification is requested as part of the update; it can send
 synthetic callback events, but does not send an email. These callbacks are not
 proof of a real message reaching the founder inbox. A timeout means unknown
-outcome: inspect the sanitized provider inventory before deciding on a retry.
+outcome: run `--inspect-auth` to reconcile the sanitized provider inventory before
+deciding on a retry. This inspection reads the encrypted bundle but makes no PUT.
 
 Keep the provider token and endpoint configuration unchanged while preparing this
 artifact. No provider mutation is implemented by the source provisioner. Rolling
