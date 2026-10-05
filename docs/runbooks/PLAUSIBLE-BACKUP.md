@@ -173,7 +173,22 @@ actual path: /var/lib/clickhouse/backups/backups/plausible_<run-id>.tar
 ```
 
 The second `backups/` is part of the current native path. The runner transfers
-that exact file. It removes only its own native staging file after verified
+that exact file in 512 KiB blocks. The real exec transport truncated full-stream
+output, sometimes with exit status zero; a successful process is not evidence
+of a complete archive. Every block must have its expected length, and native
+size/SHA-256 before and after transfer must equal the completed local copy.
+The image uses the tested SPDY transport with TLS and the same scoped RBAC.
+
+The transfer has one shared deadline (1,800 seconds by default), a fixed byte
+cap (1 GiB by default), and no per-block retries. Total ClickHouse exec
+invocations are `ceil(native_bytes / 524288) + 7`, recorded in the receipt:
+14 for the verified 3,345,408-byte source. Larger archives can exceed the usual small
+operation call budget; this is a deliberate, size-derived transfer bound, not
+unlimited polling. API HTTP calls can exceed exec invocations. Review duration
+and source growth before increasing either limit. The Job has a separate
+one-hour deadline.
+
+The runner removes only its own native staging file after verified
 off-site persistence; failed uploads leave it in place for investigation.
 Monitor this directory and PVC free space after failures. Do not delete a
 backup merely because its Job failed or delete other runs' files indiscriminately.
@@ -199,14 +214,18 @@ The destination of `download` must not already exist.
 
 ## Sunday Flight Deck review
 
-The planned review time is **Sunday at 18:00, America/Sao_Paulo**. Scheduling is
-managed separately and must be confirmed operationally. The collector itself
-does not install a scheduler. A Sunday review occurs before the calendar week
+A Codex chat follow-up was configured on 2026-10-05 for **Sunday at 18:00,
+America/Sao_Paulo**. It requires the owner computer and desktop app to remain
+available, along with the existing secure access. It preserves encrypted weekly
+reports and a local encrypted copy of the most recent verified backup. The
+collector itself does not install a scheduler. A Sunday review occurs before the calendar week
 ends; it must not be labeled a completed Monday-to-Sunday week.
 
 [`collect_weekly.py`](../../scripts/plausible/collect_weekly.py) executes one
 aggregate SELECT with a 20-second query limit, 256 MiB memory limit and 32 MiB
-result limit. It accepts no raw visitor identifiers, sessions, IP addresses,
+result limit. A complete JSON envelope, expected columns and matching row count
+are required; a truncated stream becomes unknown even if exec exits zero.
+It accepts no raw visitor identifiers, sessions, IP addresses,
 page paths, query strings or free-form event properties. Offer version
 `2026-10-05` excludes the QA version. Eight permitted events and fixed dimensions
 are used; timestamps, offer and version are typed ClickHouse parameters.
@@ -268,8 +287,11 @@ them in object storage, encrypt the bundle before
 ## Restore procedure and recurring test
 
 Perform a controlled restore test **monthly**, and after a database or Plausible
-upgrade, key change or archive-format change. This is a manual operating
-requirement; no monthly restore automation is claimed by this release.
+upgrade, key change or archive-format change. The Sunday chat follow-up is
+configured to attempt this isolated procedure when the latest proof is at least
+28 days old, and report a failure or proof older than 35 days. This is an
+owner-host agent workflow, not an unattended cluster restore Job; the private
+key must remain outside the cluster. Actual success still requires a new proof.
 
 1. Select a specific full-backup receipt. Download its exact object version and
    verify the ciphertext SHA-256 with the archive CLI.
