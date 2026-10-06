@@ -1,13 +1,12 @@
 # Plausible preservation and weekly review
 
-Status recorded on **2026-10-05**: the daily CronJob is deployed and three
-Prometheus alert rules have evaluated successfully. A first Job created manually
-from the CronJob completed; its exact encrypted S3 object version was
-independently downloaded and
-hash-verified. Earlier archives passed isolated database restores. The first
-controller-scheduled execution is still **pending**, expected on **2026-10-06
-at 03:00 America/Sao_Paulo (06:00 UTC)**. A successful manual trigger does not
-establish that the recurring schedule has executed.
+Status recorded on **2026-10-06**: the daily Kubernetes CronJob is active and
+its first **controller-scheduled execution is verified**. The 03:00
+`America/Sao_Paulo` Job completed at 03:00:47, and an independent download of
+its exact encrypted S3 object version matched size and SHA-256. All three
+Prometheus rules evaluated successfully after completion. Earlier archives
+passed isolated database restores; this scheduled archive has not been restored.
+The daily workload runs in the cluster independently of the owner's desktop.
 
 This runbook complements [Plausible bring-up](PLAUSIBLE-BRINGUP.md). Runtime
 manifests belong in `apps/prod/plausible/`; the build pipeline is
@@ -217,10 +216,61 @@ The CronJob's `lastScheduleTime` was still null, although `lastSuccessfulTime`
 was `2026-10-05T21:51:38Z`: the manual Job counted as a successful execution.
 That success timestamp alone must not be interpreted as a scheduled run.
 
-The first scheduled Job remains pending for 2026-10-06 at 03:00
-`America/Sao_Paulo`. Confirm its CronJob ownership and scheduled timestamp,
-successful receipt, independent object version/hash verification and evaluated
-monitoring state before recording the recurring cadence as observed.
+The first scheduled execution was subsequently verified on 2026-10-06 as
+recorded below. The manual evidence above remains unchanged and is not used as
+proof of that scheduler trigger.
+
+## First controller-scheduled execution
+
+The Kubernetes CronJob controller created `plausible-backup-29854440` at
+`2026-10-06T06:00:00Z` (03:00 São Paulo). It started at that time and reached
+`Complete` at `2026-10-06T06:00:47Z`, with one successful pod, exit code zero
+and the expected published image/digest. No manual Job was created for this
+validation.
+
+- CronJob UID: `2cf24ca0-01b2-43a5-9da6-6b9da361d193`.
+- Job UID: `247aa7f9-e218-4648-a2b4-10237bac44c2`.
+- The Job's controller ownerReference matches that CronJob UID.
+- `batch.kubernetes.io/cronjob-scheduled-timestamp` is
+  `2026-10-06T03:00:00-03:00`, equivalent to `06:00:00Z`.
+- CronJob `lastScheduleTime` is `2026-10-06T06:00:00Z` and
+  `lastSuccessfulTime` is `2026-10-06T06:00:47Z`.
+- Schedule remains `0 3 * * *`, timezone `America/Sao_Paulo`, `suspend: false`.
+
+The receipt from the successful pod linked to that Job records:
+
+| Field | Value |
+| --- | --- |
+| Backup ID | `20261006T060015Z_b2fd19b1936042e78e3208f001742a46` |
+| Full object | `plausible/backups/full/2026-10-06/20261006T060041Z_443832072cf3453cb8e4e05596cc3b9d.gpg` |
+| Version | `3nmVGDB-a1P.cms2bBv4v-IyDtWO4aw` |
+| Ciphertext bytes | `3727955` |
+| Ciphertext SHA-256 | `d2fb23fb5c89073c57a2608e2cfd520385871ca46fdd0a7f85fefbbb8c8d2105` |
+| Manifest SHA-256 | `108cc7889cceda7342a0f3e0b84774960a06515e2448e9e2c0734f3c00e32772` |
+| Runner verification | `2026-10-06T06:00:43.593896Z` |
+| Independent download verification | `2026-10-06T06:08:12.280566Z` |
+
+The runner used 14 ClickHouse exec invocations and reported removal of its own
+remote staging. The object is different from the initial manual backup.
+Independent versioned HEAD metadata and a full download matched the receipt's
+version, size and SHA-256; a second local hash/size check matched as well.
+The original receipt keeps `restore_tested_at: null`: successful isolated
+restores documented earlier apply to those earlier objects only.
+
+Private owner-host evidence under
+`/home/psyctl/.local/share/rbx-backups/plausible/` includes
+`scheduled-20261006.scheduler-proof.json`, `scheduled-20261006.runtime-proof.json`,
+`scheduled-20261006.receipt.json`, `scheduled-20261006.download-proof.json` and
+`scheduled-20261006.prometheus-proof.json`. The preserved ciphertext is
+`20261006T060015Z_b2fd19b1936042e78e3208f001742a46.scheduled.tar.gpg`.
+All these files have mode `0600`.
+
+The monitoring observation at `2026-10-06T06:08:25.564046Z` found all three
+backup rules with `health: ok`, `state: inactive`, no error, and evaluations at
+06:07:55 UTC, after the backup completed. This proves rule evaluation, not
+notification delivery or indefinite future backup success. The separate
+Sunday Flight Deck review remains responsible for continued historical review
+and the configured periodic restore rehearsal.
 
 ## Scheduling ownership
 
