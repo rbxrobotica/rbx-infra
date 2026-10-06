@@ -1,0 +1,27 @@
+---
+# Standalone, deliberately not imported by site.yml or the broad secrets role.
+# The dedicated pass entry must already exist. This creates one source Secret;
+# ESO and application/provider cutover are separate operational steps.
+- name: Stage only the dedicated Comms Postmark webhook credential
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  tasks:
+    - name: Require the reviewed private kubeconfig path
+      ansible.builtin.assert:
+        that:
+          - comms_webhook_kubeconfig is defined
+          - comms_webhook_kubeconfig | length > 0
+        quiet: true
+    - name: Create the dedicated source Secret without logging credential data
+      ansible.builtin.command:
+        argv:
+          - python3
+          - "{{ playbook_dir }}/../../scripts/stage-comms-postmark-webhook-auth.py"
+          - stage
+          - --kubeconfig
+          - "{{ comms_webhook_kubeconfig }}"
+      no_log: true
+      diff: false
+      changed_when: true
+      when: not ansible_check_mode

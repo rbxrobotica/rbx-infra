@@ -1,0 +1,199 @@
+name: Comms backup image
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/comms/**'
+      - 'scripts/plausible/backup_runner.py'
+      - 'scripts/plausible/s3_archive.py'
+      - 'scripts/tests/test_comms*.py'
+      - 'scripts/tests/comms_restore_fixture.py'
+      - 'scripts/tests/test_plausible*.py'
+      - '.github/workflows/comms-backup-image.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/comms/**'
+      - 'scripts/plausible/backup_runner.py'
+      - 'scripts/plausible/s3_archive.py'
+      - '.github/workflows/comms-backup-image.yml'
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: ghcr.io/rbxrobotica/comms-backup
+
+# No deployment, repository dispatch, or automatic image promotion. The
+# operator reviews a separate GitOps pin after registry existence is verified.
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Test preservation and reporting contracts without production access
+        run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_comms*.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_plausible*.py' -v
+
+      - name: Install pinned Python security lint dependencies
+        run: |
+          python3 -m pip install --disable-pip-version-check \
+            bandit==1.8.6 PyYAML==6.0.3 stevedore==5.5.0 rich==14.1.0 \
+            markdown-it-py==4.0.0 mdurl==0.1.2 Pygments==2.19.2
+
+      - name: Lint Python security boundaries
+        run: bandit --recursive scripts/comms scripts/plausible --severity-level medium
+
+      - name: Download and verify security tools
+        run: |
+          curl --fail --location --proto '=https' --tlsv1.2 --retry 2 --max-time 120 \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            --output "$RUNNER_TEMP/gitleaks.tar.gz"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  $RUNNER_TEMP/gitleaks.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/gitleaks.tar.gz" -C "$RUNNER_TEMP" gitleaks
+          curl --fail --location --proto '=https' --tlsv1.2 --retry 2 --max-time 120 \
+            https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz \
+            --output "$RUNNER_TEMP/trivy.tar.gz"
+          echo "1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75  $RUNNER_TEMP/trivy.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/trivy.tar.gz" -C "$RUNNER_TEMP" trivy
+
+      - name: Scan backup code, tests, and workflows for secrets
+        run: |
+          "$RUNNER_TEMP/gitleaks" dir scripts/comms --no-banner --redact
+          "$RUNNER_TEMP/gitleaks" dir scripts/plausible --no-banner --redact
+          "$RUNNER_TEMP/gitleaks" dir scripts/tests --no-banner --redact
+          "$RUNNER_TEMP/gitleaks" dir .github/workflows --no-banner --redact
+
+      - name: Scan source dependencies
+        # Runtime Python code uses only the standard library. The Dockerfile
+        # patches its base OS; scan the assembled image on PRs and main,
+        # rather than treating the unpatched upstream base as the final image.
+        run: |
+          "$RUNNER_TEMP/trivy" fs --scanners vuln --exit-code 1 --ignore-unfixed \
+            --severity HIGH,CRITICAL scripts/comms
+          "$RUNNER_TEMP/trivy" fs --scanners vuln --exit-code 1 --ignore-unfixed \
+            --severity HIGH,CRITICAL scripts/plausible
+
+  build-and-scan:
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+      image-id: ${{ steps.export.outputs.image-id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Compute immutable image tag
+        id: meta
+        run: echo "tag=sha-$(git rev-parse --short=7 HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Build locally before vulnerability and toolchain checks
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./scripts/comms/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: ${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Verify the container's non-root identity and toolchain
+        env:
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --entrypoint sh "$IMAGE_NAME:$IMAGE_TAG" -ec '
+            test "$(id -u)" = 10001
+            ! command -v kubectl
+            python3 --version
+            python3 -c "import comms.backup_runner, comms.s3_archive"
+            pg_dump --version | grep -E "PostgreSQL\) 16\."
+            pg_restore --version | grep -E "PostgreSQL\) 16\."
+            gpg --version
+          '
+
+      - name: Restore a synthetic database with the built image
+        env:
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --memory 512m --cpus 1 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=256m,mode=1777 \
+            --mount type=bind,src="$PWD/scripts/tests/comms_restore_fixture.py",dst=/fixture.py,readonly \
+            --entrypoint python3 "$IMAGE_NAME:$IMAGE_TAG" /fixture.py
+
+      - name: Scan the assembled image before publishing
+        env:
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          curl --fail --location --proto '=https' --tlsv1.2 --retry 2 --max-time 120 \
+            https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz \
+            --output "$RUNNER_TEMP/trivy.tar.gz"
+          echo "1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75  $RUNNER_TEMP/trivy.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/trivy.tar.gz" -C "$RUNNER_TEMP" trivy
+          "$RUNNER_TEMP/trivy" image --image-src docker --scanners vuln \
+            --exit-code 1 --ignore-unfixed --severity HIGH,CRITICAL "$IMAGE_NAME:$IMAGE_TAG"
+
+      - name: Export the verified image for main-only publication
+        id: export
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          IMAGE_TAG: ${{ steps.meta.outputs.tag }}
+        run: |
+          echo "image-id=$(docker image inspect "$IMAGE_NAME:$IMAGE_TAG" --format '{{.Id}}')" >> "$GITHUB_OUTPUT"
+          docker save "$IMAGE_NAME:$IMAGE_TAG" --output "$RUNNER_TEMP/comms-backup.tar"
+
+      - name: Retain the verified image for the publisher
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: comms-backup-image
+          path: ${{ runner.temp }}/comms-backup.tar
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+  image:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-and-scan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Download the verified image
+        uses: actions/download-artifact@v4
+        with:
+          name: comms-backup-image
+          path: ${{ runner.temp }}/comms-backup-image
+
+      - name: Load and verify the scanned image identity
+        env:
+          IMAGE_TAG: ${{ needs.build-and-scan.outputs.tag }}
+          IMAGE_ID: ${{ needs.build-and-scan.outputs.image-id }}
+        run: |
+          docker load --input "$RUNNER_TEMP/comms-backup-image/comms-backup.tar"
+          test "$(docker image inspect "$IMAGE_NAME:$IMAGE_TAG" --format '{{.Id}}')" = "$IMAGE_ID"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Publish the immutable image
+        env:
+          IMAGE_TAG: ${{ needs.build-and-scan.outputs.tag }}
+        run: docker push "$IMAGE_NAME:$IMAGE_TAG"

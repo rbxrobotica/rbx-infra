@@ -9,7 +9,14 @@ resources:
   - secretstore.yml
   - externalsecret.yml
   - externalsecret-contact.yml
+  - externalsecret-postmark-webhook.yml
   - externalsecret-s3.yml
+  - backup-serviceaccount.yml
+  - backup-recipient-configmap.yml
+  - backup-cronjob.yml
+  - backup-prometheusrule.yml
+  - contact-servicemonitor.yml
+  - contact-prometheusrule.yml
   - middleware.yml
   - certificate.yml
   - ingressroute.yml
@@ -25,5 +32,9 @@ labels:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-comms
-    newTag: sha-752b3db
-    digest: sha256:271e8f8c4764dc5dab2578edd6a007e5d749b39b5d4238191d470586ee322d06
+    newTag: sha-588d8fd
+    digest: sha256:ae3369b77d3f5779b864e6e82c3ee29dd9f1c58730bdc515d50d7d165c119f98
+  # Anonymous pull, exact-version archive download and isolated restore verified.
+  - name: ghcr.io/rbxrobotica/comms-backup
+    newTag: sha-a051b67
+    digest: sha256:fc4a6037f035baa0d229bd86f744ceca1ddb720e672004d0b7ffad1209365124
