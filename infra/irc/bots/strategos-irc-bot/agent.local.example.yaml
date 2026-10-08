@@ -1,0 +1,15 @@
+agent_id: local
+server: "127.0.0.1:6667"
+tls: false
+nick: rbx-local
+account: rbx-local
+password_env: RBX_AGENT_IRC_PASSWORD
+channel: "#rbx-agents"
+peers:
+  thinkcentre: rbx-thinkcentre
+operators:
+  - leandro
+state_dir: "~/.local/state/rbx-agent-irc/local"
+ttl_seconds: 600
+retention_seconds: 86400
+capacity: 500

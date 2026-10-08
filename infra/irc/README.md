@@ -17,6 +17,11 @@ alias SSH `corbetti`, é Ubuntu 24.04, tem Docker Compose e Tailscale, e não ti
 listeners ou containers IRC. O UFW está ativo com política de entrada `deny` e
 permite publicamente apenas SSH em `22/tcp`; nenhuma regra foi alterada.
 
+O [piloto entre agentes](docs/AGENT-PILOT.md) acrescenta uma mailbox por máquina
+e ferramentas CLI/MCP para perguntas e respostas explícitas no canal privado
+`#rbx-agents`. O transporte não executa ferramentas nem chama modelos. A
+validação local não confirma implantação nas máquinas reais.
+
 ## Componentes
 
 | Componente | Uso | Exposição padrão |

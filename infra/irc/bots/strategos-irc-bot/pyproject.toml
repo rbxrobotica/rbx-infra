@@ -12,12 +12,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+agents = [
+  "mcp>=1.12,<2",
+]
 test = [
   "pytest>=8,<10",
 ]
 
 [project.scripts]
 strategos-irc-bot = "strategos_irc_bot.__main__:main"
+rbx-agent-irc = "strategos_irc_bot.agent_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -68,6 +68,13 @@ transcrições integrais a um modelo.
 
 ## Backup e resposta
 
+O piloto entre agentes usa uma mailbox local com conteúdo de perguntas e
+respostas retido por 24 horas, diretório `0700`, banco `0600` e sem logs de
+conteúdo. Essa mailbox não é ledger nem registro de aprovação. Sua limpeza
+ocorre durante operações locais e no daemon conectado; com tudo parado, os
+dados permanecem até a próxima operação. Veja os limites de retenção e a
+fronteira de ferramentas em [AGENT-PILOT.md](AGENT-PILOT.md).
+
 Backups param brevemente o container para obter uma cópia coerente, são criados
 com modo `0600` em `/srv/rbx/irc/backups` e não saem da Corbetti por padrão.
 Teste restauração trimestralmente. Em incidente:

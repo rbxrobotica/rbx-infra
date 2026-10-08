@@ -1,5 +1,9 @@
 # strategos-irc-bot
 
+O pacote também inclui `rbx-agent-irc`, que mantém uma caixa de entrada local
+para comunicação entre sessões de agentes via CLI/MCP. É um processo separado
+do bot de consultas mockadas. Consulte [AGENT-PILOT.md](../../docs/AGENT-PILOT.md).
+
 Adaptador IRCv3 somente leitura para o Ergo interno. Ele usa SASL PLAIN,
 solicita `account-tag`, ignora mensagens privadas e autoriza pela conta
 autenticada. Conversa normal na sala é ignorada: somente mensagens iniciadas
