@@ -1,0 +1,83 @@
+# Satwake sandbox checkout email sink
+
+This overlay runs the [Comms sandbox email sink](https://github.com/rbxrobotica/rbx-comms/blob/main/docs/ops/satwake-sandbox-email-sink.md) inside `rbx-commerce-sandbox`. It accepts the checkout email-code request and holds the code in memory for a single operator claim. It does not send email, persist codes, or prove mailbox delivery. Production Comms, Postmark, and Meta are outside this path.
+
+## Observed rollout on 2026-09-27
+
+- [Infra #304](https://github.com/rbxrobotica/rbx-infra/pull/304) was merged
+  under specific sandbox-deploy approval. The image pulled, but the pod first
+  stopped at `CreateContainerConfigError`: the image declares `USER nonroot`
+  by name, and kubelet could not verify `runAsNonRoot` without a numeric UID.
+  [Infra #322](https://github.com/rbxrobotica/rbx-infra/pull/322) set the
+  Distroless `nonroot` UID/GID to `65532`; its five checks passed.
+- Argo `rbx-commerce-sandbox` then reached `Synced/Healthy` at `b36f0d7`.
+  The sink is 1/1 on the pinned Comms image; Commerce remains 1/1 on its old
+  image with the literal `COMMS_API_URL=http://127.0.0.1:1`. The two key
+  ExternalSecrets remained `Ready=True`, with only their expected property
+  names inspected. The sink has a ClusterIP Service on port 80, a
+  NetworkPolicy, and no Ingress.
+- From the Commerce pod, sink `/health` returned 204 and an unauthenticated
+  dispatch request returned 401 without storing a code. A temporary pod with
+  a different label reached Commerce `/health` (200) but its connection to
+  sink `/health` was refused; the temporary pod was removed. From Commerce,
+  a connection to the sink pod IP on operator port 8081 was refused. These
+  paired probes support ingress isolation and loopback-only operator binding.
+- The configured no-egress policy has **not** been tested from the sink's
+  own network namespace. A temporary, deliberately unready pod on the same
+  node with the sink's `app.kubernetes.io/name` label could not reach the
+  Commerce `/health` endpoint (connection refused), while a different-label
+  control pod on that node received 200. The unready pod was not a ready
+  endpoint of the sink Service, and both diagnostic pods were removed. This
+  supports enforcement for the policy's pod selector, but does not replace the
+  separately approved probe inside the real sink pod. Do not call its egress
+  enforcement fully verified or issue a synthetic code before that probe.
+  No positive dispatch, operator claim, email, Commerce URL cutover, provider
+  callback, or buyer checkout occurred in this rollout.
+
+## Controlled diagnostic and local rehearsal on 2026-09-27
+
+- Under separate operator approval, a temporary BusyBox container joined the
+  **real sink pod's** network namespace. A control request from the Commerce
+  pod reached its own internal `/health` endpoint (200); the diagnostic
+  container's request to that same Service was refused and exited with code 1.
+  The diagnostic container terminated. Only the sink pod was then deleted;
+  its Deployment recreated a ready 1/1 pod with zero ephemeral containers and
+  zero restarts. Commerce remained 1/1 with
+  `COMMS_API_URL=http://127.0.0.1:1`, and Argo remained `Synced/Healthy`.
+  This probes one harmless destination from the actual pod network namespace
+  and supports enforcement of the configured deny-all egress policy.
+- A local operator port-forward to that replacement pod exercised the sink
+  with the reserved address `buyer@example.invalid`. The two sandbox keys
+  were read into process memory from their separate target Secrets without
+  printing them. A randomly generated six-digit code was accepted by dispatch
+  (202); a wrong operator key returned 401 without consuming it; one authorized
+  claim returned the same code (200); a second claim returned 404. All four
+  responses had `Cache-Control: no-store`. The code and keys were not printed,
+  and the port-forward was terminated. The sink remained ready with no logs
+  or restarts observed.
+- This is evidence for the **isolated sink**, not for a Commerce email
+  challenge, real mailbox delivery, provider callback, browser checkout, or
+  buyer access. Do not cut Commerce over from its inert URL until the schema,
+  sandbox tenant, credential mapping, and image gates in Infra #282/#286 pass
+  under their separate approvals.
+
+## Reconciliation gates for future changes
+
+`rbx-commerce-sandbox` is an Argo CD Application with automated sync. The initial merge deployed the sink but did **not** route Commerce to it. For further changes to this workload, obtain exact deployment approval and recheck the applicable gates below before merge.
+
+1. Confirm the Comms image tagged `sha-752b3db` at immutable digest `sha256:271e8f8c4764dc5dab2578edd6a007e5d749b39b5d4238191d470586ee322d06` was built successfully from merged Comms #22 and contains `/satwake-email-sink`. Confirm the image can be pulled by the sandbox namespace. The production Comms image is unchanged.
+2. First merge and verify the [fail-closed URL change, Infra #306](https://github.com/rbxrobotica/rbx-infra/pull/306): effective sandbox Commerce `COMMS_API_URL` must be the inert loopback target `http://127.0.0.1:1`, and its ExternalSecret must no longer copy the production Comms URL. The `/checkout/email/start` route is mounted even when `SATWAKE_EMAIL_VERIFICATION_REQUIRED` is unset, so this check precedes any Commerce service key or image promotion. Do not proceed if the effective pod still points at production Comms. This baseline is permanent during the rehearsal; reverting #306 is not an allowed rollback.
+3. Provision the two unrelated sandbox-only keys specified in [the Secret mapping stage, Infra #307](https://github.com/rbxrobotica/rbx-infra/pull/307), then merge that stage under its own approval. Confirm both ExternalSecrets are Ready and both runtime Secrets contain their expected key names before deploying this workload. Missing source properties prevent the sink pod from starting. A source Secret recreation still requires re-provisioning the keys.
+4. This overlay only deploys the sink workload, dispatch Service, and NetworkPolicy; it does not create or map credentials and it does not change Commerce's URL. After the sink is ready, [Infra #282](https://github.com/rbxrobotica/rbx-infra/pull/282) may map `COMMS_SERVICE_API_KEY` into sandbox Commerce, but the effective URL must remain inert until the separate cutover change. Missing #282 source properties can block Commerce.
+5. Complete the sandbox Commerce migration and isolated tenant preflight in Infra #282 before promoting the Satwake Commerce image or using checkout. Confirm the sandbox uses `ASAAS_ENV=sandbox`. Keep `SATWAKE_EMAIL_VERIFICATION_REQUIRED` unset until the sink, source keys, checkout route, and UI are ready to test together. The sandbox Asaas webhook remains a separate provider gate.
+6. Review the rendered manifests and obtain explicit approval for the Argo deployment. The sink must have exactly one replica, no inherited provider/database variables, no Ingress, no Service port 8081, and a NetworkPolicy configured to allow dispatch only from sandbox Commerce and deny sink egress. The operator claim listener binds to pod loopback; access requires authorized `kubectl port-forward` and the separate operator key. Manifest validation does not prove that the cluster CNI enforces this policy.
+
+Only after the sink, #282, and the sandbox checkout route have passed their gates should a final, separate cutover PR change Commerce `COMMS_API_URL` from `http://127.0.0.1:1` to `http://satwake-email-sink.rbx-commerce-sandbox.svc.cluster.local`. That PR must be independently approved for Argo auto-sync. Its rollback target is the inert URL, never the legacy production Comms URL.
+
+## Verification after an approved deploy
+
+Inspect the effective Commerce environment **without printing any Secret values**, both ExternalSecret Ready conditions, sink readiness, Service ports, and the NetworkPolicy. Before treating network isolation as verified, make controlled paired probes against the same Service: an unauthenticated request from the Commerce API pod should reach the sink and return 401, while a request from an unrelated pod in the same namespace should be blocked. Also test a known reachable, harmless destination from a control pod and from within the sink pod's network namespace; only the sink should be unable to egress. A debug process sharing the sink pod's network namespace needs separate diagnostic approval and must be terminated after the probe. If these checks cannot establish CNI enforcement, record isolation as unverified and do not run the code rehearsal.
+
+Use only reserved addresses such as `buyer@example.invalid`. Before the Commerce URL cutover, test a valid dispatch through an approved local port-forward or a controlled Commerce-side probe with its sandbox service key: it must return 202; one authorized operator claim must return a six-digit code, and a second claim must return 404. A wrong operator key must return 401 without consuming the code. Follow the Comms runbook for a loopback-only claim procedure; never record the code or keys in CI logs, tickets, or shell history. After the separate cutover, test wrong-code and expired-code rejection through the sandbox checkout UI. These checks prove only the isolated challenge flow, not real email delivery.
+
+If the sink rollout fails, correct the missing source keys or image before retrying; Commerce remains on the inert URL. If a later cutover fails, revert only that cutover to restore the inert URL before changing or removing the sink. Never restore the legacy production Comms URL to the sandbox. Keep paid media and production buyer journeys off until the separate end-to-end release gates are satisfied.

@@ -1,4 +1,5 @@
 import pytest
+
 from strategos_irc_bot.commands import CommandError, CommandKind, parse_command
 
 

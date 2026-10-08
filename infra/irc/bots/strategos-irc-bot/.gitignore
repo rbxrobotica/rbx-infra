@@ -1,6 +1,9 @@
 .venv/
-.pytest_cache/
-__pycache__/
 *.egg-info/
+__pycache__/
+.pytest_cache/
+agent.yaml
 config.yaml
+*.sqlite3*
+agent.env
 uv.lock

@@ -29,9 +29,9 @@ resource "powerdns_record" "kulinaryos_com_a" {
   zone = powerdns_zone.kulinaryos_com.name
   name = "kulinaryos.com."
   type = "A"
-  # Food Process DigitalOcean Traefik edge for the restored WordPress site.
+  # Kulinaryos PROD cluster (kulinaryos-prod-k3s-fra1-01).
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "app_kulinaryos_com_a" {
@@ -39,7 +39,15 @@ resource "powerdns_record" "app_kulinaryos_com_a" {
   name    = "app.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["116.203.21.141"]
+  records = [local.kulinaryos_prod_ingress_ip]
+}
+
+resource "powerdns_record" "prova_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "prova.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "erp_kulinaryos_com_a" {
@@ -55,7 +63,7 @@ resource "powerdns_record" "adm_kulinaryos_com_a" {
   name    = "adm.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "crm_kulinaryos_com_a" {
@@ -63,7 +71,7 @@ resource "powerdns_record" "crm_kulinaryos_com_a" {
   name    = "crm.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "social_kulinaryos_com_a" {
@@ -71,7 +79,7 @@ resource "powerdns_record" "social_kulinaryos_com_a" {
   name    = "social.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "ficgara_kulinaryos_com_a" {
@@ -79,7 +87,7 @@ resource "powerdns_record" "ficgara_kulinaryos_com_a" {
   name    = "ficgara.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
 }
 
 resource "powerdns_record" "digitalmenu_kulinaryos_com_a" {
@@ -87,7 +95,108 @@ resource "powerdns_record" "digitalmenu_kulinaryos_com_a" {
   name    = "digitalmenu.kulinaryos.com."
   type    = "A"
   ttl     = 300
-  records = ["157.230.125.23"]
+  records = [local.kulinaryos_prod_ingress_ip]
+}
+
+resource "powerdns_record" "api_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "api.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_prod_ingress_ip]
+}
+
+resource "powerdns_record" "auth_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "auth.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_prod_ingress_ip]
+}
+
+resource "powerdns_record" "sito_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "sito.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_prod_ingress_ip]
+}
+
+# --- Kulinaryos environments ---
+#
+# Two isolated Food Process clusters. PROD (kulinaryos_prod_ingress_ip) serves
+# the real names above; UAT
+# serves the same names prefixed with "test." and runs on its own cluster,
+# database and repositories. The UAT cluster is the existing k3s Droplet
+# (hostname kulinaryos-social-prod-fra1-01, a historical name).
+#
+# test.kulinaryos.com and api-test.kulinaryos.com were published outside
+# Terraform (PRs #229 and #230 never merged). The import blocks below bring the
+# live rrsets into state instead of overwriting them; their declared values
+# match what is live (A 157.230.125.23, TTL 300), so the plan shows no change
+# for them. api-test is kept only while UAT moves to test.api and is removed
+# afterwards; test.kulinaryos.com becomes the UAT of the institutional site.
+
+import {
+  to = powerdns_record.test_kulinaryos_com_a
+  id = jsonencode({ zone = "kulinaryos.com.", id = "test.kulinaryos.com.:::A" })
+}
+
+import {
+  to = powerdns_record.api_test_kulinaryos_com_a
+  id = jsonencode({ zone = "kulinaryos.com.", id = "api-test.kulinaryos.com.:::A" })
+}
+
+locals {
+  # PROD: kulinaryos-prod-k3s-fra1-01, cut over 2026-09-27.
+  kulinaryos_prod_ingress_ip = "165.245.211.178"
+  kulinaryos_uat_ingress_ip  = "157.230.125.23"
+
+  kulinaryos_uat_hosts = toset([
+    "test.app",
+    "test.prova",
+    "test.api",
+    "test.crm",
+    "test.adm",
+    "test.sito",
+    "test.digitalmenu",
+    "test.ficgara",
+    "test.social",
+  ])
+}
+
+resource "powerdns_record" "test_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "test.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_uat_ingress_ip]
+}
+
+resource "powerdns_record" "test_live_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "test.live.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_uat_ingress_ip]
+}
+
+resource "powerdns_record" "api_test_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "api-test.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_uat_ingress_ip]
+}
+
+resource "powerdns_record" "kulinaryos_uat_a" {
+  for_each = local.kulinaryos_uat_hosts
+
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "${each.key}.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_uat_ingress_ip]
 }
 
 resource "powerdns_record" "localhost_kulinaryos_com_a" {
@@ -281,11 +390,14 @@ resource "powerdns_record" "kulinaryos_com_mx" {
 }
 
 resource "powerdns_record" "kulinaryos_com_spf" {
-  zone    = powerdns_zone.kulinaryos_com.name
-  name    = "kulinaryos.com."
-  type    = "TXT"
-  ttl     = 3600
-  records = ["\"v=spf1 include:_spf.aruba.it ~all\""]
+  zone = powerdns_zone.kulinaryos_com.name
+  name = "kulinaryos.com."
+  type = "TXT"
+  ttl  = 3600
+  records = [
+    "\"v=spf1 include:_spf.aruba.it ~all\"",
+    "\"brevo-code:a6b2176138b9d0206f816bfb57c2e6de\"",
+  ]
 }
 
 resource "powerdns_record" "kulinaryos_com_dmarc" {
@@ -293,7 +405,7 @@ resource "powerdns_record" "kulinaryos_com_dmarc" {
   name    = "_dmarc.kulinaryos.com."
   type    = "TXT"
   ttl     = 3600
-  records = ["\"v=DMARC1; p=none; adkim=r; aspf=r;\""]
+  records = ["\"v=DMARC1; p=none; rua=mailto:rua@dmarc.brevo.com; adkim=r; aspf=r;\""]
 }
 
 resource "powerdns_record" "kulinaryos_com_dkim" {
@@ -304,4 +416,22 @@ resource "powerdns_record" "kulinaryos_com_dkim" {
   records = [
     "\"v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAoOhAWzBuKQYXU6E3E9efq+DPvtkkvWPg3EtB+BT2cTrMGh6Xy00mXfPi/EzubRpbhHpv3b3k1d65Vyhmpp5O3HzTQyzIqYMMF5iF5y05D5aEux3pj/i1g5LkAOFE0Xdf+wnI8zppP2jP7IV4bwKPr1OnBqOjs8hfBWSEGaCSFD/aVbOdNldHiwS\" \"alzDL38E+IcT0KQB+BdutC2T9B5idcSPaBY57sC4hq31wpBlgNcYpIMDxOQN+E9E+TbgnlJYCOYsD5S0amYFivcJObjSGpdstMBfaM1ox5iEQVpEhLz5cwgohjrMst2us7G9eHZ6p2jR7X+/yTP8ryAAywzMJ5wIDAQAB\"",
   ]
+}
+
+# Brevo transactional email signs with independent selectors. The Aruba DKIM
+# selector above remains in place for mail sent through the existing mailbox.
+resource "powerdns_record" "brevo1_kulinaryos_com_dkim" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "brevo1._domainkey.kulinaryos.com."
+  type    = "CNAME"
+  ttl     = 300
+  records = ["b1.kulinaryos-com.dkim.brevo.com."]
+}
+
+resource "powerdns_record" "brevo2_kulinaryos_com_dkim" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "brevo2._domainkey.kulinaryos.com."
+  type    = "CNAME"
+  ttl     = 300
+  records = ["b2.kulinaryos-com.dkim.brevo.com."]
 }

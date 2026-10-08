@@ -1,13 +1,15 @@
 # Robsond ConfigMap (Production — MIG-v3#2)
 #
-# Position monitor disabled for foundation deploy.
-# The daemon runs passively — health checks, DB, event sourcing — but
-# cannot execute any trades until fully activated.
+# The legacy ADR-0014 fixed-percentage PositionMonitor is disabled.
+# ADR-0022 UNTRACKED-position enforcement remains active through the
+# ReconciliationWorker and is not controlled by this compatibility flag.
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name: robsond-config
   namespace: robson
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
   labels:
     app.kubernetes.io/name: robsond
     app.kubernetes.io/component: daemon
@@ -24,9 +26,9 @@ data:
   # Market data subscription (required by daemon)
   ROBSON_MARKET_DATA_SYMBOLS: "BTCUSDT"
 
-  # Position monitor: DISABLED for foundation deploy
-  # Prevents safety net from detecting/executing on rogue positions
-  ROBSON_POSITION_MONITOR_ENABLED: "true"
+  # Legacy ADR-0014 fixed-percentage monitor: disabled. Keep this false across
+  # application rollbacks; ADR-0022 ReconciliationWorker owns UNTRACKED closes.
+  ROBSON_POSITION_MONITOR_ENABLED: "false"
   ROBSON_POSITION_MONITOR_SYMBOLS: "BTCUSDT"
 
   # Projection worker

@@ -12,4 +12,4 @@ resources:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-memory
-    newTag: sha-658f34f657c995510be61c95bcdb7f2fd5c8ef42
+    newTag: sha-abe2a2ed8d90384902a6745b4258d5a2b6261073

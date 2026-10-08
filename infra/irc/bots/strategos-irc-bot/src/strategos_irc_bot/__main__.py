@@ -31,7 +31,11 @@ def main() -> None:
     policy = AuthorizationPolicy.from_accounts(
         list(config.auth.allowed_accounts), config.auth.read_only
     )
-    dispatcher = CommandDispatcher(policy, MockStrategosClient())
+    dispatcher = CommandDispatcher(
+        policy,
+        MockStrategosClient(),
+        config.strategos.tenant_id,
+    )
     IrcBot(config.irc, password, dispatcher).run()
 
 

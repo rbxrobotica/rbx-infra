@@ -18,4 +18,4 @@ commonLabels:
   environment: production
 images:
   - name: ghcr.io/rbxrobotica/rbx-portal
-    newTag: sha-5081837
+    newTag: sha-25460bc

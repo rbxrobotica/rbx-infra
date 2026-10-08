@@ -9,6 +9,7 @@ resources:
   - svc.yml
   - ingress.yml
   - rbac-external-secrets-reader.yml
+  - rbac-external-secrets-comms-postmark.yml
   - rbac-external-secrets-commerce.yml
   - cronjob-submit-sitemap.yml
 
@@ -18,4 +19,4 @@ commonLabels:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-ia-br
-    newTag: sha-ee3b850
+    newTag: sha-6a8aa25

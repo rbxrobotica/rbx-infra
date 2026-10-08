@@ -1,7 +1,6 @@
 # Kustomization for Robson Production
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 resources:
   # Namespace
   - namespace.yml
@@ -28,9 +27,23 @@ resources:
   - redis-deploy.yml
   - redis-svc.yml
   - paradedb-svc.yml
-
 labels:
   - pairs:
       app.kubernetes.io/part-of: robson
       environment: production
     includeSelectors: false
+patches:
+  - target:
+      kind: Deployment
+      name: robsond
+    patch: |-
+      - op: add
+        path: /spec/template/metadata/annotations/robson.rbx.ia~1config-revision
+        value: legacy-position-monitor-disabled-v1
+# Pattern R: single pin for every robson-v2 image (deploy + migrate hook).
+# Mirrors apps/testnet/robson/kustomization.yml. Bumped by robson CI
+# (.github/workflows/robsond.yml), never by hand. See
+# docs/infra/IMAGE-PROMOTION.md.
+images:
+  - name: ghcr.io/rbxrobotica/robson-v2
+    newTag: sha-9472d7da

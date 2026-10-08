@@ -32,6 +32,8 @@ de bind: o firewall do sistema operacional sozinho não define a exposição.
 - O bot autoriza pela tag IRCv3 `account`, nunca por nick/hostmask.
 - A lista de contas autorizadas é explícita e o padrão é negar.
 - Credenciais de bot devem ser exclusivas e sem privilégios de operador.
+- O piloto IRC é single-tenant. Integração multi-tenant exige mapa imutável de
+  canal para tenant e autorização conjunta de conta, canal e tenant.
 
 Comandos destrutivos futuros precisam passar por RBAC, policy engine, confirmação
 fora de banda quando aplicável e gravação de decisão/resultado no ledger. O stub
@@ -59,7 +61,19 @@ Nunca registre payloads, senhas SASL, mensagens privadas ou conteúdo integral d
 comandos no bot. Revise backups como dados sensíveis e aplique a mesma política de
 retenção do serviço.
 
+Não conecte o ZNC à RBXNet sensível sem revisar e desabilitar buffers/logs
+independentes. Uma integração futura do OpenClaw deve ignorar conversa ambiente,
+DMs e replay por padrão, tratar IRC como entrada não confiável e nunca enviar
+transcrições integrais a um modelo.
+
 ## Backup e resposta
+
+O piloto entre agentes usa uma mailbox local com conteúdo de perguntas e
+respostas retido por 24 horas, diretório `0700`, banco `0600` e sem logs de
+conteúdo. Essa mailbox não é ledger nem registro de aprovação. Sua limpeza
+ocorre durante operações locais e no daemon conectado; com tudo parado, os
+dados permanecem até a próxima operação. Veja os limites de retenção e a
+fronteira de ferramentas em [AGENT-PILOT.md](AGENT-PILOT.md).
 
 Backups param brevemente o container para obter uma cópia coerente, são criados
 com modo `0600` em `/srv/rbx/irc/backups` e não saem da Corbetti por padrão.

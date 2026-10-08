@@ -1,0 +1,40 @@
+# The backup runner can inspect and exec only the Plausible ClickHouse pod.
+# Exec is not query-level authorization: compromise of this runner could run
+# arbitrary commands inside that one pod. It cannot list pods or read Secrets.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: plausible-backup
+  namespace: plausible
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: plausible-backup-clickhouse
+  namespace: plausible
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    resourceNames: ["plausible-clickhouse-0"]
+    verbs: ["get"]
+  # GET supports the kubectl WebSocket transport; CREATE supports POST/SPDY
+  # and the API server's additional authorization for WebSocket upgrades.
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    resourceNames: ["plausible-clickhouse-0"]
+    verbs: ["get", "create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: plausible-backup-clickhouse
+  namespace: plausible
+subjects:
+  - kind: ServiceAccount
+    name: plausible-backup
+    namespace: plausible
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: plausible-backup-clickhouse

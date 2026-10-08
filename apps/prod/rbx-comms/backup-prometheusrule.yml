@@ -1,0 +1,69 @@
+# Selector verified against monitoring/kube-prometheus-stack-prometheus:
+# ruleSelector.matchLabels.release=kube-prometheus-stack; namespaces={}.
+# These kube-state-metrics signals prove scheduler/job status, not that a
+# backup remains downloadable or restorable. The S3 latest and restore checks
+# provide those separate checks; do not infer recovery from Job success alone.
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rbx-comms-backup
+  namespace: rbx-comms
+  labels:
+    release: kube-prometheus-stack
+    app.kubernetes.io/name: rbx-comms-backup
+spec:
+  groups:
+    - name: rbx-comms.backup
+      rules:
+        - alert: RBXCommsBackupFailed
+          expr: |
+            (
+              (kube_job_status_failed{namespace="rbx-comms"} > 0)
+              and on(namespace, job_name)
+              kube_job_owner{namespace="rbx-comms", owner_kind="CronJob", owner_name="rbx-comms-backup", owner_is_controller="true"}
+            )
+            unless on(namespace, job_name)
+            (
+              kube_job_created{namespace="rbx-comms"}
+              < on(namespace) group_left()
+              kube_cronjob_status_last_successful_time{namespace="rbx-comms", cronjob="rbx-comms-backup"}
+            )
+          for: 5m
+          labels:
+            severity: critical
+            rbx_workstream: comms-preservation
+          annotations:
+            summary: "Comms backup Job failed"
+            description: "Job {{ $labels.job_name }} failed. Inspect its safe error and the last verified archive receipt; do not assume that a partial upload is a usable backup."
+        - alert: RBXCommsBackupMissing
+          expr: absent(kube_cronjob_info{namespace="rbx-comms", cronjob="rbx-comms-backup"})
+          for: 20m
+          labels:
+            severity: critical
+            rbx_workstream: comms-preservation
+          annotations:
+            summary: "Comms backup CronJob is missing from monitoring"
+            description: "The scheduled backup is absent or kube-state-metrics cannot report it. Verify the CronJob and metrics collection."
+        - alert: RBXCommsBackupOverdue
+          expr: |
+            (
+              (time() - kube_cronjob_status_last_successful_time{namespace="rbx-comms", cronjob="rbx-comms-backup"} > 93600)
+              and on(namespace, cronjob)
+              (kube_cronjob_status_last_successful_time{namespace="rbx-comms", cronjob="rbx-comms-backup"} > 0)
+            )
+            or
+            (
+              (time() - kube_cronjob_created{namespace="rbx-comms", cronjob="rbx-comms-backup"} > 93600)
+              unless on(namespace, cronjob)
+              (kube_cronjob_status_last_successful_time{namespace="rbx-comms", cronjob="rbx-comms-backup"} > 0)
+            )
+          for: 5m
+          labels:
+            severity: critical
+            rbx_workstream: comms-preservation
+          annotations:
+            summary: "Comms has no successful daily backup in 26 hours"
+            description: >-
+              The last successful backup Job is over 26 hours old, or the
+              CronJob has never succeeded after its initial 26-hour grace
+              period. Verify an actual S3 object and restore evidence.
