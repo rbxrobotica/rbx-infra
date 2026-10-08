@@ -1,0 +1,25 @@
+[Unit]
+Description=RBX private agent IRC mailbox
+After=network-online.target rbx-irc-tunnel.service
+Wants=rbx-irc-tunnel.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=%h/.config/rbx-agent-irc/agent.env
+ExecStart=%h/.local/share/rbx-agent-irc/venv/bin/rbx-agent-irc --config %h/.config/rbx-agent-irc/agent.yaml connect
+Restart=on-failure
+RestartSec=10
+RestartPreventExitStatus=1
+TimeoutStopSec=10
+UMask=0077
+NoNewPrivileges=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=yes
+RestrictSUIDSGID=yes
+
+[Install]
+WantedBy=default.target

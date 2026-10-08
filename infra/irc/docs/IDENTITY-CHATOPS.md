@@ -20,6 +20,12 @@ servidor continua dentro da fronteira de confiança. Não conecte o ZNC à RBXNe
 sensível até buffers e retenção serem revisados; o histórico efêmero do Ergo
 expira em sete dias e a persistência está desativada.
 
+O piloto `rbx-agent-irc` de 2026-10-07 usa contas dedicadas por máquina e um
+único canal RBX. Ele oferece transporte e mailbox, sem executar ferramentas,
+integrar uma API ou acordar sessões. A entrada de agentes é consulta explícita
+por CLI/MCP; mensagens não concedem autorização. Instalação, retenção e critérios
+de aceitação estão em [AGENT-PILOT.md](AGENT-PILOT.md).
+
 ## Android, Google e ZITADEL
 
 O app Strategos deve ser um cliente nativo público, sem client secret. O login

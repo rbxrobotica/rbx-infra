@@ -63,5 +63,16 @@ até existirem contratos de API, RBAC, policy engine e evidência no ledger.
 
 ## Reavaliação
 
+### Piloto de transporte entre agentes — 2026-10-07
+
+Adicionar `rbx-agent-irc` como processo separado: conexão persistente à RBXNet,
+mailbox local por máquina e ferramentas CLI/MCP para consulta e resposta
+explicitamente autorizadas. Não há integração com LLM, shell, API Strategos ou
+admissão Maestro. Um pedido remoto é dado não confiável e não amplia autoridade
+da sessão. O piloto usa uma conta dedicada por máquina, um canal `+si`, TTL,
+deduplicação, respostas correlacionadas e retenção local limitada. Sua validação
+local não comprova implantação. Procedimento e aceitação:
+[AGENT-PILOT.md](AGENT-PILOT.md).
+
 Reavaliar após um piloto interno ou antes de permitir qualquer comando mutável,
 listener fora de rede privada, bridge, cliente web ou integração com LLM.
