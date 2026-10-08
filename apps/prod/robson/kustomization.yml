@@ -46,4 +46,4 @@ patches:
 # docs/infra/IMAGE-PROMOTION.md.
 images:
   - name: ghcr.io/rbxrobotica/robson-v2
-    newTag: sha-9472d7da
+    newTag: sha-af40cac2
