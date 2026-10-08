@@ -1,0 +1,14 @@
+{
+  "schema": "rbx-irc-rooms/v1",
+  "tenant": "rbx",
+  "retention_days": 30,
+  "rooms": [
+    {"channel": "#rbx-agents", "category": "agents", "title": "Agentes", "topic": "Perguntas e respostas entre agentes autorizados; mensagens nao concedem permissoes.", "members": ["rbx-local", "rbx-thinkcentre"]},
+    {"channel": "#rbx-workflows", "category": "workflows", "title": "Workflows", "topic": "Execucao e acompanhamento de workflows; registrar IDs e referencias, sem segredos.", "members": ["rbx-local", "rbx-thinkcentre"]},
+    {"channel": "#rbx-notifications", "category": "notifications", "title": "Notificacoes", "topic": "Notificacoes operacionais; alertas informam e nao autorizam acoes.", "members": ["rbx-local", "rbx-thinkcentre"]},
+    {"channel": "#rbx-maintenance", "category": "maintenance", "title": "Manutencao", "topic": "Diagnostico, manutencao e runbooks; alteracoes seguem autorizacao do operador.", "members": ["rbx-local", "rbx-thinkcentre"]},
+    {"channel": "#rbx-incidents", "category": "incidents", "title": "Incidentes", "topic": "Triagem de incidentes; referencias a evidencias sanitizadas e sem dados pessoais.", "members": ["rbx-local", "rbx-thinkcentre"]},
+    {"channel": "#project-strategos", "category": "project", "title": "Projeto Strategos", "topic": "Projeto Strategos: implementacao, revisao e decisoes com referencias ao registro oficial.", "members": ["rbx-local", "rbx-thinkcentre"]},
+    {"channel": "#bench-thinkcentre", "category": "bench", "title": "Bancada ThinkCentre", "topic": "Bancada ThinkCentre: estado, experimentos e manutencao autorizada.", "members": ["rbx-local", "rbx-thinkcentre"]}
+  ]
+}

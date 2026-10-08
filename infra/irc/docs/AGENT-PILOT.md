@@ -69,6 +69,18 @@ systemctl --user daemon-reload
 systemctl --user enable --now rbx-agent-irc.service
 ```
 
+Para que as unidades de usuário iniciem no boot sem login gráfico, habilite
+lingering do próprio usuário, como parte da ativação autorizada:
+
+```bash
+loginctl --no-ask-password enable-linger "$USER"
+loginctl show-user "$USER" -p Linger
+```
+
+Se a política local exigir autenticação administrativa, não amplie permissões
+do usuário; conclua esse passo pelo acesso administrativo autorizado. O Ergo
+na Corbetti registra o histórico independentemente dessas unidades de desktop.
+
 O serviço não inicia sozinho um túnel com destino arbitrário: depende da
 unidade `rbx-irc-tunnel.service` revisada. Falhas de autenticação, canal ou
 certificado encerram o processo e exigem correção antes de reiniciar. Falhas

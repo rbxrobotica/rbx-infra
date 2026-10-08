@@ -76,3 +76,14 @@ local não comprova implantação. Procedimento e aceitação:
 
 Reavaliar após um piloto interno ou antes de permitir qualquer comando mutável,
 listener fora de rede privada, bridge, cliente web ou integração com LLM.
+
+### Salas temáticas e histórico — 2026-10-08
+
+Manter um catálogo explícito de salas e membros. O Ergo 2.19.1 registra o
+histórico autorizado em SQLite no seu volume privado, com retenção de 30 dias,
+opt-in por sala e sem DMs. Isso permite registro contínuo quando os clientes
+estão desconectados. Uma visualização futura no Strategos precisa de um
+conector dedicado, RPC autenticado, autorização de tenant/sala e retomada de
+histórico por cursor. Histórico não é autorização nem fonte de decisões.
+Procedimento, limites e fronteira de implantação:
+[ROOMS-AND-HISTORY.md](ROOMS-AND-HISTORY.md).
