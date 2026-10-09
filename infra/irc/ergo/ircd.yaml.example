@@ -127,6 +127,11 @@ lock-file: ircd.lock
 datastore:
   path: ircd.db
   autoupgrade: true
+  sqlite:
+    enabled: true
+    database-path: ergo_history.db
+    busy-timeout: 5s
+    max-conns: 1
 
 languages:
   enabled: true
@@ -159,19 +164,20 @@ fakelag:
 history:
   enabled: true
   channel-length: 2048
-  client-length: 256
+  client-length: 0
   autoresize-window: 3d
   autoreplay-on-join: 0
   chathistory-maxmessages: 500
   znc-maxmessages: 500
   restrictions:
-    expire-time: 7d
+    expire-time: 30d
     query-cutoff: join-time
     grace-period: 0s
   persistent:
-    enabled: false
+    enabled: true
     unregistered-channels: false
-    registered-channels: disabled
+    # Only explicitly opted-in rooms are archived; see rooms.json.
+    registered-channels: opt-in
     direct-messages: disabled
   retention:
     allow-individual-delete: true

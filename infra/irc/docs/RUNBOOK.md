@@ -161,6 +161,11 @@ sala invite-only sem poderes de moderação.
 
 ## 6. Iniciar o bot
 
+Para salas temáticas privadas e histórico contínuo, consulte
+[ROOMS-AND-HISTORY.md](ROOMS-AND-HISTORY.md) e o catálogo `../rooms.json`.
+O histórico persistente é opt-in por sala; clientes de agente não executam
+mensagens do histórico.
+
 ```bash
 cd infra/irc/bots/strategos-irc-bot
 cp config.example.yaml config.yaml
