@@ -19,5 +19,4 @@ images:
   # Match Infra #299 so merging this Ingress second cannot restore the old pin.
   # Deploy #299 first, then merge this PR only after its separate release gate.
   - name: ghcr.io/rbxrobotica/rbx-landing-briefing-btc
-    newTag: sha-c6f6b58
-    digest: sha256:43532143771bb5a90f2b8205c2b2faf384f06c78fb7b7ceb50ae770535d3a765
+    newTag: sha-2976536
