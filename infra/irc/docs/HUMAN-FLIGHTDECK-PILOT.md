@@ -1,8 +1,9 @@
 # Piloto de conversa entre operador e agente Flight Deck
 
-Data: 2026-10-11. Estado: preparação e ensaio sintético concluídos; janela
-supervisionada encerrada sem receber a pergunta prevista. Conversa real pelo
-Halloy ainda não validada. Complementa o [piloto de transporte](AGENT-PILOT.md).
+Data: 2026-10-11. Estado: ensaio sintético concluído e primeira rodada real
+validada na segunda janela: pergunta do operador, resposta do especialista,
+recepção no cliente e exibição confirmada por screenshot. Complementa o
+[piloto de transporte](AGENT-PILOT.md).
 
 ## Objetivo e escopo
 
@@ -116,12 +117,52 @@ Retomar quando o operador estiver disponível no Halloy, gerando novo UUID e
 timestamp. O frame desta primeira janela expirou. O daemon existente continua
 ativo; não foi instalado um monitor permanente nem agendamento de retomada.
 
+### Segunda janela: pergunta e resposta reais
+
+O operador retomou o teste nesta sessão. Nova janela: 20:43:55 a 20:53:55 BRT,
+com o mesmo limite de três rodadas e escopo explicativo. Primeira correlação:
+`553e23dded8e486182f52855f08b1bcd`.
+
+| Evidência | Resultado observado |
+| --- | --- |
+| Envio humano | Screenshot do Halloy mostra a pergunta em `#rbx-agents` |
+| Leitura pela sessão | 20:45:13 BRT: pedido de entrada pendente, conta `leandro`, UUID e prefixo previstos |
+| Especialista | Subagente `flightdeck-dev` produziu resposta sobre aprovação e execução, com uma pergunta de esclarecimento |
+| Resposta enfileirada | `irc_reply` retornou `queued` às 20:46:06 BRT |
+| Transporte local | Leitura SQLite somente consulta, limitada ao UUID: pedido `replied`, três frames marcados enviados às 20:46:06, 20:46:07 e 20:46:08 BRT |
+| Recepção no cliente | Às 20:50:24 BRT, seleção pelos UUIDs do piloto nos arquivos modificados de histórico encontrou a pergunta e os trechos 1/3, 2/3 e 3/3 da primeira resposta; nenhum conteúdo de outras conversas foi exposto |
+| Processo Halloy | PID 914616 nas capturas de 20:18:27 e 20:50:43 BRT; uptime evoluiu de 528 para 2.464 segundos, consistente com ausência de reinício entre as capturas |
+| Exibição no Halloy | Screenshot posterior fornecido pelo operador, com relógio visível de 20:52, mostra os três trechos da resposta em `#rbx-agents` |
+
+Os horários de leitura pela sessão e geração do envelope não são o horário
+exato de chegada da mensagem ao servidor. Não inferir latência ponta a ponta
+dessa diferença. Os flags locais de envio também não comprovam leitura no
+cliente. A presença no histórico comprova recepção/persistência no Halloy, mas
+não comprova atualização visual imediata. O screenshot confirma exibição,
+sem medir quanto tempo a janela levou para redesenhar ou descartar o sintoma
+de uso prolongado. A primeira rodada comprova a conversa supervisionada no
+canal existente. Nenhum segredo, dado real de Workstream ou alteração de
+produto foi usado; não foram habilitadas automações permanentes.
+
+A resposta devolveu uma pergunta sobre o fluxo do Flight Deck a melhorar.
+Uma segunda correlação foi preparada para a continuação:
+`95c5fb286f5a423fa704695ac3138897`; não foi recebida nas consultas até o
+encerramento. Às 20:53:55 BRT, a consulta ativa foi encerrada conforme o limite
+combinado, com uma rodada completa e exibição confirmada. A primeira rodada
+não demonstra ainda continuidade de múltiplas rodadas nem um especialista
+permanentemente ativo.
+
 ### Próximas capacidades
 
 Para conversa cotidiana, preparar endereçamento legível como `@flightdeck-dev`,
 roteamento por sessão/projeto, identidade atribuível e um mecanismo exclusivo
 de consumo de pedidos. Depois, avaliar canal `#project-flightdeck` e permissões
 próprias. Nenhum desses itens foi implementado ou provisionado por este piloto.
+
+A captura real expõe o custo de usabilidade do protocolo atual: UUID/epoch
+precisam ser colados pelo humano, e os trechos da resposta cortam palavras na
+janela. A interface de conversa deve ocultar esses detalhes, mantendo correlação,
+limites e rastreabilidade no transporte.
 
 Um agente permanente também precisa de início e parada explícitos, limites
 de custo e tempo, retenção de contexto e recuperação. Execução de trabalho
