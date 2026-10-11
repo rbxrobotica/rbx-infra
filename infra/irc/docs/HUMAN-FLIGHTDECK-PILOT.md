@@ -1,7 +1,8 @@
 # Piloto de conversa entre operador e agente Flight Deck
 
-Data: 2026-10-11. Estado: preparação e ensaio sintético concluídos; conversa
-real pelo Halloy ainda não validada. Complementa o [piloto de transporte](AGENT-PILOT.md).
+Data: 2026-10-11. Estado: preparação e ensaio sintético concluídos; janela
+supervisionada encerrada sem receber a pergunta prevista. Conversa real pelo
+Halloy ainda não validada. Complementa o [piloto de transporte](AGENT-PILOT.md).
 
 ## Objetivo e escopo
 
@@ -100,6 +101,22 @@ pedido expirado, deduplicou a pergunta, preservou UUID/epoch/destinatário na
 resposta e recusou uma segunda resposta. Esse resultado não substitui o ensaio real.
 
 ## Evolução após o teste
+
+### Resultado da primeira janela
+
+O operador autorizou o teste e recebeu a linha pronta para envio no Halloy.
+Entre 20:14:45 e 20:24:45 BRT, a consulta dirigida não encontrou o pedido
+`67616f2b4bf94b3fb98f4ee4cad22cdf`. A mailbox reportou conexão ativa e fila
+vazia nas verificações. A consulta ativa foi encerrada no limite de tempo;
+nenhuma resposta foi publicada, e não houve confirmação de exibição no Halloy.
+Não foi recebido relato do operador de que tivesse enviado a linha. Esses
+dados não demonstram falha de entrega, nem sucesso do percurso completo.
+
+Retomar quando o operador estiver disponível no Halloy, gerando novo UUID e
+timestamp. O frame desta primeira janela expirou. O daemon existente continua
+ativo; não foi instalado um monitor permanente nem agendamento de retomada.
+
+### Próximas capacidades
 
 Para conversa cotidiana, preparar endereçamento legível como `@flightdeck-dev`,
 roteamento por sessão/projeto, identidade atribuível e um mecanismo exclusivo
