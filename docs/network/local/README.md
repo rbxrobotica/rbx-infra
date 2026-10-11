@@ -19,6 +19,7 @@ instaladas chaves, habilitados acessos ou alteradas regras para fazer o teste pa
 Referências canônicas deste levantamento:
 
 - [Evidência e limites dos testes](EVIDENCE-2026-10-11.md).
+- [Clientes IRC e papel do Strategos](CLIENTS-AND-STRATEGOS.md).
 - [Inventário de equipamentos](../../../infra/network/registry/hosts.yaml).
 - [Escopo de infraestrutura de rede](../../../infra/network/README.md).
 
@@ -145,6 +146,11 @@ O acesso móvel precisa de desenho explícito. A
 não permite senha SASL persistente; uma conta móvel com senha própria mudaria
 essa regra. O painel de salas no Strategos permanece uma proposta documentada,
 não uma capacidade demonstrada.
+
+A avaliação de [clientes e acesso móvel](CLIENTS-AND-STRATEGOS.md) propõe
+Konversation como piloto gráfico no Mint, Goguma como candidato Android e
+Strategos como interface integrada futura. O piloto deve comparar reconexão e
+consulta de histórico com o Halloy atual antes de substituí-lo.
 
 ## Arquivos, capacidade e continuidade
 
