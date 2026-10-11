@@ -1,6 +1,6 @@
 # Revisão do piloto Konversation
 
-Data: 2026-10-11. Estado: instalado, mas não adotado como padrão RBX.
+Data: 2026-10-11. Estado: piloto encerrado; Konversation desinstalado por pedido do operador.
 O operador prioriza leveza, baixo consumo, soberania, artefatos verificáveis e
 reconstrução pela automação. A instalação Flatpak resolveu a disponibilidade
 do aplicativo, mas não demonstrou aderência a esses critérios.
@@ -13,11 +13,24 @@ O aplicativo também abriu a rede pública Libera, enquanto o Halloy já contém
 RBXNet, conta SASL e sete canais. Portanto, instalação e paleta não entregaram
 equivalência operacional.
 
-Recomendação do coordenador: preservar Halloy como cliente principal, com
-diagnóstico da atualização interrompida. Konversation permanece piloto opcional.
-Isso não afirma que o Halloy é mais estável, nem que Konversation é inseguro.
-O defeito relatado e os critérios de credencial/empacotamento ainda impedem a
-escolha definitiva. Nenhum aplicativo foi removido nesta revisão.
+O operador decidiu preservar Halloy e investigar a atualização interrompida,
+incluindo consumo de memória e persistência. O tema escuro do Halloy foi
+explicitamente aprovado e não foi alterado. Isso não demonstra superioridade
+de estabilidade de um cliente. Ver o [diagnóstico Halloy](HALLOY-DIAGNOSTIC-2026-10-11.md).
+
+## Encerramento e remoção
+
+A desinstalação foi delegada ao mesmo agente Codex Sol 6.1 medium. Foram
+executados com sucesso `flatpak kill org.kde.konversation` e
+`flatpak uninstall --user --noninteractive -y org.kde.konversation`.
+O aplicativo e sua extensão de traduções foram removidos; uma verificação
+independente confirmou a ausência do pacote e do processo. A entrada de menu
+também deixou de existir.
+
+Os dados residuais em `~/.var/app/org.kde.konversation`, o runtime KDE 6.10 e
+o remote Flathub foram preservados. Não foi feita limpeza de runtimes
+compartilhados nem instalação via APT. Halloy, túnel e mailbox permaneceram
+ativos; nenhuma credencial foi migrada ou mensagem IRC enviada.
 
 ## Autenticação e perfil RBX
 
@@ -41,13 +54,12 @@ isolamento absoluto contra comprometimento de uma sessão desbloqueada. Ainda
 assim, copiar a senha do cofre para texto amplia as cópias legíveis e deve ser
 uma decisão explícita, não um efeito oculto de trocar o cliente.
 
-O [perfil preparado](konversation-pilot.prepared.json) contém somente campos
-não secretos, autoconexão desabilitada e autenticação pendente. É um plano de
-configuração, não um arquivo que o Konversation consome. Preserva identidades
-separadas para redes públicas. Nenhuma senha foi migrada nem login realizado
-por esta revisão.
+Um perfil sem segredos chegou a ser preparado, mas nunca foi aplicado. O plano
+foi retirado da árvore de trabalho após o encerramento do piloto; sua versão
+histórica permanece no Git. Nenhuma senha foi migrada nem login realizado por
+esta revisão.
 
-## Correção completa de cores
+## Cores: análise histórica, não aplicada
 
 O grupo `Message Text Colors` controla onze cores de conversa, incluindo
 `TextViewBackground`, `ChannelMessage`, `BacklogMessage` e `Hyperlink`.
@@ -56,18 +68,14 @@ As cores de apelidos e códigos IRC precisam de contraste próprio; manter
 `BreezeDark` para os demais controles Qt. Fonte:
 [schema da versão instalada](https://invent.kde.org/network/konversation/-/blob/v26.04.3/src/config/konversation.kcfg#L917).
 
-Para aplicar o perfil, encerrar primeiro o aplicativo para que salve as redes
-existentes. Fazer cópia privada do arquivo, mesclar usando grupos numerados
-livres e conferir referências de identidade, rede e canais. Alterar o arquivo
-com o programa aberto pode perder mudanças no encerramento. Não substituir
-as redes existentes nem iniciar automaticamente uma conexão com credencial
-incompleta. A confirmação visual deve ocorrer após nova abertura.
+Essas cores não chegaram a ser aplicadas. A análise permanece como referência
+caso haja uma nova avaliação explicitamente solicitada do aplicativo.
 
 ## Distribuição e consumo
 
 | Opção observada | Evidência local | Limite |
 | --- | --- | --- |
-| Flatpak atual | Konversation 1.10.26043, runtime KDE 6.10 | Runtime reporta cerca de 1,1 GB em disco; isso não representa RAM residente |
+| Flatpak avaliado e removido | Konversation 1.10.26043, runtime KDE 6.10 | Runtime reporta cerca de 1,1 GB em disco; isso não representa RAM residente |
 | APT da distribuição | Candidato 23.08.5-0ubuntu4, Noble/universe | Simulação sem recomendações acrescenta 95 pacotes nesta máquina, principalmente Qt5/KF5 |
 | Binário Linux avulso oficial | Não encontrado nas páginas oficiais consultadas | Não prometer um equivalente ao artefato Halloy; compilar exige manter dependências e builds |
 

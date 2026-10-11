@@ -10,12 +10,12 @@ datas prometidas nem evidência de implantação. Inventário e testes concluíd
   Esse caminho permanece disponível durante a evolução da mesh.
 - Cliente IRC dedicado atende operação humana; integração no Strategos será
   adicional. O sintoma do Halloy está registrado, com causa ainda desconhecida.
-- Konversation **1.10.26043** já está instalado via Flatpak user, com paleta
-  `BreezeDark` configurada. Pacote, versão e desktop entry foram verificados;
-  o uso gráfico revelou tema parcial e perfil RBX ausente. A
-  [revisão do piloto](KONVERSATION-PILOT.md) mantém Halloy como principal e
-  Konversation como comparação opcional. A preferência é distribuição leve e
-  verificável, senha no cofre e consolidação posterior no bootstrap Mint.
+- Konversation **1.10.26043** foi desinstalado por pedido do operador após
+  avaliação do tema, perfil, distribuição e armazenamento de credenciais. A
+  [revisão do piloto](KONVERSATION-PILOT.md) registra seu encerramento. Halloy
+  permanece com tema e cofre atuais, em [diagnóstico](HALLOY-DIAGNOSTIC-2026-10-11.md).
+  A preferência é distribuição leve e verificável, senha no cofre e consolidação
+  posterior no bootstrap Mint.
 - O operador concordou em revisar a senha própria do cliente nativo: o piloto
   admite conta/credencial revogável por aparelho sob a
   [política revisada](../../../infra/irc/docs/IDENTITY-CHATOPS.md).
@@ -27,34 +27,34 @@ datas prometidas nem evidência de implantação. Inventário e testes concluíd
 | Etapa | Entrega concreta | Evidência para concluir | Dependência |
 | --- | --- | --- | --- |
 | 0 — Base observada | Inventário, topologia e SSH/SFTP workstation → ThinkCentre | Testes e limites registrados; concluído | Nenhuma mudança no ZTE |
-| 1 — IRC confiável no Mint | Piloto Konversation com tema escuro, RBXNet e perfil separado para outra rede | Uso prolongado, atualizações visíveis, reconexão e histórico satisfatórios; causa do Halloy investigada | Túnel e conta humana existentes |
+| 1 — IRC confiável no Mint | Diagnóstico Halloy de interface, conexão, memória e persistência, preservando tema e perfil atuais | Uso prolongado, atualizações visíveis, reconexão e histórico satisfatórios; hipótese confirmada antes de ajustar configuração | Túnel e conta humana existentes |
 | 2 — Acesso privado definido | Política efetiva Headscale revisada, matriz de acesso e mudanças de host preparadas com reversão | Testes previstos de permitir/recusar acesso, IPv4/IPv6 e recuperação LAN | Inventário e identidade dos nós; inspeção da configuração real |
 | 3 — Primeiro cliente móvel | Goguma no POCO com conta própria e endpoint TLS privado | Salas permitidas, revogação, histórico, Wi-Fi/dados móveis e tela bloqueada validados | Etapa 2; provisionamento do caminho e conta |
 | 4 — Continuidade e segundo aparelho | Capacidade/backup da ThinkCentre avaliados e Samsung incluído se necessário | Restauração ensaiada e comportamento móvel medido no A02 | Etapa 3 para replicar o acesso móvel; revisão de capacidade pode ocorrer antes |
 | 5 — Trabalho delegado | Uma tarefa delimitada workstation → ThinkCentre, com identificador e resultado verificável | Recebimento, execução autorizada, retorno de artefato/erro e ausência de duplicação | Identidades/escopo de execução e capacidade adequada |
 
-### Etapa 1: comparar clientes sem mascarar a falha
+### Etapa 1: investigar a falha do Halloy
 
 O Halloy atual pode ficar aparentemente conectado e deixar de mostrar mensagens
 até a janela ser reaberta, segundo o operador. Reabertura também refaz conexões
 e consulta histórico; portanto, não identifica sozinha a causa.
 
-Com a instalação concluída, preparar um perfil Konversation no túnel existente, com a identidade humana,
-sem substituir a mailbox ou reiniciar seu serviço. Registrar versão, tema e
-comportamento em uma jornada de trabalho, incluindo período ocioso e retomada.
-Não declarar sucesso apenas por conseguir fazer login.
+Konversation foi removido; o tema Halloy foi aprovado. A observação inicial de
+três minutos mostrou memória estável e os arquivos examinados passaram em
+leitura JSON/gzip. Isso não descarta problemas após horas de uso ou falhas
+lógicas de histórico. Registrar comportamento em uma jornada de trabalho,
+incluindo período ocioso, suspensão e retomada.
 
-Usar um cliente humano por vez na comparação. Se houver nova falha, registrar
-horário, estado do cliente, sockets e estado do túnel antes de reabrir a janela.
+Se houver nova falha, registrar horário, estado do cliente, CPU, memória,
+sockets e estado do túnel antes de reabrir a janela, usando a
+[captura somente leitura](HALLOY-DIAGNOSTIC-2026-10-11.md#captura-no-próximo-sintoma).
 Logs de protocolo podem conter segredos e conversas: não habilitá-los como
 primeira medida. Confirmar se houve mensagens novas por evidência autorizada;
 ausência de movimento em um canal silencioso não demonstra travamento.
 
-Konversation admite várias redes simultâneas. Configurar RBXNet no túnel e
-redes externas com transporte/contas próprios; não compartilhar senhas nem
-criar uma ponte de mensagens entre redes. O piloto deve verificar legibilidade
-do tema escuro, notificações, histórico e reconexão, conforme
-[plano de clientes](CLIENTS-AND-STRATEGOS.md).
+Só testar mudança de backend gráfico ou versão quando a evidência apontar
+para essa hipótese. Alterar uma variável por vez e preservar configuração e
+histórico para reversão. Não apagar caches nem trocar o tema como diagnóstico.
 
 ### Etapas 2 e 3: preparar o acesso móvel
 

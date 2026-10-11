@@ -1,6 +1,6 @@
 # Clientes IRC e papel do Strategos
 
-Data: **2026-10-11**. Estado: **Konversation instalado; piloto de uso pendente**,
+Data: **2026-10-11**. Estado: **Konversation removido; Halloy preservado em diagnóstico**,
 sem criação de conta ou mudança de serviço IRC. Complementa a
 [arquitetura local](README.md) e o [roadmap](ROADMAP.md). O operador relata que,
 após muito tempo aberto, o Halloy deixa de mostrar atualizações dos canais e
@@ -10,10 +10,10 @@ causa não foi reproduzida; não há comparação de estabilidade neste hardware
 ## Recomendação
 
 **Revisão após uso gráfico e esclarecimento do padrão RBX:** preservar Halloy
-como cliente principal enquanto o sintoma é diagnosticado. Konversation fica
-como piloto opcional; a gravação SASL em texto e a distribuição Flatpak precisam
-ser avaliadas antes de adoção. O tema parcial foi confirmado no screenshot.
-Ver [revisão do piloto e requisitos de bootstrap](KONVERSATION-PILOT.md).
+como cliente principal enquanto o sintoma é diagnosticado. O operador encerrou
+o piloto Konversation, cuja remoção foi verificada, e aprovou o tema atual do
+Halloy. Ver [encerramento do piloto](KONVERSATION-PILOT.md) e
+[evidências de memória, persistência e conexão](HALLOY-DIAGNOSTIC-2026-10-11.md).
 
 Usar clientes IRC dedicados para conversa cotidiana e acesso operacional.
 Integrar salas e histórico ao Strategos como capacidade adicional, preservando
@@ -23,7 +23,7 @@ outro armazenamento de histórico só para trocar a interface.
 
 | Dispositivo/interface | Candidato | Papel e condição |
 | --- | --- | --- |
-| Mint, interface gráfica | Konversation, instalado via Flatpak user | Comparar com Halloy no mesmo túnel; adotar se atender estabilidade, reconexão e histórico |
+| Mint, interface gráfica | Halloy 2026.9, binário existente | Preservar tema, cofre e perfil; investigar falha de atualização em uso prolongado |
 | Mint, terminal | WeeChat | Alternativa operacional já prevista no repositório; não é requisito instalar dois clientes |
 | POCO e Samsung | Goguma | Candidato móvel; depende de versão Android, caminho de rede e identidade própria |
 | Strategos | Painel integrado futuro | Salas, histórico, alertas e referências a decisões, com autorização no backend |
@@ -53,16 +53,16 @@ Flathub. A versão upstream listada, **1.10.26082**, não é a versão do cache 
 local nem do Flatpak instalado posteriormente nesta sessão.
 Não presumir que a versão mais nova ou a disponibilidade no Mint prova estabilidade.
 
-### Instalação autorizada concluída
+### Histórico da instalação, depois removida
 
 A pedido do operador, a instalação foi delegada a Codex **Sol 6.1 medium** e
-conferida pelo agente coordenador. Está instalado **Konversation 1.10.26043**,
+conferida pelo agente coordenador. Foi instalado **Konversation 1.10.26043**,
 `org.kde.konversation`, Flathub stable, instalação do usuário, runtime KDE 6.10.
 O commit do pacote é
 `e4fad19c445f47fcfc2e71a8a8ecad288722d2bc4adaa53c86c751633fc79262`.
 A paleta `BreezeDark` foi gravada na configuração do aplicativo e confirmada
-por `kreadconfig6`. A aparência da janela e da área de mensagens ainda precisa
-ser corrigida: o screenshot posterior confirma controles escuros e conversa
+por `kreadconfig6`. A aparência da janela e da área de mensagens ficou incompleta:
+o screenshot posterior confirmou controles escuros e conversa
 branca, porque o histórico tem sua própria paleta.
 
 Comandos usados para instalar e configurar:
@@ -78,19 +78,17 @@ paleta e validação do arquivo desktop com `desktop-file-validate`. A consulta
 de versão encerrou com sucesso, mas emitiu avisos de módulo GTK e socket de
 gerenciamento de sessão; isso não substitui um teste gráfico. Halloy e suas
 configurações foram preservados. Não houve login IRC, mensagens de teste ou
-interrupção do túnel/mailbox por essa instalação. Para abrir o piloto:
+interrupção do túnel/mailbox por essa instalação. Posteriormente, por pedido do
+operador, o aplicativo foi desinstalado. Os comandos acima são registro histórico,
+não instruções de adoção ou bootstrap.
 
-```bash
-flatpak run org.kde.konversation
-```
-
-### Capacidades a conferir no piloto
+### Capacidades avaliadas e limites
 
 Konversation permite múltiplas redes simultâneas e identidades por servidor.
 RBXNet pode coexistir com redes públicas, usando perfis e credenciais separados;
 não configurar encaminhamento automático entre elas. As cores de conversa e
 componentes associados são configuráveis, inclusive com fundo escuro. Menus e
-botões dependem também da paleta Qt/KDE; no Cinnamon, validar a aparência do
+botões dependem também da paleta Qt/KDE; no desktop Mint, validar a aparência do
 pacote escolhido em vez de presumir que seguirá automaticamente o tema GTK.
 Referência: [configuração de cores do Konversation 23.08.5](https://github.com/KDE/konversation/blob/v23.08.5/src/config/colorsappearance_config.ui).
 
@@ -195,27 +193,26 @@ Assim, o Strategos pode relacionar conversas a decisões e trabalho, enquanto o
 cliente dedicado continua útil para conversa e diagnóstico. Decisões duráveis
 continuam nos registros próprios dos sistemas e repositórios.
 
-## Piloto e critérios de adoção
+## Diagnóstico e critérios de adoção
 
 1. Reproduzir o sintoma relatado de atualização interrompida após longo uso,
    anotando período ocioso, suspensão e mudanças de rede. Separar falha da
    interface, túnel e servidor; não tratar a reabertura como diagnóstico da causa.
-2. Preparar Konversation com autoconexão desativada, conta humana existente e
-   o túnel loopback já validado. Preservar Halloy e suas configurações para retorno.
-   Não iniciar outro túnel na mesma porta nem reiniciar o usado pelos agentes.
-3. Comparar login, salas permitidas, histórico e reconexão nas mesmas condições.
-   Testar fechamento/reabertura do cliente sem interromper a rede do escritório.
-   Usar um cliente humano por vez para não introduzir colisões de sessão/nick;
-   incluir tema escuro e uma segunda rede com identidade própria no piloto.
-   Eventuais mensagens de teste dependem de instrução do operador para envio.
+2. Capturar CPU, RAM, descritores, sockets e metadados de persistência antes de
+   reiniciar, conforme o [procedimento Halloy](HALLOY-DIAGNOSTIC-2026-10-11.md).
+   Preservar o tema `ferra`, o perfil, a referência ao cofre e o túnel existente.
+3. Verificar se a interface aceita troca de canais e entrada, se a rolagem está
+   presa e se há evidência independente de mensagens novas. Comparar capturas
+   em uso normal e durante o sintoma. Mensagens de teste dependem de instrução
+   do operador para envio; uma conexão TCP estabelecida não prova entrega visual.
 4. Registrar retenção/cache/logs locais separadamente dos 30 dias no servidor.
    Não ativar log bruto do protocolo por padrão; pode incluir credenciais e conteúdo.
 5. No móvel, após identidade/transporte definidos, verificar recuperação de
    histórico, Wi-Fi ↔ dados móveis, tela bloqueada, reinício, atraso de alertas
    e revogação da conta. Primeiro POCO, depois Samsung se houver necessidade.
-6. Adotar o cliente somente com evidência de uso e consulta de histórico
-   satisfatórios. Manter a opção anterior até concluir essa avaliação.
+6. Consolidar o cliente no bootstrap Mint após evidência de uso prolongado,
+   atualização visível, recuperação de histórico e reconexão satisfatórias.
 
-A instalação e as verificações de pacote/tema acima foram concluídas. Ensaios
-gráficos e de estabilidade, conexão móvel, envio de mensagem, inscrição na
-malha e mudança no Ergo continuam pendentes.
+A instalação e a remoção do Konversation foram concluídas. O diagnóstico inicial
+do Halloy não reproduziu a falha nem demonstrou vazamento de memória. Validação
+prolongada, conexão móvel, inscrição na malha e mudança no Ergo seguem pendentes.

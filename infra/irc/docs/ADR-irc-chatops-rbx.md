@@ -96,8 +96,10 @@ aparelho, sem OPER e com salas delimitadas, conforme
 [IDENTITY-CHATOPS.md](IDENTITY-CHATOPS.md). Essa revisão não provisiona contas
 nem muda listeners/ACLs em execução.
 
-Konversation é candidato ao piloto gráfico no Mint e Goguma ao piloto Android;
-WeeChat permanece alternativa de terminal. O sintoma relatado do Halloy é deixar
+O piloto Konversation foi encerrado e o aplicativo desinstalado por pedido do
+operador. Halloy permanece no Mint com tema e cofre preservados; Goguma é
+candidato ao piloto Android e WeeChat permanece alternativa de terminal.
+O sintoma relatado do Halloy é deixar
 de atualizar canais após longo tempo aberto, recuperando-se após reabertura;
 a causa ainda não foi reproduzida. O framework mobile de Strategos, Robson e
 demais produtos continua em aberto, com Tauri e Wails v3 como candidatos.

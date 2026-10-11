@@ -149,10 +149,11 @@ com salas delimitadas e sem privilégios administrativos. As contas e o endpoint
 móvel ainda não foram provisionados. O painel de salas no Strategos permanece
 uma proposta; o padrão mobile dos produtos RBX continua em aberto.
 
-A avaliação de [clientes e acesso móvel](CLIENTS-AND-STRATEGOS.md) propõe
-Konversation como piloto gráfico no Mint, Goguma como candidato Android e
-Strategos como interface integrada futura. O piloto deve comparar reconexão e
-consulta de histórico com o Halloy atual antes de substituí-lo.
+A avaliação de [clientes e acesso móvel](CLIENTS-AND-STRATEGOS.md) mantém
+Halloy no Mint, Goguma como candidato Android e Strategos como interface
+integrada futura. Konversation foi removido por pedido do operador. O
+[diagnóstico Halloy](HALLOY-DIAGNOSTIC-2026-10-11.md) examina memória,
+persistência, conexão e atualização visual, preservando o tema atual.
 
 ## Arquivos, capacidade e continuidade
 
