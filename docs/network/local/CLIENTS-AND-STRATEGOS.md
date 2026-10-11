@@ -2,8 +2,10 @@
 
 Data: **2026-10-11**. Estado: **recomendação e roteiro de piloto**, sem instalação,
 troca de cliente, criação de conta ou mudança de serviço. Complementa a
-[arquitetura local](README.md). A causa da insatisfação com o Halloy ainda não
-foi informada nem reproduzida; não há comparação de estabilidade neste hardware.
+[arquitetura local](README.md) e o [roadmap](ROADMAP.md). O operador relata que,
+após muito tempo aberto, o Halloy deixa de mostrar atualizações dos canais e
+volta a mostrá-las ao fechar e reabrir a janela. O sintoma foi relatado, mas a
+causa não foi reproduzida; não há comparação de estabilidade neste hardware.
 
 ## Recomendação
 
@@ -45,6 +47,23 @@ Flathub. A versão upstream listada, **1.10.26082**, não é a versão do cache 
 local. Escolher uma distribuição estável e anotar a versão efetivamente testada.
 Não presumir que a versão mais nova ou a disponibilidade no Mint prova estabilidade.
 
+Konversation permite múltiplas redes simultâneas e identidades por servidor.
+RBXNet pode coexistir com redes públicas, usando perfis e credenciais separados;
+não configurar encaminhamento automático entre elas. As cores de conversa e
+componentes associados são configuráveis, inclusive com fundo escuro. Menus e
+botões dependem também da paleta Qt/KDE; no Cinnamon, validar a aparência do
+pacote escolhido em vez de presumir que seguirá automaticamente o tema GTK.
+Referência: [configuração de cores do Konversation 23.08.5](https://github.com/KDE/konversation/blob/v23.08.5/src/config/colorsappearance_config.ui).
+
+Na leitura local de 2026-10-11, túnel e mailbox estavam `active/running`, com
+`NRestarts=0` desde 2026-10-08. O socket da mailbox estava estabelecido no
+loopback, e não foi encontrado processo chamado `halloy`. Esse retrato não
+reproduz o período da falha nem comprova fluxo de mensagens ponta a ponta.
+Ao ocorrer novamente, comparar conexão do cliente, atividade do túnel e
+recuperação de histórico antes de fechar a janela. Hipóteses incluem conexão
+sem recuperação, atualização visual e recuperação de histórico; nenhuma foi
+confirmada. Não aplicar ajustes de GPU, DNS ou ping sem evidência correspondente.
+
 O [Halloy documenta CHATHISTORY automático](https://halloy.chat/configuration/servers.html#automated_chathistory),
 que já está habilitado aqui. A
 [negociação atual do Konversation](https://raw.githubusercontent.com/KDE/konversation/master/src/irc/server.cpp)
@@ -78,22 +97,16 @@ móvel ainda precisa de um caminho aprovado. Para um cliente nativo, a proposta
 política da malha e pelas salas da conta. Esse endpoint e essas permissões não
 foram demonstrados nem provisionados. Não abrir a porta 6667 no ZTE.
 
-A [decisão de identidade existente](../../../infra/irc/docs/IDENTITY-CHATOPS.md)
-diz: **“O Poco não deve armazenar senha SASL persistente.”** É uma escolha de
-arquitetura, não uma limitação técnica do aparelho. Selecionar Goguma não altera
-essa decisão. Há dois caminhos para o acesso móvel:
+A [decisão de identidade](../../../infra/irc/docs/IDENTITY-CHATOPS.md) foi revista
+em 2026-10-11 com concordância explícita do operador: o piloto pode usar senha
+IRC própria e revogável por aparelho, inclusive no POCO, sem OPER e com salas
+delimitadas. Não distribuir contas da mailbox nem a conta fundadora aos telefones.
+Verificar como o cliente armazena e exporta credenciais; não presumir que a senha
+esteja no cofre do Android. Testar revogação e tratar cópias locais do histórico.
 
-1. **Manter a decisão:** implementar gateway/BFF com autenticação RBX e sessões
-   revogáveis, conforme o desenho existente, inicialmente para o painel Strategos.
-   Não está demonstrado que Goguma consuma esse contrato de autenticação.
-2. **Piloto nativo proposto:** revisar explicitamente a decisão para permitir
-   credencial dedicada e revogável por aparelho, sem OPER e com salas delimitadas.
-   Não distribuir contas da mailbox nem a conta fundadora aos telefones.
-   Só provisionar após a decisão e a definição do transporte.
-
-A regra textual cita o POCO. O Samsung exige decisão própria de escopo e conta;
-não herda acesso automaticamente. Instalar o aplicativo pode preceder essa
-decisão, mas não entrega uma conexão funcional à RBXNet.
+POCO será o primeiro piloto; Samsung terá conta e escopo próprios. A aprovação
+da direção de identidade não provisiona as contas nem o transporte. Instalar o
+aplicativo, por si só, não entrega uma conexão funcional à RBXNet.
 
 As [notificações do Goguma](https://codeberg.org/emersion/goguma/src/branch/master/doc/notifications.md)
 dependem de execução em segundo plano ou push. Consulta periódica pode atrasar
@@ -111,12 +124,18 @@ conectividade IRC e de funcionamento nativo offline. Em `rbx-infra`,
 [ROOMS-AND-HISTORY](../../../infra/irc/docs/ROOMS-AND-HISTORY.md#visualização-no-strategos)
 registra explicitamente que o painel de salas ainda não está implementado.
 
+Esse APK descreve o estado atual, não o padrão mobile definitivo. O operador
+manteve **em aberto** o framework de Strategos, Robson e demais produtos RBX;
+Tauri e Wails v3 serão avaliados em uma trilha própria do [roadmap](ROADMAP.md).
+A autenticação/autorização do serviço e o transporte IRC devem permitir essa
+escolha sem exigir a reconstrução da rede operacional.
+
 Desenho futuro, não implantado por este roteiro:
 
 ```mermaid
 flowchart LR
     D["Cliente dedicado"] -->|"SSH no desktop / TLS privado no móvel"| E["Ergo · RBXNet"]
-    U["Strategos · web / entrada Android"] -->|"sessão autenticada"| B["Backend / gateway RBX"]
+    U["Strategos · interface futura a definir"] -->|"sessão autenticada"| B["Backend / gateway RBX"]
     B -->|"identidade própria e salas delimitadas"| E
 ```
 
@@ -132,13 +151,16 @@ continuam nos registros próprios dos sistemas e repositórios.
 
 ## Piloto e critérios de adoção
 
-1. Registrar o sintoma do Halloy: fechamento/travamento, desconexão, histórico
-   incompleto ou dificuldade de uso. Separar falha da interface, túnel e servidor.
+1. Reproduzir o sintoma relatado de atualização interrompida após longo uso,
+   anotando período ocioso, suspensão e mudanças de rede. Separar falha da
+   interface, túnel e servidor; não tratar a reabertura como diagnóstico da causa.
 2. Preparar Konversation com autoconexão desativada, conta humana existente e
    o túnel loopback já validado. Preservar Halloy e suas configurações para retorno.
    Não iniciar outro túnel na mesma porta nem reiniciar o usado pelos agentes.
 3. Comparar login, salas permitidas, histórico e reconexão nas mesmas condições.
    Testar fechamento/reabertura do cliente sem interromper a rede do escritório.
+   Usar um cliente humano por vez para não introduzir colisões de sessão/nick;
+   incluir tema escuro e uma segunda rede com identidade própria no piloto.
    Eventuais mensagens de teste dependem de instrução do operador para envio.
 4. Registrar retenção/cache/logs locais separadamente dos 30 dias no servidor.
    Não ativar log bruto do protocolo por padrão; pode incluir credenciais e conteúdo.

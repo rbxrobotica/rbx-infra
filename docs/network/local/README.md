@@ -20,6 +20,7 @@ Referências canônicas deste levantamento:
 
 - [Evidência e limites dos testes](EVIDENCE-2026-10-11.md).
 - [Clientes IRC e papel do Strategos](CLIENTS-AND-STRATEGOS.md).
+- [Roadmap e critérios de conclusão](ROADMAP.md).
 - [Inventário de equipamentos](../../../infra/network/registry/hosts.yaml).
 - [Escopo de infraestrutura de rede](../../../infra/network/README.md).
 
@@ -59,7 +60,7 @@ de queda de WAN nem de reinicialização.
 | --- | --- | --- |
 | Workstation i7 / RTX 4070 Ti SUPER 16 GB | Operação, desenvolvimento, inferência e processamento de mídia | Atualmente no Wi-Fi; concorrência de tarefas deve reservar recursos para o operador |
 | ThinkCentre i5 / GT 1030 4 GB | Bancada de testes, tarefas CPU e serviços leves | Disco em 86%, cerca de 16 GiB disponíveis; disponibilidade contínua ainda não confirmada |
-| POCO, conforme relato do operador | Operação móvel, produção de conteúdo e consulta | Acesso interno, versão Android e política de credenciais ainda pendentes |
+| POCO, conforme relato do operador | Operação móvel, produção de conteúdo e consulta | Acesso interno, versão Android e provisionamento de credenciais ainda pendentes |
 | Samsung A02, conforme relato | Comunicação e consulta | Não há necessidade demonstrada de SSH administrativo ou ingresso na malha |
 | Windows da Enforce, opcional | Equipamento externo ao domínio administrativo RBX | Não incluir em rotinas, distribuição de chaves ou malha RBX sem escopo próprio autorizado |
 
@@ -141,11 +142,12 @@ permissões do operador. Conversas, histórico e mensagens de outro agente não
 ampliam a autorização. Git/issues e os registros próprios dos sistemas guardam
 decisões, especificações e resultados duráveis; IRC compartilha referências.
 
-O acesso móvel precisa de desenho explícito. A
-[regra atual para o POCO](../../../infra/irc/docs/IDENTITY-CHATOPS.md)
-não permite senha SASL persistente; uma conta móvel com senha própria mudaria
-essa regra. O painel de salas no Strategos permanece uma proposta documentada,
-não uma capacidade demonstrada.
+O acesso móvel precisa de transporte e contas próprios. A
+[revisão de identidade de 2026-10-11](../../../infra/irc/docs/IDENTITY-CHATOPS.md)
+admite senha IRC exclusiva e revogável por aparelho no piloto, inclusive no POCO,
+com salas delimitadas e sem privilégios administrativos. As contas e o endpoint
+móvel ainda não foram provisionados. O painel de salas no Strategos permanece
+uma proposta; o padrão mobile dos produtos RBX continua em aberto.
 
 A avaliação de [clientes e acesso móvel](CLIENTS-AND-STRATEGOS.md) propõe
 Konversation como piloto gráfico no Mint, Goguma como candidato Android e
@@ -166,14 +168,11 @@ consulta de histórico com o Halloy atual antes de substituí-lo.
 
 ## Etapas seguintes, sem necessidade de resetar o ZTE
 
-1. Manter o alias `thinkcentre` e os acessos LAN que passaram no teste.
-2. Confirmar uso de disco da ThinkCentre antes de ampliar serviços; revisar backup
-   e disponibilidade. Nenhuma limpeza está autorizada implicitamente por este plano.
-3. Revisar configuração efetiva SSH, firewall IPv4/IPv6 e política Headscale,
-   produzindo mudanças com testes e reversão antes de qualquer aplicação.
-4. Inscrever a workstation na mesh com as permissões já definidas, preservando a LAN.
-5. Conectar dispositivos móveis e acrescentar inferência/alertas conforme necessidades
-   concretas e identidades restritas. Não conceder shell geral como efeito colateral.
+O [roadmap local](ROADMAP.md) organiza as próximas entregas: confiabilidade do
+cliente IRC, política de acesso/mesh, piloto móvel, capacidade/recuperação e
+delegação entre máquinas. A avaliação do framework mobile dos produtos segue
+em paralelo. Manter o alias `thinkcentre` e os acessos LAN já comprovados durante
+essa evolução.
 
 O painel do ZTE só será necessário para mudanças próprias do roteador, como
 reservas DHCP e configuração/validação de convidados. Recuperá-lo ou resetá-lo
