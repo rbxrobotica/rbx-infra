@@ -96,6 +96,13 @@ recuperação de histórico antes de fechar a janela. Hipóteses incluem conexã
 sem recuperação, atualização visual e recuperação de histórico; nenhuma foi
 confirmada. Não aplicar ajustes de GPU, DNS ou ping sem evidência correspondente.
 
+Na revisão posterior do parecer Fable, a unidade local do túnel foi consultada
+por campos: `ServerAliveInterval=30`, `ServerAliveCountMax=3` e
+`ExitOnForwardFailure=yes` já estão definidos. A hipótese de ausência de
+keepalive não corresponde a essa configuração; a causa do sintoma continua
+pendente. Isso não comprova conectividade contínua nem dispensa observar o
+cliente e o túnel no momento da falha.
+
 O [Halloy documenta CHATHISTORY automático](https://halloy.chat/configuration/servers.html#automated_chathistory),
 que já está habilitado aqui. A
 [negociação atual do Konversation](https://raw.githubusercontent.com/KDE/konversation/master/src/irc/server.cpp)
