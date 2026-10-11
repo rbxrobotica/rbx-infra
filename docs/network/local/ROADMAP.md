@@ -10,6 +10,9 @@ datas prometidas nem evidência de implantação. Inventário e testes concluíd
   Esse caminho permanece disponível durante a evolução da mesh.
 - Cliente IRC dedicado atende operação humana; integração no Strategos será
   adicional. O sintoma do Halloy está registrado, com causa ainda desconhecida.
+- Konversation **1.10.26043** já está instalado via Flatpak user, com paleta
+  `BreezeDark` configurada. Pacote, versão e desktop entry foram verificados;
+  login, aparência e uso prolongado ainda não foram validados.
 - O operador concordou em revisar a senha própria do cliente nativo: o piloto
   admite conta/credencial revogável por aparelho sob a
   [política revisada](../../../infra/irc/docs/IDENTITY-CHATOPS.md).
@@ -33,7 +36,7 @@ O Halloy atual pode ficar aparentemente conectado e deixar de mostrar mensagens
 até a janela ser reaberta, segundo o operador. Reabertura também refaz conexões
 e consulta histórico; portanto, não identifica sozinha a causa.
 
-Preparar um perfil Konversation no túnel existente, com a identidade humana,
+Com a instalação concluída, preparar um perfil Konversation no túnel existente, com a identidade humana,
 sem substituir a mailbox ou reiniciar seu serviço. Registrar versão, tema e
 comportamento em uma jornada de trabalho, incluindo período ocioso e retomada.
 Não declarar sucesso apenas por conseguir fazer login.
@@ -92,6 +95,12 @@ preservam o trabalho durável. Mensagens não disparam shell arbitrário.
 Esta decisão cobre Strategos, Robson e demais produtos. Não depende da adoção
 de um cliente IRC e não deve bloquear a comunicação operacional.
 
+**Os dois frameworks serão testados.** Ensaios de build e interface com dados
+sintéticos podem começar já. A comparação funcional começa assim que houver
+contratos mínimos de sessão, tenant, permissões e licença, com uma API de teste
+comum. Não é necessário esperar a plataforma inteira; tampouco comparar apps
+com fluxos de identidade diferentes e atribuir a diferença ao framework.
+
 | Candidato | Situação oficial consultada em 2026-10-11 | Consequência para a avaliação |
 | --- | --- | --- |
 | Tauri v2 | Versão estável com Android/iOS e desktop | Candidato a referência inicial; validar plugins e requisitos reais |
@@ -118,3 +127,27 @@ o domínio e as permissões do produto. Não impor acesso IRC a todo produto RBX
 O resultado dessa prova será uma decisão de arquitetura própria, com critérios,
 limitações e atualização dos repositórios dos produtos. Nenhum framework foi
 adotado, instalado ou migrado nesta revisão.
+
+## Evolução coordenada do rbx-comms
+
+O planejamento de camadas, catálogo de salas, identidade e produto está em
+`rbx-comms/docs/architecture/sovereign-communications-roadmap.md`, acompanhado
+de `irc-room-catalog.proposed.yaml`. Ambos são propostas, não configuração
+aplicada. Preservam os sete canais atuais e consideram apenas três adições:
+`#rbx-ops`, `#merovelis-ops` e `#rbx-merovelis-growth`, com membros definidos
+explicitamente e sem herança automática entre empresas.
+
+A primeira integração proposta é um alerta interno sanitizado para
+`#rbx-notifications`, originado de monitoramento autenticado sobre saúde do
+provedor de email ou ausência prolongada de confirmação. Ausência de recibo
+não prova falha de entrega. O alerta não reenvia mensagens de clientes nem
+executa recuperação automaticamente. Ensaiar em ambiente isolado antes do
+rollout; falhas de host, energia e Internet podem afetar IRC e email juntos.
+
+Os produtos reutilizam Identity para autenticação, autorização por recurso no
+backend e Commerce para licenças/entitlements e seats. Licença não concede
+acesso administrativo ou aprovação de execução. O modelo já existe nos
+repositórios; migração e enforcement em produção ainda precisam ser confirmados.
+IRC coordena funis internamente; contato com leads e Direct Response continuam
+dependentes do público, consentimento e de experimentos mensuráveis nos canais
+de atendimento. Nenhuma campanha foi iniciada por este planejamento.

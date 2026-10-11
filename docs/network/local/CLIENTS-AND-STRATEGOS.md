@@ -1,7 +1,7 @@
 # Clientes IRC e papel do Strategos
 
-Data: **2026-10-11**. Estado: **recomendação e roteiro de piloto**, sem instalação,
-troca de cliente, criação de conta ou mudança de serviço. Complementa a
+Data: **2026-10-11**. Estado: **Konversation instalado; piloto de uso pendente**,
+sem criação de conta ou mudança de serviço IRC. Complementa a
 [arquitetura local](README.md) e o [roadmap](ROADMAP.md). O operador relata que,
 após muito tempo aberto, o Halloy deixa de mostrar atualizações dos canais e
 volta a mostrá-las ao fechar e reabrir a janela. O sintoma foi relatado, mas a
@@ -17,7 +17,7 @@ outro armazenamento de histórico só para trocar a interface.
 
 | Dispositivo/interface | Candidato | Papel e condição |
 | --- | --- | --- |
-| Mint, interface gráfica | Konversation | Comparar com Halloy no mesmo túnel; adotar se atender estabilidade, reconexão e histórico |
+| Mint, interface gráfica | Konversation, instalado via Flatpak user | Comparar com Halloy no mesmo túnel; adotar se atender estabilidade, reconexão e histórico |
 | Mint, terminal | WeeChat | Alternativa operacional já prevista no repositório; não é requisito instalar dois clientes |
 | POCO e Samsung | Goguma | Candidato móvel; depende de versão Android, caminho de rede e identidade própria |
 | Strategos | Painel integrado futuro | Salas, histórico, alertas e referências a decisões, com autorização no backend |
@@ -29,7 +29,7 @@ nenhuma dessas interfaces transforma conversa em autorização para execução.
 
 ## Evidência local e escolha no Mint
 
-Consulta somente leitura em 2026-10-11:
+Inspeção inicial, antes da instalação autorizada em 2026-10-11:
 
 - `halloy --version`: **2026.9 (2b3edc8e)**, instalado no diretório do usuário.
 - Configuração TOML consultada por lista explícita de campos: servidor
@@ -44,8 +44,40 @@ Consulta somente leitura em 2026-10-11:
 A [página oficial do Konversation](https://apps.kde.org/konversation/) apresenta
 uma GUI tradicional, TLS e releases recentes; também oferece distribuição via
 Flathub. A versão upstream listada, **1.10.26082**, não é a versão do cache APT
-local. Escolher uma distribuição estável e anotar a versão efetivamente testada.
+local nem do Flatpak instalado posteriormente nesta sessão.
 Não presumir que a versão mais nova ou a disponibilidade no Mint prova estabilidade.
+
+### Instalação autorizada concluída
+
+A pedido do operador, a instalação foi delegada a Codex **Sol 6.1 medium** e
+conferida pelo agente coordenador. Está instalado **Konversation 1.10.26043**,
+`org.kde.konversation`, Flathub stable, instalação do usuário, runtime KDE 6.10.
+O commit do pacote é
+`e4fad19c445f47fcfc2e71a8a8ecad288722d2bc4adaa53c86c751633fc79262`.
+A paleta `BreezeDark` foi gravada na configuração do aplicativo e confirmada
+por `kreadconfig6`. A aparência da janela e da área de mensagens ainda precisa
+ser verificada durante o piloto.
+
+Comandos usados para instalar e configurar:
+
+```bash
+flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+flatpak install --user --noninteractive -y flathub org.kde.konversation
+flatpak run --command=kwriteconfig6 org.kde.konversation --file kdeglobals --group General --key ColorScheme BreezeDark
+```
+
+Verificações concluídas: `flatpak info`, `konversation --version`, leitura da
+paleta e validação do arquivo desktop com `desktop-file-validate`. A consulta
+de versão encerrou com sucesso, mas emitiu avisos de módulo GTK e socket de
+gerenciamento de sessão; isso não substitui um teste gráfico. Halloy e suas
+configurações foram preservados. Não houve login IRC, mensagens de teste ou
+interrupção do túnel/mailbox por essa instalação. Para abrir o piloto:
+
+```bash
+flatpak run org.kde.konversation
+```
+
+### Capacidades a conferir no piloto
 
 Konversation permite múltiplas redes simultâneas e identidades por servidor.
 RBXNet pode coexistir com redes públicas, usando perfis e credenciais separados;
@@ -170,5 +202,6 @@ continuam nos registros próprios dos sistemas e repositórios.
 6. Adotar o cliente somente com evidência de uso e consulta de histórico
    satisfatórios. Manter a opção anterior até concluir essa avaliação.
 
-Nenhum ensaio desses clientes, conexão móvel, envio de mensagem, inscrição na
-malha ou mudança no Ergo foi executado para produzir este documento.
+A instalação e as verificações de pacote/tema acima foram concluídas. Ensaios
+gráficos e de estabilidade, conexão móvel, envio de mensagem, inscrição na
+malha e mudança no Ergo continuam pendentes.
