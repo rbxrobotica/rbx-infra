@@ -181,9 +181,11 @@ não é pré-requisito para os acessos já comprovados.
 ## Responsabilidade documental
 
 `rbx-infra` guarda inventário/topologia/matriz local e mantém Headscale/IRC.
-`rbx-workstation` contém automação de hosts, mas seu baseline completo é de VPS
-Ubuntu; o playbook Mint atual é restrito ao cliente Tailscale. Não aplicar o
-bootstrap de VPS aos desktops por conveniência. Recuperação comprovada deve
+O catálogo atribui o bootstrap local a `ldamasio/rbx-workstation-mint`, cujo
+checkout fica em `/home/psyctl/app/rbx-workstation-mint`. `rbx-workstation`
+contém automação centrada na VPS Ubuntu e um playbook Mint restrito ao cliente
+Tailscale; não substitui o repositório do desktop. Não aplicar o bootstrap de
+VPS aos desktops por conveniência. Recuperação comprovada deve
 ser relacionada em `rbx-resilience` quando houver ensaios correspondentes.
 
 Há documentação antiga de IRC que ainda menciona histórico em memória por sete

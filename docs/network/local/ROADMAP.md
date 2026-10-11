@@ -12,7 +12,10 @@ datas prometidas nem evidência de implantação. Inventário e testes concluíd
   adicional. O sintoma do Halloy está registrado, com causa ainda desconhecida.
 - Konversation **1.10.26043** já está instalado via Flatpak user, com paleta
   `BreezeDark` configurada. Pacote, versão e desktop entry foram verificados;
-  login, aparência e uso prolongado ainda não foram validados.
+  o uso gráfico revelou tema parcial e perfil RBX ausente. A
+  [revisão do piloto](KONVERSATION-PILOT.md) mantém Halloy como principal e
+  Konversation como comparação opcional. A preferência é distribuição leve e
+  verificável, senha no cofre e consolidação posterior no bootstrap Mint.
 - O operador concordou em revisar a senha própria do cliente nativo: o piloto
   admite conta/credencial revogável por aparelho sob a
   [política revisada](../../../infra/irc/docs/IDENTITY-CHATOPS.md).

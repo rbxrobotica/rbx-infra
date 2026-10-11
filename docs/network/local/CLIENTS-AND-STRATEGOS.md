@@ -9,6 +9,12 @@ causa não foi reproduzida; não há comparação de estabilidade neste hardware
 
 ## Recomendação
 
+**Revisão após uso gráfico e esclarecimento do padrão RBX:** preservar Halloy
+como cliente principal enquanto o sintoma é diagnosticado. Konversation fica
+como piloto opcional; a gravação SASL em texto e a distribuição Flatpak precisam
+ser avaliadas antes de adoção. O tema parcial foi confirmado no screenshot.
+Ver [revisão do piloto e requisitos de bootstrap](KONVERSATION-PILOT.md).
+
 Usar clientes IRC dedicados para conversa cotidiana e acesso operacional.
 Integrar salas e histórico ao Strategos como capacidade adicional, preservando
 um cliente independente para diagnóstico quando o Strategos estiver indisponível.
@@ -56,7 +62,8 @@ O commit do pacote é
 `e4fad19c445f47fcfc2e71a8a8ecad288722d2bc4adaa53c86c751633fc79262`.
 A paleta `BreezeDark` foi gravada na configuração do aplicativo e confirmada
 por `kreadconfig6`. A aparência da janela e da área de mensagens ainda precisa
-ser verificada durante o piloto.
+ser corrigida: o screenshot posterior confirma controles escuros e conversa
+branca, porque o histórico tem sua própria paleta.
 
 Comandos usados para instalar e configurar:
 

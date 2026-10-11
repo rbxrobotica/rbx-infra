@@ -1,0 +1,87 @@
+{
+  "schema": "rbx-irc-client-pilot-plan/v0",
+  "target_application": "Konversation",
+  "verified_package_version": "1.10.26043",
+  "upstream_source_tag": "v26.04.3",
+  "status": "prepared_not_applied",
+  "credential_policy": "keep_existing_halloy_keyring_no_secret_read_or_copy",
+  "qt_palette": "BreezeDark",
+  "profile": {
+    "name": "RBXNet",
+    "identity_name": "RBX leandro",
+    "nickname": "leandro-mint",
+    "sasl_account": "leandro",
+    "host": "127.0.0.1",
+    "port": 6667,
+    "tls": false,
+    "channels": [
+      "#rbx-agents",
+      "#rbx-workflows",
+      "#rbx-notifications",
+      "#rbx-maintenance",
+      "#rbx-incidents",
+      "#project-strategos",
+      "#bench-thinkcentre"
+    ],
+    "autoconnect": false,
+    "authentication_ready": false
+  },
+  "message_text_colors": {
+    "ActionMessage": "189,147,249",
+    "BacklogMessage": "172,176,179",
+    "ChannelMessage": "239,240,241",
+    "CommandMessage": "189,147,249",
+    "QueryMessage": "239,240,241",
+    "ServerMessage": "253,188,75",
+    "Time": "172,176,179",
+    "Action": "114,159,207",
+    "TextViewBackground": "35,38,41",
+    "AlternateBackground": "49,54,59",
+    "Hyperlink": "93,173,226"
+  },
+  "flags": {
+    "InputFieldsBackgroundColor": true,
+    "ShowServerList": true
+  },
+  "preserve_existing_networks_and_identities": true,
+  "apply_requires": "Konversation stopped and its existing profiles saved; merge with free group numbers",
+  "appearance": {
+    "UseColoredNicks": true,
+    "IrcColorCode0": "239,240,241",
+    "IrcColorCode1": "172,176,179",
+    "IrcColorCode2": "114,159,207",
+    "IrcColorCode3": "133,196,108",
+    "IrcColorCode4": "255,117,117",
+    "IrcColorCode5": "253,188,75",
+    "IrcColorCode6": "189,147,249",
+    "IrcColorCode7": "255,184,108",
+    "IrcColorCode8": "241,250,140",
+    "IrcColorCode9": "166,226,122",
+    "IrcColorCode10": "86,214,199",
+    "IrcColorCode11": "139,233,253",
+    "IrcColorCode12": "138,173,244",
+    "IrcColorCode13": "255,146,208",
+    "IrcColorCode14": "172,176,179",
+    "IrcColorCode15": "213,216,220",
+    "NickColor0": "114,159,207",
+    "NickColor1": "133,196,108",
+    "NickColor2": "255,117,117",
+    "NickColor3": "253,188,75",
+    "NickColor4": "189,147,249",
+    "NickColor5": "255,184,108",
+    "NickColor6": "241,250,140",
+    "NickColor7": "166,226,122",
+    "NickColor8": "86,214,199"
+  },
+  "highlight_list": {
+    "HighlightNickColor": "255,146,208",
+    "HighlightOwnLinesColor": "133,196,108"
+  },
+  "tab_notifications": {
+    "TabNotificationsMsgsColor": "133,196,108",
+    "TabNotificationsPrivateColor": "255,146,208",
+    "TabNotificationsSystemColor": "253,188,75",
+    "TabNotificationsNickColor": "255,146,208",
+    "TabNotificationsHighlightsColor": "255,146,208"
+  }
+}
