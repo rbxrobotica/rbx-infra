@@ -1,0 +1,158 @@
+# Inventário documental: não é consumido por Ansible nem aplica configuração.
+# proposed_id não é hostname, alias SSH, nome DNS ou concessão de acesso.
+schema_version: 1
+assessment_date: "2026-10-11"
+timezone: America/Sao_Paulo
+evidence: ../../../docs/network/local/EVIDENCE-2026-10-11.md
+architecture: ../../../docs/network/local/README.md
+
+devices:
+  - proposed_id: rbx-gw-01
+    observed:
+      lan_gateway_ipv4: 192.168.0.1
+      administration: login_rejected
+      administration_checked_on: "2026-10-10"
+      dhcp_reservations: not_verified
+      guest_isolation: not_verified
+      router_firewall: not_verified
+    reported:
+      vendor: ZTE
+      model: ZXHN F6600P
+      provider: Claro
+    proposed:
+      role: gateway_dhcp_and_wifi
+      change: preserve_current_network_pending_panel_inspection
+
+  - proposed_id: rbx-ws-01
+    observed:
+      hostname: psyctl-workstation
+      os: Linux Mint 22.3
+      cpu: Intel Core i7-12700F
+      ram_display: 31Gi
+      gpu:
+        model: NVIDIA GeForce RTX 4070 Ti SUPER
+        memory_mib: 16376
+      lan:
+        interface: wlp0s20f3
+        medium: wifi
+        ipv4_cidr: 192.168.0.5/24
+        gateway_ipv4: 192.168.0.1
+        address_stability: not_verified
+      root_filesystem_df_h:
+        size: 457G
+        used: 65G
+        available: 370G
+        use_percent: 15
+      tailscale:
+        backend_state: NeedsLogin
+        ipv4: null
+      irc_adapter_connected: true
+      ufw_config_enabled: false
+      complete_firewall_ruleset_verified: false
+    reported: {}
+    proposed:
+      roles:
+        - primary_operator_workstation
+        - gpu_computation
+        - development_and_media_production
+      administrative_domain: rbx
+      hostname_change: none
+
+  - proposed_id: rbx-ws-02
+    observed:
+      hostname: psyctl-ThinkCentre-E73
+      os: Linux Mint 22.3
+      cpu: Intel Core i5-4590S
+      ram_display: 15Gi
+      gpu:
+        model: NVIDIA GeForce GT 1030
+        memory_mib: 4096
+      lan:
+        interface: enp3s0
+        medium: ethernet
+        ipv4_cidr: 192.168.0.9/24
+        gateway_ipv4: 192.168.0.1
+        link_speed_mbps: 1000
+        duplex: full
+        address_stability: not_verified
+      root_filesystem_df_h:
+        size: 109G
+        used: 89G
+        available: 16G
+        use_percent: 86
+      tailscale:
+        backend_state: Running
+        ipv4: 100.64.0.3
+        peer_observed:
+          ipv4: 100.64.0.2
+          hostname: vmi3355954
+          attribution_to_corbetti: not_verified_in_this_assessment
+      irc_adapter_connected: true
+      ufw_config_enabled: false
+      complete_firewall_ruleset_verified: false
+    reported: {}
+    proposed:
+      roles:
+        - test_and_agent_workbench
+        - lightweight_services_after_storage_review
+      administrative_domain: rbx
+      hostname_change: none
+
+  - proposed_id: rbx-mob-01
+    observed: {}
+    reported:
+      device_label: POCO 13
+      os_family: Android
+      connection: wifi
+      use: content_creation_and_mobile_operations
+    proposed:
+      roles:
+        - mobile_operations
+        - media_capture_and_editing
+      internal_access: explicit_service_permissions_only
+      mesh_enrollment: pending_identity_and_access_decision
+
+  - proposed_id: rbx-mob-02
+    observed: {}
+    reported:
+      device_label: Samsung A02
+      os_family: Android
+      connection: wifi
+      use: business_communications
+    proposed:
+      role: business_communications
+      administrative_credentials: none
+      mesh_enrollment: not_required_initially
+
+  - proposed_id: ext-enforce-01
+    observed: {}
+    reported:
+      device_label: Enforce Windows 11
+      os: Windows 11
+      cpu_family: Intel Core i7
+      ram_gb: 32
+      participation: optional
+      administrative_domain: Enforce
+    proposed:
+      role: external_device
+      rbx_mesh_enrollment: none
+      network_placement: guest_network_only_after_isolation_validation
+
+observed_access:
+  - source: rbx-ws-01
+    destination: rbx-ws-02
+    protocol: ssh
+    path: direct_lan_ipv4
+    existing_alias: thinkcentre
+    remote_user: psyctl
+    result: success
+    authentication: publickey
+    strict_host_key_checking: true
+    agent_forwarding: false
+  - source: rbx-ws-02
+    destination: rbx-ws-01
+    protocol: ssh
+    path: direct_lan_ipv4
+    host_key_check: known_host_accepted
+    result: authentication_denied
+    new_access_grant: false
