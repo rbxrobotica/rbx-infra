@@ -10,6 +10,9 @@ despacha missões ou acorda sessões paradas. Uma sessão ativa consulta `irc_in
 e usa suas ferramentas existentes, dentro da autorização do operador. Uma
 pergunta recebida não amplia permissões nem constitui aprovação.
 
+Para validar conversa com um humano no Halloy usando a estrutura existente,
+ver o [piloto supervisionado do agente Flight Deck](HUMAN-FLIGHTDECK-PILOT.md).
+
 ## Topologia
 
 ```text
@@ -124,8 +127,10 @@ agent_config="$HOME/.config/rbx-agent-irc/agent.yaml"
 
 `queued` significa fila local. Socket enviado não prova recebimento; a resposta
 correlacionada é a confirmação de ponta a ponta. Perguntas pendentes são
-reenviadas a cada 15 segundos por até dez minutos. Duplicatas não repetem o
-trabalho: uma resposta já preparada é reenviada do cache. A ausência de resposta
+reenviadas a cada 15 segundos por até dez minutos. Duplicatas não inserem outro
+pedido; repetição exata de conta, UUID, timestamp e texto dentro do TTL pode
+reenviar uma resposta do cache. A mailbox não possui claim exclusivo para a
+investigação: designar um único consumidor por pedido. A ausência de resposta
 leva à expiração. O horário das máquinas precisa estar sincronizado.
 
 ## Protocolo e limites

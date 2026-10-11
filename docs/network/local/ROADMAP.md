@@ -56,6 +56,11 @@ Só testar mudança de backend gráfico ou versão quando a evidência apontar
 para essa hipótese. Alterar uma variável por vez e preservar configuração e
 histórico para reversão. Não apagar caches nem trocar o tema como diagnóstico.
 
+O [piloto humano e agente Flight Deck](../../../infra/irc/docs/HUMAN-FLIGHTDECK-PILOT.md)
+usa o canal e a mailbox existentes para testar pergunta, resposta e exibição
+no Halloy. A sessão supervisionada não é um agente permanente nem valida a
+execução delegada da etapa 5; serve como primeiro ensaio de conversa dirigida.
+
 ### Etapas 2 e 3: preparar o acesso móvel
 
 Inspecionar primeiro a política Headscale efetiva e os listeners/TLS do Ergo.
