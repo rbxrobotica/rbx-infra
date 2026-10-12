@@ -92,6 +92,64 @@ em cada cliente. Não foram definidos preços, uma rota padrão ou economia
 percentual nesta revisão. O piloto anterior não coletou totais de consumo;
 uma comparação de custo exige nova medição com perguntas equivalentes.
 
+### Preferência do operador: assinaturas e classificador local
+
+O operador manifestou interesse em integrar Thalamus e priorizou os planos já
+pagos, inicialmente sem cobrança por API sob demanda. O atendimento deve
+recusar fallback para cobrança avulsa, compra/recarga automática ou excedentes.
+Ao atingir a cota, informar indisponibilidade e aguardar renovação ou decisão
+humana. Assinatura não significa capacidade ilimitada; acompanhar cota,
+latência e consumo junto com o custo mensal. Reserva local não reserva a cota
+global compartilhada com outros usos do mesmo plano.
+
+Jev e Laya foram sugeridos como candidatos. Seu papel proposto é classificar
+uma consulta para auxiliar a escolha de rota; a resposta livre continua com
+um modelo de conversa. O classificador não concede permissões, aceita
+aprovações nem decide sozinho que um pedido sensível é seguro.
+
+| Candidato | Evidência oficial consultada em 2026-10-11 | Posição neste incremento |
+| --- | --- | --- |
+| Jev / TypeSafe | Retorna decisões tipadas e probabilidades; é oferecido por API com preço por tokens | Referência de comparação; não habilitar a API sob demanda nesta fase. [Introdução](https://docs.typesafe.ai/introduction), [oferta oficial](https://typesafe.ai/) |
+| Laya | Pesos Apache-2.0, execução local e variante multilíngue; não gera a resposta de chat | Priorizar avaliação local em português, ainda sem escolha definitiva. A model card registra limitações de precisão e calibração. [Model card](https://huggingface.co/convaiinnovations/laya), [repositório upstream](https://github.com/NandhaKishorM/laya) |
+
+Preparar avaliação de sugestões de rota em paralelo às decisões humanas, sem
+efeito operacional: poucas classes, casos em português, ambiguidades e pedidos
+fora do escopo. Comparar com regras determinísticas e medir erros de
+encaminhamento, abstenção, RAM/VRAM, CPU e latência nesta workstation. Uma
+menção explícita a um agente já resolve o destino sem modelo classificador.
+Somente adotar Laya onde ele acrescentar qualidade ou reduzir consumo total;
+incluir seu próprio custo computacional e erros na comparação. Fixar revisão
+de código/pesos e verificar artefatos antes do ensaio; nenhum modelo foi
+baixado, instalado ou medido nesta revisão.
+
+### Caminhos oficiais para usar a assinatura
+
+O Codex CLI disponível nesta sessão reportou versão `0.160.0` e autenticação
+ChatGPT em uma consulta de status sem revelar credenciais. Isso confirma o
+método de login, não o plano, a cota restante ou elegibilidade de outras
+integrações. A lista de assinaturas ativas foi solicitada ao operador.
+
+- **Executor Codex local:** a documentação permite login ChatGPT para acesso
+  por assinatura, e `codex exec` reutiliza a autenticação salva. É candidato
+  ao primeiro ensaio supervisionado. [Autenticação](https://learn.chatgpt.com/docs/auth),
+  [modo não interativo](https://learn.chatgpt.com/docs/non-interactive-mode).
+- **Integração explícita do plano ChatGPT:** existe documentação para apps
+  open-source e locais usando consentimento próprio e requisições elegíveis.
+  Há também caminho de Codex por gateway em workspaces gerenciados. Verificar
+  plano, consentimento, versão e compatibilidade antes de escolher. Não copiar
+  tokens do Codex como atalho. [Uso do plano](https://developers.openai.com/siwc/token-sharing-open-source),
+  [gateway](https://learn.chatgpt.com/docs/enterprise/sign-in-with-chatgpt-through-a-gateway).
+- **Outros executores por assinatura:** avaliar com o plano efetivo e a
+  interface oficial. Acesso no aplicativo/CLI não prova que a assinatura
+  funciona em um SDK genérico ou proxy de modelos.
+
+Um wrapper de CLI pode controlar admissão, duração e resultado da execução;
+isso não comprova controle de cada inferência ou ferramenta interna. O caminho
+institucional exige cobertura por chamada ou isenção registrada conforme a
+ADR-0008. Uma rota de modelos por gateway também não governa automaticamente
+MCPs, plugins, filesystem ou shell. A integração de assinatura ainda não foi
+implementada no atendimento IRC.
+
 ## Papel do Thalamus e segundo incremento
 
 O contrato arquitetural do Thalamus admite políticas de modelo/backend,
@@ -116,6 +174,14 @@ autenticação, roteamento, telemetria, falhas e limites no caminho real.
 O ensaio supervisionado local se enquadra na exceção de desenvolvimento/revisão
 da ADR-0008, R9; essa exceção não define a arquitetura de um serviço
 institucional permanente ou agendado.
+
+Preparar primeiro um ensaio isolado com política sintética e executor que
+retorna texto fixo, sem provedor. O fixture `sdks/contract-fixture.json` do
+Thalamus separa `/v1/decide` de `/v1/pre-call`: o segundo retorna a correlação
+usada por `/v1/post-call`. Confirmar esse contrato contra a versão selecionada,
+então testar pre-call, resultado fixo, post-call e consulta de auditoria;
+negação/revisão pendente não pode iniciar o executor. Esse ensaio ainda não
+foi executado. Somente depois conectar a rota oficial de assinatura escolhida.
 
 ## Aceitação antes de qualquer novo ensaio ao vivo
 
