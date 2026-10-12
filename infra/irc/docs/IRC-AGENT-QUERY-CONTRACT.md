@@ -127,7 +127,10 @@ baixado, instalado ou medido nesta revisão.
 O Codex CLI disponível nesta sessão reportou versão `0.160.0` e autenticação
 ChatGPT em uma consulta de status sem revelar credenciais. Isso confirma o
 método de login, não o plano, a cota restante ou elegibilidade de outras
-integrações. A lista de assinaturas ativas foi solicitada ao operador.
+integrações. O operador confirmou assinaturas ativas de ChatGPT/Codex, Claude
+Pro/Max, Kimi, GLM/Z.ai e Google One Student. Os tiers exatos, limites atuais e
+benefícios de CLI de cada plano ainda não foram auditados; não inferir esses
+direitos apenas pela existência de uma assinatura no aplicativo.
 
 - **Executor Codex local:** a documentação permite login ChatGPT para acesso
   por assinatura, e `codex exec` reutiliza a autenticação salva. É candidato
@@ -142,6 +145,24 @@ integrações. A lista de assinaturas ativas foi solicitada ao operador.
 - **Outros executores por assinatura:** avaliar com o plano efetivo e a
   interface oficial. Acesso no aplicativo/CLI não prova que a assinatura
   funciona em um SDK genérico ou proxy de modelos.
+
+Limites específicos já identificados para as assinaturas informadas:
+
+- Kimi Code restringe a assinatura ao uso pessoal interativo e exclui automação
+  não interativa; não colocá-lo como worker desatendido deste atendimento.
+  [Diretrizes oficiais](https://www.kimi.com/en/help/kimi-code/community-guidelines).
+- GLM Coding Plan limita o benefício ao assinante e às ferramentas oficialmente
+  suportadas. Verificar se o plano do operador é esse e se o caminho pretendido
+  é admitido; não tratá-lo como backend HTTP genérico de uso multiusuário.
+  [Política oficial](https://docs.z.ai/devpack/usage-policy).
+- Google: confirmar o benefício concreto de Google One Student no Gemini CLI.
+  O CLI oficial e o acesso direto ao Code Assist por software de terceiros com
+  seu OAuth são caminhos diferentes; este último é vedado na documentação.
+  [Termos do Gemini CLI](https://geminicli.com/docs/resources/tos-privacy/).
+
+O transporte HTTP/API de uma ferramenta pode consumir uma franquia de plano;
+isso é distinto de cobrança por uso. Registrar para cada rota o método de
+autenticação, executor admitido, entitlement, cota e comportamento ao esgotá-la.
 
 Um wrapper de CLI pode controlar admissão, duração e resultado da execução;
 isso não comprova controle de cada inferência ou ferramenta interna. O caminho
