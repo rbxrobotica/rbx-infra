@@ -30,6 +30,8 @@ class AgentConfig:
     retention_seconds: int = 86400
     capacity: int = 500
     human_queries: bool = False
+    storage_backend: str = "sqlite"
+    database_url_env: str | None = None
 
 
 def load_agent_config(path: Path) -> AgentConfig:
@@ -51,7 +53,14 @@ def load_agent_config(path: Path) -> AgentConfig:
     if (
         set(raw)
         - required
-        - {"ttl_seconds", "retention_seconds", "capacity", "human_queries"}
+        - {
+            "ttl_seconds",
+            "retention_seconds",
+            "capacity",
+            "human_queries",
+            "storage_backend",
+            "database_url_env",
+        }
     ):
         raise ValueError("unknown agent config field")
     if required - set(raw):
@@ -119,6 +128,17 @@ def load_agent_config(path: Path) -> AgentConfig:
     human_queries = raw.get("human_queries", False)
     if type(human_queries) is not bool:
         raise ValueError("human_queries must be a boolean")
+    storage_backend = raw.get("storage_backend", "sqlite")
+    if storage_backend not in ("sqlite", "postgresql"):
+        raise ValueError("storage_backend must be sqlite or postgresql")
+    database_url_env = raw.get("database_url_env")
+    if storage_backend == "postgresql":
+        if not isinstance(database_url_env, str) or not re.fullmatch(
+            r"RBX_[A-Z0-9_]{1,59}", database_url_env
+        ):
+            raise ValueError("PostgreSQL requires a database_url_env variable name")
+    elif database_url_env is not None:
+        raise ValueError("database_url_env requires storage_backend postgresql")
     return AgentConfig(
         raw["agent_id"],
         raw["server"],
@@ -132,4 +152,6 @@ def load_agent_config(path: Path) -> AgentConfig:
         state_dir,
         **limits,
         human_queries=human_queries,
+        storage_backend=storage_backend,
+        database_url_env=database_url_env,
     )

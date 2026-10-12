@@ -11,6 +11,7 @@ from .agent_config import load_agent_config
 from .agent_store import Mailbox
 from .agent_transport import AgentTransport, ProtocolError
 from .human_cli import add_human_parser, run_human_command
+from .storage_cli import add_storage_parser, run_storage_command
 
 
 def main() -> None:
@@ -31,11 +32,15 @@ def main() -> None:
     ack = subparsers.add_parser("ack")
     ack.add_argument("request_id")
     add_human_parser(subparsers)
+    add_storage_parser(subparsers)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     os.umask(0o077)
     try:
         config = load_agent_config(args.config)
+        if args.command == "storage":
+            print(json.dumps(run_storage_command(config, args), ensure_ascii=False))
+            return
         mailbox = Mailbox(config)
         if args.command == "connect":
             password = os.environ.get(config.password_env)

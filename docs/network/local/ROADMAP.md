@@ -1,6 +1,6 @@
 # Roadmap da rede local e comunicação operacional
 
-Atualizado em **2026-10-11**. As prioridades abaixo orientam entregas; não são
+Atualizado em **2026-10-12**. As prioridades abaixo orientam entregas; não são
 datas prometidas nem evidência de implantação. Inventário e testes concluídos:
 [arquitetura](README.md) e [evidência LAN](EVIDENCE-2026-10-11.md).
 
@@ -69,6 +69,15 @@ Os [ensaios isolados](../../../infra/irc/pilots/README.md) avançam essa trilha
 com pre/post-call e auditoria do Thalamus, preparação do executor por assinatura
 e avaliação de encaminhamento local. Continuam separados do atendimento IRC e
 não concluem a implantação de um agente permanente.
+
+The next storage increment prepares the adapter for the RBX ParadeDB/PostgreSQL
+standard. It includes explicit backend selection, shared transactional state,
+offline SQLite import and a reconciliation hold. Existing services remain
+unchanged. Follow the [migration runbook](../../../infra/irc/docs/POSTGRES-MAILBOX-RUNBOOK.md)
+and [destination preflight](../../../infra/irc/docs/POSTGRES-DESTINATION-PREFLIGHT.md):
+select and verify the dedicated destination, private TLS route, runtime grants,
+backup/restore and RPO/RTO before cutover. Then run the bounded human-query
+acceptance test; integrate the subscription executor only after that evidence.
 
 ### Etapas 2 e 3: preparar o acesso móvel
 

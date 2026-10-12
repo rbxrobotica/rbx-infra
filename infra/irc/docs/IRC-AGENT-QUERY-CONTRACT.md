@@ -1,7 +1,7 @@
 # Consulta humana a agentes por IRC: contrato proposto
 
 Estado: **entrada humana implementada para validação local, implantação pendente**,
-2026-10-11. O operador concordou com
+2026-10-12. O operador concordou com
 as melhorias de experiência após o [piloto supervisionado](HUMAN-FLIGHTDECK-PILOT.md).
 Os [ensaios isolados](../pilots/README.md) registram o que já foi verificado.
 Este documento prepara o incremento seguinte; não instala um atendimento
@@ -9,9 +9,17 @@ permanente, altera o protocolo em execução ou ativa uma rota de modelos.
 
 O [runbook da entrada humana](HUMAN-QUERY-RUNBOOK.md) descreve o código opt-in:
 sessão de até três perguntas e dez minutos, claims exclusivos, correlação e
-respostas legíveis. A suíte usa SQLite temporário e IRC em loopback. Ainda
+respostas legíveis. A suíte usa SQLite temporário, PostgreSQL descartável e IRC em loopback. Ainda
 faltam implantação controlada, comprovação no Halloy e ligação do executor
 governado à fila; não há chamada automática a modelos neste incremento.
+
+The next storage increment implements explicit PostgreSQL selection in line
+with the RBX ParadeDB standard. Claims, message deduplication and response
+state remain transactional. The [migration runbook](POSTGRES-MAILBOX-RUNBOOK.md)
+defines separate schema initialization, offline import and reconciliation before
+release. Existing SQLite services are unchanged; no backend fallback is allowed.
+The [destination preflight](POSTGRES-DESTINATION-PREFLIGHT.md) records the
+unverified live requirements for private access, ownership and recovery.
 
 ## Resultado pretendido
 

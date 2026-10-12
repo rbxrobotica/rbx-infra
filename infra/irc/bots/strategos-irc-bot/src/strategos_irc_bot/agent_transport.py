@@ -15,6 +15,7 @@ from .agent_protocol import parse_envelope
 from .agent_store import Mailbox
 from .human_protocol import HUMAN_CAPABILITIES, message_metadata, parse_human_query
 from .human_store import HumanMailbox
+from .mailbox_database import MailboxStorageError
 from .bot import IrcMessage, _split_server, parse_irc_line
 
 LOGGER = logging.getLogger(__name__)
@@ -45,7 +46,10 @@ class AgentTransport:
             raise ValueError("invalid or oversized IRC frame")
         assert self.writer is not None
         self.writer.write((line + "\r\n").encode("utf-8"))
-        await asyncio.wait_for(self.writer.drain(), timeout=10)
+        # Python 3.11 wait_for can consume external cancellation when its child
+        # completes concurrently. Keep I/O in this task so shutdown propagates.
+        async with asyncio.timeout(10):
+            await self.writer.drain()
 
     async def handle(self, message: IrcMessage) -> None:
         command = message.command
@@ -184,6 +188,8 @@ class AgentTransport:
                     return
                 envelope = parse_envelope(message.trailing)
                 self.mailbox.receive(envelope, account)
+            except MailboxStorageError:
+                raise
             except ValueError:
                 return  # Never echo rejected content or identities into the room.
 
@@ -198,7 +204,7 @@ class AgentTransport:
 
         def write(lines: list[str]) -> None:
             # The store's transaction fences this synchronous write against a
-            # concurrent session stop. Never await while holding a SQLite lock.
+            # concurrent session stop. Never await while holding a database lock.
             assert self.writer is not None
             for body in lines:
                 line = f"PRIVMSG {self.config.channel} :{body}"
@@ -210,7 +216,8 @@ class AgentTransport:
         if attempted is None:
             return False
         assert self.writer is not None
-        await asyncio.wait_for(self.writer.drain(), timeout=10)
+        async with asyncio.timeout(10):
+            await self.writer.drain()
         self.humans.mark_socket_sent(attempted["id"])
         return True
 
@@ -221,10 +228,10 @@ class AgentTransport:
         self.modes.clear()
         host, port = _split_server(self.config.server)
         context = ssl.create_default_context() if self.config.tls else None
-        reader, self.writer = await asyncio.wait_for(
-            asyncio.open_connection(host, port, ssl=context, limit=8192),
-            timeout=15,
-        )
+        async with asyncio.timeout(15):
+            reader, self.writer = await asyncio.open_connection(
+                host, port, ssl=context, limit=8192
+            )
         started = last_outgoing = last_heartbeat = time.monotonic()
         try:
             await self.send_line("CAP LS 302")
@@ -239,7 +246,7 @@ class AgentTransport:
                         self.mailbox.heartbeat(True)
                         last_heartbeat = now
                     if now - last_outgoing >= 1:
-                        # Bound idle SQLite scans as well as socket writes.
+                        # Bound idle database scans as well as socket writes.
                         last_outgoing = now
                         human_sent = await self.publish_human_reply()
                         queued = (
@@ -253,9 +260,12 @@ class AgentTransport:
                             # This means written to the socket, not peer delivery.
                             # Correlated reply is the end-to-end receipt.
                             self.mailbox.sent(row_id)
-                            last_outgoing = now
+                        # Space polls after I/O completes, including slow remote
+                        # transactions, rather than catching up in a burst.
+                        last_outgoing = time.monotonic()
                 try:
-                    line = await asyncio.wait_for(reader.readline(), timeout=0.25)
+                    async with asyncio.timeout(0.25):
+                        line = await reader.readline()
                 except asyncio.TimeoutError:
                     continue
                 if not line:
@@ -267,15 +277,23 @@ class AgentTransport:
                 await self.handle(message)
         finally:
             self.ready = False
-            self.mailbox.heartbeat(False)
             self.writer.close()
             try:
-                await asyncio.wait_for(self.writer.wait_closed(), timeout=5)
+                async with asyncio.timeout(5):
+                    await self.writer.wait_closed()
             except (OSError, asyncio.TimeoutError):
                 pass
+            # A database outage must not leave an authenticated IRC socket open.
+            self.mailbox.heartbeat(False)
 
     async def run(self) -> None:
-        # One persistent connection owns a mailbox. MCP/CLI share only SQLite.
+        if self.config.storage_backend == "postgresql":
+            # The ownership session also executes all daemon transactions. If it
+            # is lost, storage errors escape without reconnecting or sending.
+            with self.mailbox.database.transport_owner():
+                await self._run_owned()
+            return
+        # SQLite ownership is limited to this machine and private state directory.
         fd = os.open(
             self.config.state_dir / "bridge.lock",
             os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW,
@@ -288,22 +306,24 @@ class AgentTransport:
                 raise ProtocolError(
                     "another IRC daemon already owns this mailbox"
                 ) from error
-            delay = 1
-            while True:
-                self.mailbox.heartbeat(False)
-                started = time.monotonic()
-                try:
-                    await self.session()
-                except (ssl.SSLError, ProtocolError):
-                    raise
-                except (OSError, ConnectionError, asyncio.TimeoutError, ValueError):
-                    LOGGER.warning(
-                        "IRC transport disconnected; reconnecting without logging payloads"
-                    )
-                if time.monotonic() - started > 30:
-                    delay = 1
-                await asyncio.sleep(delay)
-                delay = min(30, delay * 2)
+            await self._run_owned()
         finally:
-            self.mailbox.heartbeat(False)
             os.close(fd)
+
+    async def _run_owned(self) -> None:
+        delay = 1
+        while True:
+            self.mailbox.heartbeat(False)
+            started = time.monotonic()
+            try:
+                await self.session()
+            except (MailboxStorageError, ssl.SSLError, ProtocolError):
+                raise
+            except (OSError, ConnectionError, asyncio.TimeoutError, ValueError):
+                LOGGER.warning(
+                    "IRC transport disconnected; reconnecting without logging payloads"
+                )
+            if time.monotonic() - started > 30:
+                delay = 1
+            await asyncio.sleep(delay)
+            delay = min(30, delay * 2)
