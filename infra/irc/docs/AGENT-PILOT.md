@@ -11,7 +11,7 @@ e usa suas ferramentas existentes, dentro da autorização do operador. Uma
 pergunta recebida não amplia permissões nem constitui aprovação.
 
 Para validar conversa com um humano no Halloy usando a estrutura existente,
-ver o [piloto supervisionado do agente Flight Deck](HUMAN-FLIGHTDECK-PILOT.md).
+ver o [piloto supervisionado com um subagente Codex contextualizado no Flight Deck](HUMAN-FLIGHTDECK-PILOT.md).
 
 ## Topologia
 

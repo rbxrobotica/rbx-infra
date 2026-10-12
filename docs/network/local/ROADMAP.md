@@ -56,10 +56,13 @@ Só testar mudança de backend gráfico ou versão quando a evidência apontar
 para essa hipótese. Alterar uma variável por vez e preservar configuração e
 histórico para reversão. Não apagar caches nem trocar o tema como diagnóstico.
 
-O [piloto humano e agente Flight Deck](../../../infra/irc/docs/HUMAN-FLIGHTDECK-PILOT.md)
+O [piloto humano e subagente Codex com contexto do Flight Deck](../../../infra/irc/docs/HUMAN-FLIGHTDECK-PILOT.md)
 usa o canal e a mailbox existentes para testar pergunta, resposta e exibição
 no Halloy. A sessão supervisionada não é um agente permanente nem valida a
 execução delegada da etapa 5; serve como primeiro ensaio de conversa dirigida.
+O aplicativo Flight Deck não foi chamado. O próximo incremento está delimitado
+no [contrato de consulta via IRC](../../../infra/irc/docs/IRC-AGENT-QUERY-CONTRACT.md),
+com apresentação legível, contexto mínimo e limites de consumo ainda propostos.
 
 ### Etapas 2 e 3: preparar o acesso móvel
 

@@ -1,4 +1,4 @@
-# Piloto de conversa entre operador e agente Flight Deck
+# Piloto de conversa entre operador e subagente Codex com contexto do Flight Deck
 
 Data: 2026-10-11. Estado: ensaio sintético concluído e primeira rodada real
 validada na segunda janela: pergunta do operador, resposta do especialista,
@@ -8,7 +8,8 @@ recepção no cliente e exibição confirmada por screenshot. Complementa o
 ## Objetivo e escopo
 
 Validar uma pergunta do humano no Halloy, recebimento pela mailbox, análise
-por um agente de desenvolvimento Flight Deck e resposta visível no mesmo canal.
+por um subagente Codex com contexto documental do Flight Deck e resposta visível
+no mesmo canal.
 Uma resposta pode conter uma pergunta de esclarecimento ao humano. Isso não
 ativa missões, altera código nem concede autorização a comandos recebidos.
 
@@ -27,6 +28,36 @@ Somente o coordenador desta sessão consulta e responde aos pedidos selecionados
 O especialista recebe a pergunta por delegação local e retorna uma proposta de
 resposta. Ele não publica no IRC. Isso evita dois agentes concorrendo pela
 mesma mailbox, que hoje identifica a máquina, não uma sessão de projeto.
+
+## Proveniência do subagente e do modelo
+
+O coordenador Codex desta conversa criou o subagente em **11/10/2026 às
+20:12:26 BRT** (23:12:26 UTC), para preparar e responder ao ensaio explicativo
+autorizado pelo operador. O nome interno da tarefa era
+`/root/flightdeck_dev_pilot`; `[flightdeck-dev]` era o papel textual mostrado
+nas respostas, não um serviço do produto nem uma conta IRC própria.
+
+A chamada de criação usou `fork_turns="all"`, sem override de modelo ou esforço.
+O subagente herdou o histórico da conversa e a configuração do coordenador:
+**`gpt-6-astra`, esforço `ultra`**. Essa identificação vem dos metadados locais
+de criação e dos turnos relevantes; não é uma verificação independente do
+snapshot servido pelo provedor. A preparação consultou `AGENTS.md`, `README.md`,
+`docs/architecture.md` e a ADR-0010 do checkout Flight Deck `1ba66c4`.
+
+O percurso observado foi Halloy, Ergo, adaptador/mailbox, consulta MCP pelo
+coordenador, delegação ao subagente e publicação da resposta pelo coordenador
+via `irc_reply`. O aplicativo/backend Flight Deck, o Maestro e o Thalamus não
+foram chamados. O contexto documental não equivale a acesso ao estado vivo do
+produto, treinamento específico do modelo ou implantação de um agente permanente.
+
+Portanto, a descrição correta é **consulta via IRC a um subagente Codex
+contextualizado no Flight Deck**. A expressão anterior "agente Flight Deck"
+não deve ser interpretada como evidência de integração com o produto.
+
+O fork completo e o esforço alto foram usados no protótipo; não constituem
+uma escolha otimizada para consultas curtas. Não foram coletados totais de
+tokens ou custo do piloto, portanto não há medição de economia. A próxima
+iteração deve usar contexto mínimo explícito e registrar consumo por pedido.
 
 ## O que já existe
 
@@ -127,7 +158,7 @@ com o mesmo limite de três rodadas e escopo explicativo. Primeira correlação:
 | --- | --- |
 | Envio humano | Screenshot do Halloy mostra a pergunta em `#rbx-agents` |
 | Leitura pela sessão | 20:45:13 BRT: pedido de entrada pendente, conta `leandro`, UUID e prefixo previstos |
-| Especialista | Subagente `flightdeck-dev` produziu resposta sobre aprovação e execução, com uma pergunta de esclarecimento |
+| Especialista | Subagente Codex `/root/flightdeck_dev_pilot`, apresentado como `[flightdeck-dev]`, produziu resposta sobre aprovação e execução, com uma pergunta de esclarecimento |
 | Resposta enfileirada | `irc_reply` retornou `queued` às 20:46:06 BRT |
 | Transporte local | Leitura SQLite somente consulta, limitada ao UUID: pedido `replied`, três frames marcados enviados às 20:46:06, 20:46:07 e 20:46:08 BRT |
 | Recepção no cliente | Às 20:50:24 BRT, seleção pelos UUIDs do piloto nos arquivos modificados de histórico encontrou a pergunta e os trechos 1/3, 2/3 e 3/3 da primeira resposta; nenhum conteúdo de outras conversas foi exposto |
@@ -161,8 +192,14 @@ próprias. Nenhum desses itens foi implementado ou provisionado por este piloto.
 
 A captura real expõe o custo de usabilidade do protocolo atual: UUID/epoch
 precisam ser colados pelo humano, e os trechos da resposta cortam palavras na
-janela. A interface de conversa deve ocultar esses detalhes, mantendo correlação,
-limites e rastreabilidade no transporte.
+janela. A evolução deve remover esses detalhes da apresentação humana,
+mantendo correlação, limites e rastreabilidade no transporte. O Halloy comum
+exibe os frames publicados no canal: ocultá-los exige um caminho próprio de
+apresentação, não apenas mudar o texto da pergunta.
+
+O [contrato proposto de consulta e consumo](IRC-AGENT-QUERY-CONTRACT.md)
+delimita esse próximo incremento. O aceite das melhorias pelo operador orienta
+o desenvolvimento; nenhuma nova interface ou integração foi ativada nesta revisão.
 
 Um agente permanente também precisa de início e parada explícitos, limites
 de custo e tempo, retenção de contexto e recuperação. Execução de trabalho
