@@ -1,0 +1,58 @@
+{
+  "recorded_at": "2026-10-11T22:50:04.282251-03:00",
+  "scope": "supervised local development; whole CLI job; no IRC",
+  "subscription_auth_status": "ChatGPT",
+  "api_key_fallback": false,
+  "context_repository": "rbxrobotica/rbx-flightdeck",
+  "context_revision": "1ba66c48d0d63ca55d03f7b7855873cd871f109e",
+  "context_file": "docs/architecture.md",
+  "context_line_sections": [
+    [
+      10,
+      14
+    ],
+    [
+      207,
+      228
+    ]
+  ],
+  "context_file_sha256": "0cf93b9ff82324fb78b093a6b7a108663c0c7a13fdbf12b51fe56b19a22f83f3",
+  "prompt_utf8_bytes": 2191,
+  "prompt_sha256": "0d838c3bb3e2c55763abf13a85dca9c1e6056f33faabd25e21c1cafff85590ff",
+  "executor_source_sha256": "2db402916818fbbec20661bc3c6c3bc0649be2024e231b36626f8577f6e3c96f",
+  "trial_source_sha256": "bea4d3450fa337f69c9dd1f186ecb636267a5211e93e5803232d93cb5b737ff7",
+  "thalamus_source_revision": "17fccd4edc19c7333be5dfcf7d5e0d5b7346a9d6",
+  "thalamus_backend_configured": false,
+  "durable_audit": false,
+  "identity_verifier": false,
+  "budget": {
+    "max_tokens": 12000,
+    "max_latency_ms": 60000
+  },
+  "live_irc_messages": 0,
+  "retries": 0,
+  "status": "failed",
+  "model_requested": "gpt-6.1-sol",
+  "executor_version": "codex-cli 0.160.0",
+  "elapsed_ms": 24,
+  "error_code": "nonzero_exit",
+  "executor_jobs": 1,
+  "usage": null,
+  "trace_id": "5db0b605-b720-4978-8b59-47abfeccbfd3",
+  "audit_id": "46286b9f-b377-41aa-a2fb-70679b809330",
+  "quota_consumption": "unknown; may have occurred; no retry",
+  "post_call": "not submitted: no verified result",
+  "limitations": [
+    "Job-level pre/post audit, not mediation of each CLI model inference.",
+    "No comparative token savings measured against the earlier IRC pilot.",
+    "Token totals are measured after execution; timeout is not a hard token cap.",
+    "No product or IRC service was invoked."
+  ],
+  "startup_failure_diagnosis": {
+    "method": "same CLI arguments with intentionally invalid output schema to stop before inference",
+    "diagnostic": "Error loading config.toml: invalid transport in mcp_servers.node_repl",
+    "cause": "exec --ignore-user-config removed user MCP transport; enabled=false override created an incomplete table",
+    "resolution": "prepare inert valid disabled transports, rerun configuration-only preflight before a supervised corrected trial",
+    "automatic_retry": false
+  }
+}

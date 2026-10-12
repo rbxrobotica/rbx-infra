@@ -1,0 +1,295 @@
+{
+  "schema": "rbx.codex.documentary.preflight.v1",
+  "recorded_at_brt": "2026-10-11T23:05:47-03:00",
+  "timestamp_note": "Parser-only update. Command argv and environment were checked for equivalence against the earlier inspected builder contract; full config/read and prompt render remain attributed to configuration_inspected_executor_sha256.",
+  "cli_version": "0.160.0",
+  "executor_source_sha256": "ac4ad2a03cb5844365d20f1155fc4fd1d00dfbdb5a1d848d2f8fdbadb43657ca",
+  "inference_requests": 0,
+  "auth_file_inspection": false,
+  "strict_config": "accepted by app-server; earlier exec startup validation retained with its own builder hash",
+  "methods": [
+    "initialize",
+    "config/read",
+    "configRequirements/read"
+  ],
+  "config_sources": [
+    "sessionFlags",
+    "user",
+    "system"
+  ],
+  "effective_config": {
+    "default_permissions": "irc_documentary",
+    "legacy_sandbox_mode": null,
+    "approval_policy": "never",
+    "profile_extends": null,
+    "filesystem_scratch_read_only": true,
+    "filesystem_rule_count": 1,
+    "filesystem_glob_scan_max_depth": null,
+    "command_network_enabled": false,
+    "mcp_enabled_count": 0,
+    "disabled_mcp_names": [
+      "node_repl",
+      "rbx-agent-irc"
+    ],
+    "disabled_features": [
+      "shell_tool",
+      "unified_exec",
+      "shell_snapshot",
+      "view_image",
+      "apps",
+      "plugins",
+      "remote_plugin",
+      "hooks",
+      "browser_use",
+      "browser_use_external",
+      "computer_use",
+      "image_generation",
+      "multi_agent",
+      "memories",
+      "chronicle",
+      "code_mode",
+      "code_mode_host",
+      "workspace_dependencies",
+      "skill_search",
+      "skill_mcp_dependency_install",
+      "tool_suggest",
+      "goals",
+      "sleep_tool",
+      "daemon_auto_start"
+    ],
+    "project_doc_max_bytes": 0,
+    "include_environment_context": false,
+    "include_apps_instructions": false,
+    "include_collaboration_mode_instructions": false,
+    "configured_instruction_bytes": {
+      "instructions": 0,
+      "developer_instructions": 0
+    },
+    "web_search": "disabled",
+    "forced_login_method": "chatgpt",
+    "model_provider": "openai",
+    "custom_openai_provider_present": false,
+    "custom_model_catalog_present": false,
+    "chatgpt_endpoint_official": true,
+    "environment_keys": [
+      "CODEX_HOME",
+      "HOME",
+      "LANG",
+      "PATH",
+      "TMPDIR"
+    ],
+    "nonempty_requirements_keys": [
+      "allowedLoginMethods"
+    ],
+    "disabled_mcp_transport_valid": true,
+    "disabled_mcp_transport_is_nonexecuting_stub": true,
+    "explicit_disabled_skill_count": 5,
+    "all_expected_skills_explicitly_disabled": true,
+    "skip_host_skill_discovery_override_present": false
+  },
+  "local_render": {
+    "exit_code": 0,
+    "stderr_bytes": 0,
+    "items": 3,
+    "bytes_by_role": {
+      "developer": 3290
+    },
+    "skills_catalog_present": false,
+    "agents_document_present": false,
+    "environment_context_present": false,
+    "approval_never_mentioned": true,
+    "tools_schema_included": false
+  },
+  "limits": [
+    "Preflight app-server/debug do not accept exec-only --ignore-user-config or --ignore-rules; user config was included conservatively. An additional exec startup check used those flags and stopped at an intentionally invalid output schema before any turn.",
+    "Config/read serializes extends:null and filesystem.glob_scan_max_depth:null; these are not extra grants.",
+    "Prompt-input reports model-visible context only, not concrete tools schema. No model request was executed.",
+    "Native runtime instructions and subscription authentication remain managed by installed Codex CLI.",
+    "Disabled MCP entries need a syntactically valid transport even with enabled=false; explicit nonexecuting stub transports prevent missing-transport errors when exec ignores user config.",
+    "The parser accepts one exact native warning confirming the intentionally disabled Code Mode host before a turn. Unknown, repeated, or mid-turn warnings remain refused; tool events remain refused."
+  ],
+  "references": [
+    "https://learn.chatgpt.com/docs/app-server",
+    "https://learn.chatgpt.com/docs/config-file/config-reference"
+  ],
+  "previous_preflight": {
+    "executor_source_sha256": "2db402916818fbbec20661bc3c6c3bc0649be2024e231b36626f8577f6e3c96f",
+    "limitation_discovered": "App-server/render included user MCP transports; exec --ignore-user-config left disabled MCP entries without a transport and stopped during configuration, before a model turn."
+  },
+  "exec_startup_validation": {
+    "source": "executor implementation agent; independent startup smoke",
+    "model_request_submitted": false,
+    "stdin": "synthetic nonempty",
+    "output_schema": "intentionally invalid JSON object",
+    "expected_exit_code": 1,
+    "observed_exit_code": 1,
+    "expected_failure": "invalid_output_schema_json",
+    "configuration_error": false,
+    "stdout_bytes": 0,
+    "stderr_bytes": 144,
+    "thread_or_turn_events": 0,
+    "raw_diagnostics_retained": false,
+    "executor_source_sha256": "e20714cd0bfaa2cce77509acabf38a13ec94341a881f488b9bc8649516f80d08",
+    "current_builder_repeated": false
+  },
+  "preflight_history": [
+    {
+      "schema": "rbx.codex.documentary.preflight.v1",
+      "recorded_at_brt": "2026-10-11T22:53:50-03:00",
+      "timestamp_note": "Refresh time; app-server/config and local render rechecked with the recorded builder hash. Invalid-schema exec startup check independently reported by the executor implementation agent in the same supervised session.",
+      "cli_version": "0.160.0",
+      "executor_source_sha256": "e20714cd0bfaa2cce77509acabf38a13ec94341a881f488b9bc8649516f80d08",
+      "inference_requests": 0,
+      "auth_file_inspection": false,
+      "strict_config": "accepted by app-server; exec startup independently reached invalid-schema rejection",
+      "methods": [
+        "initialize",
+        "config/read",
+        "configRequirements/read"
+      ],
+      "config_sources": [
+        "sessionFlags",
+        "user",
+        "system"
+      ],
+      "effective_config": {
+        "default_permissions": "irc_documentary",
+        "legacy_sandbox_mode": null,
+        "approval_policy": "never",
+        "profile_extends": null,
+        "filesystem_scratch_read_only": true,
+        "filesystem_rule_count": 1,
+        "filesystem_glob_scan_max_depth": null,
+        "command_network_enabled": false,
+        "mcp_enabled_count": 0,
+        "disabled_mcp_names": [
+          "node_repl",
+          "rbx-agent-irc"
+        ],
+        "disabled_features": [
+          "shell_tool",
+          "unified_exec",
+          "shell_snapshot",
+          "view_image",
+          "apps",
+          "plugins",
+          "remote_plugin",
+          "hooks",
+          "browser_use",
+          "browser_use_external",
+          "computer_use",
+          "image_generation",
+          "multi_agent",
+          "memories",
+          "chronicle",
+          "code_mode",
+          "code_mode_host",
+          "workspace_dependencies",
+          "skill_search",
+          "skill_mcp_dependency_install",
+          "tool_suggest",
+          "goals",
+          "sleep_tool",
+          "daemon_auto_start"
+        ],
+        "project_doc_max_bytes": 0,
+        "include_environment_context": false,
+        "include_apps_instructions": false,
+        "include_collaboration_mode_instructions": false,
+        "configured_instruction_bytes": {
+          "instructions": 0,
+          "developer_instructions": 0
+        },
+        "web_search": "disabled",
+        "forced_login_method": "chatgpt",
+        "model_provider": "openai",
+        "custom_openai_provider_present": false,
+        "custom_model_catalog_present": false,
+        "chatgpt_endpoint_official": true,
+        "environment_keys": [
+          "CODEX_HOME",
+          "HOME",
+          "LANG",
+          "PATH",
+          "TMPDIR"
+        ],
+        "nonempty_requirements_keys": [
+          "allowedLoginMethods"
+        ],
+        "disabled_mcp_transport_valid": true,
+        "disabled_mcp_transport_is_nonexecuting_stub": true
+      },
+      "local_render": {
+        "exit_code": 0,
+        "stderr_bytes": 0,
+        "items": 3,
+        "bytes_by_role": {
+          "developer": 3290
+        },
+        "skills_catalog_present": false,
+        "agents_document_present": false,
+        "environment_context_present": false,
+        "approval_never_mentioned": true,
+        "tools_schema_included": false
+      },
+      "limits": [
+        "Preflight app-server/debug do not accept exec-only --ignore-user-config or --ignore-rules; user config was included conservatively. An additional exec startup check used those flags and stopped at an intentionally invalid output schema before any turn.",
+        "Config/read serializes extends:null and filesystem.glob_scan_max_depth:null; these are not extra grants.",
+        "Prompt-input reports model-visible context only, not concrete tools schema. No model request was executed.",
+        "Native runtime instructions and subscription authentication remain managed by installed Codex CLI.",
+        "Disabled MCP entries need a syntactically valid transport even with enabled=false; explicit nonexecuting stub transports prevent missing-transport errors when exec ignores user config."
+      ],
+      "references": [
+        "https://learn.chatgpt.com/docs/app-server",
+        "https://learn.chatgpt.com/docs/config-file/config-reference"
+      ],
+      "previous_preflight": {
+        "executor_source_sha256": "2db402916818fbbec20661bc3c6c3bc0649be2024e231b36626f8577f6e3c96f",
+        "limitation_discovered": "App-server/render included user MCP transports; exec --ignore-user-config left disabled MCP entries without a transport and stopped during configuration, before a model turn."
+      },
+      "exec_startup_validation": {
+        "source": "executor implementation agent; independent startup smoke",
+        "model_request_submitted": false,
+        "stdin": "synthetic nonempty",
+        "output_schema": "intentionally invalid JSON object",
+        "expected_exit_code": 1,
+        "observed_exit_code": 1,
+        "expected_failure": "invalid_output_schema_json",
+        "configuration_error": false,
+        "stdout_bytes": 0,
+        "stderr_bytes": 144,
+        "thread_or_turn_events": 0,
+        "raw_diagnostics_retained": false
+      },
+      "diagnostic_after_preflight": {
+        "source": "root; local provider mock, no credentials or real model",
+        "observed_shape": "item.completed(error warning) before turn.started",
+        "cause": "enabled under-development skip_host_skill_discovery feature emitted a native startup warning",
+        "fix": "remove redundant feature override; keep five explicit disabled skills; fail closed with sanitized startup warning event shape"
+      }
+    }
+  ],
+  "configuration_inspected_executor_sha256": "836623b87f731a58076c07bd1301f4f4d454c841b0df8b5cc5645a329b71d019",
+  "builder_equivalence": {
+    "from_executor_sha256": "836623b87f731a58076c07bd1301f4f4d454c841b0df8b5cc5645a329b71d019",
+    "to_executor_sha256": "ac4ad2a03cb5844365d20f1155fc4fd1d00dfbdb5a1d848d2f8fdbadb43657ca",
+    "verified": true,
+    "method": "Exact synthetic-path argv comparison against reconstructed previously inspected settings, plus exact environment and disabled-feature comparison.",
+    "normalized_argv_sha256": "a4c6a5d45893902224ba0348ef10e41f06e9033c9fde9e239abc02e58e5354a5",
+    "disabled_features_unchanged": true,
+    "environment_unchanged": true,
+    "new_config_read_or_render": false,
+    "inference_requests": 0
+  },
+  "parser_exception": {
+    "diagnostic": "code_mode_intentionally_disabled",
+    "matching": "exact literal native Code Mode host-disabled warning",
+    "allowed_count": 1,
+    "allowed_phase": "after thread.started and before turn.started",
+    "all_other_warnings": "refused",
+    "code_mode_host_enabled": false,
+    "technical_approval_source": "Explicit root coordinator instruction in this supervised local task.",
+    "effect": "Accept a known warning confirming disabled functionality; no tool, host, fallback, or permission is enabled."
+  },
+  "configuration_inspected_at_brt": "2026-10-11T23:00:26-03:00"
+}

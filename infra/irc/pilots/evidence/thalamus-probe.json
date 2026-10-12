@@ -1,0 +1,40 @@
+{
+  "result": "passed",
+  "scope": "contract-only; unauthenticated loopback; nonproduction",
+  "negative_cases": {
+    "unknown_tenant": {
+      "server_decide": "Deny",
+      "server_pre_call": "Deny",
+      "mock_executor": "refused"
+    },
+    "unknown_backend": {
+      "server_decide": "Allow",
+      "server_pre_call": "Allow",
+      "mock_executor": "refused"
+    },
+    "excessive_budget": {
+      "server_decide": "Allow",
+      "server_pre_call": "Allow",
+      "mock_executor": "refused"
+    }
+  },
+  "mock_executions": 1,
+  "post_call": "Valid",
+  "audit_events": 2,
+  "correlation": "verified",
+  "orphan_post": "refused",
+  "review_unknown_decisions": "client unit tests only",
+  "server_allows_invalid_requests": [
+    "unknown_backend",
+    "excessive_budget"
+  ],
+  "readiness": "no backend, durable audit, identity, or retrieval",
+  "recorded_at": "2026-10-11T22:39:14.863259-03:00",
+  "source_repository": "rbxrobotica/thalamus-core",
+  "source_commit": "17fccd4edc19c7333be5dfcf7d5e0d5b7346a9d6",
+  "binary_sha256": "ea69eb52fe63d5c04380ee9f6709990897f875167c11b3961a78127c974bfac8",
+  "build_command": "cargo build --locked --offline --package thalamus-server --no-default-features -j 2",
+  "provider_calls": 0,
+  "live_irc_messages": 0,
+  "persistent_service_changes": false
+}

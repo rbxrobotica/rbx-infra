@@ -18,7 +18,10 @@ Para reuniões sensíveis, prefira um canal registrado `+si` com ACL explícita 
 mensagens privadas. IRC não oferece criptografia ponta a ponta: o operador do
 servidor continua dentro da fronteira de confiança. Não conecte o ZNC à RBXNet
 sensível até buffers e retenção serem revisados; o histórico efêmero do Ergo
-expira em sete dias e a persistência está desativada.
+foi substituído pelo histórico persistente de 30 dias nas salas aprovadas,
+conforme [ROOMS-AND-HISTORY.md](ROOMS-AND-HISTORY.md) e a
+[evidência de 2026-10-08](EVIDENCE-2026-10-08.md). DMs não são arquivadas no
+servidor; cópias locais nos clientes exigem tratamento próprio.
 
 O piloto `rbx-agent-irc` de 2026-10-07 usa contas dedicadas por máquina e um
 único canal RBX. Ele oferece transporte e mailbox, sem executar ferramentas,
@@ -28,18 +31,60 @@ de aceitação estão em [AGENT-PILOT.md](AGENT-PILOT.md).
 
 ## Android, Google e ZITADEL
 
-O app Strategos deve ser um cliente nativo público, sem client secret. O login
-abre o navegador do sistema, autentica Google como provedor federado do ZITADEL
-e usa Authorization Code com PKCE. A documentação oficial do ZITADEL recomenda
-PKCE para aplicações nativas:
+O padrão mobile de Strategos, Robson e demais produtos RBX está **em aberto**,
+conforme esclarecimento do operador em 2026-10-11. Tauri e Wails v3 são
+candidatos, não decisões aprovadas. O APK atual do Strategos abre a interface
+web no navegador do sistema e não define esse padrão corporativo.
+
+Se um produto assumir diretamente o fluxo OIDC como app nativo, ele será um
+cliente público, sem client secret: login pelo navegador do sistema e
+Authorization Code com PKCE, usando ZITADEL e seus provedores federados.
+Uma entrada que apenas abre o site mantém o fluxo web/BFF existente.
+A documentação oficial do ZITADEL recomenda PKCE para aplicações nativas:
 
 - <https://zitadel.com/docs/guides/integrate/login/oidc/oauth-recommended-flows>
 - <https://zitadel.com/docs/guides/integrate/login/oidc/login-users>
 
-O Poco não deve armazenar senha SASL persistente. Um gateway/BFF RBX deve
-validar `issuer`, `audience`, assinatura, expiração e o par estável
+### Revisão de 2026-10-11: cliente IRC dedicado nos smartphones
+
+O operador concordou explicitamente em revisar a proibição de senha própria
+para cliente nativo. Para o piloto operacional, passa a ser admitida uma
+credencial IRC persistente **individual por aparelho**, inclusive no POCO,
+sujeita aos critérios abaixo. Isso substitui a proibição geral anterior para
+esse uso; não escolhe o framework dos produtos RBX nem incorpora senha IRC
+compartilhada em APK, WebView ou frontend.
+
+- Conta humana própria por aparelho, distinta da conta fundadora, das contas
+  de agentes e das contas de outros servidores IRC; sem OPER ou administração
+  de salas. O apelido visual não substitui a identidade SASL.
+- Senha aleatória exclusiva, entregue por procedimento privado, nunca em Git,
+  chats ou logs. Verificar armazenamento, exportação e backup do cliente antes
+  de colocar a credencial em uso; não presumir uso do Android Keystore.
+- Lista explícita de salas por conta, com ciência de que a entrada permite
+  consultar o histórico ainda retido dessas salas. Nenhuma ACL existente é
+  ampliada automaticamente pela revisão documental.
+- Transporte privado aprovado e TLS com certificado validado para o acesso
+  móvel. Não reutilizar o loopback dos desktops como endpoint dos telefones.
+- Revogação individual testada, incluindo encerramento das conexões existentes
+  e negação de novo login, sem precisar trocar credenciais de outros aparelhos.
+- Retenção local, exportações e notificações de tela bloqueada revisadas no
+  piloto. Senha IRC não concede SSH, permissão de execução ou acesso global aos
+  produtos RBX.
+
+Começar pelo POCO; incluir Samsung com conta e salas próprias quando seu papel
+estiver definido. Esta revisão registra a decisão para preparar o piloto; não
+cria contas, segredos, listeners ou permissões na infraestrutura em execução.
+Procedimento e dependências:
+[clientes](../../../docs/network/local/CLIENTS-AND-STRATEGOS.md) e
+[roadmap local](../../../docs/network/local/ROADMAP.md).
+
+### Integração futura dos produtos RBX
+
+Um gateway/BFF RBX deve validar `issuer`, `audience`, assinatura, expiração e o par estável
 `(issuer, subject)`, resolver roles/membership do tenant e então criar uma
 sessão IRC curta e revogável ou atuar como gateway IRC controlado.
+O painel Strategos mantém a credencial do conector no servidor. A exceção
+operacional dos clientes IRC dedicados não altera essa fronteira.
 
 Ergo 2.19 oferece autenticação OAuth2 por introspecção e JWT, além dos
 mecanismos SASL bearer. Isso torna uma integração com ZITADEL tecnicamente

@@ -31,3 +31,5 @@ jobs:
         run: python -m pytest
       - name: Check installer syntax
         run: bash -n infra/irc/scripts/install-agent-irc.sh
+      - name: Test isolated consultation pilots without providers or model downloads
+        run: python -m unittest discover -s infra/irc/pilots -p 'test_*.py' -v

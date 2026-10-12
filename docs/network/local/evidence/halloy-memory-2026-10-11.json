@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "halloy_version": "2026.9 (2b3edc8e)",
+  "scope": "one running Halloy process; no reported UI failure reproduced during collection",
+  "memory_unit": "KiB",
+  "cpu_basis": "percent of one core over elapsed interval",
+  "duration_requested_s": 180,
+  "samples": [
+    {
+      "elapsed_s": 0.0,
+      "timestamp": "2026-10-11T17:41:59.955325+00:00",
+      "cpu_one_core_pct": null,
+      "fd_count": 87,
+      "VmHWM": 299368,
+      "VmRSS": 299368,
+      "VmSwap": 0,
+      "Threads": 70,
+      "Pss": 204055,
+      "Private_Dirty": 126268
+    },
+    {
+      "elapsed_s": 30.0,
+      "timestamp": "2026-10-11T17:42:29.959300+00:00",
+      "cpu_one_core_pct": 2.23,
+      "fd_count": 87,
+      "VmHWM": 299368,
+      "VmRSS": 299368,
+      "VmSwap": 0,
+      "Threads": 70,
+      "Pss": 204056,
+      "Private_Dirty": 126268
+    },
+    {
+      "elapsed_s": 60.0,
+      "timestamp": "2026-10-11T17:42:59.969300+00:00",
+      "cpu_one_core_pct": 1.97,
+      "fd_count": 87,
+      "VmHWM": 299368,
+      "VmRSS": 299368,
+      "VmSwap": 0,
+      "Threads": 70,
+      "Pss": 204056,
+      "Private_Dirty": 126268
+    },
+    {
+      "elapsed_s": 90.0,
+      "timestamp": "2026-10-11T17:43:29.979176+00:00",
+      "cpu_one_core_pct": 2.13,
+      "fd_count": 87,
+      "VmHWM": 299368,
+      "VmRSS": 299368,
+      "VmSwap": 0,
+      "Threads": 70,
+      "Pss": 204055,
+      "Private_Dirty": 126268
+    },
+    {
+      "elapsed_s": 120.0,
+      "timestamp": "2026-10-11T17:43:59.988864+00:00",
+      "cpu_one_core_pct": 2.03,
+      "fd_count": 87,
+      "VmHWM": 299368,
+      "VmRSS": 299368,
+      "VmSwap": 0,
+      "Threads": 70,
+      "Pss": 204055,
+      "Private_Dirty": 126268
+    },
+    {
+      "elapsed_s": 150.0,
+      "timestamp": "2026-10-11T17:44:29.998765+00:00",
+      "cpu_one_core_pct": 2.13,
+      "fd_count": 87,
+      "VmHWM": 299368,
+      "VmRSS": 299368,
+      "VmSwap": 0,
+      "Threads": 70,
+      "Pss": 204055,
+      "Private_Dirty": 126268
+    },
+    {
+      "elapsed_s": 180.1,
+      "timestamp": "2026-10-11T17:45:00.008637+00:00",
+      "cpu_one_core_pct": 2.03,
+      "fd_count": 87,
+      "VmHWM": 299368,
+      "VmRSS": 299368,
+      "VmSwap": 0,
+      "Threads": 70,
+      "Pss": 204055,
+      "Private_Dirty": 126268
+    }
+  ]
+}
