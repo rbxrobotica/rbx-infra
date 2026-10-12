@@ -4,6 +4,12 @@ O pacote também inclui `rbx-agent-irc`, que mantém uma caixa de entrada local
 para comunicação entre sessões de agentes via CLI/MCP. É um processo separado
 do bot de consultas mockadas. Consulte [AGENT-PILOT.md](../../docs/AGENT-PILOT.md).
 
+O caminho humano opt-in aceita `@flightdeck-dev pergunta` durante uma sessão
+local delimitada. Ele preserva o protocolo entre peers e os MCPs existentes.
+Configuração, operação, recuperação e limites estão em
+[HUMAN-QUERY-RUNBOOK.md](../../docs/HUMAN-QUERY-RUNBOOK.md). Está desativado por
+padrão; este código não instala um worker nem conecta a fila a um modelo.
+
 Adaptador IRCv3 somente leitura para o Ergo interno. Ele usa SASL PLAIN,
 solicita `account-tag`, ignora mensagens privadas e autoriza pela conta
 autenticada. Conversa normal na sala é ignorada: somente mensagens iniciadas

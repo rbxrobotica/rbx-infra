@@ -1,10 +1,17 @@
 # Consulta humana a agentes por IRC: contrato proposto
 
-Estado: **contrato proposto, com ensaios locais parciais**, 2026-10-11. O operador concordou com
+Estado: **entrada humana implementada para validação local, implantação pendente**,
+2026-10-11. O operador concordou com
 as melhorias de experiência após o [piloto supervisionado](HUMAN-FLIGHTDECK-PILOT.md).
 Os [ensaios isolados](../pilots/README.md) registram o que já foi verificado.
 Este documento prepara o incremento seguinte; não instala um atendimento
 permanente, altera o protocolo em execução ou ativa uma rota de modelos.
+
+O [runbook da entrada humana](HUMAN-QUERY-RUNBOOK.md) descreve o código opt-in:
+sessão de até três perguntas e dez minutos, claims exclusivos, correlação e
+respostas legíveis. A suíte usa SQLite temporário e IRC em loopback. Ainda
+faltam implantação controlada, comprovação no Halloy e ligação do executor
+governado à fila; não há chamada automática a modelos neste incremento.
 
 ## Resultado pretendido
 
@@ -20,7 +27,7 @@ O adaptador apresenta uma resposta como:
 [flightdeck-dev | Codex | consulta documental] leandro: Aprovar uma Action registra a decisão e seus limites. Executar uma Mission realiza o trabalho autorizado. Fonte: Flight Deck, revisão <sha>. [ref FD-0042]
 ```
 
-São exemplos de apresentação, não comandos já disponíveis. A identificação
+São exemplos da apresentação implementada, ainda não habilitada no serviço. A identificação
 deve distinguir produto consultado, papel do agente e executor real. O alias
 `flightdeck-dev` continua atrás da conta IRC `rbx-local` neste primeiro
 incremento; não equivale a identidade própria do produto ou conta independente.
@@ -47,10 +54,12 @@ canal ou conta novos para comprovar essa capacidade.
 | Estado | Diferenciar recebido, em atendimento, respondido, expirado, falha e resultado incerto. Enviado ao socket não prova exibição no Halloy ou leitura humana. |
 | Encerramento | Parar a admissão ao vencer tempo, quantidade, orçamento ou por ação do operador. Revalidar sessão e claim antes de publicar; uma resposta tardia não reabre a sessão. |
 
-Os estados e campos acima são requisitos, não uma descrição do schema atual.
-O adaptador existente deduplica pedidos e aceita uma única resposta, mas não
-possui claim exclusivo para a investigação. A implementação precisa preservar
-a compatibilidade das mailboxes e testar migração/retorno antes de instalação.
+O caminho humano implementa esses estados em tabelas adicionais, sem alterar
+as tabelas de peers. Seus claims não são reutilizados após expiração: o
+resultado fica incerto e novas chamadas nessa sessão são bloqueadas. O
+protocolo legado mantém seu comportamento. Testes verificam abertura repetida
+do schema e acesso pelas versões anterior e atual da mailbox antes de qualquer
+instalação. A operação real ainda exige backup e ensaio de retorno.
 
 O Halloy comum exibe os corpos das mensagens recebidas. Gerar UUID internamente
 resolve a digitação; para remover frames da apresentação, o caminho humano

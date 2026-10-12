@@ -13,6 +13,8 @@ import time
 from .agent_config import AgentConfig
 from .agent_protocol import parse_envelope
 from .agent_store import Mailbox
+from .human_protocol import HUMAN_CAPABILITIES, message_metadata, parse_human_query
+from .human_store import HumanMailbox
 from .bot import IrcMessage, _split_server, parse_irc_line
 
 LOGGER = logging.getLogger(__name__)
@@ -32,6 +34,11 @@ class AgentTransport:
         self.acked: set[str] = set()
         self.sasl_started = False
         self.modes: set[str] = set()
+        self.humans = HumanMailbox(mailbox) if config.human_queries else None
+
+    @property
+    def required_capabilities(self) -> frozenset[str]:
+        return HUMAN_CAPABILITIES if self.humans else frozenset({"account-tag", "sasl"})
 
     async def send_line(self, line: str) -> None:
         if any(c in line for c in "\r\n\0") or len(line.encode("utf-8")) > 510:
@@ -56,12 +63,15 @@ class AgentTransport:
                 self.capabilities.update(capabilities)
                 if "*" in message.params[2:]:
                     return
-                if not {"account-tag", "sasl"} <= self.capabilities:
+                if not self.required_capabilities <= self.capabilities:
                     raise ProtocolError("required IRCv3 capabilities are absent")
-                await self.send_line("CAP REQ :account-tag sasl")
+                request = "account-tag sasl"
+                if self.humans:
+                    request += " message-tags server-time"
+                await self.send_line("CAP REQ :" + request)
             elif subcommand == "ACK":
                 self.acked.update(capabilities)
-                if {"account-tag", "sasl"} <= self.acked and not self.sasl_started:
+                if self.required_capabilities <= self.acked and not self.sasl_started:
                     self.sasl_started = True
                     await self.send_line("AUTHENTICATE PLAIN")
             elif subcommand in {"NAK", "DEL"}:
@@ -158,10 +168,51 @@ class AgentTransport:
             if not account or "batch" in message.tags:
                 return
             try:
+                if message.trailing.startswith("@"):
+                    if (
+                        not self.humans
+                        or not self.authenticated
+                        or not HUMAN_CAPABILITIES <= self.acked
+                        or not message.prefix
+                        or message.prefix.split("!", 1)[0].casefold()
+                        == self.config.nick.casefold()
+                    ):
+                        return
+                    alias, question = parse_human_query(message.trailing)
+                    msgid, server_time = message_metadata(message.tags)
+                    self.humans.receive(alias, account, msgid, server_time, question)
+                    return
                 envelope = parse_envelope(message.trailing)
                 self.mailbox.receive(envelope, account)
             except ValueError:
                 return  # Never echo rejected content or identities into the room.
+
+    async def publish_human_reply(self) -> bool:
+        if (
+            not self.humans
+            or not self.ready
+            or not self.authenticated
+            or not HUMAN_CAPABILITIES <= self.acked
+        ):
+            return False
+
+        def write(lines: list[str]) -> None:
+            # The store's transaction fences this synchronous write against a
+            # concurrent session stop. Never await while holding a SQLite lock.
+            assert self.writer is not None
+            for body in lines:
+                line = f"PRIVMSG {self.config.channel} :{body}"
+                if any(c in line for c in "\r\n\0") or len(line.encode("utf-8")) > 510:
+                    raise ValueError("invalid human reply frame")
+                self.writer.write((line + "\r\n").encode("utf-8"))
+
+        attempted = self.humans.dispatch_pending(write)
+        if attempted is None:
+            return False
+        assert self.writer is not None
+        await asyncio.wait_for(self.writer.drain(), timeout=10)
+        self.humans.mark_socket_sent(attempted["id"])
+        return True
 
     async def session(self) -> None:
         self.ready = self.authenticated = self.sasl_started = False
@@ -188,7 +239,12 @@ class AgentTransport:
                         self.mailbox.heartbeat(True)
                         last_heartbeat = now
                     if now - last_outgoing >= 1:
-                        queued = self.mailbox.next_outgoing()
+                        # Bound idle SQLite scans as well as socket writes.
+                        last_outgoing = now
+                        human_sent = await self.publish_human_reply()
+                        queued = (
+                            self.mailbox.next_outgoing() if not human_sent else None
+                        )
                         if queued:
                             row_id, text = queued
                             await self.send_line(

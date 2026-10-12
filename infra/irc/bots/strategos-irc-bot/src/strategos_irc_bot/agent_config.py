@@ -29,6 +29,7 @@ class AgentConfig:
     ttl_seconds: int = 600
     retention_seconds: int = 86400
     capacity: int = 500
+    human_queries: bool = False
 
 
 def load_agent_config(path: Path) -> AgentConfig:
@@ -47,7 +48,11 @@ def load_agent_config(path: Path) -> AgentConfig:
         "operators",
         "state_dir",
     }
-    if set(raw) - required - {"ttl_seconds", "retention_seconds", "capacity"}:
+    if (
+        set(raw)
+        - required
+        - {"ttl_seconds", "retention_seconds", "capacity", "human_queries"}
+    ):
         raise ValueError("unknown agent config field")
     if required - set(raw):
         raise ValueError("missing required agent config field")
@@ -111,6 +116,9 @@ def load_agent_config(path: Path) -> AgentConfig:
         limits[key] = value
     if limits["retention_seconds"] < limits["ttl_seconds"]:
         raise ValueError("retention must cover request TTL")
+    human_queries = raw.get("human_queries", False)
+    if type(human_queries) is not bool:
+        raise ValueError("human_queries must be a boolean")
     return AgentConfig(
         raw["agent_id"],
         raw["server"],
@@ -123,4 +131,5 @@ def load_agent_config(path: Path) -> AgentConfig:
         operators,
         state_dir,
         **limits,
+        human_queries=human_queries,
     )

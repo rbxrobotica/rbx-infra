@@ -10,6 +10,7 @@ from pathlib import Path
 from .agent_config import load_agent_config
 from .agent_store import Mailbox
 from .agent_transport import AgentTransport, ProtocolError
+from .human_cli import add_human_parser, run_human_command
 
 
 def main() -> None:
@@ -29,6 +30,7 @@ def main() -> None:
     reply.add_argument("text")
     ack = subparsers.add_parser("ack")
     ack.add_argument("request_id")
+    add_human_parser(subparsers)
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     os.umask(0o077)
@@ -60,9 +62,13 @@ def main() -> None:
         elif args.command == "reply":
             mailbox.reply(args.request_id, args.text)
             result = {"request_id": args.request_id, "status": "queued"}
-        else:
+        elif args.command == "ack":
             mailbox.acknowledge(args.request_id)
             result = {"request_id": args.request_id, "status": "acknowledged"}
+        elif args.command == "human":
+            result = run_human_command(mailbox, args)
+        else:
+            raise ValueError("unknown agent command")
         print(json.dumps(result, ensure_ascii=False))
     except (ValueError, OSError, ProtocolError) as error:
         # Errors never contain incoming content or the IRC password.
