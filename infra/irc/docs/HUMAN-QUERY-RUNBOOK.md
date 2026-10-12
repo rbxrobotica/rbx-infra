@@ -10,7 +10,7 @@ O operador envia no Halloy:
 @flightdeck-dev Qual a diferença entre aprovar uma Action e executar uma Mission?
 ```
 
-O adaptador entrega a pergunta à fila local. Um consumidor autorizado reserva
+O adaptador entrega a pergunta à fila persistente. Um consumidor autorizado reserva
 a pergunta, prepara a resposta e a conclui com seu token de fencing. O canal
 recebe texto legível:
 
@@ -105,7 +105,28 @@ confirmado. Não reutilizar automaticamente o pedido.
 
 ## Estado, migração e retorno
 
-`human_queries: false` não cria tabelas novas. Ao habilitar, o código adiciona
+### PostgreSQL mailbox preparation
+
+The adapter supports an explicitly selected PostgreSQL backend, following
+the RBX ParadeDB standard. Existing SQLite installations retain their behavior
+until a controlled cutover; no fallback or automatic migration is provided.
+Claims, deduplication and response state use the selected database. Trusted
+local administration and the human-session permission model are unchanged.
+
+Read the [storage and migration runbook](POSTGRES-MAILBOX-RUNBOOK.md) and
+[destination preflight](POSTGRES-DESTINATION-PREFLIGHT.md) before installation.
+Schema initialization, a frozen source snapshot, an empty destination,
+verified import and explicit reconciliation precede activation. The initializer
+creates both peer and human tables; `human_queries: false` still prevents human
+admission. An import is held against runtime I/O until release checks pass.
+The destination, backup/restore and network checks remain unverified for live use.
+
+The SQLite rollback procedure below does not apply after PostgreSQL has
+accepted new writes. Preserve both states and follow the PostgreSQL runbook.
+
+### Existing SQLite installations
+
+No backend SQLite, `human_queries: false` não cria tabelas novas. Ao habilitar, o código adiciona
 somente `human_meta`, `human_sessions`, `human_requests` e `human_outbox` à
 mailbox existente, com índice por sessão. Não altera colunas/tabelas de peers
 nem transforma pedidos legados em consultas humanas. A migração é transacional

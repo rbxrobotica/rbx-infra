@@ -7,16 +7,15 @@ once delivery. No model or provider is invoked by this module.
 
 from __future__ import annotations
 
-import json
 import math
 import re
-import sqlite3
 import time
 import uuid
 from collections.abc import Callable
 
 from .agent_protocol import TEXT_BYTES, clean_text
 from .agent_store import Mailbox
+from .mailbox_database import Connection, Row
 
 
 class HumanMailbox:
@@ -25,48 +24,7 @@ class HumanMailbox:
         self.config = mailbox.config
         if not self.enabled:
             return
-        # Additive tables only: old Mailbox readers/writers retain their schema.
-        with mailbox.connection() as db:
-            transport = json.dumps(
-                {"server": self.config.server, "tls": self.config.tls},
-                sort_keys=True,
-                separators=(",", ":"),
-            )
-            db.execute(
-                "INSERT OR IGNORE INTO meta VALUES ('human_transport_identity', ?)",
-                (transport,),
-            )
-            recorded = db.execute(
-                "SELECT value FROM meta WHERE key='human_transport_identity'"
-            ).fetchone()[0]
-            if recorded != transport:
-                raise ValueError("human mailbox belongs to a different IRC transport")
-            for statement in (
-                """CREATE TABLE IF NOT EXISTS human_meta (
-                    key TEXT PRIMARY KEY, value INTEGER NOT NULL)""",
-                """CREATE TABLE IF NOT EXISTS human_sessions (
-                    id TEXT PRIMARY KEY, alias TEXT NOT NULL, account TEXT NOT NULL,
-                    channel TEXT NOT NULL, project TEXT NOT NULL, revision TEXT NOT NULL,
-                    model TEXT NOT NULL, created_at REAL NOT NULL, expires_at REAL NOT NULL,
-                    max_questions INTEGER NOT NULL, accepted INTEGER NOT NULL DEFAULT 0,
-                    admission_open INTEGER NOT NULL DEFAULT 1, owner TEXT,
-                    closed_at REAL, close_reason TEXT)""",
-                """CREATE TABLE IF NOT EXISTS human_requests (
-                    id TEXT PRIMARY KEY, reference TEXT NOT NULL UNIQUE,
-                    session_id TEXT NOT NULL, account TEXT NOT NULL,
-                    msgid TEXT NOT NULL UNIQUE, server_time REAL NOT NULL,
-                    received_at REAL NOT NULL, text TEXT NOT NULL,
-                    status TEXT NOT NULL, owner TEXT, fence INTEGER,
-                    claim_expires_at REAL, response TEXT, error TEXT,
-                    completed_at REAL, delivery_status TEXT NOT NULL DEFAULT 'none')""",
-                """CREATE TABLE IF NOT EXISTS human_outbox (
-                    id INTEGER PRIMARY KEY, request_id TEXT NOT NULL,
-                    part INTEGER NOT NULL, line TEXT NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'pending', attempted_at REAL,
-                    socket_sent_at REAL, UNIQUE(request_id, part))""",
-                "CREATE INDEX IF NOT EXISTS human_request_session ON human_requests(session_id)",
-            ):
-                db.execute(statement)
+        mailbox.database.initialize_human()
 
     @property
     def enabled(self) -> bool:
@@ -106,19 +64,21 @@ class HumanMailbox:
         )
 
     @staticmethod
-    def _counter(db: sqlite3.Connection, key: str) -> int:
-        db.execute("INSERT OR IGNORE INTO human_meta VALUES (?, 0)", (key,))
+    def _counter(db: Connection, key: str) -> int:
+        db.execute(
+            "INSERT INTO human_meta VALUES (?, 0) ON CONFLICT(key) DO NOTHING", (key,)
+        )
         db.execute("UPDATE human_meta SET value=value+1 WHERE key=?", (key,))
         return db.execute(
             "SELECT value FROM human_meta WHERE key=?", (key,)
         ).fetchone()[0]
 
     @staticmethod
-    def _session(row: sqlite3.Row) -> dict:
+    def _session(row: Row) -> dict:
         return dict(row) | {"session_id": row["id"]}
 
     @staticmethod
-    def _request(db: sqlite3.Connection, request_id: str) -> dict:
+    def _request(db: Connection, request_id: str) -> dict:
         row = db.execute(
             """SELECT r.*, s.alias, s.channel, s.project, s.revision, s.model,
                 s.created_at AS session_created_at, s.expires_at AS session_expires_at,
@@ -135,7 +95,7 @@ class HumanMailbox:
             "untrusted_content": True,
         }
 
-    def _maintain(self, db: sqlite3.Connection, now: float) -> None:
+    def _maintain(self, db: Connection, now: float) -> None:
         self.mailbox._expire(db, int(now))
         revoked = [
             (now, row["id"])
@@ -351,15 +311,15 @@ class HumanMailbox:
             ).fetchone()[0]
             if count >= self.config.capacity:
                 raise ValueError("mailbox is full; wait for retention cleanup")
-            window = now - now % 60
+            window = int(now - now % 60)
             rate = db.execute(
-                "SELECT window,count FROM rate_limits WHERE account=?", (account,)
+                'SELECT "window",count FROM rate_limits WHERE account=?', (account,)
             ).fetchone()
             count = rate["count"] if rate and rate["window"] == window else 0
             if count >= 6:
                 return None
             db.execute(
-                "INSERT OR REPLACE INTO rate_limits VALUES (?,?,?)",
+                'INSERT INTO rate_limits VALUES (?,?,?) ON CONFLICT(account) DO UPDATE SET "window"=excluded."window",count=excluded.count',
                 (account, window, count + 1),
             )
             request_id = uuid.uuid4().hex

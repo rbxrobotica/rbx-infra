@@ -3,8 +3,9 @@
 set -euo pipefail
 
 agent="${1:-}"
-if [[ "$agent" != local && "$agent" != thinkcentre ]]; then
-    printf 'Usage: %s local|thinkcentre\n' "$0" >&2
+backend="${2:-sqlite}"
+if [[ $# -gt 2 || ( "$agent" != local && "$agent" != thinkcentre ) || ( "$backend" != sqlite && "$backend" != postgresql ) ]]; then
+    printf 'Usage: %s local|thinkcentre [sqlite|postgresql]\n' "$0" >&2
     exit 1
 fi
 
@@ -32,12 +33,27 @@ cp "$source_root/pyproject.toml" "$install_root/app/pyproject.toml"
 cp -R "$source_root/src" "$install_root/app/"
 if [[ ! -e "$config_root/agent.yaml" ]]; then
     install -m 0600 "$source_root/agent.${agent}.example.yaml" "$config_root/agent.yaml"
+    if [[ "$backend" == postgresql ]]; then
+        cat >> "$config_root/agent.yaml" <<'EOF'
+storage_backend: postgresql
+database_url_env: RBX_IRC_DATABASE_URL
+human_queries: false
+EOF
+    fi
 fi
 install -m 0600 "$source_root/systemd/rbx-agent-irc.service.example" "$config_root/rbx-agent-irc.service.example"
 
 if [[ ! -x "$install_root/venv/bin/python" ]]; then
     "$python_bin" -m venv "$install_root/venv"
 fi
-"$install_root/venv/bin/python" -m pip install "$install_root/app[agents]"
-"$install_root/venv/bin/rbx-agent-irc" --config "$config_root/agent.yaml" status
+extras=agents
+if [[ "$backend" == postgresql ]]; then
+    extras=agents,postgres
+fi
+"$install_root/venv/bin/python" -m pip install "$install_root/app[$extras]"
+if [[ "$backend" == sqlite ]]; then
+    "$install_root/venv/bin/rbx-agent-irc" --config "$config_root/agent.yaml" status
+else
+    printf 'Existing configuration was preserved. PostgreSQL schema, secrets and migration require separate review; see POSTGRES-MAILBOX-RUNBOOK.md.\n'
+fi
 printf 'Prepared %s. Review agent.yaml and the runbook before activation.\n' "$agent"

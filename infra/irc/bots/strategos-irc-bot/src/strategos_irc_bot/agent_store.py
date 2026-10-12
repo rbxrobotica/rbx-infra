@@ -2,85 +2,24 @@
 
 from __future__ import annotations
 
-import os
-import sqlite3
-import stat
 import time
 import uuid
-from contextlib import contextmanager
-from typing import Iterator
 
 from .agent_config import AgentConfig
+from .mailbox_database import Connection, MailboxDatabase
 from .agent_protocol import TEXT_BYTES, Envelope, chunks, clean_text, render
 
 
 class Mailbox:
     def __init__(self, config: AgentConfig) -> None:
         self.config = config
-        path = config.state_dir
-        path.mkdir(mode=0o700, parents=True, exist_ok=True)
-        info = path.lstat()
-        if (
-            not stat.S_ISDIR(info.st_mode)
-            or info.st_uid != os.getuid()
-            or info.st_mode & 0o077
-        ):
-            raise ValueError("state_dir must be an owned private directory (0700)")
-        self.path = path / "mailbox.sqlite3"
-        fd = os.open(self.path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
-        try:
-            info = os.fstat(fd)
-            if (
-                not stat.S_ISREG(info.st_mode)
-                or info.st_uid != os.getuid()
-                or info.st_mode & 0o077
-            ):
-                raise ValueError("mailbox must be an owned private file (0600)")
-        finally:
-            os.close(fd)
-        with self.connection() as db:
-            db.executescript("""
-                CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-                CREATE TABLE IF NOT EXISTS requests (
-                    id TEXT PRIMARY KEY, direction TEXT NOT NULL, account TEXT NOT NULL,
-                    peer TEXT NOT NULL, timestamp INTEGER NOT NULL, text TEXT NOT NULL,
-                    status TEXT NOT NULL, response TEXT, acknowledged INTEGER DEFAULT 0
-                );
-                CREATE TABLE IF NOT EXISTS outbox (
-                    id INTEGER PRIMARY KEY, request_id TEXT NOT NULL, line TEXT NOT NULL,
-                    sent INTEGER NOT NULL DEFAULT 0, last_sent INTEGER NOT NULL DEFAULT 0
-                );
-                CREATE TABLE IF NOT EXISTS fragments (
-                    request_id TEXT NOT NULL, part INTEGER NOT NULL, total INTEGER NOT NULL,
-                    text TEXT NOT NULL, PRIMARY KEY(request_id, part)
-                );
-                CREATE TABLE IF NOT EXISTS rate_limits (
-                    account TEXT PRIMARY KEY, window INTEGER NOT NULL, count INTEGER NOT NULL
-                );
-            """)
-            identity = f"{config.agent_id}:{config.account}:{config.channel}"
-            db.execute("INSERT OR IGNORE INTO meta VALUES ('identity', ?)", (identity,))
-            if (
-                db.execute("SELECT value FROM meta WHERE key='identity'").fetchone()[0]
-                != identity
-            ):
-                raise ValueError(
-                    "state_dir belongs to a different agent/account/channel"
-                )
+        self.database = MailboxDatabase(config)
+        self.path = self.database.path
 
-    @contextmanager
-    def connection(self) -> Iterator[sqlite3.Connection]:
-        db = sqlite3.connect(self.path, timeout=5)
-        db.row_factory = sqlite3.Row
-        db.execute("PRAGMA secure_delete=ON")
-        try:
-            with db:
-                db.execute("BEGIN IMMEDIATE")
-                yield db
-        finally:
-            db.close()
+    def connection(self):
+        return self.database.connection()
 
-    def _expire(self, db: sqlite3.Connection, now: int) -> None:
+    def _expire(self, db: Connection, now: int) -> None:
         db.execute(
             "UPDATE requests SET status='expired' WHERE timestamp<? AND status='pending'",
             (now - self.config.ttl_seconds,),
@@ -97,16 +36,11 @@ class Mailbox:
             "DELETE FROM requests WHERE timestamp<?",
             (now - self.config.retention_seconds,),
         )
-        db.execute("DELETE FROM rate_limits WHERE window<?", (now - 60,))
+        db.execute('DELETE FROM rate_limits WHERE "window"<?', (now - 60,))
 
-    def _capacity(self, db: sqlite3.Connection) -> None:
+    def _capacity(self, db: Connection) -> None:
         human_count = 0
-        if (
-            self.config.human_queries
-            and db.execute(
-                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='human_requests'"
-            ).fetchone()
-        ):
+        if self.config.human_queries and self.database.has_human_tables(db):
             human_count = db.execute(
                 "SELECT count(*) FROM human_requests WHERE received_at>=?",
                 (time.time() - self.config.retention_seconds,),
@@ -123,8 +57,9 @@ class Mailbox:
         text = clean_text(text)
         if len(text.encode("utf-8")) > TEXT_BYTES:
             raise ValueError("question exceeds 240 UTF-8 bytes")
-        now, request_id = int(time.time()), uuid.uuid4().hex
+        request_id = uuid.uuid4().hex
         with self.connection() as db:
+            now = int(time.time())
             self._expire(db, now)
             self._capacity(db)
             db.execute(
@@ -134,15 +69,14 @@ class Mailbox:
             self._queue(db, request_id, Envelope("ask", peer, request_id, now, text))
         return request_id
 
-    def _queue(
-        self, db: sqlite3.Connection, request_id: str, envelope: Envelope
-    ) -> None:
+    def _queue(self, db: Connection, request_id: str, envelope: Envelope) -> None:
         db.execute(
             "INSERT INTO outbox(request_id, line) VALUES (?, ?)",
             (request_id, render(envelope)),
         )
 
     def receive(self, envelope: Envelope, account: str, now: int | None = None) -> bool:
+        requested_now = now
         now = int(time.time()) if now is None else now
         account = account.casefold()
         if envelope.target != self.config.agent_id or account == self.config.account:
@@ -153,6 +87,9 @@ class Mailbox:
         if account not in self.config.operators and peer is None:
             return False
         with self.connection() as db:
+            now = int(time.time()) if requested_now is None else requested_now
+            if not now - self.config.ttl_seconds <= envelope.timestamp <= now + 30:
+                return False
             self._expire(db, now)
             existing = db.execute(
                 "SELECT * FROM requests WHERE id=?", (envelope.request_id,)
@@ -176,13 +113,13 @@ class Mailbox:
                 self._capacity(db)
                 window = now - now % 60
                 rate = db.execute(
-                    "SELECT window,count FROM rate_limits WHERE account=?", (account,)
+                    'SELECT "window",count FROM rate_limits WHERE account=?', (account,)
                 ).fetchone()
                 count = rate[1] if rate and rate[0] == window else 0
                 if count >= 6:
                     return False
                 db.execute(
-                    "INSERT OR REPLACE INTO rate_limits VALUES (?, ?, ?)",
+                    'INSERT INTO rate_limits VALUES (?, ?, ?) ON CONFLICT(account) DO UPDATE SET "window"=excluded."window",count=excluded.count',
                     (account, window, count + 1),
                 )
                 db.execute(
@@ -307,13 +244,13 @@ class Mailbox:
     def heartbeat(self, connected: bool) -> None:
         with self.connection() as db:
             db.execute(
-                "INSERT OR REPLACE INTO meta VALUES ('heartbeat', ?)",
+                "INSERT INTO meta VALUES ('heartbeat', ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
                 (str(int(time.time())) if connected else "0",),
             )
 
     def status(self) -> dict:
-        now = int(time.time())
         with self.connection() as db:
+            now = int(time.time())
             self._expire(db, now)
             heartbeat = db.execute(
                 "SELECT value FROM meta WHERE key='heartbeat'"

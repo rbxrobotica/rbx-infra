@@ -22,6 +22,11 @@ e ferramentas CLI/MCP para perguntas e respostas explícitas no canal privado
 `#rbx-agents`. O transporte não executa ferramentas nem chama modelos. A
 validação local não confirma implantação nas máquinas reais.
 
+The agent mailbox also supports the RBX ParadeDB/PostgreSQL storage standard.
+See the [offline migration runbook](docs/POSTGRES-MAILBOX-RUNBOOK.md) and
+[destination preflight](docs/POSTGRES-DESTINATION-PREFLIGHT.md). This prepared
+backend does not migrate an installed mailbox or enable human queries on merge.
+
 ## Componentes
 
 | Componente | Uso | Exposição padrão |

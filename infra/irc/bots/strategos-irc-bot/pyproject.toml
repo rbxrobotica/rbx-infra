@@ -12,6 +12,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+postgres = [
+  "psycopg[binary]==3.3.6",
+]
 agents = [
   "mcp>=1.12,<2",
 ]
