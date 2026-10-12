@@ -1,0 +1,65 @@
+{
+  "context_repository": "rbxrobotica/rbx-flightdeck",
+  "context_revision": "1ba66c48d0d63ca55d03f7b7855873cd871f109e",
+  "context_file": "docs/architecture.md",
+  "context_line_sections": [
+    [
+      10,
+      14
+    ],
+    [
+      207,
+      228
+    ]
+  ],
+  "context_file_sha256": "0cf93b9ff82324fb78b093a6b7a108663c0c7a13fdbf12b51fe56b19a22f83f3",
+  "prompt_utf8_bytes": 2191,
+  "prompt_sha256": "0d838c3bb3e2c55763abf13a85dca9c1e6056f33faabd25e21c1cafff85590ff",
+  "thalamus_source_revision": "17fccd4edc19c7333be5dfcf7d5e0d5b7346a9d6",
+  "thalamus_backend_configured": false,
+  "recorded_at": "2026-10-11T23:06:42.522953-03:00",
+  "scope": "supervised local development; whole CLI job; no IRC",
+  "subscription_auth_status": "ChatGPT",
+  "api_key_fallback": false,
+  "durable_audit": false,
+  "identity_verifier": false,
+  "budget": {
+    "max_tokens": 12000,
+    "max_latency_ms": 60000
+  },
+  "executor_source_sha256": "ac4ad2a03cb5844365d20f1155fc4fd1d00dfbdb5a1d848d2f8fdbadb43657ca",
+  "trial_source_sha256": "06413c3ce98461206e5de467137a4e3f9526e00ac302a51c2530d4fc0b602d35",
+  "live_irc_messages": 0,
+  "wrapper_retries": 0,
+  "prior_corrected_local_failures": 3,
+  "status": "ok",
+  "model_requested": "gpt-6.1-sol",
+  "executor_version": "codex-cli 0.160.0",
+  "elapsed_ms": 9653,
+  "error_code": null,
+  "exit_code": 0,
+  "event_shape": null,
+  "startup_warnings": [
+    "code_mode_intentionally_disabled"
+  ],
+  "executor_jobs": 1,
+  "usage": {
+    "input_tokens": 8161,
+    "cached_input_tokens": 6912,
+    "output_tokens": 178,
+    "reasoning_output_tokens": 0
+  },
+  "trace_id": "cef04df9-2210-499c-a86b-991639c59ffb",
+  "audit_id": "65572dff-fb05-4c08-bf16-e903ceadcc31",
+  "post_call": "Valid",
+  "answer": "Segundo o trecho, **aprovar uma Action no Flight Deck** é uma decisão de planejamento e autorização. Para uma Action `RBX_INTERNAL` no nível de Workstream, com rota Public Presence habilitada, a aprovação cria atomicamente uma intenção durável de execução, fixando referências e o commit exato. Actions destinadas a Channel, Person ou Organization não entram nessa ponte.\n\n**Executar uma Mission no Maestro** envolve admissão, ativação, leases e evidências de execução no repositório. O worker admite inicialmente uma Mission V2 bloqueada; após decisão válida de dispatch, os estágios descritos seguem sem assistência humana para `claude_code_design`.\n\nIsso é **comportamento documentado, não funcionamento verificado**. O trecho não comprova execução efetiva dos provedores; nomes de perfis são apenas chaves de roteamento.",
+  "tokens_used": 8339,
+  "audit_events": 2,
+  "correlation": "verified",
+  "limitations": [
+    "Job-level pre/post audit, not mediation of each CLI model inference.",
+    "No comparative token savings measured against the earlier IRC pilot.",
+    "Token totals are measured after execution; timeout is not a hard token cap.",
+    "No product or IRC service was invoked."
+  ]
+}

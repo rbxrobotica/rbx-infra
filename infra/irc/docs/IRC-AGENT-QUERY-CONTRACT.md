@@ -1,7 +1,8 @@
 # Consulta humana a agentes por IRC: contrato proposto
 
-Estado: **proposta de implementação**, 2026-10-11. O operador concordou com
+Estado: **contrato proposto, com ensaios locais parciais**, 2026-10-11. O operador concordou com
 as melhorias de experiência após o [piloto supervisionado](HUMAN-FLIGHTDECK-PILOT.md).
+Os [ensaios isolados](../pilots/README.md) registram o que já foi verificado.
 Este documento prepara o incremento seguinte; não instala um atendimento
 permanente, altera o protocolo em execução ou ativa uma rota de modelos.
 
@@ -119,8 +120,15 @@ encaminhamento, abstenção, RAM/VRAM, CPU e latência nesta workstation. Uma
 menção explícita a um agente já resolve o destino sem modelo classificador.
 Somente adotar Laya onde ele acrescentar qualidade ou reduzir consumo total;
 incluir seu próprio custo computacional e erros na comparação. Fixar revisão
-de código/pesos e verificar artefatos antes do ensaio; nenhum modelo foi
-baixado, instalado ou medido nesta revisão.
+de código/pesos e verificar artefatos antes do ensaio.
+
+O [primeiro ensaio local](../pilots/README.md#laya-em-português) foi concluído
+com Laya multilíngue fixado por revisão/hash, em ambiente temporário isolado.
+Nos 32 casos sintéticos, acertou 8, contra 29 do baseline de regras; consumiu
+2,28 GiB de pico RSS e teve mediana quente de 221,5 ms por consulta em CPU.
+Não houve truncamento. Manter Laya fora da operação nesta configuração. Os
+rótulos são provisórios e ambos erraram classificação de pedido fora do escopo;
+nenhuma dessas medições valida autorização ou desempenho em tráfego real.
 
 ### Caminhos oficiais para usar a assinatura
 
@@ -171,6 +179,15 @@ ADR-0008. Uma rota de modelos por gateway também não governa automaticamente
 MCPs, plugins, filesystem ou shell. A integração de assinatura ainda não foi
 implementada no atendimento IRC.
 
+O [executor local de desenvolvimento](../pilots/README.md#executor-codex-por-assinatura)
+já completou uma consulta pela autenticação ChatGPT, com modelo solicitado
+`gpt-6.1-sol`, pre/post-call e dois eventos correlacionados no Thalamus local.
+A CLI informou 8.161 tokens de entrada (6.912 em cache) e 178 de saída em
+9,653 segundos. O uso inclui o contexto nativo, além do prompt explícito de
+2.191 bytes. Esta evidência valida uma consulta supervisionada por assinatura;
+não comprova atendimento IRC implantado, economia contra o piloto anterior
+ou mediação de cada inferência interna do executor.
+
 ## Papel do Thalamus e segundo incremento
 
 O contrato arquitetural do Thalamus admite políticas de modelo/backend,
@@ -190,19 +207,26 @@ execução. O chat não substitui os contratos de aprovação e despacho.
 Os documentos consultados estabelecem responsabilidades, não prontidão da
 implantação. O piloto não chamou Thalamus e não existe, nesta evidência,
 redirecionamento automático das chamadas internas do Codex desktop para ele.
-Integrar um executor futuro exige verificar interfaces implementadas,
+Integrar um executor exige verificar interfaces implementadas,
 autenticação, roteamento, telemetria, falhas e limites no caminho real.
 O ensaio supervisionado local se enquadra na exceção de desenvolvimento/revisão
 da ADR-0008, R9; essa exceção não define a arquitetura de um serviço
 institucional permanente ou agendado.
 
-Preparar primeiro um ensaio isolado com política sintética e executor que
-retorna texto fixo, sem provedor. O fixture `sdks/contract-fixture.json` do
-Thalamus separa `/v1/decide` de `/v1/pre-call`: o segundo retorna a correlação
-usada por `/v1/post-call`. Confirmar esse contrato contra a versão selecionada,
-então testar pre-call, resultado fixo, post-call e consulta de auditoria;
-negação/revisão pendente não pode iniciar o executor. Esse ensaio ainda não
-foi executado. Somente depois conectar a rota oficial de assinatura escolhida.
+O primeiro [ensaio isolado](../pilots/evidence/thalamus-probe.json) foi executado
+com o servidor compilado da revisão `17fccd4`, sem features de backend,
+política sintética e executor que retorna texto fixo. `/v1/decide` não gera os
+IDs de auditoria; `/v1/pre-call` devolve a correlação usada por `/v1/post-call`.
+Uma execução simulada produziu resultado `Valid` e dois eventos correlacionados.
+Tenant desconhecido foi negado e post-call órfão recusado.
+
+O servidor aceitou o pedido de backend desconhecido e orçamento maior que a
+política; o probe recusou esses casos conferindo pedido e envelope antes do
+executor. Essa recusa adicional pertence ao cliente. Revisão pendente e decisão
+desconhecida foram simuladas nos testes de unidade; não foram produzidas pela
+política JSON do servidor. A instância foi encerrada, sem auditoria persistente,
+verificador de identidade ou chamada a provedor. O ensaio confirma o contrato
+local observado, não prontidão institucional.
 
 ## Aceitação antes de qualquer novo ensaio ao vivo
 

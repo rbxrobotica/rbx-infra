@@ -63,6 +63,10 @@ execução delegada da etapa 5; serve como primeiro ensaio de conversa dirigida.
 O aplicativo Flight Deck não foi chamado. O próximo incremento está delimitado
 no [contrato de consulta via IRC](../../../infra/irc/docs/IRC-AGENT-QUERY-CONTRACT.md),
 com apresentação legível, contexto mínimo e limites de consumo ainda propostos.
+Os [ensaios isolados](../../../infra/irc/pilots/README.md) avançam essa trilha
+com pre/post-call e auditoria do Thalamus, preparação do executor por assinatura
+e avaliação de encaminhamento local. Continuam separados do atendimento IRC e
+não concluem a implantação de um agente permanente.
 
 ### Etapas 2 e 3: preparar o acesso móvel
 
