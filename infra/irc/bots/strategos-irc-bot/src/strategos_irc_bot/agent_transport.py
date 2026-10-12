@@ -46,7 +46,10 @@ class AgentTransport:
             raise ValueError("invalid or oversized IRC frame")
         assert self.writer is not None
         self.writer.write((line + "\r\n").encode("utf-8"))
-        await asyncio.wait_for(self.writer.drain(), timeout=10)
+        # Python 3.11 wait_for can consume external cancellation when its child
+        # completes concurrently. Keep I/O in this task so shutdown propagates.
+        async with asyncio.timeout(10):
+            await self.writer.drain()
 
     async def handle(self, message: IrcMessage) -> None:
         command = message.command
@@ -213,7 +216,8 @@ class AgentTransport:
         if attempted is None:
             return False
         assert self.writer is not None
-        await asyncio.wait_for(self.writer.drain(), timeout=10)
+        async with asyncio.timeout(10):
+            await self.writer.drain()
         self.humans.mark_socket_sent(attempted["id"])
         return True
 
@@ -224,10 +228,10 @@ class AgentTransport:
         self.modes.clear()
         host, port = _split_server(self.config.server)
         context = ssl.create_default_context() if self.config.tls else None
-        reader, self.writer = await asyncio.wait_for(
-            asyncio.open_connection(host, port, ssl=context, limit=8192),
-            timeout=15,
-        )
+        async with asyncio.timeout(15):
+            reader, self.writer = await asyncio.open_connection(
+                host, port, ssl=context, limit=8192
+            )
         started = last_outgoing = last_heartbeat = time.monotonic()
         try:
             await self.send_line("CAP LS 302")
@@ -260,7 +264,8 @@ class AgentTransport:
                         # transactions, rather than catching up in a burst.
                         last_outgoing = time.monotonic()
                 try:
-                    line = await asyncio.wait_for(reader.readline(), timeout=0.25)
+                    async with asyncio.timeout(0.25):
+                        line = await reader.readline()
                 except asyncio.TimeoutError:
                     continue
                 if not line:
@@ -274,7 +279,8 @@ class AgentTransport:
             self.ready = False
             self.writer.close()
             try:
-                await asyncio.wait_for(self.writer.wait_closed(), timeout=5)
+                async with asyncio.timeout(5):
+                    await self.writer.wait_closed()
             except (OSError, asyncio.TimeoutError):
                 pass
             # A database outage must not leave an authenticated IRC socket open.

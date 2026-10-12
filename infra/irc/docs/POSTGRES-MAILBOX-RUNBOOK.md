@@ -97,6 +97,10 @@ as malformed IRC input or handled as an IRC reconnect. The socket is closed
 even when recording the disconnected heartbeat fails. The example systemd unit
 uses `RestartPreventExitStatus=1`, so this failure needs operator attention.
 Verify that the installed supervisor preserves that behavior.
+Socket operations use `asyncio.timeout` so external cancellation remains
+visible on Python 3.11 as well as 3.12. A deterministic regression test covers
+socket drain completing concurrently with cancellation; transport tests also
+bound shutdown and verify ownership release.
 
 ## Provision and initialize only after preflight
 
@@ -257,13 +261,14 @@ validation, complete migration, duplicate import, commit uncertainty and hold
 release. This verifies code behavior with synthetic state. It does not establish
 the live destination's TLS, backup, availability or Halloy behavior.
 
-Local evidence on 2026-10-12: 258 adapter tests and 37 isolated pilot tests
-passed. A second run of 70 storage/migration tests passed against PostgreSQL
-16.15 with password authentication, matching the CI service configuration.
-After the final output-poll timing correction, all 19 transport/integration
-tests passed again. Both database containers used synthetic disposable state;
-no installed mailbox or service was connected. Independent review covered the
-backend, importer, administrative release and socket closure on storage failure.
+Local evidence on 2026-10-12: 259 adapter tests passed on Python 3.12.14;
+37 isolated pilot tests passed. A separate run of 70 storage/migration tests
+passed against PostgreSQL 16.15 with password authentication, matching CI.
+All five PostgreSQL transport cases also passed on Python 3.11.17, including
+the cancellation regression that fails with the previous timeout wrapper.
+Every database container used synthetic disposable state; no installed mailbox
+or service was connected. Independent review covered the backend, importer,
+administrative release and socket closure on storage failure.
 
 References: [Psycopg transactions](https://www.psycopg.org/psycopg3/docs/basic/transactions.html),
 [PostgreSQL advisory locks](https://www.postgresql.org/docs/17/explicit-locking.html#ADVISORY-LOCKS),

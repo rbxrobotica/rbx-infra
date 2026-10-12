@@ -117,13 +117,27 @@ class IRCFixture:
             self.tasks.discard(task)
             self.clients.discard(writer)
             writer.close()
-            await writer.wait_closed()
+            async with asyncio.timeout(5):
+                await writer.wait_closed()
 
     async def stop(self):
-        tasks = list(self.tasks)
-        for task in tasks:
+        for writer in list(self.clients):
+            writer.close()
+        await cancel_and_join(list(self.tasks))
+
+
+async def cancel_and_join(tasks):
+    """Fail explicitly if cancellation is lost instead of hanging the CI job."""
+    if not tasks:
+        return
+    for task in tasks:
+        if not task.done():
             task.cancel()
-        await asyncio.gather(*tasks, return_exceptions=True)
+    done, pending = await asyncio.wait(tasks, timeout=5)
+    for task in pending:
+        task.cancel()
+    assert not pending, "IRC fixture task failed to stop after cancellation"
+    await asyncio.gather(*done, return_exceptions=True)
 
 
 async def until(predicate, running):
@@ -173,11 +187,13 @@ def test_postgres_run_uses_shared_ownership_without_local_lockfile(
             assert not fixture.errors
             assert not config.state_dir.exists()
         finally:
-            running.cancel()
-            await asyncio.gather(running, return_exceptions=True)
-            await fixture.stop()
             server.close()
-            await server.wait_closed()
+            try:
+                await cancel_and_join([running])
+            finally:
+                await fixture.stop()
+                async with asyncio.timeout(5):
+                    await server.wait_closed()
         assert not Mailbox(config).status()["connected"]
         assert not config.state_dir.exists()
 
@@ -231,11 +247,46 @@ def test_postgres_database_loss_closes_socket_without_reconnect_or_more_sends(
             # itself must not reconnect its lost database ownership connection.
             assert Mailbox(config).inbox() == []
         finally:
-            if not running.done():
-                running.cancel()
-            await asyncio.gather(running, return_exceptions=True)
-            await fixture.stop()
             server.close()
-            await server.wait_closed()
+            try:
+                await cancel_and_join([running])
+            finally:
+                await fixture.stop()
+                async with asyncio.timeout(5):
+                    await server.wait_closed()
+
+    asyncio.run(scenario())
+
+
+def test_cancellation_wins_when_socket_drain_finishes_at_the_same_time(postgres_config):
+    """Python 3.11 wait_for could swallow cancellation after its child finished."""
+    initialize_postgres(postgres_config)
+    bot = AgentTransport(postgres_config, Mailbox(postgres_config), "fixture-password")
+
+    async def scenario():
+        ready = asyncio.get_running_loop().create_future()
+        drain_started = asyncio.Event()
+
+        class Writer:
+            def write(self, _data):
+                pass
+
+            async def drain(self):
+                drain_started.set()
+                await ready
+
+        bot.writer = Writer()
+        sending = asyncio.create_task(bot.send_line("PING :synthetic"))
+        async with asyncio.timeout(2):
+            await drain_started.wait()
+        # Queue drain completion first, then cancel the outer task before either
+        # wakeup runs. Cancellation must remain visible to its caller.
+        ready.set_result(None)
+        sending.cancel()
+        done, pending = await asyncio.wait({sending}, timeout=2)
+        if pending:
+            await cancel_and_join(list(pending))
+        assert not pending
+        assert sending in done and sending.cancelled()
 
     asyncio.run(scenario())

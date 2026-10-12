@@ -30,6 +30,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
+          --tmpfs /var/lib/postgresql/data:rw,size=256m
           --health-cmd "pg_isready -U irc_test -d irc_mailbox_test"
           --health-interval 5s
           --health-timeout 5s
@@ -47,7 +48,7 @@ jobs:
         env:
           RBX_IRC_TEST_POSTGRES_URL: postgresql://irc_test:irc_test_only@127.0.0.1:5432/irc_mailbox_test
           RBX_IRC_REQUIRE_POSTGRES: '1'
-        run: python -m pytest
+        run: python -m pytest -v --durations=10 -o faulthandler_timeout=60
       - name: Check installer syntax
         run: bash -n infra/irc/scripts/install-agent-irc.sh
       - name: Test isolated consultation pilots without providers or model downloads

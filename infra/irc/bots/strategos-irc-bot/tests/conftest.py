@@ -44,6 +44,7 @@ def _test_admin_parameters(raw: str) -> dict[str, str | int]:
         "gssencmode": "disable",
         "connect_timeout": 5,
         "application_name": "rbx-irc-synthetic-tests",
+        "options": "-c statement_timeout=30000 -c lock_timeout=5000",
     }
 
 
