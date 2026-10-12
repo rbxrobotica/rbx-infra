@@ -60,9 +60,11 @@ O [piloto humano e subagente Codex com contexto do Flight Deck](../../../infra/i
 usa o canal e a mailbox existentes para testar pergunta, resposta e exibição
 no Halloy. A sessão supervisionada não é um agente permanente nem valida a
 execução delegada da etapa 5; serve como primeiro ensaio de conversa dirigida.
-O aplicativo Flight Deck não foi chamado. O próximo incremento está delimitado
-no [contrato de consulta via IRC](../../../infra/irc/docs/IRC-AGENT-QUERY-CONTRACT.md),
-com apresentação legível, contexto mínimo e limites de consumo ainda propostos.
+O aplicativo Flight Deck não foi chamado. A entrada humana delimitada está
+implementada e desativada por padrão, com apresentação legível, sessão e claims
+exclusivos, conforme o [runbook](../../../infra/irc/docs/HUMAN-QUERY-RUNBOOK.md).
+A integração do executor, contexto mínimo e limites de consumo continuam no
+[contrato de consulta via IRC](../../../infra/irc/docs/IRC-AGENT-QUERY-CONTRACT.md).
 Os [ensaios isolados](../../../infra/irc/pilots/README.md) avançam essa trilha
 com pre/post-call e auditoria do Thalamus, preparação do executor por assinatura
 e avaliação de encaminhamento local. Continuam separados do atendimento IRC e
@@ -76,10 +78,41 @@ permita somente o serviço IRC necessário aos telefones e teste a negação de
 serviços administrativos. Sem anunciar a LAN inteira nem configurar exit node.
 
 A workstation está `NeedsLogin` no levantamento; a ThinkCentre já tem endereço
-mesh. Completar o acesso privado conforme a
-[ADR-0011](../../adr/ADR-0011-headscale-sovereign-mesh-on-eagle.md) e o
-[runbook](../../runbooks/HEADSCALE-MESH.md), mantendo caminhos existentes e
-`--accept-dns=false`. O piloto móvel não depende de fechar acessos atuais.
+mesh. Antes de cadastrar novos nós, reconciliar a implementação real com a
+[ADR-0011](../../adr/ADR-0011-headscale-sovereign-mesh-on-eagle.md), o
+[runbook](../../runbooks/HEADSCALE-MESH.md) e decisões posteriores ainda não
+integradas. Manter os caminhos existentes e `--accept-dns=false`. O piloto
+móvel não depende de fechar acessos atuais.
+
+**Pré-requisito de reconciliação identificado em 2026-10-11:** um relato técnico
+fornecido pelo operador descreve política restritiva e uma implementação mais
+recente mantida fora do `main`. A inspeção independente do `main` na revisão
+`98ae09f1f1e4f128c2d9321de1d40e65fee707b1` confirmou que o template Headscale
+não contém `policy`, e que o role substitui o arquivo efetivo antes de executar
+`configtest` e reiniciar. A documentação oficial informa que ausência de
+política carregada permite tráfego entre os nós. Portanto, há risco de
+regressão de acesso ao reaplicar esse template; configuração, ambiente e
+unidade reais ainda precisam ser reconciliados para comprovar o efeito exato.
+Não usar esse playbook como caminho aprovado de expansão enquanto isso estiver
+pendente. [Políticas Headscale](https://headscale.net/stable/ref/policy/).
+
+Preservar commits, alterações pendentes e arquivos relevantes em destino
+adequado antes de rebase ou integração. Este repositório é público; publicar
+somente conteúdo revisado, sem segredos ou exportações brutas de configuração
+operacional. Manter a cópia original e fazer a integração em worktree distinta.
+O relato não substitui a verificação da branch remota, do backup ou da produção.
+
+A reconciliação deve cobrir carregamento obrigatório e validação semântica da
+política, testes de permitir/recusar, DERP e firewall, versão fixada do cliente
+e restauração. O `main` ainda exige DERP embutido, libera STUN e permite
+downgrade para o cliente fixado; esses pontos precisam concordar com a decisão
+vigente. Não atribuir número definitivo à ADR local antes de reconciliar o
+catálogo. Essa pendência não bloqueia o desenvolvimento IRC em ambiente isolado.
+
+Separar papel administrativo e execução de agentes se a ThinkCentre concentrar
+credenciais da frota. Identidades, tags e regras devem distinguir funções e
+dispositivos; um único usuário administrativo não deve conceder o mesmo acesso
+a todos. Endurecer SSH somente após verificar acesso por chave e recuperação.
 
 Para o POCO, propor inicialmente `#rbx-notifications`, `#rbx-incidents` e
 `#project-strategos`, ajustando à necessidade do operador antes de provisionar.

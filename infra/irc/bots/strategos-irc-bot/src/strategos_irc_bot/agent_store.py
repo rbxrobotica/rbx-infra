@@ -100,8 +100,19 @@ class Mailbox:
         db.execute("DELETE FROM rate_limits WHERE window<?", (now - 60,))
 
     def _capacity(self, db: sqlite3.Connection) -> None:
+        human_count = 0
         if (
-            db.execute("SELECT count(*) FROM requests").fetchone()[0]
+            self.config.human_queries
+            and db.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='human_requests'"
+            ).fetchone()
+        ):
+            human_count = db.execute(
+                "SELECT count(*) FROM human_requests WHERE received_at>=?",
+                (time.time() - self.config.retention_seconds,),
+            ).fetchone()[0]
+        if (
+            db.execute("SELECT count(*) FROM requests").fetchone()[0] + human_count
             >= self.config.capacity
         ):
             raise ValueError("mailbox is full; wait for retention cleanup")
