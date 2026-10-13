@@ -2,6 +2,15 @@
 # Headscale control server on eagle (ADR-0011). Additive: this role opens
 # 443/tcp and 3478/udp and starts headscale. It closes nothing.
 
+- name: Refuse the superseded control-plane rollout before any mutation
+  ansible.builtin.fail:
+    msg: >-
+      This legacy role would replace the live file-backed policy configuration.
+      It is quarantined pending governed-state reconciliation, candidate
+      validation and recovery evidence. Use the read-only procedure in
+      docs/runbooks/HEADSCALE-RECONCILIATION.md. There is no apply override.
+  tags: [always]
+
 - name: Download headscale deb (pinned version, checksum-verified)
   get_url:
     url: "{{ headscale_deb_url }}"

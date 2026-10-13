@@ -106,6 +106,15 @@ provisioning; they do not authorize a cutover or require opening public access.
 
 ### Etapas 2 e 3: preparar o acesso móvel
 
+**October 12 reconciliation checkpoint:** Eagle's live policy, public DERP
+profile and two online nodes are now observed. The later nine-commit rollout
+was found on ThinkCentre, with a pending POCO edit preserved. Both the legacy
+main role and the recovered initial rollout can overwrite important state;
+the legacy roles are quarantined before mutation. A repeatable, file-only audit
+and synthetic tests are available. This is preparation, not expanded mesh or
+mobile IRC access. See [reconciliation and recovery gates](../../runbooks/HEADSCALE-RECONCILIATION.md).
+
+
 Inspecionar primeiro a política Headscale efetiva e os listeners/TLS do Ergo.
 O template Git não comprova o estado em execução. Preparar uma mudança que
 permita somente o serviço IRC necessário aos telefones e teste a negação de

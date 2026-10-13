@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "status": "preparation_only",
+  "observed_at_utc": "2026-10-13T02:06:02.605930+00:00",
+  "observed_at_local": "2026-10-12T23:06:02-03:00",
+  "source_receipt_sha256": "01a3f982cfceda2dcfd7e724914fe6b2a1975cd2daf89396e181eecd2bd17f31",
+  "repository_base": "be7686e2b1e18a96051a8c7ba21c8a64e2354752",
+  "control_plane": {
+    "version": "0.29.3",
+    "service_active": true,
+    "config_sha256": "d138ed7be87af3d20440e63d042fe3d7f988e3850e646530af632cc35c2126ff",
+    "policy_sha256": "19920f2d76129cce5401a12ceb25ff8516ff42970cc581a725564b259675dda1",
+    "policy_mode": "file",
+    "policy_reference_expected": true,
+    "grants": 2,
+    "nodes": 2,
+    "nodes_online": 2,
+    "embedded_derp": false,
+    "public_derp_map": true,
+    "magic_dns": false,
+    "override_local_dns": false,
+    "policy_check": {
+      "rc": 0,
+      "via": "running_server_grpc",
+      "database_bypass": false,
+      "traffic_matrix_executed": false
+    }
+  },
+  "recovered_work": {
+    "source_host": "thinkcentre",
+    "branch": "feat/headscale-governed-rollout",
+    "head": "4f84a1a0d2f5526e3d1c825baaa75f38cf030ef0",
+    "commits_ahead_of_branch_base": 9,
+    "local_ref": "refs/remotes/thinkcentre/headscale-governed-rollout",
+    "remote_branch_published": false,
+    "uncommitted_path": "bootstrap/ansible/headscale-poco-policy.yml",
+    "uncommitted_diff_sha256": "8c13a01d99a3d286a1123736b013a5b3eb183fe31b7b7d3016c95f5930c94ac0",
+    "uncommitted_diff_bytes": 475,
+    "original_worktree_modified_by_this_task": false
+  },
+  "recovery": {
+    "local_backup_service_result": "success",
+    "latest_local_archive_utc": "2026-10-12T03:30:45.654442+00:00",
+    "local_archive_count": 15,
+    "latest_backup_contents_verified": false,
+    "external_copy_verified": false,
+    "new_restore_executed": false,
+    "rpo": null,
+    "rto": null,
+    "local_backup_timer_enabled": true,
+    "local_backup_calendar": "*-*-* 03:17:00 UTC",
+    "timer_receipt_sha256": "ba437a76127b7c019b480630d8930f982fea15e48dc8b13d971b2a47656dfe0c",
+    "rsync_net_account_available": false,
+    "rsync_net_account_source": "operator confirmation on 2026-10-12"
+  },
+  "boundaries": {
+    "deployment": false,
+    "restart": false,
+    "policy_set": false,
+    "node_enrollment": false,
+    "new_grants": false,
+    "traffic_matrix_executed": false,
+    "native_configtest_called_once_during_initial_inspection": true,
+    "native_configtest_is_a_pure_parser": false,
+    "deliberate_database_migration": false,
+    "initial_configtest_database_side_effects_verified": false,
+    "password_store_values_retrieved": false,
+    "private_key_material_read": false
+  },
+  "file_auditor": {
+    "receipt_sha256": "2d1180618564a7ada066bc30753d3f919b66bb9221c0b12e945b92291bbcc0ed",
+    "status": "observation_only",
+    "findings": 0,
+    "config_and_policy_hashes_match_metadata_receipt": true,
+    "deployment_verified": false,
+    "traffic_semantics_verified": false
+  }
+}
