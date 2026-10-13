@@ -95,6 +95,15 @@ select and verify the dedicated destination, private TLS route, runtime grants,
 backup/restore and RPO/RTO before cutover. Then run the bounded human-query
 acceptance test; integrate the subscription executor only after that evidence.
 
+The [October 12 live preflight](../../../infra/irc/docs/POSTGRES-LIVE-PREFLIGHT-2026-10-12.md)
+reached Jaguar through the existing ThinkCentre SSH identity. No dedicated IRC
+database/role was identified; pgBackRest and WAL archiving are not active. The
+workstation's direct database probe timed out, and its mesh client still reports
+`NeedsLogin`. TLS is enabled on PostgreSQL, but the application hostname/trust
+path remains unverified. Four hosts report synchronized clocks. These findings
+move the next preparation to the private route, recovery plan and dedicated
+provisioning; they do not authorize a cutover or require opening public access.
+
 ### Etapas 2 e 3: preparar o acesso móvel
 
 Inspecionar primeiro a política Headscale efetiva e os listeners/TLS do Ergo.

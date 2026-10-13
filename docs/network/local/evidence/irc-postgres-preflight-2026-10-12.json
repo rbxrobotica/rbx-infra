@@ -1,0 +1,233 @@
+{
+  "schema_version": 1,
+  "assessment_local_date": "2026-10-12",
+  "timezone": "America/Sao_Paulo",
+  "baseline_infra_commit": "69b06fcb7a1ab18c2cd0a2bc60e717bacac323bf",
+  "readiness_for_live_migration": "blocked",
+  "observation_mode": "Read-only catalog and operating-system metadata through existing SSH identities, strict known-host checks. One credential-free TCP probe from the workstation.",
+  "secret_handling": {
+    "pass_reference_names_only": true,
+    "password_values_decrypted": false,
+    "irc_specific_reference_identified": false,
+    "existing_ssh_keys_used": true
+  },
+  "source_sha256": {
+    "jaguar-initial.json": "80ea7b427cde33470577b9c59c821e267015107f8989a1153bb384d3025c4d26",
+    "jaguar-details.json": "0a58aa30dba4bf20dbf8d649fc342f91a38aa260d584fb4c36c0261eabc15cd6",
+    "workstation-route.json": "25dbc61287a038b203a96c51e99641661524f22a2527a6e874f964869df76ea0",
+    "workstation-clock.json": "544ab7ab4b477161d1e72ee86e29817bee535f5d78e7091a9b9352c8865dee94",
+    "thinkcentre-clock.json": "c250a3095e770b9afe33967d1b0ed4aa3a2c812bd54676834426b5a5c04d44bc",
+    "corbetti-clock.json": "f1e19b8152c2e48f579fe2b4c41420d1061e9ef31a498a2ccbd3ef10b830a02b"
+  },
+  "database_server": {
+    "observed_at_utc": "2026-10-13T01:27:12.833512+00:00",
+    "server": {
+      "server_version": "16.15 (Ubuntu 16.15-0ubuntu0.24.04.1)",
+      "in_recovery": false,
+      "observed_at_utc": "2026-10-13T01:27:11.294205+00:00"
+    },
+    "settings": {
+      "archive_mode": "off",
+      "archive_timeout": "0",
+      "listen_addresses": "*",
+      "max_connections": "200",
+      "max_wal_senders": "10",
+      "port": "5432",
+      "ssl": "on",
+      "ssl_min_protocol_version": "TLSv1.2",
+      "superuser_reserved_connections": "3",
+      "wal_level": "replica"
+    },
+    "archive_configuration": {
+      "archive_command_present": false,
+      "archive_command_mentions_pgbackrest": false,
+      "archive_library_present": false
+    },
+    "irc_named_databases": [],
+    "irc_named_roles": [],
+    "hba_summary": {
+      "rule_count": 92,
+      "parse_errors": 0,
+      "hostssl_rules": 0,
+      "irc_named_rules": 0,
+      "all_databases_all_users_host_rules": 2
+    },
+    "all_database_all_user_host_rules_scope": "IPv4 and IPv6 loopback only; SCRAM-SHA-256",
+    "archiver": {
+      "archived_count": 0,
+      "failed_count": 0,
+      "last_archived_time": null,
+      "last_failed_time": null,
+      "stats_reset": "2026-03-28T03:42:25.861154+00:00"
+    },
+    "connections": {
+      "current_connections": 77,
+      "active_connections": 1
+    },
+    "pg_search_available": [],
+    "disk": {
+      "postgres": {
+        "total_bytes": 414921494528,
+        "free_bytes": 354149662720
+      },
+      "pgbackrest": {
+        "exists": false
+      }
+    },
+    "pgbackrest_binary_present": false,
+    "pgbackrest_units": {
+      "returncode": 1,
+      "units": []
+    },
+    "mesh_client_present": false
+  },
+  "certificate_metadata": {
+    "observed_at_utc": "2026-10-13T01:29:04.236272+00:00",
+    "tls_enabled": true,
+    "subject_equals_issuer": true,
+    "dns_san_count": 1,
+    "dns_san_names_provider_host": true,
+    "valid_from_utc": "2026-03-28T03:42:19+00:00",
+    "valid_until_utc": "2036-03-25T03:42:19+00:00",
+    "sha256": "d14376cdac59b1e2eadfda49078bb3768facd12f4eddd258a9fa4aaeb44026b2",
+    "application_endpoint_and_trust_verified": false,
+    "certificate_chain_verification_attempted": false
+  },
+  "firewall": {
+    "active": true,
+    "postgres_allow_rule_count": 4,
+    "postgres_allow_rule_scope": "Four individual inventory IPv4 addresses; no workstation rule observed"
+  },
+  "backup_surface": {
+    "matching_host_timers": [
+      [
+        "dpkg-db-backup.timer",
+        "dpkg-db-backup.service"
+      ]
+    ],
+    "root_and_postgres_crontab_checks": {
+      "root": {
+        "returncode": 1,
+        "matched_tool_names": []
+      },
+      "postgres": {
+        "returncode": 1,
+        "matched_tool_names": []
+      }
+    },
+    "application_level_or_external_backups_exhaustively_audited": false,
+    "irc_backup_or_restore_verified": false
+  },
+  "workstation_direct_route_probe": {
+    "observed_at_utc": "2026-10-13T01:28:59.708698+00:00",
+    "origin": "rbx-local",
+    "target": "declared Jaguar IPv4 PostgreSQL endpoint",
+    "credentials_sent": false,
+    "tcp_connected": false,
+    "error_class": "TimeoutError",
+    "errno": null
+  },
+  "workstation_mesh": {
+    "returncode": 0,
+    "backend_state": "NeedsLogin",
+    "self_online": false
+  },
+  "clock_observations": {
+    "jaguar": {
+      "observed_at_utc": "2026-10-13T01:29:04.236272+00:00",
+      "clock": {
+        "returncode": 0,
+        "properties": {
+          "Timezone": "Europe/Berlin",
+          "NTP": "yes",
+          "NTPSynchronized": "yes"
+        }
+      },
+      "timesync": {
+        "returncode": 0,
+        "selected_fields": [
+          "Poll interval: 34min 8s (min: 32s; max 34min 8s)",
+          "Stratum: 2",
+          "Root distance: 4.493ms (max: 5s)",
+          "Offset: -1.821ms",
+          "Delay: 18.958ms",
+          "Packet count: 548",
+          "Frequency: -6.375ppm"
+        ]
+      }
+    },
+    "rbx-local": {
+      "observed_at_utc": "2026-10-13T01:31:32.544070+00:00",
+      "clock": {
+        "returncode": 0,
+        "properties": {
+          "Timezone": "America/Sao_Paulo",
+          "NTP": "yes",
+          "NTPSynchronized": "yes"
+        }
+      },
+      "timesync": {
+        "returncode": 0,
+        "selected_fields": [
+          "Stratum: 2",
+          "Root distance: 5.782ms (max: 5s)",
+          "Offset: -31.862ms",
+          "Delay: 201.870ms",
+          "Packet count: 205",
+          "Frequency: +22.835ppm"
+        ]
+      }
+    },
+    "thinkcentre": {
+      "observed_at_utc": "2026-10-13T01:31:32.740294+00:00",
+      "clock": {
+        "returncode": 0,
+        "properties": {
+          "Timezone": "America/Sao_Paulo",
+          "NTP": "yes",
+          "NTPSynchronized": "yes"
+        }
+      },
+      "timesync": {
+        "returncode": 0,
+        "selected_fields": [
+          "Stratum: 2",
+          "Root distance: 5.370ms (max: 5s)",
+          "Offset: +14.154ms",
+          "Delay: 204.867ms",
+          "Packet count: 308"
+        ]
+      }
+    },
+    "irc-host-corbetti": {
+      "observed_at_utc": "2026-10-13T01:32:09.990027+00:00",
+      "clock": {
+        "returncode": 0,
+        "properties": {
+          "Timezone": "Europe/Berlin",
+          "NTP": "yes",
+          "NTPSynchronized": "yes"
+        }
+      },
+      "timesync": {
+        "returncode": 0,
+        "selected_fields": [
+          "Stratum: 2",
+          "Root distance: 22.018ms (max: 5s)",
+          "Offset: -10.913ms",
+          "Delay: 97.734ms",
+          "Packet count: 550",
+          "Frequency: -1.219ppm"
+        ]
+      }
+    }
+  },
+  "limitations": [
+    "No dedicated IRC runtime credentials or database were identified; effective application grants could not be tested.",
+    "No selected private application route or TLS hostname/CA contract was verified.",
+    "The TCP timeout alone does not identify which network device denied or lost the connection.",
+    "Clock offsets are point-in-time NTP client reports, not continuous clock measurements.",
+    "Absence of pgBackRest/WAL archive does not establish absence of every application-level backup.",
+    "No schema changes, backup runs, restore operations, service restarts, mailbox migration or human-query activation occurred."
+  ]
+}
