@@ -7,7 +7,7 @@ render=subprocess.check_output(['kubectl','kustomize',str(root/'apps/prod/olhaes
 docs=list(yaml.safe_load_all(render))
 by_name={(d['kind'],d['metadata']['name']):d for d in docs}
 config=by_name[('ConfigMap','olhaescola-config')]['data']
-for flag in ('LOCAL_PREVIEW','PUBLIC_SUBMISSIONS_ENABLED','MODERATION_ENABLED','LEGAL_REVIEW_APPROVED'):
+for flag in ('LOCAL_PREVIEW','PUBLIC_SUBMISSIONS_ENABLED','MODERATION_ENABLED','ORPHAN_RECONCILIATION_ENABLED','LEGAL_REVIEW_APPROVED'):
     assert config[flag]=='false',f'{flag} não está fechado'
 assert config['COMPREHEND_REGION']!='sa-east-1'
 assert config['CONTROLLER_NAME']=='Leandro Damasio' and config['CONTACT_EMAIL']=='ceo@rbxsystems.ch'

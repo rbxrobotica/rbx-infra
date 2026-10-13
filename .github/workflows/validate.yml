@@ -115,6 +115,9 @@ jobs:
           kubectl kustomize apps/prod/robson >/dev/null
           kubectl kustomize apps/prod/olhaescola >/dev/null
 
+      - name: Validate Olha Escola inactive launch preparation
+        run: python3 scripts/validate-olhaescola-launch-preparation.py
+
       - name: Validate inert sandbox buyer identity contract locally
         run: python3 scripts/validate-satwake-sandbox-identity.py
 

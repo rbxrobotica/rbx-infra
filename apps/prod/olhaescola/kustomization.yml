@@ -15,6 +15,6 @@ labels:
   includeSelectors: false
 images:
 - name: ghcr.io/rbxrobotica/olhaescola-api
-  newTag: sha-17dfa5e22cd98c952986757218f15bda822b2d14
+  newTag: sha-e8443b5192d74be413aeb0425ffca9db0c755ffd
 - name: ghcr.io/rbxrobotica/olhaescola-web
-  newTag: sha-17dfa5e22cd98c952986757218f15bda822b2d14
+  newTag: sha-e8443b5192d74be413aeb0425ffca9db0c755ffd
