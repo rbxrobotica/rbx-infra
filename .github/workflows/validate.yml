@@ -113,6 +113,7 @@ jobs:
           kubectl kustomize apps/prod/rbx-briefing-btc >/dev/null
           kubectl kustomize apps/prod/rbx-briefing-btc-sandbox >/dev/null
           kubectl kustomize apps/prod/robson >/dev/null
+          kubectl kustomize apps/prod/olhaescola >/dev/null
 
       - name: Validate inert sandbox buyer identity contract locally
         run: python3 scripts/validate-satwake-sandbox-identity.py

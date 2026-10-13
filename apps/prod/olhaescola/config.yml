@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: olhaescola-config
+data:
+  APP_ORIGIN: https://olhaescola.com.br
+  ORIGIN: https://olhaescola.com.br
+  PUBLIC_APP_URL: https://olhaescola.com.br
+  LOCAL_PREVIEW: 'false'
+  PUBLIC_SUBMISSIONS_ENABLED: 'false'
+  MODERATION_ENABLED: 'false'
+  LEGAL_REVIEW_APPROVED: 'false'
+  LISTEN_ADDR: 0.0.0.0:8087
+  API_INTERNAL_URL: http://olhaescola-api:8087
+  HOST: 0.0.0.0
+  PORT: '3017'
+  BODY_SIZE_LIMIT: '819200'
+  TRUSTED_PROXY_CIDRS: 10.42.0.0/16
+  ADDRESS_HEADER: X-Forwarded-For
+  XFF_DEPTH: '1'
+  AWS_REGION: sa-east-1
+  CONTROLLER_NAME: Leandro Damasio
+  CONTACT_EMAIL: ceo@rbxsystems.ch
+  S3_ENDPOINT: https://eu2.contabostorage.com
+  S3_REGION: eu2
+  REKOGNITION_REGION: sa-east-1
+  COMPREHEND_REGION: eu-central-1
+  PENDING_RETENTION_DAYS: '7'
