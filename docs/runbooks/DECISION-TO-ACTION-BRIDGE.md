@@ -69,6 +69,27 @@ Do not describe this state as live autonomous publication. Merging application
 code did not create credentials, apply the Corbetti role, change the Public
 Presence image pin or execute an ArgoCD sync.
 
+## Cluster state observed after the merges
+
+Read-only observations. Nothing was changed by hand in the cluster.
+
+On 2026-09-24 02:10 UTC, right after rbx-infra#268 and #269, rbx-maestro#23 and
+#24, rbx-public-presence#6 and rbx-flightdeck#15 were merged, ArgoCD auto-synced
+without the admission prerequisites below in place:
+
+| Application | ArgoCD | Observed cause |
+| --- | --- | --- |
+| `rbx-flightdeck` | OutOfSync, Degraded, sync retrying | New ReplicaSet cannot start; the worker CronJob pod fails with `couldn't find key PUBLIC_PRESENCE_WORKER_KEY in Secret rbx-flightdeck/rbx-flightdeck-secrets`. The old pods (`sha-f9a1c63`) keep serving. |
+| `rbx-maestro` | Synced, Degraded | New pod (`sha-cf3d94b`) fails with `secret "maestro-flightdeck-key" not found`; the ExternalSecret reports `UpdateFailed`. |
+| `rbx-public-presence` | OutOfSync, waiting for the migrate hook | The hook job still pulled the placeholder `sha-000...` image and `ghcr-pull-secret` was missing. The pin is `9ba13e2`; PR 6 (`31ade92`) was not promoted. |
+
+Rechecked on 2026-09-28 (application status only, causes not re-diagnosed):
+`rbx-flightdeck` OutOfSync and Degraded, `rbx-maestro` Synced and Degraded,
+`rbx-public-presence` OutOfSync and Healthy. The admission prerequisites below
+are therefore the recovery path, not only a pre-merge checklist. ArgoCD
+auto-syncs on merge, so any later merge that references a missing secret key
+repeats this failure mode.
+
 ## Admission prerequisites
 
 Before changing activation state, verify rather than assume that the admission
@@ -93,6 +114,9 @@ kubectl --kubeconfig <operator-kubeconfig> get externalsecret -n rbx-maestro
 kubectl --kubeconfig <operator-kubeconfig> get cronjob -n rbx-flightdeck rbx-flightdeck-public-presence-worker
 ```
 
+Once the pods are green, the worker is expected to return `{"stage":"idle"}`
+until an Action is approved and a standing authorization exists.
+
 These commands inspect state only. Any secret change, Ansible application,
 manifest merge, ArgoCD sync or production canary needs its own current operator
 authorization.
@@ -105,7 +129,12 @@ Activation is one later, separately reviewed GitOps change. Its safe order is:
    its immutable image pin.
 2. Prepare one distinct dispatch credential and project it to Maestro as
    `AGENT_LOOP_FLIGHTDECK_DISPATCH_KEY` and to Flight Deck as
-   `MAESTRO_DISPATCH_KEY`. Do not reuse the admission credential.
+   `MAESTRO_DISPATCH_KEY`. Do not reuse the admission credential: the Flight
+   Deck worker fails closed if any two of `MAESTRO_ADMIT_KEY`,
+   `MAESTRO_DISPATCH_KEY`, `PUBLIC_PRESENCE_WORKER_KEY` and
+   `PUBLIC_PRESENCE_SERVICE_KEY` are equal. Provisioning the key never
+   authorizes activation by itself (rbx-maestro ADR-0006; the governance
+   decision is rbx-governance ADR-0614).
 3. Apply the current Corbetti agent-workbench role and verify the capability
    report contract on the host.
 4. Keep the first production authorization narrow: one identity, profile,
