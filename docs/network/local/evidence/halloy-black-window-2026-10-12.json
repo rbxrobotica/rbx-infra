@@ -1,0 +1,628 @@
+{
+  "schema_version": 1,
+  "incident_local_date": "2026-10-12",
+  "timezone": "America/Sao_Paulo",
+  "symptom": "Entire Halloy client area black; window frame remains visible. Operator reports still black during collection.",
+  "operator_context": "Using Codex for unrelated work. No suspend; screen may have locked after idle. No reported scrolling trigger.",
+  "halloy_version": "2026.9 (2b3edc8e)",
+  "binary_sha256": "097c5dfbc061e2d1d981b3a781c54e9e9e575a331df171ea37e54fdf8a387711",
+  "config_sha256": "b66b92cc4231b9d54fd0f3f2e8e7fb6be2701c8c0d7cd548bd9f8eaa75940921",
+  "runtime_table_present": false,
+  "theme": "ferra",
+  "sample_count": 6,
+  "samples": [
+    {
+      "source_sha256": "3172b7a93c30e2634b4f71b602ae1abc3f28d28fc3c3f535a294c2ca7eaf91ca",
+      "started_at_utc": "2026-10-13T00:54:45.689393+00:00",
+      "finished_at_utc": "2026-10-13T00:54:47.701754+00:00",
+      "process": {
+        "pid": 914616,
+        "uptime_seconds": 92708.62,
+        "cpu_sample_seconds": 2.0,
+        "cpu_percent_one_core": 101.985,
+        "rss_kib": 298488,
+        "peak_rss_kib": 298488,
+        "pss_kib": 209200,
+        "swap_kib": 0,
+        "threads": 69,
+        "fd_count": 87,
+        "local_irc_sockets": [
+          {
+            "family": "ipv4",
+            "peer_port": 6667,
+            "receive_queue_bytes": 0,
+            "send_queue_bytes": 0,
+            "state": "ESTABLISHED"
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "source_sha256": "714f9ebb32d52d6bf840bff269e6c0afbaa105b889fd4147b50cbedeca22ca7a",
+      "started_at_utc": "2026-10-13T00:54:50.725848+00:00",
+      "finished_at_utc": "2026-10-13T00:54:52.737702+00:00",
+      "process": {
+        "pid": 914616,
+        "uptime_seconds": 92713.66,
+        "cpu_sample_seconds": 2.0,
+        "cpu_percent_one_core": 102.985,
+        "rss_kib": 298488,
+        "peak_rss_kib": 298488,
+        "pss_kib": 209201,
+        "swap_kib": 0,
+        "threads": 69,
+        "fd_count": 87,
+        "local_irc_sockets": [
+          {
+            "family": "ipv4",
+            "peer_port": 6667,
+            "receive_queue_bytes": 0,
+            "send_queue_bytes": 0,
+            "state": "ESTABLISHED"
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "source_sha256": "c74e4b84da192e784bf8fc0b61e23362ffb6a04353eec5ff3592b4ad8023bc87",
+      "started_at_utc": "2026-10-13T00:54:55.761538+00:00",
+      "finished_at_utc": "2026-10-13T00:54:57.773463+00:00",
+      "process": {
+        "pid": 914616,
+        "uptime_seconds": 92718.69,
+        "cpu_sample_seconds": 2.0,
+        "cpu_percent_one_core": 101.988,
+        "rss_kib": 298488,
+        "peak_rss_kib": 298488,
+        "pss_kib": 209201,
+        "swap_kib": 0,
+        "threads": 69,
+        "fd_count": 87,
+        "local_irc_sockets": [
+          {
+            "family": "ipv4",
+            "peer_port": 6667,
+            "receive_queue_bytes": 0,
+            "send_queue_bytes": 0,
+            "state": "ESTABLISHED"
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "source_sha256": "7e43ac512370205c8cb1fa6f61d50c53872edede1904bdeb0b3ccbff552704bf",
+      "started_at_utc": "2026-10-13T00:55:00.798505+00:00",
+      "finished_at_utc": "2026-10-13T00:55:02.810597+00:00",
+      "process": {
+        "pid": 914616,
+        "uptime_seconds": 92723.73,
+        "cpu_sample_seconds": 2.0,
+        "cpu_percent_one_core": 101.988,
+        "rss_kib": 298488,
+        "peak_rss_kib": 298488,
+        "pss_kib": 209201,
+        "swap_kib": 0,
+        "threads": 69,
+        "fd_count": 87,
+        "local_irc_sockets": [
+          {
+            "family": "ipv4",
+            "peer_port": 6667,
+            "receive_queue_bytes": 0,
+            "send_queue_bytes": 0,
+            "state": "ESTABLISHED"
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "source_sha256": "eab2143e1b0399545fc40af17cf6b7eb2c116e42c700634675f013556671047c",
+      "started_at_utc": "2026-10-13T00:55:05.836840+00:00",
+      "finished_at_utc": "2026-10-13T00:55:07.848702+00:00",
+      "process": {
+        "pid": 914616,
+        "uptime_seconds": 92728.77,
+        "cpu_sample_seconds": 2.0,
+        "cpu_percent_one_core": 101.487,
+        "rss_kib": 298488,
+        "peak_rss_kib": 298488,
+        "pss_kib": 209201,
+        "swap_kib": 0,
+        "threads": 69,
+        "fd_count": 87,
+        "local_irc_sockets": [
+          {
+            "family": "ipv4",
+            "peer_port": 6667,
+            "receive_queue_bytes": 0,
+            "send_queue_bytes": 0,
+            "state": "ESTABLISHED"
+          }
+        ],
+        "errors": []
+      }
+    },
+    {
+      "source_sha256": "b5e057071ea274588b376b56cdf1810576cb6dc27e4ac70c8c70d7b36b2f883d",
+      "started_at_utc": "2026-10-13T00:55:10.874348+00:00",
+      "finished_at_utc": "2026-10-13T00:55:12.886299+00:00",
+      "process": {
+        "pid": 914616,
+        "uptime_seconds": 92733.81,
+        "cpu_sample_seconds": 2.0,
+        "cpu_percent_one_core": 101.985,
+        "rss_kib": 298488,
+        "peak_rss_kib": 298488,
+        "pss_kib": 209201,
+        "swap_kib": 0,
+        "threads": 69,
+        "fd_count": 87,
+        "local_irc_sockets": [
+          {
+            "family": "ipv4",
+            "peer_port": 6667,
+            "receive_queue_bytes": 0,
+            "send_queue_bytes": 0,
+            "state": "ESTABLISHED"
+          }
+        ],
+        "errors": []
+      }
+    }
+  ],
+  "persistence_metadata_first": {
+    "dashboard.json.gz": {
+      "errors": [],
+      "file_count": 1,
+      "newest_mtime_utc": "2026-10-11T17:45:29.895257+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 240
+    },
+    "drafts.json": {
+      "errors": [],
+      "file_count": 1,
+      "newest_mtime_utc": "2026-10-11T23:45:02.179300+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 193
+    },
+    "history": {
+      "errors": [],
+      "file_count": 21,
+      "newest_mtime_utc": "2026-10-11T23:46:14.187037+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 33390
+    },
+    "logs": {
+      "errors": [],
+      "file_count": 4,
+      "newest_mtime_utc": "2026-10-11T23:46:14.190042+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 56927
+    },
+    "targets": {
+      "errors": [],
+      "file_count": 1,
+      "newest_mtime_utc": "2026-10-11T23:09:41.348159+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 32
+    },
+    "window.json": {
+      "errors": [],
+      "file_count": 1,
+      "newest_mtime_utc": "2026-10-13T00:52:15.850474+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 106
+    }
+  },
+  "persistence_metadata_last": {
+    "dashboard.json.gz": {
+      "errors": [],
+      "file_count": 1,
+      "newest_mtime_utc": "2026-10-11T17:45:29.895257+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 240
+    },
+    "drafts.json": {
+      "errors": [],
+      "file_count": 1,
+      "newest_mtime_utc": "2026-10-11T23:45:02.179300+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 193
+    },
+    "history": {
+      "errors": [],
+      "file_count": 21,
+      "newest_mtime_utc": "2026-10-11T23:46:14.187037+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 33390
+    },
+    "logs": {
+      "errors": [],
+      "file_count": 4,
+      "newest_mtime_utc": "2026-10-11T23:46:14.190042+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 56927
+    },
+    "targets": {
+      "errors": [],
+      "file_count": 1,
+      "newest_mtime_utc": "2026-10-11T23:09:41.348159+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 32
+    },
+    "window.json": {
+      "errors": [],
+      "file_count": 1,
+      "newest_mtime_utc": "2026-10-13T00:52:15.850474+00:00",
+      "symlinks_skipped": 0,
+      "total_bytes": 106
+    }
+  },
+  "thread_sample": {
+    "started_at_utc": "2026-10-13T01:00:40.299808+00:00",
+    "pid": 914616,
+    "thread_sample_seconds": 3.001,
+    "thread_count": 69,
+    "top_threads": [
+      {
+        "tid": 914616,
+        "cpu_percent_one_core": 99.961,
+        "state": "R"
+      },
+      {
+        "tid": 914643,
+        "cpu_percent_one_core": 1.0,
+        "state": "S"
+      },
+      {
+        "tid": 914650,
+        "cpu_percent_one_core": 1.0,
+        "state": "S"
+      },
+      {
+        "tid": 914647,
+        "cpu_percent_one_core": 0.666,
+        "state": "S"
+      },
+      {
+        "tid": 914619,
+        "cpu_percent_one_core": 0.0,
+        "state": "S"
+      },
+      {
+        "tid": 914620,
+        "cpu_percent_one_core": 0.0,
+        "state": "S"
+      },
+      {
+        "tid": 914621,
+        "cpu_percent_one_core": 0.0,
+        "state": "S"
+      },
+      {
+        "tid": 914622,
+        "cpu_percent_one_core": 0.0,
+        "state": "S"
+      }
+    ]
+  },
+  "services": {
+    "rbx-irc-tunnel.service": {
+      "returncode": 0,
+      "properties": {
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "SubState": "running",
+        "ActiveEnterTimestamp": "Thu 2026-10-08 18:24:17 -03"
+      }
+    },
+    "rbx-agent-irc.service": {
+      "returncode": 0,
+      "properties": {
+        "NRestarts": "0",
+        "ActiveState": "active",
+        "SubState": "running",
+        "ActiveEnterTimestamp": "Thu 2026-10-08 18:20:48 -03"
+      }
+    }
+  },
+  "system_memory_kib": {
+    "MemTotal": 32661952,
+    "MemAvailable": 17366248,
+    "SwapTotal": 2097148,
+    "SwapFree": 2096108
+  },
+  "gpu_global": {
+    "started_at_utc": "2026-10-13T01:00:40.299808+00:00",
+    "gpu_global_csv_fields": [
+      "name",
+      "driver_version",
+      "memory_total_mib",
+      "memory_used_mib",
+      "utilization_percent",
+      "temperature_celsius"
+    ],
+    "gpu_global": "NVIDIA GeForce RTX 4070 Ti SUPER, 595.99.02, 16376, 952, 2, 37",
+    "gpu_query_returncode": 0
+  },
+  "log_scan": [
+    {
+      "name": "halloy.2026-10-10-06-57-55.log",
+      "bytes": 22247,
+      "mtime_epoch": 1791666412.9735088,
+      "tail_bytes_examined": 22247,
+      "indicator_counts": {
+        "when presenting surface": 0,
+        "SurfaceError": 0,
+        "Outdated": 0,
+        "Lost": 0,
+        "Timeout": 0,
+        "OutOfMemory": 0,
+        "panic": 0,
+        "ERROR": 0,
+        "WARN": 0
+      }
+    },
+    {
+      "name": "halloy.2026-10-10-18-06-57.log",
+      "bytes": 11510,
+      "mtime_epoch": 1791730340.5584733,
+      "tail_bytes_examined": 11510,
+      "indicator_counts": {
+        "when presenting surface": 0,
+        "SurfaceError": 0,
+        "Outdated": 0,
+        "Lost": 0,
+        "Timeout": 0,
+        "OutOfMemory": 0,
+        "panic": 0,
+        "ERROR": 0,
+        "WARN": 0
+      }
+    },
+    {
+      "name": "halloy.2026-10-11-14-30-59.log",
+      "bytes": 11903,
+      "mtime_epoch": 1791760174.9002342,
+      "tail_bytes_examined": 11903,
+      "indicator_counts": {
+        "when presenting surface": 0,
+        "SurfaceError": 0,
+        "Outdated": 0,
+        "Lost": 0,
+        "Timeout": 0,
+        "OutOfMemory": 0,
+        "panic": 0,
+        "ERROR": 0,
+        "WARN": 0
+      }
+    },
+    {
+      "name": "halloy.2026-10-11-20-09-39.log",
+      "bytes": 11267,
+      "mtime_epoch": 1791762374.190042,
+      "tail_bytes_examined": 11267,
+      "indicator_counts": {
+        "when presenting surface": 0,
+        "SurfaceError": 0,
+        "Outdated": 0,
+        "Lost": 0,
+        "Timeout": 0,
+        "OutOfMemory": 0,
+        "panic": 0,
+        "ERROR": 0,
+        "WARN": 0
+      }
+    }
+  ],
+  "limitations": [
+    "A short series during failure, not a continuous trace of process lifetime.",
+    "Established TCP and healthy services do not prove IRC message delivery or rendering.",
+    "Global GPU figures are not Halloy-specific.",
+    "Stable RSS and peak RSS do not exclude every memory or persistence defect.",
+    "Log indicator counts do not identify the cause; no backtrace was obtained.",
+    "No protocol payload, credentials, configuration contents or conversation history included."
+  ],
+  "software_experiment": {
+    "restart": {
+      "started_at_utc": "2026-10-13T01:03:30.807674+00:00",
+      "old_pid": 914616,
+      "original_config_sha256": "b66b92cc4231b9d54fd0f3f2e8e7fb6be2701c8c0d7cd548bd9f8eaa75940921",
+      "candidate_config_sha256": "4eb8093f8933372319a691c88c13e961aa19a5b664fc4c4877ae4a1975256cae",
+      "actions": [
+        {
+          "action": "request_window_close",
+          "returncode": 0
+        }
+      ],
+      "old_process_stopped": true,
+      "new_pid": 1414652,
+      "exit_code_after_3s": null,
+      "finished_at_utc": "2026-10-13T01:03:34.018706+00:00"
+    },
+    "user_authorized": true,
+    "config_change": {
+      "runtime": {
+        "backend": "software"
+      }
+    },
+    "other_config_semantically_unchanged": true,
+    "same_installed_binary": true,
+    "sample_count": 6,
+    "samples": [
+      {
+        "source_sha256": "6b14ab5c168c1e0d6f42096f7f7fbc863f3e3ab0fbd6ce19edf5640efdf7540e",
+        "started_at_utc": "2026-10-13T01:03:55.730300+00:00",
+        "finished_at_utc": "2026-10-13T01:03:57.749532+00:00",
+        "process": {
+          "pid": 1414652,
+          "uptime_seconds": 26.72,
+          "cpu_sample_seconds": 2.001,
+          "cpu_percent_one_core": 1.499,
+          "rss_kib": 118528,
+          "peak_rss_kib": 118528,
+          "pss_kib": 109790,
+          "swap_kib": 0,
+          "threads": 67,
+          "fd_count": 26,
+          "local_irc_sockets": [
+            {
+              "family": "ipv4",
+              "peer_port": 6667,
+              "receive_queue_bytes": 0,
+              "send_queue_bytes": 0,
+              "state": "ESTABLISHED"
+            }
+          ],
+          "errors": []
+        }
+      },
+      {
+        "source_sha256": "55fcb073abbb61370f8a6df18eb4d3e27fb678895b4e238d22856b936005bd5e",
+        "started_at_utc": "2026-10-13T01:04:00.800658+00:00",
+        "finished_at_utc": "2026-10-13T01:04:02.819950+00:00",
+        "process": {
+          "pid": 1414652,
+          "uptime_seconds": 31.79,
+          "cpu_sample_seconds": 2.001,
+          "cpu_percent_one_core": 0.5,
+          "rss_kib": 118528,
+          "peak_rss_kib": 118528,
+          "pss_kib": 109790,
+          "swap_kib": 0,
+          "threads": 64,
+          "fd_count": 26,
+          "local_irc_sockets": [
+            {
+              "family": "ipv4",
+              "peer_port": 6667,
+              "receive_queue_bytes": 0,
+              "send_queue_bytes": 0,
+              "state": "ESTABLISHED"
+            }
+          ],
+          "errors": []
+        }
+      },
+      {
+        "source_sha256": "8076aa3c3e4bc4859edea6b17ee25574e1f99403af7c2f17bfd4e58055bcb243",
+        "started_at_utc": "2026-10-13T01:04:05.865518+00:00",
+        "finished_at_utc": "2026-10-13T01:04:07.882272+00:00",
+        "process": {
+          "pid": 1414652,
+          "uptime_seconds": 36.86,
+          "cpu_sample_seconds": 2.001,
+          "cpu_percent_one_core": 1.0,
+          "rss_kib": 118572,
+          "peak_rss_kib": 118572,
+          "pss_kib": 109834,
+          "swap_kib": 0,
+          "threads": 64,
+          "fd_count": 26,
+          "local_irc_sockets": [
+            {
+              "family": "ipv4",
+              "peer_port": 6667,
+              "receive_queue_bytes": 0,
+              "send_queue_bytes": 0,
+              "state": "ESTABLISHED"
+            }
+          ],
+          "errors": []
+        }
+      },
+      {
+        "source_sha256": "e8ff10d88917bccc01d57cdc5489cee08eb95fd2f2f23b09fed8634777327dd9",
+        "started_at_utc": "2026-10-13T01:04:10.925689+00:00",
+        "finished_at_utc": "2026-10-13T01:04:12.943920+00:00",
+        "process": {
+          "pid": 1414652,
+          "uptime_seconds": 41.92,
+          "cpu_sample_seconds": 2.001,
+          "cpu_percent_one_core": 1.0,
+          "rss_kib": 118852,
+          "peak_rss_kib": 118852,
+          "pss_kib": 110114,
+          "swap_kib": 0,
+          "threads": 64,
+          "fd_count": 26,
+          "local_irc_sockets": [
+            {
+              "family": "ipv4",
+              "peer_port": 6667,
+              "receive_queue_bytes": 0,
+              "send_queue_bytes": 0,
+              "state": "ESTABLISHED"
+            }
+          ],
+          "errors": []
+        }
+      },
+      {
+        "source_sha256": "b2408c24f351b1d410dca4bc1a47e85f73f5ebd92d46615f813de15091b216c1",
+        "started_at_utc": "2026-10-13T01:04:15.990642+00:00",
+        "finished_at_utc": "2026-10-13T01:04:18.009873+00:00",
+        "process": {
+          "pid": 1414652,
+          "uptime_seconds": 46.98,
+          "cpu_sample_seconds": 2.001,
+          "cpu_percent_one_core": 1.0,
+          "rss_kib": 118852,
+          "peak_rss_kib": 118852,
+          "pss_kib": 110114,
+          "swap_kib": 0,
+          "threads": 64,
+          "fd_count": 26,
+          "local_irc_sockets": [
+            {
+              "family": "ipv4",
+              "peer_port": 6667,
+              "receive_queue_bytes": 0,
+              "send_queue_bytes": 0,
+              "state": "ESTABLISHED"
+            }
+          ],
+          "errors": []
+        }
+      },
+      {
+        "source_sha256": "9a376b42ad3072c6a182f4fb44cef60642645019ef341ed80264cec76341788c",
+        "started_at_utc": "2026-10-13T01:04:21.047244+00:00",
+        "finished_at_utc": "2026-10-13T01:04:23.059093+00:00",
+        "process": {
+          "pid": 1414652,
+          "uptime_seconds": 52.04,
+          "cpu_sample_seconds": 2.0,
+          "cpu_percent_one_core": 1.0,
+          "rss_kib": 118852,
+          "peak_rss_kib": 118852,
+          "pss_kib": 110114,
+          "swap_kib": 0,
+          "threads": 64,
+          "fd_count": 26,
+          "local_irc_sockets": [
+            {
+              "family": "ipv4",
+              "peer_port": 6667,
+              "receive_queue_bytes": 0,
+              "send_queue_bytes": 0,
+              "state": "ESTABLISHED"
+            }
+          ],
+          "errors": []
+        }
+      }
+    ],
+    "visual_result": {
+      "operator_confirmed_normal_window": true,
+      "operator_screenshot_shows_channels_and_successful_authentication_at_local_time": "2026-10-12T22:03:00-03:00",
+      "screenshot_in_repository": false
+    },
+    "assessment": "Initial recovery after restart with software backend; long-term stability and causal role of backend unproven.",
+    "bootstrap_changed": false
+  }
+}
