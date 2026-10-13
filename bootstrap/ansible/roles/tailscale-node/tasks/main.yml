@@ -3,6 +3,15 @@
 # WireGuard interface next to existing connectivity. Closes nothing, changes
 # no route, never touches resolv.conf (--accept-dns=false).
 
+- name: Refuse the superseded enrollment before any mutation
+  ansible.builtin.fail:
+    msg: >-
+      This legacy enrollment predates the deployed mesh policy and client
+      version. It is quarantined pending governed-state reconciliation.
+      Use docs/runbooks/HEADSCALE-RECONCILIATION.md. No package, firewall,
+      credential or enrollment change is approved by this role.
+  tags: [always]
+
 - name: Install tailscale apt signing key
   get_url:
     url: "https://pkgs.tailscale.com/stable/ubuntu/{{ tailscale_apt_release }}.noarmor.gpg"
@@ -19,7 +28,7 @@
   apt:
     name: "tailscale={{ tailscale_version }}"
     update_cache: true
-    allow_downgrade: true
+    allow_downgrade: false
 
 - name: Hold tailscale package (upgrades are deliberate PRs)
   dpkg_selections:
