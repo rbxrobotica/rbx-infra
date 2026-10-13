@@ -3,10 +3,18 @@
 Assessment date: 2026-10-12, America/Sao_Paulo.
 Readiness for live migration and human-query activation: **BLOCKED**.
 
-This is a repository-only assessment of the PostgreSQL destination for the IRC
+**Live follow-up:** The [October 12 destination review](POSTGRES-LIVE-PREFLIGHT-2026-10-12.md)
+adds read-only observations of Jaguar and the actual workstation path. Readiness
+remains blocked: no dedicated IRC target was identified, the private application
+route and TLS trust contract remain unverified, and pgBackRest/WAL archiving are
+not active on the inspected host. The observations below preserve the initial
+repository-only assessment.
+
+This initial review was a repository-only assessment of the PostgreSQL destination for the IRC
 adapter's durable queue, supplemented by the isolated tests described below.
 It approves neither a host nor a cutover. No deployed database connections, SSH
-commands, secret reads, production writes or service changes were performed.
+commands, secret reads, production writes or service changes were performed in
+that initial assessment.
 Keep the deployed adapter and its existing state unchanged while the live
 evidence below is collected.
 
