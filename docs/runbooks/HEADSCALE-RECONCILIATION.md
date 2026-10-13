@@ -125,6 +125,14 @@ creation is included. Extending this destination to Headscale remains a proposal
 
 ## Next implementation and operator gate
 
+The [candidate preparation increment](HEADSCALE-CANDIDATE.md) now reproduces
+the observed baseline from recovered Git source, preserves original bytes and
+tests the complete synthetic candidate in isolated native Headscale. It provides
+local preparation only; the deployment role and live rollback remain unimplemented.
+The [mobile IRC design](PRIVATE-IRC-MOBILE.md) also records the newly observed
+loopback bindings and self-signed TLS trust gap. These advance items 1, 2 and 4
+below without claiming that their live acceptance or recovery gate is complete.
+
 1. Review and publish the necessary parts of the recovered source without
    importing stale inventory, general hardening changes or historical acceptance
    claims as current state. Preserve the pending POCO edit separately.

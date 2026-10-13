@@ -1,0 +1,11 @@
+regions:
+  999:
+    regionid: 999
+    regioncode: synthetic
+    regionname: Synthetic offline fixture
+    nodes:
+      - name: synthetic
+        regionid: 999
+        hostname: derp.invalid
+        ipv4: 192.0.2.1
+        derpport: 443

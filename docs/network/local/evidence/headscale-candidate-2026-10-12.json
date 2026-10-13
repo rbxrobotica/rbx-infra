@@ -1,0 +1,138 @@
+{
+  "schema_version": "headscale-candidate-readiness-v1",
+  "operator_local_date": "2026-10-12",
+  "timezone": "America/Sao_Paulo",
+  "scope": "source preparation, synthetic tests and read-only runtime metadata",
+  "live_mutations": false,
+  "deployment_authorized": false,
+  "historical_source": {
+    "tip": "4f84a1a0d2f5526e3d1c825baaa75f38cf030ef0",
+    "template_commit": "effc982d94138d35ef12907f2d0a31b19cc90cb2",
+    "template_blob": "69a8e23973a414f6bce28316664893ad4c03a0a9",
+    "original_worktree_changed": false,
+    "pending_edit_changed": false
+  },
+  "reconstruction": {
+    "from_git": true,
+    "production_state_copied": false,
+    "configuration_matches_observed_hash": true,
+    "policy_matches_observed_hash": true,
+    "rendered_template_changes": "comments only",
+    "adoption_receipt": {
+      "adoption_only": true,
+      "bundle_format": "headscale-candidate-bundle-v1",
+      "file_observation_schema": "headscale-file-preflight-v1",
+      "hashes": {
+        "bundled_config_sha256": "d138ed7be87af3d20440e63d042fe3d7f988e3850e646530af632cc35c2126ff",
+        "bundled_policy_sha256": "19920f2d76129cce5401a12ceb25ff8516ff42970cc581a725564b259675dda1",
+        "candidate_config_sha256": "309dbbc9e113054d830300b7e32c54e19dcaad1f62c797af69388b6a3d39af8a",
+        "current_config_sha256": "d138ed7be87af3d20440e63d042fe3d7f988e3850e646530af632cc35c2126ff",
+        "policy_sha256": "19920f2d76129cce5401a12ceb25ff8516ff42970cc581a725564b259675dda1"
+      },
+      "headscale_version": "0.29.3",
+      "input_consistency": {
+        "fingerprints_rechecked": true,
+        "live_atomic_snapshot": false,
+        "operator_attestation_required": true,
+        "stopped_sources_or_private_copies_required": true
+      },
+      "live_changes": false,
+      "live_reference_path_verified": false,
+      "native_validation": false,
+      "policy_preserved": true,
+      "schema_version": "headscale-candidate-bundle-v1",
+      "snapshot_reference_override": true,
+      "status": "prepared",
+      "traffic_semantics_verified": false
+    }
+  },
+  "headscale_process": {
+    "captured_at_utc": "2026-10-13T02:32:40.349272+00:00",
+    "process_running": true,
+    "headscale_environment_keys": [],
+    "config_environment_points_to_expected": null,
+    "explicit_config_argument_present": false,
+    "config_argument_points_to_expected": null,
+    "serve_subcommand_present": true,
+    "unknown_extra_argument_count": 0
+  },
+  "irc_endpoint": {
+    "captured_at_utc": "2026-10-13T02:25:26.901798+00:00",
+    "running": true,
+    "configured_image": "ghcr.io/ergochat/ergo:v2.19.1",
+    "image_id": "sha256:b1e4361866b75cc18c2d0c4ea302b64f9c251dbc6e06eb1e37e7a8175b3dcc26",
+    "ports": {
+      "6667/tcp": [
+        {
+          "port": "6667",
+          "loopback": true,
+          "wildcard": false,
+          "ip_family": 4,
+          "mesh_cgnat": false
+        }
+      ],
+      "6697/tcp": [
+        {
+          "port": "6697",
+          "loopback": true,
+          "wildcard": false,
+          "ip_family": 4,
+          "mesh_cgnat": false
+        }
+      ]
+    },
+    "system_trust_verified": false,
+    "self_signed_error": true,
+    "hostname_verification_conclusive": false,
+    "irc_authentication_attempted": false,
+    "certificate": {
+      "subject_cn": "irc.internal.rbx",
+      "issuer_cn": "irc.internal.rbx",
+      "dns_san": [
+        "irc.internal.rbx"
+      ],
+      "ip_san": [
+        "127.0.0.1"
+      ],
+      "not_before_utc": "2026-09-24T04:09:37Z",
+      "not_after_utc": "2027-09-24T04:09:37Z",
+      "sha256": "2e0ddf3c2020d839c9dbc9c61ce445c75b0a2c6b84fd4bbf8705156e18f5a701",
+      "private_key_read": false
+    }
+  },
+  "verification": {
+    "unit_tests_passed": 46,
+    "ansible_local_preparation_passed": true,
+    "native_scope": "synthetic config and identities only; see headscale-native-2026-10-12.json",
+    "live_traffic_tested": false,
+    "production_restore_tested": false,
+    "ansible_negative_cases": {
+      "existing_bundle_unchanged": true,
+      "temporary_staging_removed": true,
+      "negative_cases": {
+        "existing-output": {
+          "rejected": true,
+          "exit_code": 2
+        },
+        "wrong-baseline": {
+          "rejected": true,
+          "exit_code": 2
+        },
+        "check-mode": {
+          "rejected": true,
+          "exit_code": 2
+        }
+      }
+    }
+  },
+  "remaining": [
+    "review ADR and implement promotion/rollback",
+    "verify fresh live baseline and effective runtime profile before apply",
+    "external encrypted custody and restore drill",
+    "recovery owner and RPO/RTO",
+    "private IRC DNS, trusted TLS and renewal",
+    "service-specific phone grant and per-device account",
+    "IPv4/IPv6 and mobile acceptance"
+  ],
+  "rsync_net_account_available": false
+}

@@ -1,0 +1,80 @@
+name: Headscale candidate native validation
+
+on:
+  pull_request:
+    # Include stacked PRs before the reconciliation base reaches main.
+    paths:
+      - '.github/workflows/headscale-candidate-native.yml'
+      - 'bootstrap/ansible/headscale-candidate.yml'
+      - 'bootstrap/ansible/roles/headscale_candidate/**'
+      - 'scripts/network/headscale_*.py'
+      - 'scripts/network/test-headscale-candidate-native.sh'
+      - 'scripts/tests/test_headscale*.py'
+      - 'scripts/tests/fixtures/headscale/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/headscale-candidate-native.yml'
+      - 'bootstrap/ansible/headscale-candidate.yml'
+      - 'bootstrap/ansible/roles/headscale_candidate/**'
+      - 'scripts/network/headscale_*.py'
+      - 'scripts/network/test-headscale-candidate-native.sh'
+      - 'scripts/tests/test_headscale*.py'
+      - 'scripts/tests/fixtures/headscale/**'
+
+permissions:
+  contents: read
+
+jobs:
+  native-synthetic-validation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.15'
+      - name: Install checksum-pinned Python test dependencies
+        run: |
+          python -m venv "$RUNNER_TEMP/headscale-test-venv"
+          cat > "$RUNNER_TEMP/headscale-test-requirements.txt" <<'REQ'
+          PyYAML==6.0.3 --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc
+          Jinja2==3.1.6 --hash=sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67
+          MarkupSafe==3.0.3 --hash=sha256:d6dd0be5b5b189d31db7cda48b91d7e0a9795f31430b7f271219ab30f1d3ac9d
+          yamllint==1.37.1 --hash=sha256:364f0d79e81409f591e323725e6a9f4504c8699ddf2d7263d8d2b539cd66a583
+          pathspec==0.12.1 --hash=sha256:a0d503e138a4c123b27490a4f7beda6a01c6f288df0e4a8b79c7eb0dc7b4cc08
+          REQ
+          "$RUNNER_TEMP/headscale-test-venv/bin/python" -m pip install \
+            --disable-pip-version-check --require-hashes --only-binary=:all: \
+            --requirement "$RUNNER_TEMP/headscale-test-requirements.txt"
+          echo "$RUNNER_TEMP/headscale-test-venv/bin" >> "$GITHUB_PATH"
+      - name: Require the local rootless Podman engine
+        run: |
+          command -v podman
+          test "$(id -u)" -ne 0
+          test "$(env -u CONTAINER_HOST -u CONTAINER_CONNECTION \
+            podman --remote=false info --format '{{.Host.Security.Rootless}}')" = true
+          podman --version
+      - name: Lint the workflow and candidate Ansible files
+        run: |
+          yamllint .github/workflows/headscale-candidate-native.yml \
+            bootstrap/ansible/headscale-candidate.yml \
+            bootstrap/ansible/roles/headscale_candidate/defaults/main.yml \
+            bootstrap/ansible/roles/headscale_candidate/tasks/main.yml
+      - name: Test file preflight and candidate preparation
+        run: python3 -I -B -m unittest discover -s scripts/tests -p 'test_headscale*.py' -v
+      - name: Validate synthetic candidate with the native pinned release
+        run: |
+          bash -n scripts/network/test-headscale-candidate-native.sh
+          sh -n scripts/tests/fixtures/headscale/native-runner.sh
+          scripts/network/test-headscale-candidate-native.sh \
+            | tee "$RUNNER_TEMP/headscale-synthetic-validation.json"
+      - name: Retain only the sanitized synthetic report
+        uses: actions/upload-artifact@v4
+        with:
+          name: headscale-synthetic-native-validation
+          path: ${{ runner.temp }}/headscale-synthetic-validation.json
+          if-no-files-found: error
+          retention-days: 7

@@ -114,6 +114,22 @@ the legacy roles are quarantined before mutation. A repeatable, file-only audit
 and synthetic tests are available. This is preparation, not expanded mesh or
 mobile IRC access. See [reconciliation and recovery gates](../../runbooks/HEADSCALE-RECONCILIATION.md).
 
+**October 12 candidate increment:** The recovered source reproduces the observed
+configuration and policy hashes. A local-only [adoption preparer](../../runbooks/HEADSCALE-CANDIDATE.md)
+now requires exact baselines and complete YAML equivalence, retaining both files
+byte for byte. Its isolated native Headscale tests exercise synthetic identities,
+two allow assertions, six deny assertions and rejected invalid inputs. This is
+not a live policy test, a replacement deployment role or completion of stage 2.
+The legacy rollout remains quarantined.
+
+The [mobile IRC endpoint plan](../../runbooks/PRIVATE-IRC-MOBILE.md) records that
+Ergo's ports are loopback-only and its present certificate fails system trust
+as self-signed. Name resolution, trusted TLS, a service-specific mesh grant,
+per-device credentials and recovery evidence remain before phone acceptance.
+The operator confirmed that the rsync.net account is not available; its
+[requirements and cost options](../../runbooks/RSYNC-NET-READINESS.md) are prepared.
+USB access to the POCO/A02 is not needed until endpoint readiness.
+
 
 Inspecionar primeiro a política Headscale efetiva e os listeners/TLS do Ergo.
 O template Git não comprova o estado em execução. Preparar uma mudança que
@@ -145,12 +161,13 @@ somente conteúdo revisado, sem segredos ou exportações brutas de configuraç�
 operacional. Manter a cópia original e fazer a integração em worktree distinta.
 O relato não substitui a verificação da branch remota, do backup ou da produção.
 
-A reconciliação deve cobrir carregamento obrigatório e validação semântica da
-política, testes de permitir/recusar, DERP e firewall, versão fixada do cliente
-e restauração. O `main` ainda exige DERP embutido, libera STUN e permite
-downgrade para o cliente fixado; esses pontos precisam concordar com a decisão
-vigente. Não atribuir número definitivo à ADR local antes de reconciliar o
-catálogo. Essa pendência não bloqueia o desenvolvimento IRC em ambiente isolado.
+Reconciliation must cover required policy loading and semantic validation,
+allow/deny tests, DERP and firewall, client version and restoration. The revision
+inspected on October 11 required embedded DERP, opened STUN and permitted a
+downgrade to its pinned client. The quarantine increment blocks those legacy
+roles and removes the explicit downgrade option; the later relay decision still
+needs reconciliation. Do not assign the recovered ADR a definitive number before
+reviewing the catalog. This does not block isolated IRC development.
 
 Separar papel administrativo e execução de agentes se a ThinkCentre concentrar
 credenciais da frota. Identidades, tags e regras devem distinguir funções e

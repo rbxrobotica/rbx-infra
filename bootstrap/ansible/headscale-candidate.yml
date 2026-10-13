@@ -1,0 +1,10 @@
+---
+# Local preparation only; do not pass a fleet inventory or run with become.
+# No packages, native Headscale, services, handlers, enrollment or apply.
+- name: Prepare a Headscale adoption candidate on the controller
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  roles:
+    - headscale_candidate
