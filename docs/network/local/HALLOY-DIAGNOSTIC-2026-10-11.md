@@ -7,6 +7,15 @@ mostrá-las ao fechar e reabrir a janela. Konversation foi
 [removido a pedido do operador](KONVERSATION-PILOT.md). O tema escuro Halloy
 foi aprovado e permanece inalterado.
 
+**2026-10-12 update:** The observations below remain the October 11 baseline.
+The symptom was subsequently captured as a black main window with sustained
+CPU use near one core and stable resident memory. The
+[October 12 incident record](HALLOY-INCIDENT-2026-10-12.md) contains the live
+measurements and their limits; the exact cause remains unknown. After the
+operator authorized a restart with software rendering, the interface recovered
+and short samples showed much lower CPU consumption. Long-term stability remains
+unverified; see the incident record for the experiment and reversal procedure.
+
 ## Ambiente e evidência
 
 - Halloy **2026.9 (2b3edc8e)**, binário existente em
@@ -75,10 +84,21 @@ mensagem de teste, captura de payload ou reinício dos serviços.
 | [#2129: painel deixa de redesenhar](https://github.com/squidowl/halloy/issues/2129) | Relatos de CPU alta e RAM estável; há comentários em Linux/NVIDIA | Verificar se título/canal mudam enquanto a conversa permanece congelada |
 | [#2228: memória cresce com o tempo](https://github.com/squidowl/halloy/issues/2228) | Relato em 2026.8 após uso por dias | Medir tendência de RSS/PSS no mesmo processo durante uso prolongado e no momento da falha |
 
-Nenhum desses relatos confirma a causa local. A correção de hang NVIDIA da
-[PR #2354](https://github.com/squidowl/halloy/pull/2354) já faz parte da
-[2026.9 instalada](https://github.com/squidowl/halloy/releases/tag/2026.9).
-Portanto, atualizar para essa mesma versão não constitui uma correção nova.
+**Correction verified on 2026-10-12:** None of these reports establishes the
+local cause. [Halloy PR #2354](https://github.com/squidowl/halloy/pull/2354)
+introduced an Iced NVIDIA/Vulkan recovery change, but inclusion of that PR does
+not mean the recovery remains active in Halloy 2026.9. The
+[release's dependency pin](https://github.com/squidowl/halloy/blob/2026.9/Cargo.toml#L169-L171)
+selects Iced `3124ac8a68529d10a34f708431ffc373615f9470`, which contains
+[revert `a4abb0f`](https://github.com/squidowl/iced/commit/a4abb0fe890767dc32604a13cc0a49c2f32819ed).
+[Iced PR #3478](https://github.com/iced-rs/iced/pull/3478) records the original
+presentation-error loop and a subsequent Halloy/Vulkan redraw regression that
+preceded the revert. The
+[pinned code](https://github.com/squidowl/iced/blob/3124ac8a68529d10a34f708431ffc373615f9470/winit/src/lib.rs#L953-L995)
+again requests redraw after generic presentation errors. This is a plausible
+failure mechanism, not a diagnosis: the October 12 capture did not contain the
+specific surface-error log signature. Reinstalling the same 2026.9 release is
+not a new fix.
 
 ## Captura no próximo sintoma
 

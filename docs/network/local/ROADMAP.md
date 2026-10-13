@@ -45,6 +45,22 @@ leitura JSON/gzip. Isso não descarta problemas após horas de uso ou falhas
 lógicas de histórico. Registrar comportamento em uma jornada de trabalho,
 incluindo período ocioso, suspensão e retomada.
 
+**2026-10-12 incident:** A black main window was captured at 21:51 BRT. Live
+sampling found CPU use near one core, stable RSS and no process swap; the IRC
+connection and tunnel services remained active. The operator reported no
+suspend or scrolling trigger, with an idle screen lock only a possibility.
+See the [incident record](HALLOY-INCIDENT-2026-10-12.md) and the
+[corrected upstream assessment](HALLOY-DIAGNOSTIC-2026-10-11.md#hipóteses-apoiadas-por-relatos-upstream):
+the Iced NVIDIA recovery introduced by Halloy PR #2354 was later reverted in
+the dependency pinned by 2026.9. No matching surface-error signature was found,
+so the exact cause remains unknown. An operator-authorized restart at 22:03 BRT
+changed only `runtime.backend` to `software`; the operator confirmed recovery,
+and six short samples showed 0.5% to 1.499% CPU and about 116 MiB RSS. Theme,
+channels and vault integration were preserved. Keep the setting as a local
+experiment with a private backup; prolonged use and idle/lock behavior still
+need validation before changing the Mint bootstrap. This does not complete
+stage 1.
+
 Se houver nova falha, registrar horário, estado do cliente, CPU, memória,
 sockets e estado do túnel antes de reabrir a janela, usando a
 [captura somente leitura](HALLOY-DIAGNOSTIC-2026-10-11.md#captura-no-próximo-sintoma).
