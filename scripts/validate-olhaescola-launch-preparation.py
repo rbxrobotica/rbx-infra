@@ -9,7 +9,9 @@ by_name={(d['kind'],d['metadata']['name']):d for d in docs}
 config=by_name[('ConfigMap','olhaescola-config')]['data']
 for flag in ('LOCAL_PREVIEW','PUBLIC_SUBMISSIONS_ENABLED','MODERATION_ENABLED','ORPHAN_RECONCILIATION_ENABLED','LEGAL_REVIEW_APPROVED'):
     assert config[flag]=='false',f'{flag} não está fechado'
-assert config['COMPREHEND_REGION']!='sa-east-1'
+assert config['FACE_DETECTOR_BINARY']=='/app/face-detector'
+assert config['FACE_DETECTOR_MODEL']=='/app/models/face_detection_yunet_2023mar.onnx'
+assert not any(key in config for key in ('REKOGNITION_REGION','COMPREHEND_REGION','AWS_REGION'))
 assert config['CONTROLLER_NAME']=='Leandro Damasio' and config['CONTACT_EMAIL']=='ceo@rbxsystems.ch'
 for name in ('olhaescola-api','olhaescola-web'):
     d=by_name[('Deployment',name)]
