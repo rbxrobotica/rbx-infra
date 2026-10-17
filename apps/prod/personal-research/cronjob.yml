@@ -1,0 +1,80 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: collector
+  namespace: personal-research
+spec:
+  schedule: "30 8 * * 1,4"
+  timeZone: America/Sao_Paulo
+  suspend: true
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 600
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: personal-research
+        spec:
+          restartPolicy: Never
+          serviceAccountName: collector
+          automountServiceAccountToken: false
+          imagePullSecrets:
+            - name: ghcr-pull-secret
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            fsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: collector
+              image: ghcr.io/rbxrobotica/personal-research:build-required
+              args: [--fetch, --output, /work]
+              env:
+                - name: CAREER_DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: runtime
+                      key: CAREER_DATABASE_URL
+                - name: CAREER_RUN_KEY
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.labels['batch.kubernetes.io/job-name']
+                - name: PGSSLROOTCERT
+                  value: /etc/postgresql/ca.crt
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: "1"
+                  memory: 256Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              volumeMounts:
+                - name: work
+                  mountPath: /work
+                - name: postgres-ca
+                  mountPath: /etc/postgresql
+                  readOnly: true
+          volumes:
+            - name: postgres-ca
+              secret:
+                secretName: runtime
+                items:
+                  - key: PG_CA_PEM
+                    path: ca.crt
+            - name: work
+              emptyDir:
+                medium: Memory
+                sizeLimit: 32Mi

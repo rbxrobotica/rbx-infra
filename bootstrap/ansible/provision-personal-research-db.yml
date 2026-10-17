@@ -1,0 +1,131 @@
+---
+# Standalone operator play. Never imported by site.yml.
+# Passwords exist in pass before execution; no implicit generation or rotation.
+- name: Provision isolated research database on Jaguar
+  hosts: db_server
+  serial: 1
+  any_errors_fatal: true
+  become: true
+  vars:
+    research_nodes: "{{ groups['k3s_server'] + groups['k3s_agents'] }}"
+  pre_tasks:
+    - name: Require recorded recovery preflight and exact target
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname == 'jaguar'
+          - personal_research_preflight_ref | default('') | length > 0
+          - personal_research_provision_authorized | default(false) | bool
+    - name: Verify PostgreSQL version and TLS before provisioning
+      become_user: postgres
+      community.postgresql.postgresql_query:
+        query: SELECT current_setting('server_version_num')::int / 10000 = 16 AS expected_version, current_setting('ssl') = 'on' AS tls_enabled
+      register: research_server
+      failed_when: not research_server.query_result[0].expected_version or not research_server.query_result[0].tls_enabled
+      changed_when: false
+    - name: Read dedicated passwords without logging or caching
+      ansible.builtin.set_fact:
+        research_owner_password: "{{ lookup('ansible.builtin.pipe', 'pass show rbx/personal-research/owner-password').splitlines()[0] }}"
+        research_runtime_password: "{{ lookup('ansible.builtin.pipe', 'pass show rbx/personal-research/runtime-password').splitlines()[0] }}"
+      no_log: true
+    - name: Validate distinct nonempty credentials
+      ansible.builtin.assert:
+        that:
+          - research_owner_password | length >= 32
+          - research_runtime_password | length >= 32
+          - research_runtime_password != research_owner_password
+      no_log: true
+  tasks:
+    - name: Create dedicated owner and restricted runtime identities
+      become_user: postgres
+      community.postgresql.postgresql_user:
+        name: "{{ item.name }}"
+        password: "{{ item.password }}"
+        role_attr_flags: LOGIN,NOINHERIT,NOSUPERUSER,NOCREATEDB,NOCREATEROLE,NOREPLICATION,NOBYPASSRLS
+        conn_limit: 4
+        state: present
+      loop:
+        - {name: career_watch_owner, password: "{{ research_owner_password }}"}
+        - {name: career_watch_app, password: "{{ research_runtime_password }}"}
+      no_log: true
+    - name: Create isolated database owned by migration identity
+      become_user: postgres
+      community.postgresql.postgresql_db:
+        name: career_watch
+        owner: career_watch_owner
+        encoding: UTF8
+        state: present
+    - name: Restrict database and public schema access
+      become_user: postgres
+      community.postgresql.postgresql_query:
+        db: career_watch
+        query: |
+          REVOKE ALL ON DATABASE career_watch FROM PUBLIC;
+          GRANT CONNECT ON DATABASE career_watch TO career_watch_app;
+          REVOKE ALL ON SCHEMA public FROM PUBLIC;
+          ALTER ROLE career_watch_app IN DATABASE career_watch SET statement_timeout = '15s';
+          ALTER ROLE career_watch_app IN DATABASE career_watch SET idle_in_transaction_session_timeout = '30s';
+    - name: Authorize scoped TLS access with rollback on invalid HBA
+      block:
+        - name: Write database-specific node connections ahead of broad rules
+          ansible.builtin.blockinfile:
+            path: /etc/postgresql/16/main/pg_hba.conf
+            marker: "# {mark} ANSIBLE MANAGED personal-research"
+            insertbefore: BOF
+            backup: true
+            block: |
+              {% for node in research_nodes %}
+              hostssl career_watch career_watch_owner,career_watch_app {{ hostvars[node].ansible_host }}/32 scram-sha-256
+              {% endfor %}
+              host all career_watch_owner,career_watch_app 0.0.0.0/0 reject
+              host all career_watch_owner,career_watch_app ::/0 reject
+          register: research_hba
+        - name: Validate HBA before reload
+          become_user: postgres
+          community.postgresql.postgresql_query:
+            query: SELECT count(*) AS errors FROM pg_hba_file_rules WHERE error IS NOT NULL
+          register: research_hba_validation
+          failed_when: research_hba_validation.query_result[0].errors | int != 0
+          changed_when: false
+      rescue:
+        - name: Restore previous HBA when validation failed after a write
+          ansible.builtin.copy:
+            src: "{{ research_hba.backup_file }}"
+            dest: /etc/postgresql/16/main/pg_hba.conf
+            remote_src: true
+            mode: preserve
+          when: research_hba.backup_file is defined
+        - name: Stop before reloading invalid configuration
+          ansible.builtin.fail:
+            msg: HBA validation failed; inspect the recorded backup and repair before retrying.
+    - name: Record clock and postmaster before reload
+      become_user: postgres
+      community.postgresql.postgresql_query:
+        query: SELECT clock_timestamp()::text AS checked_at, pg_postmaster_start_time()::text AS started_at
+      register: research_before_reload
+      changed_when: false
+    - name: Reload PostgreSQL configuration without restart
+      become_user: postgres
+      community.postgresql.postgresql_query:
+        query: SELECT pg_reload_conf() AS reloaded
+      register: research_reload
+      failed_when: not research_reload.query_result[0].reloaded
+    - name: Verify reload took effect without restart even after a retry
+      become_user: postgres
+      community.postgresql.postgresql_query:
+        query: SELECT pg_conf_load_time() >= %(checked_at)s::timestamptz AS applied, pg_postmaster_start_time()::text = %(started_at)s AS same_postmaster
+        named_args:
+          checked_at: "{{ research_before_reload.query_result[0].checked_at }}"
+          started_at: "{{ research_before_reload.query_result[0].started_at }}"
+      register: research_reload_proof
+      retries: 3
+      delay: 1
+      until: research_reload_proof.query_result[0].applied
+      failed_when: not research_reload_proof.query_result[0].applied or not research_reload_proof.query_result[0].same_postmaster
+      changed_when: false
+    - name: Permit database port from declared nodes only
+      community.general.ufw:
+        rule: allow
+        port: '5432'
+        proto: tcp
+        src: "{{ hostvars[item].ansible_host }}"
+      loop: "{{ research_nodes }}"

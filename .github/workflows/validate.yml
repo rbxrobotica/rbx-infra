@@ -54,6 +54,9 @@ jobs:
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
 
+      - name: Validate personal research isolation and schedule
+        run: python3 scripts/validate-personal-research.py
+
       - name: Validate Kubernetes manifests
         run: |
           # Exclude archived manifests (not deployed) and skip HTTPRoute (Gateway
