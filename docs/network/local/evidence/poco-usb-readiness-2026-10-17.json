@@ -22,5 +22,39 @@
   "phone_apps_installed": false,
   "phone_settings_changed": false,
   "production_network_changed": false,
-  "irc_mobile_acceptance": "not started; endpoint, trust, account and permissions still require readiness"
+  "irc_mobile_acceptance": "not started; endpoint, trust, account and permissions still require readiness",
+  "follow_up": {
+    "usb_debugging_authorized": true,
+    "adb_state": "device",
+    "manufacturer": "Xiaomi",
+    "hardware_model": "2602BPC18G",
+    "android_release": "16",
+    "api_level": "36",
+    "security_patch": "2026-08-01",
+    "apps": {
+      "com.tailscale.ipn": {
+        "installed": true,
+        "version_metadata": [
+          "versionCode=298567190 minSdk=32 targetSdk=36",
+          "versionName=1.104.1-t7f4efe814-g6d75bd403"
+        ]
+      },
+      "fr.emersion.goguma": {
+        "installed": false
+      }
+    },
+    "private_dns_mode_setting": "null",
+    "always_on_vpn_setting": "null",
+    "lockdown_setting": "null",
+    "settings_interpretation": "null means no explicit value returned; effective DNS and VPN behavior are not established by this alone",
+    "phone_properties_read": true,
+    "personal_content_collected": false,
+    "tailscale_opened_for_inspection": true,
+    "foreground": "Android VPN confirmation dialog behind locked screen",
+    "vpn_consent_approved_by_agent": false,
+    "mesh_account_control_server_verified": false,
+    "next_step": "Operator unlocks screen; inspect VPN request and account/control-server before connection consent",
+    "phone_apps_installed": false,
+    "production_network_changed": false
+  }
 }
