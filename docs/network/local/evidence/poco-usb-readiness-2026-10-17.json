@@ -1,0 +1,26 @@
+{
+  "schema_version": "rbx-mobile-readiness-v1",
+  "date": "2026-10-17",
+  "device_role": "operator POCO Android, model not yet verified",
+  "usb_adb_interface_detected": true,
+  "adb_available_initially": false,
+  "host_tool": {
+    "version": "37.0.1-15733141",
+    "source": "https://dl.google.com/android/repository/platform-tools_r37.0.1-linux.zip",
+    "upstream_sha1_checked_against_https_repository_metadata": true,
+    "local_archive_sha256": "d230f13842f60f782a8645f9c813f8f845bf36089ea7289f28c48f17979313f1",
+    "upstream_sha256_signature_verified": false,
+    "install_scope": "operator-owned tools directory; no Android Studio",
+    "adb_server": "local loopback"
+  },
+  "initial_adb_result": "no permissions",
+  "host_udev_package_installed": false,
+  "operator_in_plugdev": true,
+  "sudo_noninteractive_available": false,
+  "next_step": "Operator installs distribution USB rules, reconnects USB and confirms phone debugging consent if prompted.",
+  "phone_properties_read": false,
+  "phone_apps_installed": false,
+  "phone_settings_changed": false,
+  "production_network_changed": false,
+  "irc_mobile_acceptance": "not started; endpoint, trust, account and permissions still require readiness"
+}

@@ -1,6 +1,6 @@
 # Roadmap da rede local e comunicação operacional
 
-Atualizado em **2026-10-12**. As prioridades abaixo orientam entregas; não são
+Atualizado em **2026-10-17**. As prioridades abaixo orientam entregas; não são
 datas prometidas nem evidência de implantação. Inventário e testes concluídos:
 [arquitetura](README.md) e [evidência LAN](EVIDENCE-2026-10-11.md).
 
@@ -129,6 +129,15 @@ per-device credentials and recovery evidence remain before phone acceptance.
 The operator confirmed that the rsync.net account is not available; its
 [requirements and cost options](../../runbooks/RSYNC-NET-READINESS.md) are prepared.
 USB access to the POCO/A02 is not needed until endpoint readiness.
+
+**October 17 operator decisions and phone readiness:** The operator accepted
+separate permissions, per-device credentials and the privacy limits of IRC, and
+requested explicit [DNS/certificate design](../../runbooks/PRIVATE-IRC-MOBILE.md#dns-and-certificate-contract-to-complete-before-provisioning)
+and a [relay cost/benefit comparison](../../runbooks/RBXNET-RELAY-TRADEOFFS.md)
+favoring simplicity, low resource use and operational control. The connected
+POCO may now be inspected over USB for readiness, independently of endpoint
+provisioning; this does not complete the live IRC pilot. Future external tests
+with Flavia are optional and require their own participation and scoped access.
 
 
 Inspecionar primeiro a política Headscale efetiva e os listeners/TLS do Ergo.

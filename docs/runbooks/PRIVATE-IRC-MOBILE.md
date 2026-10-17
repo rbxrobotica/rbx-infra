@@ -3,6 +3,15 @@
 Status: proposed endpoint design, October 12, 2026. No DNS, certificate, port
 binding, firewall, Headscale grant, account or phone enrollment changed.
 
+October 17 operator review: separation of network/application/command permissions,
+revocable per-device credentials and the server-visible nature of IRC messages
+were accepted as design principles. The operator requested explicit DNS/TLS
+documentation and a lightweight, sovereignty-aware relay cost/benefit review.
+The POCO is available for USB diagnostics; this does not establish endpoint
+readiness or authorize changing production DNS, policy or listeners. Future
+external tests with Flavia or her devices are an option, not current enrollment
+or access authorization. See [relay tradeoffs](RBXNET-RELAY-TRADEOFFS.md).
+
 ## What the existing access actually provides
 
 At 23:25 BRT on October 12, Corbetti's Ergo container was running from the
@@ -50,6 +59,62 @@ and revocation on every client. Test the actual Android client's trust behavior;
 installing a user CA does not by itself prove that an app accepts it. Neither
 option permits disabling hostname or certificate verification. The existing
 self-signed certificate is not silently promoted into phone trust.
+
+### DNS and certificate contract to complete before provisioning
+
+DNS discovery, TLS server authentication, mesh membership, IRC authentication
+and channel/history authorization are separate checks. A DNS name or certificate
+does not enroll a device or grant a room. Modes such as secret/invite-only are
+not a complete company/tenant authorization model.
+
+| Decision | Proposed pilot contract | Evidence required before live use |
+| --- | --- | --- |
+| Client name | One owned FQDN, provisionally `irc.rbxsystems.ch` | Operator selects name; certificate SAN matches exactly |
+| Destination | Corbetti's stable mesh address, TLS TCP/6697 | Fresh node/address inventory; private bind and firewall; no public IRC listener |
+| DNS resolution | First evaluate a normal authoritative record resolving to the mesh address | Works with Wi-Fi, mobile carrier DNS and Android Private DNS; record discloses name/address and may encounter rebinding filters |
+| Alternative resolution | Split DNS only if the actual client resolver path is explicitly designed | With `accept-dns=false`, Headscale-pushed DNS must not be assumed effective; no hidden global resolver replacement |
+| IPv6 | Publish AAAA only when that exact path is validated | Positive and negative IPv6 tests; otherwise avoid advertising an untested path |
+| Certificate issuance | Public ACME DNS-01 candidate, narrowly scoped/delegated challenge authority | Domain control, provider support and least-privilege credential custody confirmed |
+| Renewal | Named owner, scheduled renewal, validated atomic install and documented Ergo reload | Staging/dry-run where supported, installed certificate readback, expiry alert tested; issuer success alone is insufficient |
+| Failure | Reject wrong name, untrusted CA and expired certificates | No verification bypass; retain working desktop SSH route for recovery |
+| Recovery | Preserve current key/certificate securely and restore only a valid matching pair | Restricted backup, rollback procedure, custody outside the dependent service and restoration evidence |
+
+Avoid making certificate renewal depend solely on the same mesh path it is
+supposed to recover. DNS-01 challenge credentials stay on the authorized issuer,
+never in the phone, IRC, Git or an agent prompt. Public certificates expose the
+chosen hostname through certificate transparency; a private IP DNS record is
+not an access-control mechanism. A public CA removes private-root distribution
+work, but not DNS/issuer dependency or renewal responsibility.
+
+Use a proposed alert threshold of 30 days remaining, with escalation at 14 and
+7 days, subject to the selected certificate lifetime and renewal schedule. These
+are proposed thresholds, not deployed alerts or measured response guarantees.
+Record certificate serial/fingerprint and validity as public metadata; never
+attach private keys or credential-bearing configuration to evidence.
+
+For an authorized test client, verify the peer using the selected FQDN as both
+SNI and hostname and a trusted CA store. Test failure cases with synthetic or
+isolated fixtures, not by replacing the live certificate with an invalid one.
+Changing Android Private DNS, enabling a VPN, switching to mobile data or
+altering battery exemptions are separate observable test steps; record original
+settings and restore them after the agreed test.
+
+### USB diagnostic boundary
+
+USB inspection may establish the actual model, Android/API version, presence and
+version of Tailscale/IRC clients, Private DNS mode and battery restrictions. The
+USB vendor/product label is not a reliable device-model identification. Do not
+collect photos, messages, accounts, full bug reports, raw application databases,
+tokens, private DNS provider names or device identifiers for public evidence.
+
+ADB needs both host USB permissions and the phone's debugging consent. Keep its
+server on loopback and never enable wireless ADB as a workaround. Install only
+the required tools from a verified source; do not install Android Studio for
+this pilot. Record version and provenance. A locally computed SHA-256 identifies
+the downloaded artifact; it is not an upstream signature or certificate.
+
+Read-only readiness does not require changing VPN or DNS settings. Actual IRC
+acceptance remains conditional on the service and account readiness above.
 
 ## Proposed acceptance matrix
 
