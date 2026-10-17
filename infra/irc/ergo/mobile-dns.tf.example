@@ -1,0 +1,10 @@
+# Review-only example; not loaded by the managed DNS Terraform root.
+# Move to infra/terraform/dns only after DNS/TLS cutover authorization.
+# No AAAA until the IPv6 TLS listener is prepared and validated separately.
+resource "powerdns_record" "irc_private_a" {
+  zone    = powerdns_zone.rbxsystems_ch.name
+  name    = "irc.rbxsystems.ch."
+  type    = "A"
+  ttl     = 300
+  records = ["100.64.0.2"]
+}

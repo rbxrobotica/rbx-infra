@@ -35,6 +35,10 @@ See [evidence](../network/local/evidence/headscale-candidate-2026-10-12.json).
 
 ## Proposed endpoint and trust
 
+The [concrete cutover candidate](PRIVATE-IRC-MOBILE-CUTOVER.md) includes an
+opt-in Compose overlay, review-only DNS example and offline preflight checks.
+It remains blocked on scoped certificate issuance/renewal and live preflight.
+
 Use one TLS service reachable through Corbetti's private mesh address, with an
 explicit service port and per-device IRC credentials. Keep plaintext IRC bound
 to loopback and retain the workstation's existing tunnel during the pilot.

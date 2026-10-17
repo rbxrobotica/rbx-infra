@@ -33,6 +33,9 @@ jobs:
       - name: Test Headscale observations and candidate preparation with isolated fixtures
         run: python3 -B -m unittest discover -s scripts/tests -p 'test_headscale_*.py' -v
 
+      - name: Test private mobile IRC preflight with isolated certificates
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_irc_mobile_preflight.py' -v
+
       - name: Setup kubeconform
         # Authenticated download: anonymous release downloads from shared
         # Actions runner IPs get rate limited (HTTP 429 with a tiny body,

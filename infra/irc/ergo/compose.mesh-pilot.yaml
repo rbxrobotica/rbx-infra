@@ -1,0 +1,7 @@
+# Opt-in only: never named compose.override.yaml and never used by bootstrap.
+# Preserve ERGO_TLS_BIND_ADDRESS=127.0.0.1 in the base configuration.
+# Validate the resolved model with scripts/network/irc_mobile_preflight.py.
+services:
+  ergo:
+    ports:
+      - "100.64.0.2:6697:6697/tcp"
