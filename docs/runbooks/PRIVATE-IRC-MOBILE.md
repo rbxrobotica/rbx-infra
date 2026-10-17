@@ -1,7 +1,9 @@
 # Private IRC access for mobile devices
 
-Status: proposed endpoint design, October 12, 2026. No DNS, certificate, port
-binding, firewall, Headscale grant, account or phone enrollment changed.
+Status: IRC endpoint design remains proposed. On October 17, the operator
+authorized and completed POCO enrollment under the existing `poco-rbx-trusted`
+identity. DNS, certificates, listeners, grants and IRC accounts remain unchanged.
+See [enrollment and bounded probes](../network/local/evidence/poco-mesh-enrollment-2026-10-17.json).
 
 October 17 operator review: separation of network/application/command permissions,
 revocable per-device credentials and the server-visible nature of IRC messages
@@ -166,3 +168,22 @@ phone pilot; chat content does not grant command execution authority.
 
 This sequence does not depend on router administration, a ZTE factory reset,
 LAN route advertisement, an exit node or placing PostgreSQL in Kubernetes.
+
+## October 17 enrolled-device checkpoint
+
+The POCO was online after registration. Android shell TCP probes over IPv4 and
+IPv6 received connection refusal on Corbetti TCP/18080; a server-side listener
+check confirmed that no test service was listening. Ports 22, 6667 and 6697
+timed out. These are bounded observations, not full application acceptance or
+independent proof of policy enforcement. Existing desktop IRC loopback bindings
+remain in place. No additional probe listener was started.
+
+The next live change must be prepared as one reviewable private IRC endpoint:
+select `irc.rbxsystems.ch`, confirm DNS-01 automation and scoped credential
+availability, stage and verify the matching certificate, retain loopback desktop
+access while adding only mesh TLS access, and grant this phone identity only
+Corbetti TCP/6697. Keep the existing TCP/18080 permission until its removal is
+explicitly approved. Provision a separate IRC credential and limited channel
+membership before application tests. Do not infer those production changes are
+authorized merely from enrollment. Roll back new access by removing only the new
+grant/listener and revoking the phone credential; preserve desktop recovery.
