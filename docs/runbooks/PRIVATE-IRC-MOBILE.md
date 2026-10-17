@@ -113,6 +113,15 @@ the required tools from a verified source; do not install Android Studio for
 this pilot. Record version and provenance. A locally computed SHA-256 identifies
 the downloaded artifact; it is not an upstream signature or certificate.
 
+On the inspected Mint host, `android-sdk-platform-tools-common` is the distribution
+package supplying USB rules. The operator is already in `plugdev`; installing
+the rules requires local sudo authentication. After installation, reconnect the
+USB cable and approve this computer's debugging key on the phone if prompted.
+Do not run ADB as root or make the USB node world-writable to bypass this step.
+See the [October 17 readiness record](../network/local/evidence/poco-usb-readiness-2026-10-17.json)
+for the initial permission failure and verified host-tool provenance; it contains
+no claim that phone inspection or IRC acceptance has completed.
+
 Read-only readiness does not require changing VPN or DNS settings. Actual IRC
 acceptance remains conditional on the service and account readiness above.
 
