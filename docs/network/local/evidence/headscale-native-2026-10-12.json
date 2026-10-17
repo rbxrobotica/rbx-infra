@@ -1,0 +1,48 @@
+{
+  "allow_assertions": 2,
+  "binary_sha256": "8dc183758024ed7095cf610fedea0790233613c71353bc8be2715d82ba29b92c",
+  "bootstrap_is_candidate_verdict": false,
+  "deny_assertions": 6,
+  "deployment_authorized": false,
+  "executed_config_sha256": "10c7ed3393403ff417bbf7d45ccd5afed2074f1f1c02f487e3b13eacc40b3271",
+  "executed_policy_sha256": "e3c3901f85d3cbb1d07617b6dc1f7fa7ad2737759a8f3fe019f71c0ba7cea608",
+  "hashes": {
+    "bundled_config_sha256": "10c7ed3393403ff417bbf7d45ccd5afed2074f1f1c02f487e3b13eacc40b3271",
+    "bundled_policy_sha256": "e3c3901f85d3cbb1d07617b6dc1f7fa7ad2737759a8f3fe019f71c0ba7cea608",
+    "candidate_config_sha256": "a39a62deb921743c05774c2145e8fb00cb8d67181a874414171cfe582b4f6e98",
+    "current_config_sha256": "10c7ed3393403ff417bbf7d45ccd5afed2074f1f1c02f487e3b13eacc40b3271",
+    "policy_sha256": "e3c3901f85d3cbb1d07617b6dc1f7fa7ad2737759a8f3fe019f71c0ba7cea608"
+  },
+  "headscale_version": "0.29.3",
+  "image": "docker.io/library/ubuntu@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55",
+  "live_traffic_verified": false,
+  "native_configtest": true,
+  "native_policy_matrix": true,
+  "native_rejections": [
+    "invalid-schema",
+    "missing-identity",
+    "reversed-ports"
+  ],
+  "network": "none",
+  "preparer_rejections": [
+    "missing",
+    "empty-file",
+    "no-rules",
+    "empty-grants"
+  ],
+  "raw_logs_retained": false,
+  "release_deb_sha256": "14eccf8d41fd93927ad3fe1fd9e49dbe14d5668a244c4205d940967c442aea0d",
+  "runtime_field_remappings": [],
+  "schema_version": "headscale-synthetic-native-test-v1",
+  "state_storage": "disposable_tmpfs",
+  "status": "passed",
+  "synthetic_nodes": 3,
+  "synthetic_only": true,
+  "synthetic_users": 2,
+  "operator_local_date": "2026-10-12",
+  "remote_engine_environment_test": {
+    "remote_host_and_connection_supplied": true,
+    "local_engine_forced": true,
+    "passed": true
+  }
+}

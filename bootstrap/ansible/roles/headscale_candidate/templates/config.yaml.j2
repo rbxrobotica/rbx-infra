@@ -1,0 +1,91 @@
+# Headscale {{ headscale_version }} candidate; preparation only, not a deployment.
+# Reconciles the observed profile; provenance and limits are in the runbook.
+
+server_url: https://{{ headscale_domain }}
+listen_addr: ":{{ headscale_listen_port }}"
+metrics_listen_addr: 127.0.0.1:9090
+grpc_listen_addr: 127.0.0.1:50443
+grpc_allow_insecure: false
+trusted_proxies: []
+
+noise:
+  private_key_path: {{ headscale_state_dir }}/noise_private.key
+
+prefixes:
+  v4: 100.64.0.0/10
+  v6: fd7a:115c:a1e0::/48
+  allocation: sequential
+
+derp:
+  server:
+    enabled: false
+  urls:
+    - {{ headscale_derp_map_url }}
+  paths: []
+  auto_update_enabled: true
+  update_frequency: 3h
+
+disable_check_updates: true
+
+node:
+  expiry: 0
+  ephemeral:
+    inactivity_timeout: 30m
+  routes:
+    ha:
+      probe_interval: 10s
+      probe_timeout: 5s
+
+database:
+  type: sqlite
+  debug: false
+  gorm:
+    prepare_stmt: true
+    parameterized_queries: true
+    skip_err_record_not_found: true
+    slow_threshold: 1000
+  sqlite:
+    path: {{ headscale_state_dir }}/db.sqlite
+    write_ahead_log: true
+    wal_autocheckpoint: 1000
+
+acme_url: https://acme-v02.api.letsencrypt.org/directory
+acme_email: ""
+tls_letsencrypt_hostname: {{ headscale_domain }}
+tls_letsencrypt_cache_dir: {{ headscale_state_dir }}/cache
+tls_letsencrypt_challenge_type: TLS-ALPN-01
+tls_letsencrypt_listen: ":http"
+tls_cert_path: ""
+tls_key_path: ""
+
+log:
+  level: info
+  format: text
+
+policy:
+  mode: file
+  path: {{ headscale_policy_path }}
+
+# Preserve the observed DNS profile. Verify client preferences separately;
+# this file alone does not prove resolver, route or exit-node behavior.
+dns:
+  magic_dns: false
+  base_domain: mesh.rbx.internal
+  override_local_dns: false
+  nameservers:
+    global: []
+    split: {}
+  search_domains: []
+  extra_records: []
+
+unix_socket: /var/run/headscale/headscale.sock
+unix_socket_permission: "0770"
+
+logtail:
+  enabled: false
+
+taildrop:
+  enabled: false
+
+auto_update:
+  enabled: false

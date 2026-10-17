@@ -30,8 +30,11 @@ jobs:
       - name: Validate scoped production Robson Secret contract
         run: python3 scripts/validate-robson-prod-secret-scope.py
 
-      - name: Test Headscale file observations with isolated fixtures
-        run: python3 -m unittest discover -s scripts/tests -p 'test_headscale_preflight.py' -v
+      - name: Test Headscale observations and candidate preparation with isolated fixtures
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_headscale_*.py' -v
+
+      - name: Test private mobile IRC preflight with isolated certificates
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_irc_mobile_preflight.py' -v
 
       - name: Setup kubeconform
         # Authenticated download: anonymous release downloads from shared

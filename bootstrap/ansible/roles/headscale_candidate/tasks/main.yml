@@ -1,0 +1,111 @@
+---
+- name: Require local preparation without privilege escalation
+  ansible.builtin.assert:
+    that:
+      - inventory_hostname == 'localhost'
+      - ansible_connection | default('local') == 'local'
+      - not (ansible_become | default(false) | bool)
+      - headscale_version == '0.29.3'
+      - headscale_candidate_current_config is match('^/')
+      - headscale_candidate_policy is match('^/')
+      - headscale_candidate_output_dir is match('^/')
+      - headscale_policy_path is match('^/')
+      - headscale_candidate_expected_config_sha256 is match('^[0-9a-f]{64}$')
+      - headscale_candidate_expected_policy_sha256 is match('^[0-9a-f]{64}$')
+      - not ansible_check_mode
+    fail_msg: >-
+      Preparation requires localhost, no become, explicit private snapshots,
+      known SHA-256 values and a new output directory. This local-only generator
+      is not a deployment; use its normal mode, not Ansible check mode.
+  no_log: true
+
+- name: Inspect the existing private output parent
+  ansible.builtin.stat:
+    path: "{{ headscale_candidate_output_dir | dirname }}"
+    follow: false
+  register: headscale_candidate_parent
+  no_log: true
+
+- name: Require an existing controller-owned private parent
+  ansible.builtin.assert:
+    that:
+      - headscale_candidate_parent.stat.isdir | default(false)
+      - not (headscale_candidate_parent.stat.islnk | default(false))
+      - headscale_candidate_parent.stat.mode == '0700'
+      - headscale_candidate_parent.stat.uid == (lookup('pipe', 'id -u') | int)
+    fail_msg: "Candidate parent must be an existing user-owned 0700 directory"
+  no_log: true
+
+- name: Inspect attested snapshot hashes without displaying contents
+  ansible.builtin.stat:
+    path: "{{ item }}"
+    follow: false
+    checksum_algorithm: sha256
+  loop:
+    - "{{ headscale_candidate_current_config }}"
+    - "{{ headscale_candidate_policy }}"
+  register: headscale_candidate_sources
+  no_log: true
+
+- name: Require both snapshot hashes before rendering
+  ansible.builtin.assert:
+    that:
+      - headscale_candidate_sources.results[0].stat.isreg | default(false)
+      - headscale_candidate_sources.results[1].stat.isreg | default(false)
+      - headscale_candidate_sources.results[0].stat.checksum == headscale_candidate_expected_config_sha256
+      - headscale_candidate_sources.results[1].stat.checksum == headscale_candidate_expected_policy_sha256
+    fail_msg: "Snapshot baseline mismatch; no candidate was rendered"
+  no_log: true
+
+- name: Render and prepare only in private controller staging
+  block:
+    - name: Create a new private staging directory
+      ansible.builtin.tempfile:
+        state: directory
+        path: "{{ headscale_candidate_output_dir | dirname }}"
+        prefix: .headscale-candidate-
+      register: headscale_candidate_stage
+      no_log: true
+
+    - name: Render the reviewed candidate profile
+      ansible.builtin.template:
+        src: config.yaml.j2
+        dest: "{{ headscale_candidate_stage.path }}/config.yaml"
+        mode: "0600"
+      diff: false
+      no_log: true
+
+    - name: Prepare a new bundle after complete semantic and baseline comparison
+      ansible.builtin.command:
+        argv:
+          - "{{ ansible_playbook_python }}"
+          - -B
+          - "{{ playbook_dir }}/../../scripts/network/headscale_candidate.py"
+          - --current-config
+          - "{{ headscale_candidate_current_config }}"
+          - --policy
+          - "{{ headscale_candidate_policy }}"
+          - --candidate-config
+          - "{{ headscale_candidate_stage.path }}/config.yaml"
+          - --expect-config-sha256
+          - "{{ headscale_candidate_expected_config_sha256 }}"
+          - --expect-policy-sha256
+          - "{{ headscale_candidate_expected_policy_sha256 }}"
+          - --policy-reference-path
+          - "{{ headscale_policy_path }}"
+          - --output-dir
+          - "{{ headscale_candidate_output_dir }}"
+      register: headscale_candidate_result
+      changed_when: headscale_candidate_result.rc == 0
+      no_log: true
+
+    - name: Show the sanitized preparation receipt
+      ansible.builtin.debug:
+        msg: "{{ headscale_candidate_result.stdout | from_json }}"
+  always:
+    - name: Remove only this invocation's temporary render directory
+      ansible.builtin.file:
+        path: "{{ headscale_candidate_stage.path }}"
+        state: absent
+      when: headscale_candidate_stage.path is defined
+      no_log: true

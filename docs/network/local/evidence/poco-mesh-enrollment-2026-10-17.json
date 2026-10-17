@@ -1,0 +1,51 @@
+{
+  "observed_at_utc": "2026-10-17T21:47:27.599681+00:00",
+  "status": "enrolled_irc_not_ready",
+  "node": {
+    "name": "poco-x8-pro-max",
+    "user": "poco-rbx-trusted",
+    "online_after_registration": true,
+    "ipv4": "100.64.0.1",
+    "ipv6": "fd7a:115c:a1e0::1"
+  },
+  "authorization": "Operator explicitly requested registration of the POCO request displayed by Headscale.",
+  "ssh_verification": "Eagle ED25519 host key matched the pre-existing ThinkCentre trust record, retrieved over strictly verified SSH. Registration used the existing ThinkCentre-to-Eagle access without agent forwarding or private-key transfer.",
+  "existing_grant": {
+    "destination_user": "corbetti-service",
+    "protocol_port": "tcp:18080"
+  },
+  "probes": {
+    "origin": "Android adb shell toybox nc; not an IRC application test",
+    "destinations": [
+      "100.64.0.2",
+      "fd7a:115c:a1e0::2"
+    ],
+    "results_for_both_families": {
+      "18080": "connection refused",
+      "22": "timeout",
+      "6667": "timeout",
+      "6697": "timeout"
+    },
+    "limitation": "Timeouts are consistent with denial but do not independently prove policy enforcement. Connection refusal is not successful application communication."
+  },
+  "server_observation": {
+    "tcp_18080_listener": false,
+    "ergo_published_bindings": [
+      "127.0.0.1:6667",
+      "127.0.0.1:6697"
+    ]
+  },
+  "unchanged": [
+    "Headscale grants",
+    "IRC listeners",
+    "DNS",
+    "certificates",
+    "IRC accounts"
+  ],
+  "remaining": [
+    "Private TLS IRC endpoint and renewal",
+    "Explicit phone IRC grant",
+    "Per-device IRC credential and channel membership",
+    "Positive and negative app-level acceptance"
+  ]
+}
