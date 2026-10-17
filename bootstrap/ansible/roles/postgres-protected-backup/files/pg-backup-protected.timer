@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily protected PostgreSQL backup
+
+[Timer]
+OnCalendar=*-*-* 04:15:00 UTC
+Persistent=true
+Unit=pg-backup-protected.service
+
+[Install]
+WantedBy=timers.target
