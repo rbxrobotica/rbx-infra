@@ -44,7 +44,8 @@ criaria reconciliação concorrente.
 
 No sumatrae, a barreira é `rbx.io/maintenance=stabilization:NoSchedule`. Instalar
 essa taint antes de retirar o cordon. Somente DNS, ingresso e os cinco
-componentes de monitoramento e o controlador ArgoCD autorizados recebem a toleration correspondente.
+componentes de monitoramento, o controlador ArgoCD e a instância única do
+robsond autorizados recebem a toleration correspondente.
 Não adicionar toleration genérica de `unschedulable` aos controladores.
 
 Os valores dos charts ficam nos dois Applications de monitoramento, em
@@ -62,6 +63,15 @@ de 1 GiB, limite de 2 GiB e paralelismo reduzido. Isso retira seu processo de
 aproximadamente 1 GiB do tiger. Essa colocação precisa ser revisada ao adicionar
 workers; ela não fornece alta disponibilidade ao próprio ArgoCD. Se sumatrae
 falhar, alterar a colocação explicitamente após verificar o destino.
+O processo Go tem `GOMEMLIMIT=1600MiB` dentro do limite de contêiner de 2 GiB;
+isso antecipa a coleta de memória, mas não substitui medir a carga e os picos.
+
+O robsond mantém uma réplica e estratégia Recreate. Sua toleration é uma
+exceção de capacidade para recuperação, não autorização para múltiplos
+executores. Antes de remover um pod preso num nó inacessível, comprovar que o
+processo anterior parou. Não usar remoção forçada para criar outro executor
+enquanto o anterior puder continuar executando. Não alterar imagens, migrações,
+configuração de negociação ou credenciais ao corrigir apenas agendamento.
 
 ## Reservas do sistema: canário
 

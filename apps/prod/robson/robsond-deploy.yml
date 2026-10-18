@@ -30,6 +30,12 @@ spec:
         prometheus.io/path: "/metrics"
     spec:
       serviceAccountName: robsond
+      # Capacity-checked recovery host; keep one runtime and Recreate strategy.
+      tolerations:
+      - key: rbx.io/maintenance
+        operator: Equal
+        value: stabilization
+        effect: NoSchedule
       imagePullSecrets:
       - name: ghcr-pull-secret
       securityContext:
