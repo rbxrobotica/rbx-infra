@@ -36,6 +36,9 @@ jobs:
       - name: Test private mobile IRC preflight with isolated certificates
         run: python3 -B -m unittest discover -s scripts/tests -p 'test_irc_mobile_preflight.py' -v
 
+      - name: Test node capacity guard before resource reservations
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_reliability_capacity.py' -v
+
       - name: Setup kubeconform
         # Authenticated download: anonymous release downloads from shared
         # Actions runner IPs get rate limited (HTTP 429 with a tiny body,
@@ -64,14 +67,14 @@ jobs:
           # kubeconform's error exit instead of -ignore-missing-schemas).
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             mapfile -t manifests < <(
-              git diff --name-only --diff-filter=AM "origin/${{ github.base_ref }}...HEAD" -- apps core gitops platform |
+              git diff --name-only --diff-filter=AM "origin/${{ github.base_ref }}...HEAD" -- apps core gitops platform bootstrap/ansible/files/reliability |
                 grep -E '\.(yml|yaml)$' |
                 grep -v '/archived/' ||
                 true
             )
           else
             mapfile -t manifests < <(
-              find apps core gitops platform -type f \( -name "*.yml" -o -name "*.yaml" \) \
+              find apps core gitops platform bootstrap/ansible/files/reliability -type f \( -name "*.yml" -o -name "*.yaml" \) \
                 -not -path "*/archived/*"
             )
           fi

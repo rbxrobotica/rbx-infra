@@ -1,0 +1,3 @@
+---
+# Capacity-checked canary; do not enable on tiger/altaica before rebalancing.
+rbx_reliability_reservations_enabled: true
