@@ -1,0 +1,72 @@
+# Overrides the packaged chart without editing k3s-generated traefik.yaml.
+apiVersion: helm.cattle.io/v1
+kind: HelmChartConfig
+metadata:
+  name: traefik
+  namespace: kube-system
+spec:
+  valuesContent: |
+    deployment:
+      replicas: 2
+      minReadySeconds: 5
+      podAnnotations:
+        prometheus.io/port: "9100"
+        prometheus.io/path: /metrics
+        prometheus.io/scrape: "true"
+    updateStrategy:
+      type: RollingUpdate
+      rollingUpdate:
+        maxSurge: 0
+        maxUnavailable: 1
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        memory: 512Mi
+    tolerations:
+      - key: CriticalAddonsOnly
+        operator: Exists
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      - key: rbx.io/maintenance
+        operator: Equal
+        value: stabilization
+        effect: NoSchedule
+    affinity:
+      nodeAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          nodeSelectorTerms:
+            - matchExpressions:
+                - key: kubernetes.io/os
+                  operator: In
+                  values: [linux]
+                - key: workload
+                  operator: NotIn
+                  values: [analytics]
+      podAntiAffinity:
+        requiredDuringSchedulingIgnoredDuringExecution:
+          - topologyKey: kubernetes.io/hostname
+            labelSelector:
+              matchLabels:
+                app.kubernetes.io/name: traefik
+                app.kubernetes.io/instance: traefik-kube-system
+    readinessProbe:
+      timeoutSeconds: 3
+      periodSeconds: 5
+      failureThreshold: 2
+    livenessProbe:
+      timeoutSeconds: 3
+      periodSeconds: 10
+      failureThreshold: 6
+    startupProbe:
+      httpGet:
+        path: /ping
+        port: 8080
+      periodSeconds: 5
+      timeoutSeconds: 3
+      failureThreshold: 36

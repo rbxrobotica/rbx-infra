@@ -1,0 +1,137 @@
+---
+# Deliberately excludes host hardening, databases, secrets and general site.yml.
+- name: Stop packaged CoreDNS reconciliation without deleting DNS resources
+  hosts: k3s_server
+  serial: 1
+  gather_facts: false
+  any_errors_fatal: true
+  tags: [critical-services]
+  tasks:
+    - name: Read cluster identity without reading credentials
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - --request-timeout=10s
+          - get
+          - namespace
+          - kube-system
+          - -o
+          - jsonpath={.metadata.uid}
+      register: reliability_cluster_identity
+      changed_when: false
+      check_mode: false
+
+    - name: Refuse a different cluster
+      ansible.builtin.assert:
+        that:
+          - reliability_cluster_identity.stdout == rbx_cluster_kube_system_uid
+
+    - name: Verify an existing working CoreDNS installation
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - --request-timeout=10s
+          - -n
+          - kube-system
+          - get
+          - deployment/coredns
+          - service/kube-dns
+          - configmap/coredns
+          - serviceaccount/coredns
+          - -o
+          - name
+      changed_when: false
+      check_mode: false
+
+    - name: Preserve existing DNS resources across k3s restarts
+      ansible.builtin.copy:
+        content: ""
+        dest: /var/lib/rancher/k3s/server/manifests/coredns.yaml.skip
+        owner: root
+        group: root
+        mode: "0644"
+
+- name: Persist critical service redundancy consistently on every server
+  hosts: k3s_server
+  serial: 1
+  gather_facts: false
+  any_errors_fatal: true
+  tags: [critical-services]
+  tasks:
+    - name: Install the reviewed critical service manifests
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/reliability/{{ item.source }}"
+        dest: "/var/lib/rancher/k3s/server/manifests/{{ item.destination }}"
+        owner: root
+        group: root
+        mode: "0644"
+      loop:
+        - source: coredns-deploy.yml
+          destination: rbx-coredns.yaml
+        - source: coredns-pdb.yml
+          destination: rbx-coredns-pdb.yaml
+        - source: traefik-config.yml
+          destination: rbx-traefik-config.yaml
+
+- name: Protect a capacity-checked control-plane canary
+  hosts: k3s_server
+  serial: 1
+  gather_facts: false
+  any_errors_fatal: true
+  tags: [resource-reservations]
+  tasks:
+    - name: Install resource reservations only on explicitly enabled hosts
+      when: rbx_reliability_reservations_enabled | default(false) | bool
+      block:
+        - name: Verify requests and host pressure before shrinking Allocatable
+          ansible.builtin.script:
+            cmd: >-
+              {{ playbook_dir }}/../../scripts/check-node-reliability-capacity.py
+              {{ inventory_hostname }} --peers
+              {{ groups['k3s_server'] | difference([inventory_hostname]) | join(' ') }}
+          changed_when: false
+          check_mode: false
+
+        - name: Create k3s configuration drop-in directory
+          ansible.builtin.file:
+            path: /etc/rancher/k3s/config.yaml.d
+            state: directory
+            owner: root
+            group: root
+            mode: "0755"
+
+        - name: Reserve capacity for k3s and the operating system
+          ansible.builtin.copy:
+            dest: /etc/rancher/k3s/config.yaml.d/90-rbx-reliability.yaml
+            owner: root
+            group: root
+            mode: "0644"
+            content: |
+              # Appended to existing kubelet arguments; no credentials here.
+              kubelet-arg+:
+                - "kube-reserved=cpu=500m,memory=2Gi,ephemeral-storage=1Gi"
+                - "system-reserved=cpu=250m,memory=512Mi,ephemeral-storage=1Gi"
+                - "eviction-hard=memory.available<500Mi,nodefs.available<10%,nodefs.inodesFree<5%,imagefs.available<15%,imagefs.inodesFree<5%"
+          notify: Restart capacity-checked k3s canary
+        - name: Apply the canary configuration before checking recovery
+          ansible.builtin.meta: flush_handlers
+
+        - name: Wait for canary readiness
+          ansible.builtin.command:
+            argv:
+              - /usr/local/bin/k3s
+              - kubectl
+              - --request-timeout=48s
+              - wait
+              - --for=condition=Ready
+              - "node/{{ inventory_hostname }}"
+              - --timeout=45s
+          changed_when: false
+          when: not ansible_check_mode
+  handlers:
+    - name: Restart capacity-checked k3s canary
+      ansible.builtin.systemd_service:
+        name: k3s
+        state: restarted
