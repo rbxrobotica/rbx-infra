@@ -425,6 +425,47 @@ class HeadscalePreflightTests(unittest.TestCase):
         self.assertIn("observation_failed", self.codes(report))
         self.assert_sanitized(report)
 
+    def test_copied_policy_requires_explicit_expected_logical_reference(self):
+        expected_reference = "/etc/headscale/synthetic-policy.hujson"
+        current = copy.deepcopy(self.config_value)
+        current["policy"]["path"] = expected_reference
+        self.write_config(current)
+        self.write_config(current, self.candidate)
+        self.assertEqual(self.audit(self.candidate)["status"], "blocked")
+        original = MODULE.read_file
+        with mock.patch.object(MODULE, "read_file", wraps=original) as reads:
+            report = MODULE.audit(
+                self.config,
+                self.policy,
+                self.candidate,
+                policy_reference_path=expected_reference,
+            )
+        self.assertEqual(report["status"], "observation_only")
+        self.assertTrue(report["snapshot_reference_override"])
+        self.assertFalse(report["live_reference_path_verified"])
+        flags = report["observations"]["config"]
+        self.assertFalse(flags["policy_path_matches_explicit_input"])
+        self.assertTrue(flags["policy_path_matches_expected_reference"])
+        self.assertEqual(
+            {call.args[0] for call in reads.call_args_list},
+            {self.config, self.policy, self.candidate},
+        )
+        self.assertNotIn(expected_reference, json.dumps(report))
+
+    def test_wrong_relative_or_traversing_reference_override_blocks(self):
+        for reference in (
+            "relative-policy",
+            "/etc/headscale/../policy",
+            "/unrelated/synthetic-policy",
+        ):
+            with self.subTest(reference=reference):
+                report = MODULE.audit(
+                    self.config, self.policy, policy_reference_path=reference
+                )
+                self.assertEqual(report["status"], "blocked")
+                self.assertFalse(report["live_reference_path_verified"])
+                self.assertNotIn(reference, json.dumps(report))
+
 
 if __name__ == "__main__":
     unittest.main()

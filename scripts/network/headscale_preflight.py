@@ -198,7 +198,7 @@ def _path_matches(reference, explicit):
     return os.path.normpath(reference) == str(Path(explicit).expanduser().absolute())
 
 
-def _config(report, value, policy_path, label):
+def _config(report, value, policy_path, label, policy_reference_path=None):
     policy = value.get("policy")
     if type(policy) is not dict:
         policy = {}
@@ -210,12 +210,16 @@ def _config(report, value, policy_path, label):
         "policy_mode_file": mode == "file",
         "policy_path_present": type(reference) is str and bool(reference.strip()),
         "policy_path_matches_explicit_input": _path_matches(reference, policy_path),
+        "policy_path_matches_expected_reference": _path_matches(
+            reference,
+            policy_path if policy_reference_path is None else policy_reference_path,
+        ),
     }
     if mode != "file":
         _finding(report, f"{label}_file_policy_mode_missing_or_unsupported")
     if not flags["policy_path_present"]:
         _finding(report, f"{label}_policy_path_missing")
-    elif not flags["policy_path_matches_explicit_input"]:
+    elif not flags["policy_path_matches_expected_reference"]:
         _finding(report, f"{label}_policy_path_mismatch_or_relative")
 
     derp = value.get("derp")
@@ -365,27 +369,41 @@ def _report():
         "deployment_verified": False,
         "traffic_semantics_verified": False,
         "mutations_performed": False,
+        "snapshot_reference_override": False,
+        "live_reference_path_verified": False,
         "files": {},
         "observations": {},
         "findings": [],
     }
 
 
-def audit(config_path, policy_path, candidate_config_path=None):
+def audit(
+    config_path, policy_path, candidate_config_path=None, *, policy_reference_path=None
+):
     report = _report()
     try:
+        if policy_reference_path is not None:
+            report["snapshot_reference_override"] = True
+            expected_reference = Path(policy_reference_path)
+            if not expected_reference.is_absolute() or ".." in expected_reference.parts:
+                _finding(report, "policy_reference_path_must_be_explicit_absolute")
+                return report
         current = _input(report, "config", config_path)
         policy = _input(report, "policy", policy_path, policy=True)
         if current is not None:
             report["observations"]["config"] = _config(
-                report, current, policy_path, "config"
+                report, current, policy_path, "config", policy_reference_path
             )
         report["observations"]["policy"] = _policy(report, policy)
         if candidate_config_path is not None:
             candidate = _input(report, "candidate_config", candidate_config_path)
             if candidate is not None:
                 report["observations"]["candidate_config"] = _config(
-                    report, candidate, policy_path, "candidate_config"
+                    report,
+                    candidate,
+                    policy_path,
+                    "candidate_config",
+                    policy_reference_path,
                 )
             if current is not None and candidate is not None:
                 current_policy = current.get("policy")
@@ -437,8 +455,14 @@ def main(argv=None):
         parser.add_argument("--config", required=True)
         parser.add_argument("--policy", required=True)
         parser.add_argument("--candidate-config")
+        parser.add_argument("--policy-reference-path")
         args = parser.parse_args(argv)
-        report = audit(args.config, args.policy, args.candidate_config)
+        report = audit(
+            args.config,
+            args.policy,
+            args.candidate_config,
+            policy_reference_path=args.policy_reference_path,
+        )
     except Exception:
         report = _report()
         _finding(report, "invalid_arguments_or_observation_failed")

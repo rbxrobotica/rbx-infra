@@ -1,0 +1,15 @@
+---
+# Candidate profile matching the October 12 observation. No policy is generated.
+headscale_version: "0.29.3"
+headscale_domain: "headscale.rbxsystems.ch"
+headscale_listen_port: 443
+headscale_state_dir: /var/lib/headscale
+headscale_derp_map_url: "https://controlplane.tailscale.com/derpmap/default"
+headscale_policy_path: /etc/headscale/policy.hujson
+
+# Explicit operator-owned private snapshots and their independently known hashes.
+headscale_candidate_current_config: ""
+headscale_candidate_policy: ""
+headscale_candidate_expected_config_sha256: ""
+headscale_candidate_expected_policy_sha256: ""
+headscale_candidate_output_dir: ""
