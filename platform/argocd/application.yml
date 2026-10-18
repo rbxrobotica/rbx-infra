@@ -33,6 +33,9 @@ spec:
       valuesObject:
         # Temporary capacity placement until dedicated workers are available.
         controller:
+          env:
+            - name: GOMEMLIMIT
+              value: 1600MiB
           nodeSelector:
             kubernetes.io/hostname: sumatrae
           tolerations:
