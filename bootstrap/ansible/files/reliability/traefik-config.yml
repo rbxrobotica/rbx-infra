@@ -6,6 +6,7 @@ metadata:
   namespace: kube-system
 spec:
   valuesContent: |
+    priorityClassName: rbx-infra-critical
     deployment:
       replicas: 2
       minReadySeconds: 5

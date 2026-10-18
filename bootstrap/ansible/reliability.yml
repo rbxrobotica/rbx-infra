@@ -60,6 +60,30 @@
   any_errors_fatal: true
   tags: [critical-services]
   tasks:
+    - name: Persist the non-preempting priority class before workloads use it
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/files/reliability/critical-priority.yml"
+        dest: /var/lib/rancher/k3s/server/manifests/rbx-critical-priority.yaml
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Wait for k3s to register the priority class
+      ansible.builtin.command:
+        argv:
+          - /usr/local/bin/k3s
+          - kubectl
+          - --request-timeout=10s
+          - get
+          - priorityclass
+          - rbx-infra-critical
+      register: reliability_priority_class
+      changed_when: false
+      until: reliability_priority_class.rc == 0
+      retries: 6
+      delay: 3
+      when: not ansible_check_mode
+
     - name: Install the reviewed critical service manifests
       ansible.builtin.copy:
         src: "{{ playbook_dir }}/files/reliability/{{ item.source }}"
