@@ -30,6 +30,27 @@ spec:
     # kube-prometheus-stack has been in since 2026-08-06.
     targetRevision: 10.2.2
     helm:
+      valuesObject:
+        # Temporary capacity placement until dedicated workers are available.
+        controller:
+          nodeSelector:
+            kubernetes.io/hostname: sumatrae
+          tolerations:
+            - key: rbx.io/maintenance
+              operator: Equal
+              value: stabilization
+              effect: NoSchedule
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1Gi
+            limits:
+              memory: 2Gi
+        configs:
+          params:
+            controller.status.processors: "10"
+            controller.operation.processors: "2"
+            controller.kubectl.parallelism.limit: "5"
       values: |
         global:
           domain: argocd.rbx.ia.br

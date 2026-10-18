@@ -31,6 +31,10 @@ gerenciados pelo cert-manager; não habilitar armazenamento ACME local em cada
 réplica. A anti-afinidade obrigatória impede as duas réplicas no mesmo host.
 `maxSurge: 0` permite atualizar em apenas dois hosts elegíveis. O PDB preserva
 uma réplica em interrupções voluntárias, mas não cobre perda abrupta de host.
+A PriorityClass `rbx-infra-critical` mantém prioridade na fila com
+`preemptionPolicy: Never`: pedidos de ingresso e DNS não devem expulsar outras
+aplicações para fabricar capacidade. Uma réplica Pending exige corrigir a
+capacidade e o agendamento; não remover essa proteção para forçar o rollout.
 
 Esses manifests estão fora de `platform/`: o Application `platform` percorre
 esse diretório recursivamente. Ter k3s e ArgoCD como donos dos mesmos recursos
@@ -40,7 +44,7 @@ criaria reconciliação concorrente.
 
 No sumatrae, a barreira é `rbx.io/maintenance=stabilization:NoSchedule`. Instalar
 essa taint antes de retirar o cordon. Somente DNS, ingresso e os cinco
-componentes de monitoramento autorizados recebem a toleration correspondente.
+componentes de monitoramento e o controlador ArgoCD autorizados recebem a toleration correspondente.
 Não adicionar toleration genérica de `unschedulable` aos controladores.
 
 Os valores dos charts ficam nos dois Applications de monitoramento, em
@@ -52,6 +56,12 @@ descartável e limitado a 256 MiB de dados; seu contêiner reserva 320 MiB.
 Conferir os controladores e os pods recriados: toleration persistente, PVC
 correto, readiness e ausência de OOM. Só então remover qualquer exceção manual.
 Não fazer drain de sumatrae ou altaica sem um procedimento para seus dados.
+
+O controlador ArgoCD, sem PVC, é colocado temporariamente no sumatrae com pedido
+de 1 GiB, limite de 2 GiB e paralelismo reduzido. Isso retira seu processo de
+aproximadamente 1 GiB do tiger. Essa colocação precisa ser revisada ao adicionar
+workers; ela não fornece alta disponibilidade ao próprio ArgoCD. Se sumatrae
+falhar, alterar a colocação explicitamente após verificar o destino.
 
 ## Reservas do sistema: canário
 

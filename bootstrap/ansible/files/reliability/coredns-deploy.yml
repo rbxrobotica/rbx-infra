@@ -26,7 +26,7 @@ spec:
       labels:
         k8s-app: kube-dns
     spec:
-      priorityClassName: system-cluster-critical
+      priorityClassName: rbx-infra-critical
       serviceAccountName: coredns
       nodeSelector:
         kubernetes.io/os: linux
