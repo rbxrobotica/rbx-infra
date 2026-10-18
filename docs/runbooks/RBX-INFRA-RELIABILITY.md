@@ -44,7 +44,7 @@ criaria reconciliação concorrente.
 
 No sumatrae, a barreira é `rbx.io/maintenance=stabilization:NoSchedule`. Instalar
 essa taint antes de retirar o cordon. Somente DNS, ingresso e os cinco
-componentes de monitoramento, o controlador ArgoCD e a instância única do
+componentes de monitoramento, os componentes do ArgoCD e a instância única do
 robsond autorizados recebem a toleration correspondente.
 Não adicionar toleration genérica de `unschedulable` aos controladores.
 
@@ -56,6 +56,15 @@ Grafana, Alertmanager e Loki permanecem vinculados ao sumatrae. Grafana usa
 Recreate por causa do banco SQLite no PVC. O cache de resultados Loki é
 descartável e limitado a 256 MiB de dados; seu contêiner reserva 320 MiB.
 
+Na primeira conversão de um Grafana existente de RollingUpdate para Recreate,
+retirar também o campo antigo `rollingUpdate`; omiti-lo no manifesto não basta
+se outro gerenciador detém o campo. A adaptação é restrita à estratégia:
+
+```sh
+kubectl -n monitoring patch deployment kube-prometheus-stack-grafana --type merge \
+  -p '{"spec":{"strategy":{"type":"Recreate","rollingUpdate":null}}}'
+```
+
 Conferir os controladores e os pods recriados: toleration persistente, PVC
 correto, readiness e ausência de OOM. Só então remover qualquer exceção manual.
 Não fazer drain de sumatrae ou altaica sem um procedimento para seus dados.
@@ -65,6 +74,8 @@ de 1 GiB, limite de 2 GiB e paralelismo reduzido. Isso retira seu processo de
 aproximadamente 1 GiB do tiger. Essa colocação precisa ser revisada ao adicionar
 workers; ela não fornece alta disponibilidade ao próprio ArgoCD. Se sumatrae
 falhar, alterar a colocação explicitamente após verificar o destino.
+Os demais componentes e o hook de inicialização do ArgoCD também podem usar
+essa capacidade pela toleration global; não receberam colocação obrigatória.
 O processo Go tem `GOMEMLIMIT=1600MiB` dentro do limite de contêiner de 2 GiB;
 isso antecipa a coleta de memória, mas não substitui medir a carga e os picos.
 
@@ -77,10 +88,14 @@ configuração de negociação ou credenciais ao corrigir apenas agendamento.
 
 ## Reservas do sistema: canário
 
-Somente `host_vars/sumatrae.yml` habilita a reserva. O guard exige os outros
+Somente `host_vars/sumatrae.yml` habilita a reserva. O play confere o UID do
+cluster mesmo quando só a tag de reservas é selecionada. O guard exige a taint
+de manutenção revisada sem cordon genérico, os outros
 servidores Ready, APIs `/readyz` respondendo, duas instâncias prontas de DNS e
 ingresso em hosts distintos, pedidos dos pods dentro do novo Allocatable e
 memória disponível sem pressão significativa. Falha no guard interrompe o play.
+O teste de encaixe não comprova folga N-1: a capacidade adicional continua
+necessária quando os pedidos ocupam quase todo o orçamento de pods.
 
 ```sh
 ansible-playbook -i inventory/hosts.yml reliability.yml --tags resource-reservations --check

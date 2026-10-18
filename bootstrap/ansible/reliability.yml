@@ -109,6 +109,26 @@
     - name: Install resource reservations only on explicitly enabled hosts
       when: rbx_reliability_reservations_enabled | default(false) | bool
       block:
+        - name: Verify cluster identity even when only the reservation tag is selected
+          ansible.builtin.command:
+            argv:
+              - /usr/local/bin/k3s
+              - kubectl
+              - --request-timeout=10s
+              - get
+              - namespace
+              - kube-system
+              - -o
+              - jsonpath={.metadata.uid}
+          register: reliability_reservation_cluster_identity
+          changed_when: false
+          check_mode: false
+
+        - name: Refuse resource reservations in a different cluster
+          ansible.builtin.assert:
+            that:
+              - reliability_reservation_cluster_identity.stdout == rbx_cluster_kube_system_uid
+
         - name: Verify requests and host pressure before shrinking Allocatable
           ansible.builtin.script:
             cmd: >-
@@ -159,3 +179,5 @@
       ansible.builtin.systemd_service:
         name: k3s
         state: restarted
+      # Unit status can include environment/arguments on other installations.
+      no_log: true

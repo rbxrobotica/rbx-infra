@@ -1,0 +1,789 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-18",
+  "generated_utc": "2026-10-18T18:36:40.864670+00:00",
+  "implementation_prs": [
+    372,
+    373,
+    374,
+    375
+  ],
+  "public_probe_windows": [
+    {
+      "file": "http-during-rollout.jsonl",
+      "sha256": "23e084f7aed2357db80bdfaf636c1aefa4b1824716bc427ee02acc4c3019ae9f",
+      "from_utc": "2026-10-18T17:26:10.875638+00:00",
+      "to_utc": "2026-10-18T17:56:02.465251+00:00",
+      "by_url": {
+        "https://rbx.ia.br/": {
+          "checks": 160,
+          "http_200": 159,
+          "failures": 1,
+          "latency_p95_seconds": 1.578612,
+          "latency_max_seconds": 2.585744
+        },
+        "https://rbxsystems.ch/": {
+          "checks": 160,
+          "http_200": 160,
+          "failures": 0,
+          "latency_p95_seconds": 1.653228,
+          "latency_max_seconds": 2.167705
+        },
+        "https://robson.rbx.ia.br/": {
+          "checks": 160,
+          "http_200": 159,
+          "failures": 1,
+          "latency_p95_seconds": 1.150451,
+          "latency_max_seconds": 2.319189
+        },
+        "https://api.robson.rbx.ia.br/readyz": {
+          "checks": 160,
+          "http_200": 105,
+          "failures": 55,
+          "latency_p95_seconds": 1.272417,
+          "latency_max_seconds": 1.606922
+        }
+      }
+    },
+    {
+      "file": "http-after-recovery.jsonl",
+      "sha256": "8456cfcb84e2c09073588806248c98378323727b54d13a4cf9d5bf99376499b0",
+      "from_utc": "2026-10-18T17:58:57.207793+00:00",
+      "to_utc": "2026-10-18T18:32:46.906540+00:00",
+      "by_url": {
+        "https://rbx.ia.br/": {
+          "checks": 500,
+          "http_200": 500,
+          "failures": 0,
+          "latency_p95_seconds": 1.267527,
+          "latency_max_seconds": 6.364967
+        },
+        "https://rbxsystems.ch/": {
+          "checks": 500,
+          "http_200": 500,
+          "failures": 0,
+          "latency_p95_seconds": 1.224686,
+          "latency_max_seconds": 6.366212
+        },
+        "https://robson.rbx.ia.br/": {
+          "checks": 500,
+          "http_200": 500,
+          "failures": 0,
+          "latency_p95_seconds": 0.944013,
+          "latency_max_seconds": 1.595334
+        },
+        "https://api.robson.rbx.ia.br/readyz": {
+          "checks": 500,
+          "http_200": 492,
+          "failures": 8,
+          "latency_p95_seconds": 0.940733,
+          "latency_max_seconds": 2.144794
+        }
+      }
+    }
+  ],
+  "controlled_change_probe_windows": [
+    {
+      "test": "sumatrae-reservation",
+      "checks": 72,
+      "failures": 0
+    },
+    {
+      "test": "ha-eviction",
+      "checks": 16,
+      "failures": 0
+    }
+  ],
+  "ha_drill": [
+    {
+      "time_utc": "2026-10-18T18:24:12.576546+00:00",
+      "test": "eviction-start",
+      "deployment": "traefik",
+      "pod": "traefik-576fd755c4-69z9x",
+      "ready_hosts": [
+        "sumatrae",
+        "tiger"
+      ]
+    },
+    {
+      "time_utc": "2026-10-18T18:24:21.890125+00:00",
+      "test": "eviction-recovered",
+      "deployment": "traefik",
+      "seconds": 9.3,
+      "ready_hosts": [
+        "altaica",
+        "tiger"
+      ]
+    },
+    {
+      "time_utc": "2026-10-18T18:24:22.141875+00:00",
+      "test": "dns-query",
+      "pod": "coredns-6784d9cf7b-mw7hz",
+      "node": "tiger",
+      "protocol": "udp",
+      "answers": 1
+    },
+    {
+      "time_utc": "2026-10-18T18:24:22.144627+00:00",
+      "test": "dns-query",
+      "pod": "coredns-6784d9cf7b-mw7hz",
+      "node": "tiger",
+      "protocol": "tcp",
+      "answers": 1
+    },
+    {
+      "time_utc": "2026-10-18T18:24:22.145849+00:00",
+      "test": "dns-query",
+      "pod": "coredns-6784d9cf7b-rsqxz",
+      "node": "sumatrae",
+      "protocol": "udp",
+      "answers": 1
+    },
+    {
+      "time_utc": "2026-10-18T18:24:22.146866+00:00",
+      "test": "dns-query",
+      "pod": "coredns-6784d9cf7b-rsqxz",
+      "node": "sumatrae",
+      "protocol": "tcp",
+      "answers": 1
+    },
+    {
+      "time_utc": "2026-10-18T18:24:22.146985+00:00",
+      "test": "eviction-start",
+      "deployment": "coredns",
+      "pod": "coredns-6784d9cf7b-rsqxz",
+      "ready_hosts": [
+        "sumatrae",
+        "tiger"
+      ]
+    },
+    {
+      "time_utc": "2026-10-18T18:24:29.746569+00:00",
+      "test": "eviction-recovered",
+      "deployment": "coredns",
+      "seconds": 7.6,
+      "ready_hosts": [
+        "altaica",
+        "tiger"
+      ]
+    },
+    {
+      "time_utc": "2026-10-18T18:24:29.751132+00:00",
+      "test": "dns-query",
+      "pod": "coredns-6784d9cf7b-lz689",
+      "node": "altaica",
+      "protocol": "udp",
+      "answers": 1
+    },
+    {
+      "time_utc": "2026-10-18T18:24:29.754457+00:00",
+      "test": "dns-query",
+      "pod": "coredns-6784d9cf7b-lz689",
+      "node": "altaica",
+      "protocol": "tcp",
+      "answers": 1
+    },
+    {
+      "time_utc": "2026-10-18T18:24:29.755922+00:00",
+      "test": "dns-query",
+      "pod": "coredns-6784d9cf7b-mw7hz",
+      "node": "tiger",
+      "protocol": "udp",
+      "answers": 1
+    },
+    {
+      "time_utc": "2026-10-18T18:24:29.758228+00:00",
+      "test": "dns-query",
+      "pod": "coredns-6784d9cf7b-mw7hz",
+      "node": "tiger",
+      "protocol": "tcp",
+      "answers": 1
+    }
+  ],
+  "frontend_assets": [
+    {
+      "url": "https://robson.rbx.ia.br/_app/env.js",
+      "status": 200,
+      "content_type": "application/javascript"
+    },
+    {
+      "url": "https://robson.rbx.ia.br/_app/immutable/chunks/CMtCgr7i.js",
+      "status": 200,
+      "content_type": "application/javascript"
+    },
+    {
+      "url": "https://robson.rbx.ia.br/_app/immutable/chunks/CeCVnHc7.js",
+      "status": 200,
+      "content_type": "application/javascript"
+    },
+    {
+      "url": "https://robson.rbx.ia.br/_app/immutable/chunks/CmXQx9zy.js",
+      "status": 200,
+      "content_type": "application/javascript"
+    },
+    {
+      "url": "https://robson.rbx.ia.br/_app/immutable/chunks/UUe7fbZf.js",
+      "status": 200,
+      "content_type": "application/javascript"
+    },
+    {
+      "url": "https://robson.rbx.ia.br/_app/immutable/entry/app.BQfyZHXE.js",
+      "status": 200,
+      "content_type": "application/javascript"
+    },
+    {
+      "url": "https://robson.rbx.ia.br/_app/immutable/entry/start.BXO5Tb1W.js",
+      "status": 200,
+      "content_type": "application/javascript"
+    }
+  ],
+  "browser_smoke": {
+    "domains": [
+      "robson.rbx.ia.br",
+      "robson.rbxsystems.ch"
+    ],
+    "page_title": "Login · RBX Robson",
+    "google_sign_in_button_rendered": true,
+    "authenticated_flow_exercised": false
+  },
+  "reservation_canary": {
+    "node": "sumatrae",
+    "allocatable_cpu_m": 3250,
+    "allocatable_memory_Ki": 4998332,
+    "pre_restart_requests_memory_Mi": 4614,
+    "post_drill_requests_memory_Mi": 4416,
+    "post_drill_requests_cpu_m": 1090,
+    "post_drill_available_memory_Mi": 3032.59765625,
+    "unrequested_helper_allowance_Mi": 256,
+    "memory_target_Mi": 4881.18359375,
+    "memory_pressure_full_avg10": 0
+  },
+  "postconditions": {
+    "time_utc": "2026-10-18T18:35:01.056734+00:00",
+    "nodes": [
+      {
+        "name": "altaica",
+        "ready": true,
+        "allocatable": {
+          "cpu": "4",
+          "ephemeral-storage": "147149479002",
+          "hugepages-1Gi": "0",
+          "hugepages-2Mi": "0",
+          "memory": "8131776Ki",
+          "pods": "110"
+        },
+        "taints": [],
+        "unschedulable": false
+      },
+      {
+        "name": "bengal",
+        "ready": true,
+        "allocatable": {
+          "cpu": "4",
+          "ephemeral-storage": "147243988467",
+          "hugepages-2Mi": "0",
+          "memory": "8126444Ki",
+          "pods": "110"
+        },
+        "taints": [
+          {
+            "effect": "NoSchedule",
+            "key": "rbx.io/os-pilot",
+            "value": "ubuntu-2604"
+          }
+        ],
+        "unschedulable": false
+      },
+      {
+        "name": "jaguar",
+        "ready": true,
+        "allocatable": {
+          "cpu": "8",
+          "ephemeral-storage": "394175419493",
+          "hugepages-1Gi": "0",
+          "hugepages-2Mi": "0",
+          "memory": "24608568Ki",
+          "pods": "110"
+        },
+        "taints": [
+          {
+            "effect": "NoSchedule",
+            "key": "robson.io/dedicated",
+            "value": "analytics"
+          }
+        ],
+        "unschedulable": false
+      },
+      {
+        "name": "sumatrae",
+        "ready": true,
+        "allocatable": {
+          "cpu": "3250m",
+          "ephemeral-storage": "137257285811",
+          "hugepages-1Gi": "0",
+          "hugepages-2Mi": "0",
+          "memory": "4998332Ki",
+          "pods": "110"
+        },
+        "taints": [
+          {
+            "effect": "NoSchedule",
+            "key": "rbx.io/maintenance",
+            "value": "stabilization"
+          }
+        ],
+        "unschedulable": false
+      },
+      {
+        "name": "tiger",
+        "ready": true,
+        "allocatable": {
+          "cpu": "4",
+          "ephemeral-storage": "147149479002",
+          "hugepages-1Gi": "0",
+          "hugepages-2Mi": "0",
+          "memory": "8131768Ki",
+          "pods": "110"
+        },
+        "taints": [],
+        "unschedulable": false
+      }
+    ],
+    "applications": [
+      {
+        "name": "argocd",
+        "sync": "Synced",
+        "health": "Healthy",
+        "has_ambiguous_values": false
+      },
+      {
+        "name": "kube-prometheus-stack",
+        "sync": "Synced",
+        "health": "Healthy",
+        "has_ambiguous_values": false
+      },
+      {
+        "name": "loki",
+        "sync": "Synced",
+        "health": "Healthy",
+        "has_ambiguous_values": false
+      },
+      {
+        "name": "rbx-ia-br",
+        "sync": "Synced",
+        "health": "Healthy",
+        "has_ambiguous_values": false
+      },
+      {
+        "name": "rbxsystems-ch",
+        "sync": "Synced",
+        "health": "Healthy",
+        "has_ambiguous_values": false
+      },
+      {
+        "name": "robson-prod",
+        "sync": "Synced",
+        "health": "Healthy",
+        "has_ambiguous_values": false
+      }
+    ],
+    "critical_pods": [
+      {
+        "name": "coredns-6784d9cf7b-lz689",
+        "uid": "5554a935-a3ab-45d3-ad10-b44e3fbab059",
+        "node": "altaica",
+        "ready": true,
+        "priority_class": "rbx-infra-critical",
+        "preemption_policy": "Never",
+        "maintenance_toleration": true,
+        "temporary_unschedulable_exception": false,
+        "containers": [
+          {
+            "name": "coredns",
+            "image": "rancher/mirrored-coredns-coredns:1.14.4",
+            "resources": {
+              "limits": {
+                "memory": "170Mi"
+              },
+              "requests": {
+                "cpu": "100m",
+                "memory": "70Mi"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "coredns-6784d9cf7b-mw7hz",
+        "uid": "9a0a7188-3e39-4e22-b025-41e2635690f4",
+        "node": "tiger",
+        "ready": true,
+        "priority_class": "rbx-infra-critical",
+        "preemption_policy": "Never",
+        "maintenance_toleration": true,
+        "temporary_unschedulable_exception": false,
+        "containers": [
+          {
+            "name": "coredns",
+            "image": "rancher/mirrored-coredns-coredns:1.14.4",
+            "resources": {
+              "limits": {
+                "memory": "170Mi"
+              },
+              "requests": {
+                "cpu": "100m",
+                "memory": "70Mi"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "traefik-576fd755c4-6cz5t",
+        "uid": "05ec2b44-03e8-43fc-9771-3fd88d2aa965",
+        "node": "tiger",
+        "ready": true,
+        "priority_class": "rbx-infra-critical",
+        "preemption_policy": "Never",
+        "maintenance_toleration": true,
+        "temporary_unschedulable_exception": false,
+        "containers": [
+          {
+            "name": "traefik",
+            "image": "rancher/mirrored-library-traefik:3.7.4",
+            "resources": {
+              "limits": {
+                "memory": "512Mi"
+              },
+              "requests": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "traefik-576fd755c4-xdg6q",
+        "uid": "9dcbe2e2-ae0f-40d1-aa16-81a4d725ee8a",
+        "node": "altaica",
+        "ready": true,
+        "priority_class": "rbx-infra-critical",
+        "preemption_policy": "Never",
+        "maintenance_toleration": true,
+        "temporary_unschedulable_exception": false,
+        "containers": [
+          {
+            "name": "traefik",
+            "image": "rancher/mirrored-library-traefik:3.7.4",
+            "resources": {
+              "limits": {
+                "memory": "512Mi"
+              },
+              "requests": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "monitoring_pods": [
+      {
+        "name": "alertmanager-kube-prometheus-stack-alertmanager-0",
+        "uid": "2e463666-b58f-494d-b3fc-1cccf9207e79",
+        "node": "sumatrae",
+        "ready": true,
+        "priority_class": null,
+        "preemption_policy": "PreemptLowerPriority",
+        "maintenance_toleration": true,
+        "temporary_unschedulable_exception": false,
+        "containers": [
+          {
+            "name": "alertmanager",
+            "image": "quay.io/prometheus/alertmanager:v0.27.0",
+            "resources": {
+              "limits": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              },
+              "requests": {
+                "cpu": "10m",
+                "memory": "64Mi"
+              }
+            }
+          },
+          {
+            "name": "config-reloader",
+            "image": "quay.io/prometheus-operator/prometheus-config-reloader:v0.79.2",
+            "resources": {
+              "limits": {
+                "memory": "128Mi"
+              },
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "kube-prometheus-stack-grafana-7bdcb95db-l8ngb",
+        "uid": "81d5a082-c944-4f1f-9caf-80bde2200187",
+        "node": "sumatrae",
+        "ready": true,
+        "priority_class": null,
+        "preemption_policy": "PreemptLowerPriority",
+        "maintenance_toleration": true,
+        "temporary_unschedulable_exception": false,
+        "containers": [
+          {
+            "name": "grafana-sc-dashboard",
+            "image": "quay.io/kiwigrid/k8s-sidecar:1.28.0",
+            "resources": {
+              "limits": {
+                "memory": "128Mi"
+              },
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              }
+            }
+          },
+          {
+            "name": "grafana-sc-datasources",
+            "image": "quay.io/kiwigrid/k8s-sidecar:1.28.0",
+            "resources": {
+              "limits": {
+                "memory": "128Mi"
+              },
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              }
+            }
+          },
+          {
+            "name": "grafana",
+            "image": "docker.io/grafana/grafana:11.4.0",
+            "resources": {
+              "limits": {
+                "cpu": "200m",
+                "memory": "512Mi"
+              },
+              "requests": {
+                "cpu": "50m",
+                "memory": "256Mi"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "loki-0",
+        "uid": "17de8f9e-be30-4157-84d1-efa06a363b5d",
+        "node": "sumatrae",
+        "ready": true,
+        "priority_class": null,
+        "preemption_policy": "PreemptLowerPriority",
+        "maintenance_toleration": true,
+        "temporary_unschedulable_exception": false,
+        "containers": [
+          {
+            "name": "loki-sc-rules",
+            "image": "kiwigrid/k8s-sidecar:1.27.5",
+            "resources": {
+              "limits": {
+                "memory": "128Mi"
+              },
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              }
+            }
+          },
+          {
+            "name": "loki",
+            "image": "docker.io/grafana/loki:3.2.0",
+            "resources": {
+              "limits": {
+                "cpu": "300m",
+                "memory": "512Mi"
+              },
+              "requests": {
+                "cpu": "50m",
+                "memory": "192Mi"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "name": "loki-results-cache-0",
+        "uid": "96bbee53-e712-4716-adea-f2f219575103",
+        "node": "sumatrae",
+        "ready": true,
+        "priority_class": null,
+        "preemption_policy": "PreemptLowerPriority",
+        "maintenance_toleration": true,
+        "temporary_unschedulable_exception": false,
+        "containers": [
+          {
+            "name": "memcached",
+            "image": "memcached:1.6.23-alpine",
+            "resources": {
+              "limits": {
+                "memory": "384Mi"
+              },
+              "requests": {
+                "cpu": "100m",
+                "memory": "320Mi"
+              }
+            }
+          },
+          {
+            "name": "exporter",
+            "image": "prom/memcached-exporter:v0.14.2",
+            "resources": {}
+          }
+        ]
+      },
+      {
+        "name": "prometheus-kube-prometheus-stack-prometheus-0",
+        "uid": "7bb91439-b5a7-4b48-9800-2f36177be71d",
+        "node": "sumatrae",
+        "ready": true,
+        "priority_class": null,
+        "preemption_policy": "PreemptLowerPriority",
+        "maintenance_toleration": true,
+        "temporary_unschedulable_exception": false,
+        "containers": [
+          {
+            "name": "prometheus",
+            "image": "quay.io/prometheus/prometheus:v3.0.1",
+            "resources": {
+              "limits": {
+                "cpu": "1",
+                "memory": "2Gi"
+              },
+              "requests": {
+                "cpu": "250m",
+                "memory": "1536Mi"
+              }
+            }
+          },
+          {
+            "name": "config-reloader",
+            "image": "quay.io/prometheus-operator/prometheus-config-reloader:v0.79.2",
+            "resources": {
+              "limits": {
+                "memory": "128Mi"
+              },
+              "requests": {
+                "cpu": "10m",
+                "memory": "32Mi"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "backend_pods": [
+      {
+        "name": "robsond-68998bbff4-l7hd4",
+        "uid": "09ec4695-0644-4f9b-bcfe-4e93f9a4246b",
+        "node": "sumatrae",
+        "ready": true,
+        "priority_class": null,
+        "preemption_policy": "PreemptLowerPriority",
+        "maintenance_toleration": true,
+        "temporary_unschedulable_exception": false,
+        "containers": [
+          {
+            "name": "robsond",
+            "image": "ghcr.io/rbxrobotica/robson-v2:sha-145e1c1c",
+            "resources": {
+              "limits": {
+                "cpu": "500m",
+                "memory": "768Mi"
+              },
+              "requests": {
+                "cpu": "250m",
+                "memory": "512Mi"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "monitoring_pvcs": [
+      {
+        "name": "alertmanager-kube-prometheus-stack-alertmanager-db-alertmanager-kube-prometheus-stack-alertmanager-0",
+        "uid": "e4ecb9aa-0046-4144-82d3-8deed7d6fdd4",
+        "created": "2026-06-24T03:57:06Z",
+        "phase": "Bound",
+        "volume": "pvc-e4ecb9aa-0046-4144-82d3-8deed7d6fdd4",
+        "capacity": {
+          "storage": "2Gi"
+        }
+      },
+      {
+        "name": "kube-prometheus-stack-grafana",
+        "uid": "a0e7ca41-dcff-4094-bbc0-622215ac007d",
+        "created": "2026-06-24T03:05:57Z",
+        "phase": "Bound",
+        "volume": "pvc-a0e7ca41-dcff-4094-bbc0-622215ac007d",
+        "capacity": {
+          "storage": "5Gi"
+        }
+      },
+      {
+        "name": "prometheus-kube-prometheus-stack-prometheus-db-prometheus-kube-prometheus-stack-prometheus-0",
+        "uid": "bd589e1d-f17a-415c-a14f-233c9217ba19",
+        "created": "2026-06-24T03:57:10Z",
+        "phase": "Bound",
+        "volume": "pvc-bd589e1d-f17a-415c-a14f-233c9217ba19",
+        "capacity": {
+          "storage": "10Gi"
+        }
+      },
+      {
+        "name": "storage-loki-0",
+        "uid": "f89c3649-35d1-48a5-af90-59ddb323d11e",
+        "created": "2026-06-24T03:05:03Z",
+        "phase": "Bound",
+        "volume": "pvc-f89c3649-35d1-48a5-af90-59ddb323d11e",
+        "capacity": {
+          "storage": "20Gi"
+        }
+      }
+    ]
+  },
+  "database_preflight": {
+    "host": "jaguar",
+    "database_total": "1645 MB",
+    "filesystem_available": "330G",
+    "archive_mode": "off",
+    "pgbackrest_installed": false,
+    "cipher_reference_found_on_operator": false
+  },
+  "resolved_ipv4": {
+    "rbx.ia.br": [
+      "158.220.116.31"
+    ],
+    "rbxsystems.ch": [
+      "158.220.116.31"
+    ],
+    "robson.rbx.ia.br": [
+      "158.220.116.31"
+    ],
+    "robson.rbxsystems.ch": [
+      "158.220.116.31"
+    ],
+    "api.robson.rbx.ia.br": [
+      "158.220.116.31"
+    ]
+  }
+}
