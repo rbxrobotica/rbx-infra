@@ -32,6 +32,12 @@ spec:
     helm:
       values: |
         global:
+          # Allow checked recovery capacity for ArgoCD and its init hook.
+          tolerations:
+            - key: rbx.io/maintenance
+              operator: Equal
+              value: stabilization
+              effect: NoSchedule
           domain: argocd.rbx.ia.br
           image:
             # Chart 10.2.2 ships v3.4.6. Pinned one patch forward: v3.4.7
