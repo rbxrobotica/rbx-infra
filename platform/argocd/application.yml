@@ -30,32 +30,14 @@ spec:
     # kube-prometheus-stack has been in since 2026-08-06.
     targetRevision: 10.2.2
     helm:
-      valuesObject:
-        # Temporary capacity placement until dedicated workers are available.
-        controller:
-          env:
-            - name: GOMEMLIMIT
-              value: 1600MiB
-          nodeSelector:
-            kubernetes.io/hostname: sumatrae
+      values: |
+        global:
+          # Allow checked recovery capacity for ArgoCD and its init hook.
           tolerations:
             - key: rbx.io/maintenance
               operator: Equal
               value: stabilization
               effect: NoSchedule
-          resources:
-            requests:
-              cpu: 200m
-              memory: 1Gi
-            limits:
-              memory: 2Gi
-        configs:
-          params:
-            controller.status.processors: "10"
-            controller.operation.processors: "2"
-            controller.kubectl.parallelism.limit: "5"
-      values: |
-        global:
           domain: argocd.rbx.ia.br
           image:
             # Chart 10.2.2 ships v3.4.6. Pinned one patch forward: v3.4.7
@@ -155,6 +137,9 @@ spec:
                 - UpdateRequest
           params:
             server.insecure: true
+            controller.status.processors: '10'
+            controller.operation.processors: '2'
+            controller.kubectl.parallelism.limit: '5'
         server:
           ingress:
             enabled: true
@@ -180,6 +165,23 @@ spec:
           enabled: true
         notifications:
           enabled: false
+        controller:
+          env:
+            - name: GOMEMLIMIT
+              value: 1600MiB
+          nodeSelector:
+            kubernetes.io/hostname: sumatrae
+          tolerations:
+            - key: rbx.io/maintenance
+              operator: Equal
+              value: stabilization
+              effect: NoSchedule
+          resources:
+            requests:
+              cpu: 200m
+              memory: 1Gi
+            limits:
+              memory: 2Gi
 
   destination:
     server: https://kubernetes.default.svc

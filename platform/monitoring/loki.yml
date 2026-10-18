@@ -29,40 +29,6 @@ spec:
     chart: loki
     targetRevision: 6.18.0
     helm:
-      valuesObject:
-        singleBinary:
-          tolerations:
-          - key: rbx.io/maintenance
-            operator: Equal
-            value: stabilization
-            effect: NoSchedule
-          resources:
-            requests:
-              cpu: 50m
-              memory: 192Mi
-            limits:
-              cpu: 300m
-              memory: 512Mi
-        sidecar:
-          resources:
-            requests:
-              cpu: 10m
-              memory: 32Mi
-            limits:
-              memory: 128Mi
-        resultsCache:
-          allocatedMemory: 256
-          tolerations:
-          - key: rbx.io/maintenance
-            operator: Equal
-            value: stabilization
-            effect: NoSchedule
-          resources:
-            requests:
-              cpu: 100m
-              memory: 320Mi
-            limits:
-              memory: 384Mi
       values: |
         deploymentMode: SingleBinary
 
@@ -102,12 +68,17 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 128Mi
+              memory: 192Mi
             limits:
               cpu: 300m
-              memory: 256Mi
+              memory: 512Mi
 
         # Disable distributed components (not needed for single-binary)
+          tolerations:
+            - key: rbx.io/maintenance
+              operator: Equal
+              value: stabilization
+              effect: NoSchedule
         read:
           replicas: 0
         write:
@@ -137,6 +108,26 @@ spec:
 
         test:
           enabled: false
+        sidecar:
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+        resultsCache:
+          allocatedMemory: 256
+          tolerations:
+            - key: rbx.io/maintenance
+              operator: Equal
+              value: stabilization
+              effect: NoSchedule
+          resources:
+            requests:
+              cpu: 100m
+              memory: 320Mi
+            limits:
+              memory: 384Mi
 
   destination:
     server: https://kubernetes.default.svc
