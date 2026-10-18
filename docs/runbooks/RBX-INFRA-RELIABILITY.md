@@ -48,8 +48,10 @@ componentes de monitoramento, o controlador ArgoCD e a instância única do
 robsond autorizados recebem a toleration correspondente.
 Não adicionar toleration genérica de `unschedulable` aos controladores.
 
-Os valores dos charts ficam nos dois Applications de monitoramento, em
-`valuesObject`, que complementa os valores existentes. Os PVCs de Prometheus,
+Os valores dos charts ficam em um único bloco `helm.values` nos Applications.
+Não combinar `valuesObject` com `values`: ArgoCD ignora o segundo quando o
+primeiro está presente. O CI rejeita essa combinação e renderiza os valores
+efetivos para conferir persistência, imagem e identidade. Os PVCs de Prometheus,
 Grafana, Alertmanager e Loki permanecem vinculados ao sumatrae. Grafana usa
 Recreate por causa do banco SQLite no PVC. O cache de resultados Loki é
 descartável e limitado a 256 MiB de dados; seu contêiner reserva 320 MiB.

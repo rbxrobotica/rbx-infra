@@ -29,118 +29,6 @@ spec:
     chart: kube-prometheus-stack
     targetRevision: 67.4.0
     helm:
-      valuesObject:
-        grafana:
-          deploymentStrategy:
-            type: Recreate
-          tolerations:
-          - key: rbx.io/maintenance
-            operator: Equal
-            value: stabilization
-            effect: NoSchedule
-          resources:
-            requests:
-              cpu: 50m
-              memory: 256Mi
-            limits:
-              cpu: 200m
-              memory: 512Mi
-          sidecar:
-            resources:
-              requests:
-                cpu: 10m
-                memory: 32Mi
-              limits:
-                memory: 128Mi
-          readinessProbe:
-            timeoutSeconds: 5
-        prometheus:
-          prometheusSpec:
-            tolerations:
-            - key: rbx.io/maintenance
-              operator: Equal
-              value: stabilization
-              effect: NoSchedule
-            resources:
-              requests:
-                cpu: 250m
-                memory: 1536Mi
-              limits:
-                cpu: '1'
-                memory: 2Gi
-        alertmanager:
-          alertmanagerSpec:
-            tolerations:
-            - key: rbx.io/maintenance
-              operator: Equal
-              value: stabilization
-              effect: NoSchedule
-            resources:
-              requests:
-                cpu: 10m
-                memory: 64Mi
-              limits:
-                cpu: 100m
-                memory: 128Mi
-        prometheusOperator:
-          resources:
-            requests:
-              cpu: 50m
-              memory: 128Mi
-            limits:
-              memory: 512Mi
-          prometheusConfigReloader:
-            resources:
-              requests:
-                cpu: 10m
-                memory: 32Mi
-              limits:
-                memory: 128Mi
-        additionalPrometheusRulesMap:
-          rbx-infra-continuity:
-            groups:
-            - name: rbx.infra.continuity
-              rules:
-              - alert: RBXCriticalServiceUnavailable
-                expr: kube_deployment_status_replicas_available{namespace="kube-system",deployment=~"traefik|coredns"}
-                  < 1
-                for: 30s
-                labels:
-                  severity: critical
-                  rbx_workstream: infra
-                annotations:
-                  summary: Critical service {{ $labels.deployment }} has no ready replica
-                  description: Check endpoints and node pressure before restarting or draining a control-plane
-                    host.
-              - alert: RBXCriticalServiceRedundancyLost
-                expr: kube_deployment_status_replicas_available{namespace="kube-system",deployment=~"traefik|coredns"}
-                  < 2
-                for: 2m
-                labels:
-                  severity: warning
-                  rbx_workstream: infra
-                annotations:
-                  summary: Critical service {{ $labels.deployment }} has lost redundancy
-                  description: Restore two available replicas on distinct hosts. Check the RBX reliability runbook.
-              - alert: RBXNodeReadyLost
-                expr: kube_node_status_condition{condition="Ready",status="true"} == 0
-                for: 1m
-                labels:
-                  severity: critical
-                  rbx_workstream: infra
-                annotations:
-                  summary: Node {{ $labels.node }} is not Ready
-                  description: Check etcd quorum, host memory and local volumes before maintenance.
-              - alert: RBXNodeMemoryHeadroomLow
-                expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.15
-                for: 5m
-                labels:
-                  severity: warning
-                  rbx_workstream: infra
-                annotations:
-                  summary: Node {{ $labels.instance }} has less than 15% available memory
-                  description: Investigate before evictions or API overload; do not drain local-path workloads
-                    blindly.
       values: |
         # ── Grafana ──────────────────────────────────────────────────────────
         grafana:
@@ -171,10 +59,10 @@ spec:
           resources:
             requests:
               cpu: 50m
-              memory: 128Mi
+              memory: 256Mi
             limits:
               cpu: 200m
-              memory: 256Mi
+              memory: 512Mi
 
           # Pre-configure Loki datasource
           additionalDataSources:
@@ -187,6 +75,22 @@ spec:
                 maxLines: 1000
 
         # ── Prometheus ───────────────────────────────────────────────────────
+          deploymentStrategy:
+            type: Recreate
+          tolerations:
+            - key: rbx.io/maintenance
+              operator: Equal
+              value: stabilization
+              effect: NoSchedule
+          sidecar:
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
+          readinessProbe:
+            timeoutSeconds: 5
         prometheus:
           prometheusSpec:
             retention: 7d
@@ -203,11 +107,11 @@ spec:
 
             resources:
               requests:
-                cpu: 100m
-                memory: 512Mi
-              limits:
-                cpu: 500m
+                cpu: 250m
                 memory: 1536Mi
+              limits:
+                cpu: '1'
+                memory: 2Gi
 
             # Scrape pods with prometheus.io/scrape: "true" annotations
             # This picks up robsond and other annotated pods automatically.
@@ -242,6 +146,11 @@ spec:
         # the k3s binary, not as pods, so the chart's component scrapes can
         # never find them and their *Down alerts fire forever as false
         # positives. Standard k3s guidance: disable those component monitors.
+            tolerations:
+              - key: rbx.io/maintenance
+                operator: Equal
+                value: stabilization
+                effect: NoSchedule
         kubeProxy:
           enabled: false
         kubeScheduler:
@@ -307,12 +216,17 @@ spec:
             resources:
               requests:
                 cpu: 10m
-                memory: 32Mi
+                memory: 64Mi
               limits:
                 cpu: 100m
-                memory: 64Mi
+                memory: 128Mi
 
         # ── node-exporter ────────────────────────────────────────────────────
+            tolerations:
+              - key: rbx.io/maintenance
+                operator: Equal
+                value: stabilization
+                effect: NoSchedule
         nodeExporter:
           enabled: true
 
@@ -581,9 +495,62 @@ spec:
         # webhook serving certificate/CA bundle is regenerated in an approved
         # maintenance window. The broken CA currently blocks ArgoCD from
         # reconciling PrometheusRule resources.
+          rbx-infra-continuity:
+            groups:
+              - name: rbx.infra.continuity
+                rules:
+                  - alert: RBXCriticalServiceUnavailable
+                    expr: kube_deployment_status_replicas_available{namespace="kube-system",deployment=~"traefik|coredns"} < 1
+                    for: 30s
+                    labels:
+                      severity: critical
+                      rbx_workstream: infra
+                    annotations:
+                      summary: Critical service {{ $labels.deployment }} has no ready replica
+                      description: Check endpoints and node pressure before restarting or draining a control-plane host.
+                  - alert: RBXCriticalServiceRedundancyLost
+                    expr: kube_deployment_status_replicas_available{namespace="kube-system",deployment=~"traefik|coredns"} < 2
+                    for: 2m
+                    labels:
+                      severity: warning
+                      rbx_workstream: infra
+                    annotations:
+                      summary: Critical service {{ $labels.deployment }} has lost redundancy
+                      description: Restore two available replicas on distinct hosts. Check the RBX reliability runbook.
+                  - alert: RBXNodeReadyLost
+                    expr: kube_node_status_condition{condition="Ready",status="true"} == 0
+                    for: 1m
+                    labels:
+                      severity: critical
+                      rbx_workstream: infra
+                    annotations:
+                      summary: Node {{ $labels.node }} is not Ready
+                      description: Check etcd quorum, host memory and local volumes before maintenance.
+                  - alert: RBXNodeMemoryHeadroomLow
+                    expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.15
+                    for: 5m
+                    labels:
+                      severity: warning
+                      rbx_workstream: infra
+                    annotations:
+                      summary: Node {{ $labels.instance }} has less than 15% available memory
+                      description: Investigate before evictions or API overload; do not drain local-path workloads blindly.
         prometheusOperator:
           admissionWebhooks:
             enabled: false
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          prometheusConfigReloader:
+            resources:
+              requests:
+                cpu: 10m
+                memory: 32Mi
+              limits:
+                memory: 128Mi
 
   destination:
     server: https://kubernetes.default.svc

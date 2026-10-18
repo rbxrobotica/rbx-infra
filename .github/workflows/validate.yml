@@ -39,6 +39,17 @@ jobs:
       - name: Test node capacity guard before resource reservations
         run: python3 -B -m unittest discover -s scripts/tests -p 'test_reliability_capacity.py' -v
 
+      - name: Validate unambiguous Helm values in ArgoCD Applications
+        run: python3 scripts/validate-argocd-helm-values.py
+
+      - name: Setup Helm for effective values and storage contracts
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.0
+
+      - name: Validate rendered reliability chart storage and identity
+        run: python3 scripts/validate-reliability-charts.py
+
       - name: Setup kubeconform
         # Authenticated download: anonymous release downloads from shared
         # Actions runner IPs get rate limited (HTTP 429 with a tiny body,
