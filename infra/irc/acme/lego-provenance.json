@@ -1,0 +1,7 @@
+{
+  "version": "4.35.2",
+  "url": "https://github.com/go-acme/lego/releases/download/v4.35.2/lego_v4.35.2_linux_amd64.tar.gz",
+  "archive_sha256": "ee5be4bf457de8e3efa86a51651c75c87f0ee0e4e9f3ae14f6034d68365770f3",
+  "binary_sha256": "fb98f19242ceffc3b41061e10251a41c3b3dfd1bb542296604d9c9e2f42e9d15",
+  "verification": "GitHub release digest and upstream checksum manifest, not a signature"
+}
