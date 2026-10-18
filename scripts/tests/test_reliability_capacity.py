@@ -51,6 +51,13 @@ class ResourceAccountingTests(unittest.TestCase):
         unready = {"metadata": {"labels": {"app.kubernetes.io/name": "traefik"}}, "spec": {"nodeName": "tiger"}, "status": {"conditions": [{"type": "Ready", "status": "False"}]}}
         self.assertEqual(capacity.critical_service_hosts([terminating, unready], "traefik"), set())
 
+    def test_reservations_require_the_specific_scheduling_barrier(self):
+        barrier = {"key": "rbx.io/maintenance", "value": "stabilization", "effect": "NoSchedule"}
+        self.assertTrue(capacity.maintenance_barrier({"spec": {"taints": [barrier]}}))
+        for spec in ({}, {"taints": [{**barrier, "effect": "PreferNoSchedule"}]}, {"taints": [{**barrier, "value": "unreviewed"}]}, {"taints": [barrier], "unschedulable": True}):
+            with self.subTest(spec=spec):
+                self.assertFalse(capacity.maintenance_barrier({"spec": spec}))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -58,6 +58,16 @@ def critical_service_hosts(pods, service):
     return hosts
 
 
+def maintenance_barrier(node):
+    spec = node.get("spec", {})
+    return not spec.get("unschedulable", False) and any(
+        t.get("key") == "rbx.io/maintenance"
+        and t.get("value") == "stabilization"
+        and t.get("effect") == "NoSchedule"
+        for t in spec.get("taints", [])
+    )
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("node")
@@ -70,9 +80,11 @@ def main():
         return json.loads(result.stdout)
 
     nodes = {n["metadata"]["name"]: n for n in read(["get", "nodes"])["items"]}
-    for peer in args.peers:
+    if not maintenance_barrier(nodes[args.node]):
+        raise SystemExit("STOP: use the reviewed maintenance taint with generic cordon removed before reservations")
+    for peer in [args.node, *args.peers]:
         if not any(c["type"] == "Ready" and c["status"] == "True" for c in nodes[peer]["status"]["conditions"]):
-            raise SystemExit("STOP: another control-plane peer is not Ready")
+            raise SystemExit("STOP: a control-plane node is not Ready")
         address = next(a["address"] for a in nodes[peer]["status"]["addresses"] if a["type"] == "InternalIP")
         subprocess.run(base + ["--server=https://" + address + ":6443", "get", "--raw=/readyz"], check=True, capture_output=True, text=True, timeout=12)
     critical_pods = read(["get", "pods", "-n", "kube-system"])["items"]

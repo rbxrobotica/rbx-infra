@@ -2,7 +2,7 @@
 
 Data: 18 de outubro de 2026. Horários em America/Sao_Paulo.
 
-Estado: plano de execução proposto, baseado no incidente e nas verificações de produção desta sessão. As contenções já executadas estão identificadas na seção 3; as mudanças permanentes abaixo ainda precisam de implementação e validação.
+Estado: execução iniciada após autorização. A descrição abaixo preserva a baseline e o plano original. Resultados aplicados, incidentes durante a execução, testes e pendências estão no [relatório de execução](infra/RBX-INFRA-RELIABILITY-EXECUTION-2026-10-18.md). As etapas futuras não devem ser interpretadas como concluídas.
 
 ## 1 Nome e objetivo
 
