@@ -1,0 +1,27 @@
+# Candidate only. Do not enable until staging, DNS isolation and issuance pass.
+[Unit]
+Description=RBX IRC certificate renewal (does not deploy to Ergo)
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=/var/lib/rbx-irc-acme/production/certificates/irc.rbxsystems.ch.crt
+
+[Service]
+Type=oneshot
+User=rbx-irc-acme
+Group=rbx-irc-acme
+UMask=0077
+EnvironmentFile=/etc/rbx/irc-acme/operator.env
+LoadCredential=rfc2136-tsig:/etc/rbx/irc-acme/tsig.secret
+ExecStart=/usr/bin/python3 /opt/rbx/irc-acme/irc_acme.py --lego /opt/rbx/irc-acme/lego --sha256 fb98f19242ceffc3b41061e10251a41c3b3dfd1bb542296604d9c9e2f42e9d15 --state /var/lib/rbx-irc-acme --tsig-secret %d/rfc2136-tsig --email ${RBX_ACME_EMAIL} --environment production --operation renew --execute
+TimeoutStartSec=16min
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/rbx-irc-acme
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+

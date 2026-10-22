@@ -1,0 +1,11 @@
+[Unit]
+Description=Check RBX IRC certificate renewal twice daily
+
+[Timer]
+OnCalendar=*-*-* 03,15:00:00
+RandomizedDelaySec=30min
+Persistent=true
+Unit=rbx-irc-acme-renew.service
+
+[Install]
+WantedBy=timers.target

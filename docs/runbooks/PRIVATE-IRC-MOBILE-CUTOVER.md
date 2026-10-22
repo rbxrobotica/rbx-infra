@@ -40,6 +40,10 @@ deliberately not named `compose.override.yaml`, preventing implicit activation.
 
 ## Certificate renewal is a deployment prerequisite
 
+The [scoped DNS-01 candidate](IRC-DNS01-RENEWAL.md) now specifies a dedicated
+challenge child zone and a pinned issuer runner with inactive systemd examples.
+It is not deployed and does not yet include certificate installation/reload.
+
 The inspected Corbetti command path had neither `lego` nor `certbot`, and the
 listed timers contained no ACME/certificate timer. This does not rule out other
 issuers or automation elsewhere. The repository's shared cert-manager issuer
