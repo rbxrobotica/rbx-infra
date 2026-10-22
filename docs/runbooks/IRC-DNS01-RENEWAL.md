@@ -118,11 +118,21 @@ is not automatically revoked by removing the challenge key.
 
 ## Validation and remaining gates
 
+October 22: the isolated primary acceptance gate now has a reproducible native
+fixture in `scripts/network/test-irc-dns01-native.sh`, also run by CI. Ten cases
+passed with PowerDNS 4.8.3/gpgsql and PostgreSQL 16: signed add/delete, six
+refusals including wrong-source and parent/sibling attempts, then final positive
+add/delete. Readbacks confirmed no forbidden TXT records. The sanitized
+[evidence](../network/local/evidence/irc-dns01-native-2026-10-22.json) records
+the candidate hash and package versions. No production DNS or credentials were
+used. See the [fixture scope](../../scripts/tests/fixtures/irc-dns01/README.md).
+
 Eight runner tests and six endpoint preflight tests pass with synthetic data.
-Native Lego CLI/provider discovery passed, but no RFC2136 write, ACME request or
-systemd activation was attempted. The isolated authoritative acceptance fixture,
-secondary provisioning, scoped key creation and certificate deployment hook
-remain unimplemented gates, explicitly not evidence of production readiness.
+Native Lego CLI/provider discovery passed. RFC2136 writes have now been tested
+only inside the synthetic fixture; no production update, ACME request or systemd
+activation was attempted. Secondary provisioning/replication, scoped real key
+creation and the certificate deployment hook remain open gates, explicitly not
+evidence of production readiness.
 
 Secret review: references only in the candidate manifest and inactive service;
 no real secret was read, copied or committed. Tests contain synthetic key material.
