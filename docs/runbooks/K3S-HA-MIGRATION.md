@@ -4,7 +4,13 @@
 > See [Execution Notes](#execution-notes-2026-06-24) below for actual outcomes and corrections.
 
 **Audience:** RBX operators executing the control-plane HA migration.
-**Prerequisites:** root SSH to all nodes (key-based); `KUBECONFIG=~/.kube/config-rbx`; ArgoCD admin; `pass` access; an offsite backup target (rsync.net Zurich, ADR-0004).
+**Historical execution prerequisites:** root SSH to the nodes (key-based),
+reviewed kubeconfig/admin access and the approved secret store. The former
+rsync.net Zurich prerequisite was incorrect: ADR-0004 selected mail backup,
+not a deployed cluster snapshot target. Jaguar snapshot sync and independent
+provider/account recovery are distinct. See [the dated reconciliation](../infra/BACKUP-EVIDENCE-RECONCILIATION-2026-10-29.md).
+A future migration requires a fresh preservation/recovery preflight and an
+explicit maintenance-window approval; completion in June is not that preflight.
 **Origin:** Action item P1 from `docs/incidents/INCIDENT-2026-06-22-KINE-BLOAT.md`.
 
 > **Warning — this is a destructive, in-place control-plane rebuild.** k3s cannot convert an
