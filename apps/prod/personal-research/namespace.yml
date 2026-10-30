@@ -1,0 +1,30 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: personal-research
+  labels:
+    app.kubernetes.io/part-of: personal-research
+    pod-security.kubernetes.io/enforce: restricted
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: collector
+  namespace: personal-research
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: collector
+  namespace: personal-research
+spec:
+  hard:
+    requests.cpu: "1"
+    requests.memory: 512Mi
+    limits.cpu: "2"
+    limits.memory: 1Gi
+    pods: "4"
+    persistentvolumeclaims: "0"
