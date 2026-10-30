@@ -1,0 +1,31 @@
+# Traefik Middleware: deny every client on the robsond /metrics route.
+#
+# robsond serves Prometheus exposition at /metrics without authentication
+# (robsond/src/api.rs, "Unauthenticated (read-only)"), on the same listener
+# as the public API. Prometheus scrapes the pod directly through the
+# prometheus.io/* pod annotations (cluster-internal, port 8080), so the
+# route has no legitimate consumer through the public ingress; before this
+# middleware it answered 200 on https://api.robson.rbx.ia.br/metrics with
+# gauges such as active positions and reconciliation timestamps, and the
+# repository's RUSTSEC-2024-0437 (protobuf) exception text in robson's
+# osv-scanner.toml assumed the endpoint was cluster-internal.
+#
+# Traefik 3.x has no deny middleware. This allow-list rejects every client
+# except Traefik's own loopback with 403; the route it guards
+# (robsond-metrics-ingressroute.yml) targets the built-in noop@internal
+# service, so even a loopback-addressed request (a sidecar sharing the
+# proxy's network namespace, or accepted PROXY-protocol metadata claiming
+# 127.0.0.1) gets Traefik's 418 and never reaches robsond.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: metrics-deny
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: robson
+spec:
+  ipAllowList:
+    sourceRange:
+      - 127.0.0.1/32

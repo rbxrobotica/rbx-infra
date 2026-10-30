@@ -1,0 +1,46 @@
+# Robsond API: /metrics route, denied at the edge.
+#
+# robsond serves Prometheus exposition at /metrics without authentication
+# on the same listener as the public API, and robsond-ingress.yml forwards
+# the whole host. Prometheus scrapes the pod directly through the
+# prometheus.io/* pod annotations (cluster-internal, port 8080), so the
+# public route has no consumer; before this file it answered 200 on
+# https://api.robson.rbx.ia.br/metrics.
+#
+# Deterministic deny, no backend involved: the route targets Traefik's
+# built-in `noop@internal` service, which never proxies and answers 418 to
+# every request, and the loopback-only ipAllowList middleware in front of
+# it answers 403 to any client that is not Traefik's own loopback. Either
+# way nothing reaches robsond. An IngressRoute rather than an Ingress
+# because the Kubernetes Ingress API cannot name a TraefikService; the
+# explicit priority keeps this router ahead of robsond-ingress.yml's
+# PathPrefix(/) router without relying on rule-length ordering.
+#
+# No cert-manager annotation on purpose: robsond-ingress.yml owns the
+# certificate; this route only references the same secret so it is served
+# on websecure too.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: robsond-metrics
+  namespace: robson
+  labels:
+    app.kubernetes.io/name: robsond
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: robson
+spec:
+  entryPoints:
+    - web
+    - websecure
+  routes:
+    - match: Host(`api.robson.rbx.ia.br`) && Path(`/metrics`)
+      kind: Rule
+      priority: 1000
+      middlewares:
+        - name: metrics-deny
+          namespace: robson
+      services:
+        - name: noop@internal
+          kind: TraefikService
+  tls:
+    secretName: robsond-api-tls

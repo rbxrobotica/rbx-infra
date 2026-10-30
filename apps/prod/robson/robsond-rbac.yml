@@ -1,4 +1,14 @@
-# Robsond ServiceAccount and RBAC
+# Robsond ServiceAccount
+#
+# robsond, the migrate Jobs and the retention CronJob never call the
+# Kubernetes API: configuration and credentials arrive as environment
+# variables (configMapRef / secretKeyRef in the pod specs), and the daemon
+# has no client for the API server. The former Role granted this account
+# get/list/watch on every Secret in the namespace, which a compromised
+# trading pod could have used to read its own and any sibling credentials
+# through the API. The Role and RoleBinding are gone and the token is no
+# longer mounted; the account remains so the pod specs' serviceAccountName
+# keeps resolving.
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -8,30 +18,4 @@ metadata:
     app.kubernetes.io/name: robsond
     app.kubernetes.io/component: daemon
     app.kubernetes.io/part-of: robson
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: robsond-role
-  namespace: robson
-rules:
-- apiGroups: [""]
-  resources: ["configmaps", "secrets"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "list", "watch"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: robsond-rolebinding
-  namespace: robson
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: robsond-role
-subjects:
-- kind: ServiceAccount
-  name: robsond
-  namespace: robson
+automountServiceAccountToken: false
