@@ -1,0 +1,139 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: olhaescola-api
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: olhaescola-api
+  template:
+    metadata:
+      labels:
+        app: olhaescola-api
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: api
+        image: ghcr.io/rbxrobotica/olhaescola-api:latest
+        ports:
+        - name: http
+          containerPort: 8087
+        envFrom:
+        - configMapRef:
+            name: olhaescola-config
+        - secretRef:
+            name: olhaescola-secrets
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: '1'
+            memory: 512Mi
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: http
+          initialDelaySeconds: 3
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 20
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: olhaescola-api
+spec:
+  selector:
+    app: olhaescola-api
+  ports:
+  - name: http
+    port: 8087
+    targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: olhaescola-web
+spec:
+  replicas: 0
+  selector:
+    matchLabels:
+      app: olhaescola-web
+  template:
+    metadata:
+      labels:
+        app: olhaescola-web
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: web
+        image: ghcr.io/rbxrobotica/olhaescola-web:latest
+        ports:
+        - name: http
+          containerPort: 3017
+        envFrom:
+        - configMapRef:
+            name: olhaescola-config
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: '1'
+            memory: 384Mi
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: http
+          initialDelaySeconds: 3
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 20
+      imagePullSecrets:
+      - name: ghcr-pull-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: olhaescola-web
+spec:
+  selector:
+    app: olhaescola-web
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
