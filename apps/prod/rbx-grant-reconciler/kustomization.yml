@@ -5,15 +5,9 @@ resources:
   - grant-reconciler-deploy.yml
   - grant-reconciler-svc.yml
   - network-policy.yml
-# No images transformer yet, deliberately. The image does not exist until
-# rbx-identity merges the service and its publish workflow runs on main, and
-# Pattern R forbids a production overlay pinned to a floating tag. Before this
-# Application is synced for the first time, add:
-#
-#   images:
-#     - name: ghcr.io/rbxrobotica/rbx-grant-reconciler
-#       newTag: sha-<first publish>
-#
-# Until then the deploy manifest's :latest placeholder is what would be pulled,
-# which is why the Application has no automated sync and the README lists
-# pinning as a bring-up step.
+# Pinned to the first publish of the service, from the rbx-identity
+# "Publish grant reconciler image" workflow on main. Pattern R: the immutable
+# tag lives here, never in the deploy manifest.
+images:
+  - name: ghcr.io/rbxrobotica/rbx-grant-reconciler
+    newTag: sha-3ee59ab
