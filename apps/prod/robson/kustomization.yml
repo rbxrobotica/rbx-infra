@@ -6,6 +6,7 @@ resources:
   - namespace.yml
   # Middleware
   - middleware-https.yml
+  - middleware-metrics-deny.yml
   # Frontend v2 (SvelteKit) replaces legacy React frontend.
   # Legacy files archived under apps/archived/robson-frontend-react/.
   # Network model: Ingress (traefik) — Gateway API HTTPRoute migration
@@ -23,6 +24,7 @@ resources:
   - robsond-deploy.yml
   - robsond-svc.yml
   - robsond-ingress.yml
+  - robsond-metrics-ingressroute.yml
   # Infrastructure
   - redis-deploy.yml
   - redis-svc.yml

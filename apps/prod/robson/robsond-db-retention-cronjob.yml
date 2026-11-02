@@ -46,6 +46,11 @@ spec:
             app.kubernetes.io/name: robsond
             app.kubernetes.io/component: db-retention
         spec:
+          # Same account as robsond: automountServiceAccountToken is false
+          # there, and this Job only needs DATABASE_URL from the secret
+          # reference below, never the Kubernetes API. The implicit
+          # `default` account used before still mounted a token.
+          serviceAccountName: robsond
           imagePullSecrets:
           - name: ghcr-pull-secret
           securityContext:
