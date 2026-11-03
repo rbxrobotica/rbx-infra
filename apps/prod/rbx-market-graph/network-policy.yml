@@ -145,6 +145,31 @@ spec:
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
+  name: api-oidc-egress
+  namespace: rbx-market-graph
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: api
+  policyTypes:
+    - Egress
+  egress:
+    # The verifier fetches ZITADEL's JWKS through the public issuer URL.
+    # k3s DNATs that LoadBalancer traffic to Traefik's HTTPS pod port.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/name: traefik
+      ports:
+        - protocol: TCP
+          port: 8443
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
   name: db-migrate
   namespace: rbx-market-graph
 spec:
