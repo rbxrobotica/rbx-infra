@@ -1,0 +1,42 @@
+{
+  "schema": "rbx.resilience.synthetic-execution.v1",
+  "observed_at": "2026-11-03T06:12:57Z",
+  "executed_by": "codex-root",
+  "result": "pass",
+  "exit_code": 0,
+  "synthetic_only": true,
+  "source_revision": "1e123c3e805758bc48797958287d8a1631a097d3",
+  "fixture": "scripts/tests/comms_restore_fixture.py",
+  "runtime_source": "https://github.com/rbxrobotica/rbx-infra",
+  "runtime_image": "ghcr.io/rbxrobotica/comms-backup@sha256:fc4a6037f035baa0d229bd86f744ceca1ddb720e672004d0b7ffad1209365124",
+  "local_image_id": "c499726bb460b3c6ac02740650f02f49c7dcdea95e4e2c51198c4580ee66eb98",
+  "runtime_source_note": "Image tag sha-a051b67; the fixture, Comms runner and imported archive code have no tracked changes between a051b67b3e49f61004c1e2ee23f122bd46652ba6 and source_revision. This is source comparison, not a new image rebuild or attestation.",
+  "isolation": {
+    "runtime": "rootless-podman",
+    "network": "none",
+    "root_filesystem": "read-only",
+    "capabilities": "all-dropped",
+    "no_new_privileges": true,
+    "memory_bytes": 536870912,
+    "cpus": 1,
+    "temporary_filesystem": "/tmp:rw,nosuid,nodev,size=256m,mode=1777",
+    "production_mounts": false,
+    "credentials_supplied": false,
+    "code_mounts": ["scripts/tests/comms_restore_fixture.py:/fixture.py:readonly"]
+  },
+  "stdout": {
+    "synthetic_only": true,
+    "s3_transport": "stubbed",
+    "postgres_major": 16,
+    "rows_restored": 2,
+    "logical_fingerprint_match": true,
+    "gpg_decryption_manifest_and_dump_hashes": "verified",
+    "runner_plaintext_cleanup": "verified"
+  },
+  "limits": [
+    "The fixture generated a synthetic rbx_comms database; no real selected pilot database was captured or recovered.",
+    "S3 was a local transport stub. B2 account readiness, remote permissions, Object Lock, retention, credentials and failure independence were not tested.",
+    "No Headscale process, private key custody, production scheduling, RPO or RTO was qualified.",
+    "This is execution evidence for a local mechanism test, not H1 or an auditor component promotion."
+  ]
+}
