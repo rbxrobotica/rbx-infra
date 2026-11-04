@@ -1,0 +1,23 @@
+# Existing RBX external PostgreSQL host from docs/infra/DATABASE.md.
+# The new DB, roles, TLS certificate and extensions still require verification.
+apiVersion: v1
+kind: Service
+metadata:
+  name: olhaescola-postgres
+spec:
+  ports:
+    - name: postgres
+      port: 5432
+      protocol: TCP
+---
+apiVersion: v1
+kind: Endpoints
+metadata:
+  name: olhaescola-postgres
+subsets:
+  - addresses:
+      - ip: 161.97.147.76
+    ports:
+      - name: postgres
+        port: 5432
+        protocol: TCP

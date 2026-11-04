@@ -1,0 +1,3 @@
+# Fragment to add to spec.destinations of rbx-applications during activation.
+namespace: olhaescola
+server: https://kubernetes.default.svc
