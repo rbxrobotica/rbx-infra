@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - namespace.yml
+  - postgres-svc.yml
+  - secrets.yml
+  - cronjob.yml
+  - networkpolicy.yml
+# Replace the blocked tag with the published immutable digest before activation.
+images:
+  - name: ghcr.io/rbxrobotica/personal-research
+    newTag: build-required

@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: personal-research
+  namespace: argocd
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/personal-research
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: personal-research
+  # First sync and activation are separate operator operations.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true

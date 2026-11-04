@@ -16,6 +16,8 @@ spec:
     # ZITADEL self-hosted Helm chart repo for RBX Identity.
     - https://charts.zitadel.com
   destinations:
+    - namespace: personal-research
+      server: https://kubernetes.default.svc
     - namespace: robson
       server: https://kubernetes.default.svc
     - namespace: lda-prod
