@@ -1,0 +1,33 @@
+name: Validate PI VI preview
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/prod/pi-vi-historicos/**'
+      - 'scripts/package-pi-vi-historicos.py'
+      - '.github/workflows/pi-vi-preview.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/prod/pi-vi-historicos/**'
+      - 'scripts/package-pi-vi-historicos.py'
+      - '.github/workflows/pi-vi-preview.yml'
+permissions:
+  contents: read
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/prod/pi-vi-historicos/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.22.1'
+          cache: npm
+          cache-dependency-path: apps/prod/pi-vi-historicos/frontend/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run build

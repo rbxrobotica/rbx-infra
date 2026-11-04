@@ -1,0 +1,26 @@
+# Academic preview: static SvelteKit, synthetic browser-local data only.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: pi-vi-historicos
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: pi-vi-historicos
+    app.kubernetes.io/part-of: academic-studies
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/pi-vi-historicos
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rbx-ia-br
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
