@@ -11,4 +11,4 @@ configMapGenerator:
       - site.tgz
   - name: pi-vi-historicos-nginx
     files:
-      - default.conf=nginx.conf
+      - nginx.conf
