@@ -9,6 +9,11 @@ pdns_zones:
   - strategos.gr
   - merovelis.com
   - kulinaryos.com
+  - initelo.com
+  - iteruno.com
+  - satwake.com
+  - verentir.com
+  - zugbrief.com
 
 # SOA defaults (phase 1)
 pdns_soa_refresh: 3600      # 1h
