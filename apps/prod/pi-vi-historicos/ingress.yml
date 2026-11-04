@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pi-vi-historicos
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: websecure
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - rbx.ia.br
+      secretName: rbx-ia-br-tls
+  rules:
+    - host: rbx.ia.br
+      http:
+        paths:
+          - path: /estudos/historicos-escolares
+            pathType: Prefix
+            backend:
+              service:
+                name: pi-vi-historicos
+                port:
+                  number: 80

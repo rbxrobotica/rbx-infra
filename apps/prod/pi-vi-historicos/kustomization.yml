@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: rbx-ia-br
+resources:
+  - deployment.yml
+  - service.yml
+  - ingress.yml
+configMapGenerator:
+  - name: pi-vi-historicos-site
+    files:
+      - site.tgz
+  - name: pi-vi-historicos-nginx
+    files:
+      - nginx.conf
