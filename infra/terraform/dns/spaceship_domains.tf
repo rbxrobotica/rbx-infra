@@ -38,6 +38,10 @@ resource "powerdns_record" "spaceship_ns" {
 resource "powerdns_record" "spaceship_parking_a" {
   for_each = local.spaceship_domains
 
+  # Both RRsets update the same SOA. Serialize these groups to avoid concurrent
+  # PowerDNS/PostgreSQL serial updates while creating a zone.
+  depends_on = [powerdns_record.spaceship_ns]
+
   zone    = powerdns_zone.spaceship[each.key].name
   name    = powerdns_zone.spaceship[each.key].name
   type    = "A"

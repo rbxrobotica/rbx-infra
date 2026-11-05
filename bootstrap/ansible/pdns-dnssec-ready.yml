@@ -1,0 +1,145 @@
+---
+# Enable DNSSEC backend support without re-rendering credentials or changing
+# existing zone content. The role templates carry the same persistent settings.
+# Run against the DNS inventory only, with existing SSH aliases if appropriate:
+# -e '{"ansible_host":"{{ inventory_hostname }}","ansible_user":"root"}'
+- name: Prepare DNSSEC backends one nameserver at a time
+  hosts: eagle:pantera
+  order: sorted
+  serial: 1
+  any_errors_fatal: true
+  gather_facts: false
+  become: true
+  vars_files:
+    - roles/pdns/defaults/main.yml
+  vars:
+    pdns_existing_health_zones:
+      - rbxsystems.ch
+      - rbx.ia.br
+      - strategos.gr
+      - merovelis.com
+      - kulinaryos.com
+  tasks:
+    - name: Restrict this operation to the known backend roles
+      ansible.builtin.assert:
+        that:
+          - inventory_hostname in ['eagle', 'pantera']
+          - (inventory_hostname == 'eagle' and pdns_backend == 'bind') or (inventory_hostname == 'pantera' and pdns_backend == 'gpgsql')
+        quiet: true
+
+    - name: Check running daemon before changing configuration
+      ansible.builtin.command: pdns_control version
+      changed_when: false
+      check_mode: false
+
+    - name: Check existing authoritative zones before changing configuration
+      ansible.builtin.command:
+        argv: [dig, '@127.0.0.1', "{{ item }}", SOA, '+short', '+time=3', '+tries=1']
+      loop: "{{ pdns_existing_health_zones }}"
+      register: pdns_health_before
+      changed_when: false
+      check_mode: false
+      failed_when: pdns_health_before.rc != 0 or pdns_health_before.stdout | trim | length == 0
+
+    - name: Enable backend DNSSEC processing with configuration rollback
+      block:
+        - name: Create a service-owned directory for SQLite journals
+          ansible.builtin.file:
+            path: "{{ pdns_dnssec_dir }}"
+            state: directory
+            owner: pdns
+            group: pdns
+            mode: '0750'
+          when: pdns_backend == 'bind'
+
+        - name: Initialize secondary DNSSEC metadata database if absent
+          ansible.builtin.command:
+            argv: [pdnsutil, create-bind-db, "{{ pdns_bind_dnssec_db }}"]
+            creates: "{{ pdns_bind_dnssec_db }}"
+          register: pdns_dnssec_db_created
+          when: pdns_backend == 'bind'
+
+        - name: Protect the secondary metadata database
+          ansible.builtin.file:
+            path: "{{ pdns_bind_dnssec_db }}"
+            owner: pdns
+            group: pdns
+            mode: '0640'
+          when: pdns_backend == 'bind' and not ansible_check_mode
+
+        - name: Verify SQLite write access as the DNS service user
+          ansible.builtin.command:
+            argv:
+              - runuser
+              - -u
+              - pdns
+              - --
+              - python3
+              - -c
+              - "import sqlite3,sys; c=sqlite3.connect(sys.argv[1]); c.execute('PRAGMA journal_mode=WAL'); c.execute('BEGIN IMMEDIATE'); c.rollback(); c.close()"
+              - "{{ pdns_bind_dnssec_db }}"
+          changed_when: false
+          when: pdns_backend == 'bind' and not ansible_check_mode
+
+        - name: Enable the backend setting without exposing the configuration
+          ansible.builtin.lineinfile:
+            path: "{{ pdns_config_dir }}/pdns.conf"
+            regexp: "{{ '^gpgsql-dnssec=' if pdns_backend == 'gpgsql' else '^bind-dnssec-db=' }}"
+            line: "{{ 'gpgsql-dnssec=yes' if pdns_backend == 'gpgsql' else 'bind-dnssec-db=' + pdns_bind_dnssec_db }}"
+            backup: true
+          register: pdns_dnssec_config
+          no_log: true
+          diff: false
+
+        - name: Require a recoverable configuration backup before restarting
+          ansible.builtin.assert:
+            that:
+              - not pdns_dnssec_config.changed or (pdns_dnssec_config.backup | default('') | length > 0)
+            quiet: true
+          when: not ansible_check_mode
+
+        - name: Rectify existing primary zone metadata before restarting
+          ansible.builtin.command: pdnsutil rectify-all-zones
+          when: pdns_backend == 'gpgsql' and pdns_dnssec_config.changed
+
+        - name: Restart only when backend configuration changed
+          ansible.builtin.systemd:
+            name: pdns
+            state: restarted
+          when: pdns_dnssec_config.changed or pdns_dnssec_db_created.changed | default(false)
+
+        - name: Check daemon after backend preparation
+          ansible.builtin.command: pdns_control version
+          changed_when: false
+          when: not ansible_check_mode
+
+        - name: Check existing authoritative zones after backend preparation
+          ansible.builtin.command:
+            argv: [dig, '@127.0.0.1', "{{ item }}", SOA, '+short', '+time=3', '+tries=1']
+          loop: "{{ pdns_existing_health_zones }}"
+          register: pdns_health_after
+          changed_when: false
+          failed_when: pdns_health_after.rc != 0 or pdns_health_after.stdout | trim | length == 0
+          when: not ansible_check_mode
+      rescue:
+        - name: Restore the previous configuration if a backup was created
+          ansible.builtin.copy:
+            src: "{{ pdns_dnssec_config.backup }}"
+            dest: "{{ pdns_config_dir }}/pdns.conf"
+            remote_src: true
+            owner: root
+            group: pdns
+            mode: '0640'
+          when: pdns_dnssec_config.backup | default('') | length > 0
+          no_log: true
+          diff: false
+
+        - name: Restart with the restored configuration
+          ansible.builtin.systemd:
+            name: pdns
+            state: restarted
+          when: pdns_dnssec_config.changed | default(false)
+
+        - name: Stop this migration after restoring configuration
+          ansible.builtin.fail:
+            msg: DNSSEC backend preparation failed; configuration rollback was attempted. No registrar delegation has been changed.

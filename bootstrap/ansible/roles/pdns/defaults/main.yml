@@ -2,3 +2,5 @@
 pdns_version: "4.9"
 pdns_config_dir: "/etc/powerdns"
 pdns_zones_dir: "/var/lib/powerdns/zones"
+pdns_dnssec_dir: "/var/lib/powerdns/dnssec"
+pdns_bind_dnssec_db: "{{ pdns_dnssec_dir }}/bind-metadata.sqlite3"

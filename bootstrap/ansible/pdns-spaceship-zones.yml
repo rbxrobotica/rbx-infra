@@ -1,0 +1,90 @@
+---
+# Run only after Terraform has created the five zones and pdns-dnssec-ready.yml
+# has enabled backend support. Keys stay on the primary; zone content stays in
+# Terraform. No existing zone is signed by this playbook.
+- name: Sign the five newly created Spaceship zones
+  hosts: pantera
+  gather_facts: false
+  become: true
+  vars:
+    spaceship_dns_zones: [initelo.com, iteruno.com, satwake.com, verentir.com, zugbrief.com]
+  tasks:
+    - name: Read current DNSSEC status for each new zone
+      ansible.builtin.command:
+        argv: [pdnsutil, show-zone, "{{ item }}"]
+      loop: "{{ spaceship_dns_zones }}"
+      register: spaceship_dnssec_before
+      changed_when: false
+
+    - name: Sign only zones that are not already secured
+      ansible.builtin.command:
+        argv: [pdnsutil, secure-zone, "{{ item.item }}"]
+      loop: "{{ spaceship_dnssec_before.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      when: "'Zone is not actively secured' in item.stdout"
+
+    - name: Rectify the newly signed zone metadata
+      ansible.builtin.command:
+        argv: [pdnsutil, rectify-zone, "{{ item }}"]
+      loop: "{{ spaceship_dns_zones }}"
+
+    - name: Check each signed zone before secondary transfers
+      ansible.builtin.command:
+        argv: [pdnsutil, check-zone, "{{ item }}"]
+      loop: "{{ spaceship_dns_zones }}"
+      changed_when: false
+
+- name: Configure and transfer the new signed secondary zones
+  hosts: eagle
+  gather_facts: false
+  become: true
+  vars_files:
+    - roles/pdns/defaults/main.yml
+  vars:
+    spaceship_dns_zones: [initelo.com, iteruno.com, satwake.com, verentir.com, zugbrief.com]
+  tasks:
+    - name: Require all new zones to be declared in the secondary inventory
+      ansible.builtin.assert:
+        that:
+          - spaceship_dns_zones | difference(pdns_zones) | length == 0
+        quiet: true
+
+    - name: Render the declared secondary zone inventory
+      ansible.builtin.template:
+        src: roles/pdns/templates/named.conf.j2
+        dest: /etc/powerdns/named.conf
+        owner: root
+        group: pdns
+        mode: '0640'
+        backup: true
+      register: spaceship_secondary_config
+
+    - name: Restart the secondary only when its zone inventory changed
+      ansible.builtin.systemd:
+        name: pdns
+        state: restarted
+      when: spaceship_secondary_config.changed
+
+    - name: Request fresh signed AXFR for each new zone
+      ansible.builtin.command:
+        argv: [pdns_control, retrieve, "{{ item }}"]
+      loop: "{{ spaceship_dns_zones }}"
+
+    - name: Wait until each new secondary zone is authoritative
+      ansible.builtin.command:
+        argv: [dig, '@127.0.0.1', "{{ item }}", SOA, '+short', '+time=3', '+tries=1']
+      loop: "{{ spaceship_dns_zones }}"
+      register: spaceship_secondary_soa
+      changed_when: false
+      until: spaceship_secondary_soa.rc == 0 and spaceship_secondary_soa.stdout | trim | length > 0
+      retries: 12
+      delay: 3
+
+    - name: Require signed transfers to be marked PRESIGNED
+      ansible.builtin.command:
+        argv: [pdnsutil, get-meta, "{{ item }}", PRESIGNED]
+      loop: "{{ spaceship_dns_zones }}"
+      register: spaceship_secondary_presigned
+      changed_when: false
+      failed_when: spaceship_secondary_presigned.rc != 0 or 'PRESIGNED = 1' not in spaceship_secondary_presigned.stdout
