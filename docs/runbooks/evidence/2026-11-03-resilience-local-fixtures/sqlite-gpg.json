@@ -1,0 +1,65 @@
+{
+  "base_commit": "1e123c3e805758bc48797958287d8a1631a097d3",
+  "command": [
+    "bash",
+    "scripts/resilience/run-local-fixture.sh"
+  ],
+  "completed_at": "2026-11-03T06:16:59.617506+00:00",
+  "executed_at": "2026-11-03T06:16:58.042018+00:00",
+  "exit_code": 0,
+  "isolation_invocation": {
+    "capabilities": "ALL dropped",
+    "cpus": 1,
+    "engine": "local-rootless-podman",
+    "host_mounts": "fixture code and tests, read-only only",
+    "memory": "512m",
+    "network": "none",
+    "no_new_privileges": true,
+    "read_only_root": true,
+    "temporary_storage": "private128m tmpfs",
+    "user": "10001:10001"
+  },
+  "limits": [
+    "Local-copy transport only; no B2/S3 connection",
+    "No production data, Headscale runtime, retention enforcement, RPO/RTO or provider-exit capability demonstrated",
+    "Separate keyrings share one disposable machine; no independent custodian or location proven",
+    "Subprocess-error redaction and cleanup-reporting tests are mocked; successful encryption/decryption and SQLite are real",
+    "Unsigned public-key encryption and same-process reference hashes do not prove author/freshness or resist joint ciphertext/reference substitution; independent trusted receipt and authenticated provenance pending"
+  ],
+  "result": {
+    "agent_cleanup_confirmed": true,
+    "application_config_match": true,
+    "ciphertext_readback_match": true,
+    "ciphertext_size_bytes": 20818,
+    "headscale_runtime_tested": false,
+    "logical_state_match": true,
+    "producer_private_keys": false,
+    "production_data_accessed": false,
+    "provider_integration_tested": false,
+    "retention_enforcement_tested": false,
+    "rows_restored": 2,
+    "schema": "rbx.resilience.local-fixture.v1",
+    "sqlite_integrity": "ok",
+    "synthetic_only": true,
+    "temporary_files_removed": true,
+    "transport": "local-copy"
+  },
+  "runtime_image": "ghcr.io/rbxrobotica/comms-backup@sha256:fc4a6037f035baa0d229bd86f744ceca1ddb720e672004d0b7ffad1209365124",
+  "schema": "rbx.resilience.synthetic-execution.v1",
+  "source_sha256": {
+    ".github/workflows/resilience-local-fixture.yml": "6a7749ffb974b345ea284973c053ea3263e034a93a18546c91c3fa8b95496694",
+    "scripts/resilience/__init__.py": "877b6c0d2190c67d2ddf1a4013b1e9e28d3c01302be40e92e5a81ded115c8249",
+    "scripts/resilience/local_fixture.py": "bf46e9817e2a35ed67b84b622904126e8a42361378c19030f6cf5e02fc723365",
+    "scripts/resilience/run-local-fixture.sh": "4521f0335f94a4ff08fca4087fc670121891c422dd38993e991d2988f77afa6f",
+    "scripts/tests/test_resilience_local_fixture.py": "3fd1d704d5f2bd2551fd83f0b879b9accc89c7ef2e950d4fff935e5f30949b2d"
+  },
+  "stderr": "test_changed_file_cannot_pass_the_captured_manifest (test_resilience_local_fixture.BundleTests.test_changed_file_cannot_pass_the_captured_manifest) ... ok\ntest_child_environment_does_not_inherit_credentials_and_errors_are_redacted (test_resilience_local_fixture.BundleTests.test_child_environment_does_not_inherit_credentials_and_errors_are_redacted) ... ok\ntest_cleanup_failure_is_observable_and_cannot_pass_the_cli (test_resilience_local_fixture.BundleTests.test_cleanup_failure_is_observable_and_cannot_pass_the_cli) ... ok\ntest_cli_rejects_source_or_provider_arguments_before_any_operation (test_resilience_local_fixture.BundleTests.test_cli_rejects_source_or_provider_arguments_before_any_operation) ... ok\ntest_duplicate_paths_traversal_links_and_devices_are_rejected (test_resilience_local_fixture.BundleTests.test_duplicate_paths_traversal_links_and_devices_are_rejected) ... ok\ntest_existing_restore_is_never_overwritten (test_resilience_local_fixture.BundleTests.test_existing_restore_is_never_overwritten) ... ok\ntest_invalid_database_is_removed_even_with_matching_file_hash (test_resilience_local_fixture.BundleTests.test_invalid_database_is_removed_even_with_matching_file_hash) ... ok\ntest_manifest_hash_mismatch_writes_nothing (test_resilience_local_fixture.BundleTests.test_manifest_hash_mismatch_writes_nothing) ... ok\ntest_replacement_symlink_and_oversized_member_are_rejected (test_resilience_local_fixture.BundleTests.test_replacement_symlink_and_oversized_member_are_rejected) ... ok\ntest_restore_works_after_source_is_removed_and_preserves_private_modes (test_resilience_local_fixture.BundleTests.test_restore_works_after_source_is_removed_and_preserves_private_modes) ... ok\ntest_whole_artifact_bound_and_symlink_are_rejected (test_resilience_local_fixture.BundleTests.test_whole_artifact_bound_and_symlink_are_rejected) ... ok\ntest_ciphertext_tamper_is_rejected_before_decryption (test_resilience_local_fixture.RealGPGTests.test_ciphertext_tamper_is_rejected_before_decryption) ... ok\ntest_decompression_is_bounded_and_partial_plaintext_is_removed (test_resilience_local_fixture.RealGPGTests.test_decompression_is_bounded_and_partial_plaintext_is_removed) ... ok\ntest_real_decryption_matches_plaintext_and_fails_with_missing_private_key (test_resilience_local_fixture.RealGPGTests.test_real_decryption_matches_plaintext_and_fails_with_missing_private_key) ... ok\ntest_real_pipeline_reports_its_limits_and_cleans_all_temporary_material (test_resilience_local_fixture.RealGPGTests.test_real_pipeline_reports_its_limits_and_cleans_all_temporary_material) ... ok\n\n----------------------------------------------------------------------\nRan 15 tests in 0.287s\n\nOK\n",
+  "stdout": "{\"agent_cleanup_confirmed\": true, \"application_config_match\": true, \"ciphertext_readback_match\": true, \"ciphertext_size_bytes\": 20818, \"headscale_runtime_tested\": false, \"logical_state_match\": true, \"producer_private_keys\": false, \"production_data_accessed\": false, \"provider_integration_tested\": false, \"retention_enforcement_tested\": false, \"rows_restored\": 2, \"schema\": \"rbx.resilience.local-fixture.v1\", \"sqlite_integrity\": \"ok\", \"synthetic_only\": true, \"temporary_files_removed\": true, \"transport\": \"local-copy\"}\n",
+  "synthetic_only": true,
+  "unit_tests": {
+    "executed": 15,
+    "passed": 15,
+    "real_gpg_required": true
+  },
+  "working_tree_code_identified_by_hashes": true
+}

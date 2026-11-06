@@ -1,0 +1,36 @@
+name: Synthetic local recovery fixture
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/resilience/**'
+      - 'scripts/tests/test_resilience_local_fixture.py'
+      - '.github/workflows/resilience-local-fixture.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/resilience/**'
+      - 'scripts/tests/test_resilience_local_fixture.py'
+      - '.github/workflows/resilience-local-fixture.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  synthetic-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Cache the immutable public fixture runtime
+        run: |
+          printf '%s\n' '{"auths":{}}' > "$RUNNER_TEMP/fixture-empty-auth.json"
+          env -u CONTAINER_HOST -u CONTAINER_CONNECTION podman --remote=false pull \
+            --authfile "$RUNNER_TEMP/fixture-empty-auth.json" \
+            ghcr.io/rbxrobotica/comms-backup@sha256:fc4a6037f035baa0d229bd86f744ceca1ddb720e672004d0b7ffad1209365124
+      - name: Check and run the isolated synthetic fixture
+        run: |
+          bash -n scripts/resilience/run-local-fixture.sh
+          bash scripts/resilience/run-local-fixture.sh
