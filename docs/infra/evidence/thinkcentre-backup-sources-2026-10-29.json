@@ -1,0 +1,118 @@
+{
+  "curated_on": "2026-10-29",
+  "classification": "retrospective document provenance; not new drill execution evidence",
+  "sources": [
+    {
+      "source": "thinkcentre:/home/psyctl/docs/etcd-restore-drill-evidence-2026-07-18.md",
+      "sha256": "4165a1522a83387e30f176d61c01ac0fd4a804645de5fd79755d8b037efc0277",
+      "excerpt_ranges_1_based": [
+        [
+          18,
+          29
+        ],
+        [
+          32,
+          78
+        ]
+      ]
+    },
+    {
+      "source": "thinkcentre:/home/psyctl/docs/gov092.md",
+      "sha256": "698b168271b001eac81293ec0ea4b5db3abacceb3ce844d0c5b4590543e0f092",
+      "excerpt_ranges_1_based": [
+        [
+          1162,
+          1162
+        ],
+        [
+          1280,
+          1333
+        ]
+      ]
+    },
+    {
+      "source": "thinkcentre:/home/psyctl/docs/gov094.md",
+      "sha256": "67251f5357ceb5845107a8a842f1aa949141d16aa3468cb5be9f4cdeaea0c990",
+      "excerpt_ranges_1_based": [
+        [
+          281,
+          304
+        ],
+        [
+          565,
+          583
+        ],
+        [
+          808,
+          808
+        ]
+      ]
+    },
+    {
+      "source": "thinkcentre:/home/psyctl/docs/gov095.md",
+      "sha256": "e91ff4b2a8beae3afb074c29ac0d1b4dde232d8f8f1ac2a05eff70b52f5889c6",
+      "excerpt_ranges_1_based": [
+        [
+          591,
+          600
+        ]
+      ]
+    },
+    {
+      "source": "thinkcentre:/home/psyctl/docs/jaguar-pg-backup-s3.md",
+      "sha256": "c0b516d5273fb3d6bc3bcf2ff6a10f7a5a66af10b33fac20953a60c27b34c105",
+      "excerpt_ranges_1_based": [
+        [
+          7,
+          11
+        ],
+        [
+          18,
+          32
+        ],
+        [
+          49,
+          58
+        ]
+      ]
+    },
+    {
+      "source": "thinkcentre:/home/psyctl/docs/jaguar-pg-restore-drill-evidence-2026-07-18.md",
+      "sha256": "82e40f2295ec07e24808d3c63e3357079bde411f14b699ce7b7fba434acdf3a2",
+      "excerpt_ranges_1_based": [
+        [
+          42,
+          73
+        ],
+        [
+          146,
+          171
+        ]
+      ]
+    },
+    {
+      "source": "thinkcentre:/home/psyctl/docs/k3s-ha-cluster-state.md",
+      "sha256": "779c1d82110d10abe57e768306a83d71411d53993ca69162bbd2f2a57c319333",
+      "excerpt_ranges_1_based": [
+        [
+          1,
+          8
+        ],
+        [
+          216,
+          235
+        ],
+        [
+          303,
+          321
+        ]
+      ]
+    }
+  ],
+  "commercial_source": {
+    "kind": "operator attestation supplied in this session; private email not reopened or exported",
+    "event_date": "2026-08-31",
+    "claim": "Vendor withdrew Zurich for new contracts and offered Denver or Silicon Valley; no purchase established"
+  },
+  "privacy": "No transcript bodies, payloads, email export, credential values or application rows are included."
+}

@@ -11,7 +11,22 @@ point activates a WORKING archiver. WAL archived before the scheduled
 window simply accumulates (bounded, compressed) in the local repo
 until phase 3's first backup gives retention something to expire.
 
-## Phase 1: deploy (no impact on the running cluster)
+## Evidence and admission before phase 1
+
+The [2026-10-12 preflight](../../infra/irc/docs/POSTGRES-LIVE-PREFLIGHT-2026-10-12.md)
+did not find pgBackRest installed or WAL archiving active. Do not present the
+phases below as installed state. [Historical logical dumps](JAGUAR-LOGICAL-BACKUP-HISTORY.md)
+are a different mechanism and do not prove whole-cluster/WAL recovery.
+
+Before any deployment, reconcile account/region, component coverage, consistent
+capture, capacity, key custody and an isolated recovery procedure using
+[readiness](RSYNC-NET-READINESS.md). It identifies the current role's mixed key
+provisioning/activation as work that must be separated before using a new
+account. Verify those changes in source and fixtures before retrieving secrets
+or installing packages. An accepted ADR or provider account does not authorize
+the shared PostgreSQL restart or activate a repository.
+
+## Phase 1: proposed deployment preparation
 
 Once, on the operator machine:
 

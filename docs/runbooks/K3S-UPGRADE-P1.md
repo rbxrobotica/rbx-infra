@@ -1,23 +1,18 @@
 # Runbook - P1 k3s Supported-Version Upgrade
 
-Status: **COMPLETE — 4 of 4 steps done (2026-07-22).** Cluster on `v1.36.2+k3s1`
-(all 4 nodes), supported stable line. Roadmap finished; no further minor upgrades
-until the next supported-line drift.
+Historical execution status: four upgrade steps were recorded complete on
+2026-07-22. That is a dated upgrade outcome, not current cluster health or a
+current upstream-support assertion. The [versioned July history](../infra/CLUSTER-RECOVERY-HISTORY-2026-07.md)
+replaces the pointer that existed only under an operator's `~/docs`.
 
-> **Resume urgency (security).** 1.34 is the OLDEST currently-supported Kubernetes
-> minor: it enters maintenance **2026-08-27** (~6 weeks) and reaches **EOL
-> 2026-10-27** (~3 months); the imminent 1.37 release drops it from support.
-> Finishing to `v1.36.2+k3s1` (EOL 2027-04-28) restores full CVE coverage. The
-> cluster already sat ~5 months on EOL `v1.32.3` (2026-02-28 → 2026-07-18) with
-> zero upstream patches — do not stall again. Progress: `1.32.3` ✅→ `1.33.13` ✅→ `1.34.9` ✅→ `1.35.6` ✅→
-> **`1.36.2`** (roadmap COMPLETE 2026-07-22). State record:
-> `~/docs/k3s-ha-cluster-state.md` (final section).
+This controlled procedure is retained for historical context and future
+adaptation. Revalidate releases/support, topology, backup age, recovery evidence,
+capacity and the exact maintenance window before any reuse. The isolated July
+[etcd](../infra/evidence/2026-07-18-etcd-restore.md) and
+[Thalamus](../infra/evidence/2026-07-18-jaguar-thalamus-restore.md) tests do not
+prove current full-cluster or all-database recovery.
 
-This runbook upgrades the RBX k3s cluster from `v1.32.3+k3s1` back into a
-supported Kubernetes release line. It is intentionally written as a controlled
-procedure, not an instruction to run now.
-
-## Current state
+## Historical state as of 2026-07-22
 
 As of 2026-07-22:
 
@@ -25,7 +20,7 @@ As of 2026-07-22:
 - `jaguar` is an agent and database/analytics host.
 - All nodes run **`v1.36.2+k3s1`** (upgraded from `v1.32.3` → `1.33.13` → `1.34.9`
   → `1.35.6` → `1.36.2` across the 2026-07-18/19/20/22 windows).
-- Active upstream Kubernetes branches are `1.34` (oldest; EOL 2026-10-27),
+- The historical support note listed upstream Kubernetes branches as `1.34` (oldest; EOL 2026-10-27),
   `1.35` (EOL 2026-12-28), and `1.36` (current stable; EOL 2027-04-28).
 
 ## Upgrade rule
