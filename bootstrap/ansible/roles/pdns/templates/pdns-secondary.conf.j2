@@ -10,6 +10,7 @@ local-port=53
 
 # Backend: BIND (zone files from AXFR, no Postgres dependency)
 launch=bind
+bind-dnssec-db={{ pdns_bind_dnssec_db }}
 bind-config=/etc/powerdns/named.conf
 bind-supermaster-config=/etc/powerdns/named.conf
 bind-supermaster-destdir={{ pdns_zones_dir }}

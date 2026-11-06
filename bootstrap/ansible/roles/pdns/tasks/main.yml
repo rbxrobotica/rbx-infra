@@ -55,7 +55,31 @@
     group: pdns
     mode: "0640"
   when: pdns_role == "primary"
+  register: pdns_primary_config
   notify: restart pdns
+
+- name: Create writable BIND DNSSEC metadata directory (secondary only)
+  file:
+    path: "{{ pdns_dnssec_dir }}"
+    state: directory
+    owner: pdns
+    group: pdns
+    mode: "0750"
+  when: pdns_backend == "bind"
+
+- name: Initialize BIND DNSSEC metadata database (secondary only)
+  command:
+    argv: [pdnsutil, create-bind-db, "{{ pdns_bind_dnssec_db }}"]
+    creates: "{{ pdns_bind_dnssec_db }}"
+  when: pdns_backend == "bind"
+
+- name: Protect BIND DNSSEC metadata database (secondary only)
+  file:
+    path: "{{ pdns_bind_dnssec_db }}"
+    owner: pdns
+    group: pdns
+    mode: "0640"
+  when: pdns_backend == "bind" and not ansible_check_mode
 
 - name: Deploy PowerDNS secondary configuration
   template:
@@ -88,6 +112,10 @@
   when: pdns_role == "primary"
   register: schema_init
   changed_when: "'SELECT 1' not in (schema_init.stderr | default(''))"
+
+- name: Rectify existing zones after enabling backend DNSSEC processing
+  command: pdnsutil rectify-all-zones
+  when: pdns_role == "primary" and pdns_primary_config.changed
 
 - name: Disable systemd-resolved stub listener (conflicts with pdns on port 53)
   lineinfile:
