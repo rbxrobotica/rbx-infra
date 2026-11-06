@@ -82,6 +82,15 @@ resource "powerdns_record" "social_kulinaryos_com_a" {
   records = [local.kulinaryos_prod_ingress_ip]
 }
 
+# MediaMTX WebRTC signalling for the Piazza production streams.
+resource "powerdns_record" "live_kulinaryos_com_a" {
+  zone    = powerdns_zone.kulinaryos_com.name
+  name    = "live.kulinaryos.com."
+  type    = "A"
+  ttl     = 300
+  records = [local.kulinaryos_prod_ingress_ip]
+}
+
 resource "powerdns_record" "ficgara_kulinaryos_com_a" {
   zone    = powerdns_zone.kulinaryos_com.name
   name    = "ficgara.kulinaryos.com."
