@@ -1,0 +1,9 @@
+---
+# Run separately after creating a locked backup bucket and dedicated credentials.
+# The legacy cron remains until retire_legacy_postgres_backup_cron=true is passed
+# after a successful protected backup and isolated restore.
+- name: Configure protected PostgreSQL backup on jaguar
+  hosts: db_server
+  become: true
+  roles:
+    - postgres-protected-backup
