@@ -1,0 +1,40 @@
+name: IRC DNS-01 native isolation
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/irc-dns01-native.yml'
+      - 'infra/irc/acme/dns01-plan.json'
+      - 'scripts/network/test-irc-dns01-native.sh'
+      - 'scripts/tests/fixtures/irc-dns01/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/irc-dns01-native.yml'
+      - 'infra/irc/acme/dns01-plan.json'
+      - 'scripts/network/test-irc-dns01-native.sh'
+      - 'scripts/tests/fixtures/irc-dns01/**'
+
+permissions:
+  contents: read
+
+jobs:
+  dns01-native-isolation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Test native update boundaries in rootless disposable PostgreSQL
+        run: |
+          bash -n scripts/network/test-irc-dns01-native.sh
+          bash scripts/network/test-irc-dns01-native.sh \
+            | tee "$RUNNER_TEMP/irc-dns01-native.json"
+      - name: Retain only sanitized results
+        uses: actions/upload-artifact@v4
+        with:
+          name: irc-dns01-native-isolation
+          path: ${{ runner.temp }}/irc-dns01-native.json
+          if-no-files-found: error
+          retention-days: 7
