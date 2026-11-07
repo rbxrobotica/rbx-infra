@@ -2,7 +2,7 @@
 
 Status: development backlog; implementation and deployment have not started.
 Created: 2026-11-07 (America/Sao_Paulo).
-Delivery owner: RBX Infra. Assignee, priority and target date: unassigned.
+Delivery owner: RBX Infra. Assignee, priority and target date are maintained in the linked GitHub issue.
 
 GitHub delivery tracking: [issue #386](https://github.com/rbxrobotica/rbx-infra/issues/386).
 This change versions the technical scope and checklist. Automatic GitHub progress publication is not configured yet.
