@@ -1,0 +1,6 @@
+schema: spec-driven
+context: |
+  Follow AGENTS.md. RBX Infra owns cluster-specific GitOps manifests, environment
+  configuration and references to secrets. Application code and build pipelines
+  belong to their application owner. OpenSpec cards record pending work and do
+  not authorize production deployment, DNS/secret changes or cluster operations.
