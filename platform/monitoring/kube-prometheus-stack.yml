@@ -316,6 +316,33 @@ spec:
                       summary: "Robson MonthlyHalt circuit breaker is active"
                       description: "The 4% monthly drawdown circuit breaker has engaged. Trading is halted until the month boundary; operator review required."
 
+                  - alert: RBXRobsondMonthlyBudgetBasisInvalid
+                    expr: robsond_monthly_budget_basis_invalid{kubernetes_namespace="robson"} == 1
+                    for: 5m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson monthly budget basis is invalid"
+                      description: >-
+                        monthly_state.capital_base is not positive for the current month. New entries are denied and
+                        MonthlyHalt does not fire on it (robson ADR-0051 §1), so positions stay open on their stops.
+                        Correct the basis with evidence, or the next month boundary writes a new one; entries resume
+                        without a restart.
+
+                  - alert: RBXRobsondMonthlyBudgetBasisUnread
+                    expr: time() - robsond_monthly_budget_basis_last_read_timestamp_seconds{kubernetes_namespace="robson"} > 300
+                    for: 5m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson cannot read its monthly budget basis"
+                      description: >-
+                        robsond has had no successful read of monthly_state for its budget basis alarm for over 10
+                        minutes, or none since it started. The invalid-basis gauge keeps the last value it read, so
+                        whether the basis is valid right now is unknown.
+
                   - alert: RBXRobsondStaleActivePositions
                     expr: robsond_stale_active_positions{kubernetes_namespace="robson"} > 0
                     for: 10m
