@@ -33,6 +33,14 @@ jobs:
       - name: Test Headscale observations and candidate preparation with isolated fixtures
         run: python3 -B -m unittest discover -s scripts/tests -p 'test_headscale_*.py' -v
 
+      - name: Test bounded Headscale inventory with required YAML parser
+        run: |
+          python3 -B -c 'import yaml'
+          python3 -B -m unittest discover -s scripts/tests -p 'test_resilience_headscale_inventory.py' -v
+
+      - name: Test on-demand pass SSH-agent activation with mocked commands
+        run: python3 -B -m unittest discover -s scripts/tests -p 'test_pass_ssh_agent.py' -v
+
       - name: Test private mobile IRC preflight with isolated certificates
         run: python3 -B -m unittest discover -s scripts/tests -p 'test_irc_*.py' -v
 
