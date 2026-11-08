@@ -99,6 +99,12 @@ The separate [B2 metadata simulation](B2-METADATA-SIMULATION.md) adds offline
 contract tests to this wrapper. They use injected fixtures only, with no cloud
 transport, and do not change the scope of the SQLite/GPG roundtrip report.
 
+The [B2 synthetic canary protocol](RESILIENCE-B2-CANARY.md) also has offline
+adversarial tests in this wrapper. The tests inject an in-memory transport and
+synthetic bytes; the wrapper never invokes the canary CLI or loads live account
+configuration. Its real HTTP transport requires a separate authorized operator
+invocation and does not turn these offline tests into provider evidence.
+
 Execution reports describe only the code revision actually run. Preserve
 sanitized results in rbx-resilience if useful, without promoting component
 status or treating a local fixture as a passing provider-exit drill.

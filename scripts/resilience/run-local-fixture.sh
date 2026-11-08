@@ -31,6 +31,7 @@ timeout --kill-after=5s 240s "${podman_local[@]}" run --rm --pull=never \
     --mount "type=bind,source=$repo/scripts/resilience,destination=/fixture-scripts/resilience,ro" \
     --mount "type=bind,source=$repo/scripts/tests/test_resilience_local_fixture.py,destination=/fixture-scripts/tests/test_resilience_local_fixture.py,ro" \
     --mount "type=bind,source=$repo/scripts/tests/test_resilience_b2_preflight.py,destination=/fixture-scripts/tests/test_resilience_b2_preflight.py,ro" \
+    --mount "type=bind,source=$repo/scripts/tests/test_resilience_b2_canary.py,destination=/fixture-scripts/tests/test_resilience_b2_canary.py,ro" \
     --entrypoint /bin/sh "$image" -ec '
         python3 -B -m unittest discover -s /fixture-scripts/tests -p "test_resilience_*.py" -v
         python3 -B /fixture-scripts/resilience/local_fixture.py
