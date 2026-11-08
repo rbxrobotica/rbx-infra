@@ -4,13 +4,13 @@ on:
   pull_request:
     paths:
       - 'scripts/resilience/**'
-      - 'scripts/tests/test_resilience_local_fixture.py'
+      - 'scripts/tests/test_resilience_*.py'
       - '.github/workflows/resilience-local-fixture.yml'
   push:
     branches: [main]
     paths:
       - 'scripts/resilience/**'
-      - 'scripts/tests/test_resilience_local_fixture.py'
+      - 'scripts/tests/test_resilience_*.py'
       - '.github/workflows/resilience-local-fixture.yml'
 
 permissions:

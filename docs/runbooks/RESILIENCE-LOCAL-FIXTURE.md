@@ -95,6 +95,10 @@ is limited to the Enterprise Web Console. Do not bypass a failed security check
 or silently fall back to the existing Contabo destination. This increment does
 not modify that client or broaden the Comms database boundary.
 
+The separate [B2 metadata simulation](B2-METADATA-SIMULATION.md) adds offline
+contract tests to this wrapper. They use injected fixtures only, with no cloud
+transport, and do not change the scope of the SQLite/GPG roundtrip report.
+
 Execution reports describe only the code revision actually run. Preserve
 sanitized results in rbx-resilience if useful, without promoting component
 status or treating a local fixture as a passing provider-exit drill.
