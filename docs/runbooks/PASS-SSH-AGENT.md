@@ -52,3 +52,31 @@ Run the synthetic test suite without invoking real SSH, pass, or ssh-agent:
 ```sh
 python3 -m unittest discover -s scripts/tests -p test_pass_ssh_agent.py
 ```
+
+## Verified operator binding, 2026-11-08
+
+The operator workspace has a user-local `rbx-eagle-access` entry point bound to
+the existing Eagle alias and existing encrypted credential. Its source copy
+matches commit `11a35d4`, SHA-256
+`ad86db9aeb17ee7a1fb86e03644a453f24160e6d7445b30d47bd9281f1c00b00`.
+The installation is a reproducible source copy and local binding; pass remains
+the credential source. Private paths and credential references are not published.
+
+```sh
+rbx-eagle-access status
+rbx-eagle-access load
+ssh eagle
+```
+
+The initial cache was empty at verification. The installed `load` then reported a
+changed, matching identity; `status` reported ready, and a separate strict,
+non-forwarding SSH probe returned the Headscale service active. The installed
+binding uses a 900-second lifetime. GPG unlock and an existing running agent
+are prerequisites; there is no automatic permanent cache or new server grant.
+Three existing SSH configuration files were inspected without finding a
+`Match exec` directive. As `ssh -G` evaluates configuration, keep that source
+trusted and review changes before credential activation.
+
+These observations qualify this local authentication workflow only. Independent
+GPG recovery custody and replication of the exact encrypted credential were
+not established by this login test. They remain recovery preflight items.
