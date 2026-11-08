@@ -213,6 +213,12 @@ helper, synthetic `local_fixture.py` and synthetic canary are not substitutes.
 Implement and review the bounded capture/manifest/encryption tool against
 fixtures before supplying an exact source operation command.
 
+The separate [synthetic capture/restore mechanism](HEADSCALE-CAPTURE-FIXTURE.md)
+now exercises WAL-aware snapshots, required dummy identity/configuration files,
+bounded manifests and encrypted local recovery. It accepts no real input and
+uses neither the Headscale database schema nor its executable. It is preparation
+for this contract, not its production capture or native recovery implementation.
+
 ## Archive and independent recovery gates
 
 - Qualify the actual production producer and separate recovery identities,
