@@ -1,0 +1,10 @@
+[Unit]
+Description=Protected PostgreSQL backup to dedicated S3 bucket
+Wants=network-online.target
+After=network-online.target postgresql.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pg-backup-protected.sh
+StandardOutput=journal
+StandardError=journal
