@@ -190,9 +190,16 @@ blocking institutional sending.
 
 ### Backup target decision
 
-Mailcow data lives on a single VPS. Pick an off-site target
-(rsync.net / Backblaze B2 / Storj / other) and write
-`tasks/backup.yml` for the `mailcow-host` role.
+The historical target selection is [ADR-0004](../adr/ADR-0004-mail-backup-target-rsync-net-zurich.md),
+not an open choice inferred from this checklist. Selection did not establish an
+account, installed backup or Mailcow restore. The operator confirmed no account
+was available on 2026-10-12, and supplied an earlier vendor response withdrawing
+Zurich for new contracts. Reconcile [region and procurement](RSYNC-NET-READINESS.md)
+before preparing or activating `tasks/backup.yml` for `mailcow-host`.
+
+Keep contracting, implementation, backup receipts and an isolated Mailcow
+restore as separate evidence. Outbound relay success and the historical
+Thalamus/etcd drills do not cover Mailcow content/configuration recovery.
 
 ---
 

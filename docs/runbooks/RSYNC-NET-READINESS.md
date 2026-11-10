@@ -1,12 +1,26 @@
 # rsync.net requirements and budget
 
 Status: procurement preparation, October 12, 2026. The operator confirmed that
-no rsync.net account is available. No account was opened, purchase made, vendor
-contact sent or credential created. The PostgreSQL direction is recorded in
+no rsync.net account was available on that date. That preparation opened no
+account, made no purchase, sent no vendor contact and created no credential.
+This does not mean there was no earlier commercial correspondence. The PostgreSQL direction is recorded in
 [ADR-0012](../adr/ADR-0012-pgbackrest-cluster-backup-jaguar.md); extending it to
 Headscale requires a separate recovery design.
 
-## Published prices
+## Region reconciliation (2026-10-29)
+
+The operator supplied a 2026-08-31 vendor response stating that Zurich had been
+withdrawn for new contracts, with Denver or Silicon Valley offered instead.
+The message had been read in the originating session; this reconciliation did
+not reopen or export email. It establishes neither purchase nor acceptance of
+a substitute region. The October locations-page claim below is not sufficient
+to establish an offer available to RBX in the selected region.
+
+Keep region and contracting unresolved until an authenticated, account-specific
+commercial offer and owner decision reconcile the historical ADRs. No provider
+or region is selected by this update. See [the evidence timeline](../infra/BACKUP-EVIDENCE-RECONCILIATION-2026-10-29.md).
+
+## Historical price research from 2026-10-12
 
 Official pages checked on October 12. USD amounts exclude applicable taxes and
 payment/currency-conversion costs. No student, promotional or prepayment discount
@@ -19,8 +33,8 @@ is assumed. Recheck the selected offer before purchase.
 | 1,000 GB | $15/month | $120/year paid upfront |
 
 Standard is $0.015/GB/month and includes seven daily snapshots and support.
-The current order page offers monthly, yearly and two-year billing; no discount
-was verified. Sources: [pricing](https://www.rsync.net/pricing.html) and
+The order page inspected on October 12 offered monthly, yearly and two-year
+billing; no discount was verified in that research. Sources: [pricing](https://www.rsync.net/pricing.html) and
 [order form](https://www.rsync.net/signup/order.html).
 
 The technical rclone offer is $0.01/GB/month, paid annually. Despite its name,
@@ -29,8 +43,10 @@ excludes additional logins/subaccounts and product-specific integration support.
 Different directories under the same login do not establish credential isolation.
 Source: [rclone offer](https://www.rsync.net/products/rclone.html).
 
-Zurich is available without a region surcharge. Confirm the region in the order.
-Source: [locations](https://www.rsync.net/products/locations.html).
+The October research inferred Zurich availability without a region surcharge
+from the [locations page](https://www.rsync.net/products/locations.html). That
+inference conflicts with the August commercial response and is withdrawn as
+procurement evidence. Current region availability was not rechecked here.
 
 The Standard plan is the proposed budgeting baseline for multiple RBX components,
 subject to measured capacity and verification of subaccount restrictions. The
@@ -49,7 +65,7 @@ and [snapshot behavior](https://rsync.net/resources/howto/snapshots.html).
 
 | Requirement | Concrete preparation | Acceptance evidence |
 | --- | --- | --- |
-| Ownership | Name billing owner, recovery owner and Zurich region | Account and escalation register, without secrets |
+| Ownership | Confirm offered region and scope against the owner-approved ADR; name billing/recovery owners | Account and escalation register, without secrets |
 | Capacity | Measure consistent encrypted Headscale archive; separately measure PostgreSQL full, differential and WAL volumes through a retention cycle | Measured sizes and peak usage including rotation overlap and snapshots |
 | Access separation | Distinct administrator, component uploader and restore authority; verify scope on each identity | Positive/negative access tests; revocation of one identity does not revoke all recovery |
 | Encryption | Encrypt before upload; separate encryption custody from upload credentials | Restore using independently held recovery material |
