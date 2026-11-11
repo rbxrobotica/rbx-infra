@@ -98,7 +98,7 @@ def start(phase):
         "ProtectSystem=strict", "ProtectHome=yes", "PrivateTmp=yes", "PrivateDevices=yes",
         "ProtectKernelTunables=yes", "ProtectKernelModules=yes", "ProtectControlGroups=yes",
         "RestrictSUIDSGID=yes", "LockPersonality=yes", "MemoryDenyWriteExecute=yes",
-        "RestrictAddressFamilies=AF_INET AF_UNIX", "IPAddressDeny=any",
+        "RestrictAddressFamilies=AF_INET AF_UNIX AF_NETLINK", "IPAddressDeny=any",
         "InaccessiblePaths=/var/lib/postgresql /var/lib/rancher /etc/ssh",
         "RuntimeDirectory=rbx-dns-origin-state", "RuntimeDirectoryMode=0700",
         "ReadWritePaths=/run/rbx-dns-origin-state", "WorkingDirectory=/run/rbx-dns-origin-state",
