@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import time
 
-ROOT = pathlib.Path("/run/rbx-dns-origin-source")
+ROOT = pathlib.Path("/var/cache/rbx-dns-origin-source")
 CONTROL = pathlib.Path("/run/rbx-dns-origin-control")
 UNIT = "rbx-dns-origin.service"
 TIMER = "rbx-dns-origin-cleanup"

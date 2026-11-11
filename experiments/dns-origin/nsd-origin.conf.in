@@ -6,7 +6,7 @@ server:
     identity: "rbx-synthetic-origin"
     username: ""
     chroot: ""
-    zonesdir: "/run/rbx-dns-origin-source"
+    zonesdir: "/var/cache/rbx-dns-origin-source"
     zonelistfile: ""
     pidfile: "/run/rbx-dns-origin-state/nsd.pid"
     xfrdfile: "/run/rbx-dns-origin-state/xfrd.state"

@@ -26,7 +26,9 @@ available memory and ample `/run` tmpfs. Its active UFW currently denies incomin
 against existing local host keys; no host-key bypass or key replacement is used.
 
 The origin uses official Ubuntu NSD 4.8.0 packages extracted into a private task
-directory, without installing packages or editing host service configuration.
+directory under `/var/cache/rbx-dns-origin-source`, without installing packages
+or editing host service configuration. `/run` is mounted noexec and is retained
+only for writable transient state/control; its protections are not relaxed.
 NSD is authoritative-only. Run it as a transient DynamicUser with only
 CAP_NET_BIND_SERVICE, NoNewPrivileges, strict filesystem protection, inaccessible
 production data paths, 128 MiB memory and 10% CPU limits, and a hard runtime cap.
