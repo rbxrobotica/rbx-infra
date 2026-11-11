@@ -177,7 +177,8 @@ jobs:
     # kubeconform see as one scalar. This extracts them, runs promtool check
     # rules over every rule file and the alert unit tests in
     # scripts/tests/prometheus-rules, in podman from digest-pinned images, so
-    # a broken expression fails the PR instead of reaching Prometheus.
+    # a broken expression fails the PR instead of reaching Prometheus. The
+    # tooling itself gets bandit, osv-scanner and gitleaks (guardrails §2).
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
@@ -190,6 +191,9 @@ jobs:
 
       - name: Check and unit-test Prometheus rules with promtool 3.0.1
         run: bash scripts/test-prometheus-rules.sh
+
+      - name: Security-scan the Prometheus rule tooling
+        run: bash scripts/scan-prometheus-rules-tooling.sh
 
   validate-argocd:
     runs-on: ubuntu-latest

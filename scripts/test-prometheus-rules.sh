@@ -28,7 +28,7 @@ mkdir "$work/rules"
 echo "-- extract additionalPrometheusRulesMap"
 podman run --rm -v "$root:/repo:ro" -v "$work/rules:/rules" "$python_image" sh -ec '
   pip install --quiet --disable-pip-version-check --root-user-action=ignore \
-    --no-deps --only-binary :all: --require-hashes \
+    --only-binary :all: --require-hashes \
     -r /repo/scripts/tests/prometheus-rules/requirements.txt
   python -I /repo/scripts/extract-prometheus-rules.py \
     /repo/platform/monitoring/kube-prometheus-stack.yml /rules'

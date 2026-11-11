@@ -3,7 +3,10 @@
 # rbx.robson.fence.negative-control. Every alert gets a firing case, a
 # not-firing case and an absent-metric case; a rule that must never fire is
 # checked at several times, not only after recovery. Production scrapes and
-# evaluates every 30 s, so these do too. Run through
+# evaluates every 30 s, so these do too. One case per alert pins its firing
+# edge to one evaluation: silent 30 s before onset + `for`, firing at it, so
+# a `for` changed by 30 s or more fails (RBXRobsondFenceMetricAbsent's case is
+# in robson-fence-absent.test.yml). Run through
 # scripts/test-prometheus-rules.sh, which extracts rules/ from
 # platform/monitoring/kube-prometheus-stack.yml.
 #
@@ -115,7 +118,7 @@ tests:
       - {eval_time: 1m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
       - {eval_time: 5m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
       - {eval_time: 6m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
-      - eval_time: 7m
+      - eval_time: 6m30s
         alertname: RBXRobsondJournalLatchSet
         exp_alerts:
           - exp_labels: {severity: critical, rbx_workstream: robson-trading}
@@ -126,6 +129,11 @@ tests:
                 event-log stream was suspended, an operation was aborted, a venue mutation ran without a permit, or
                 (from PR F part 2) the generation ran out. Admissions stay closed until a restart, and from PR F
                 part 2 until a release after it. The stop will not mark the epoch clean.
+      - eval_time: 7m
+        alertname: RBXRobsondJournalLatchSet
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: *ann_JournalLatchSet
 
   - name: latch is silent at 0 and in another namespace
     interval: 30s
@@ -150,7 +158,8 @@ tests:
     alert_rule_test:
       - {eval_time: 1m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
       - {eval_time: 4m30s, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
-      - eval_time: 6m
+      - {eval_time: 5m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - eval_time: 5m30s
         alertname: RBXRobsondUnpermittedOrAbortedOperation
         exp_alerts:
           - exp_labels: {severity: critical, rbx_workstream: robson-trading}
@@ -160,6 +169,11 @@ tests:
                 Either may have reached the venue with nothing left to record the answer. The journal latch is set,
                 so admissions are closed until a restart (and from PR F part 2 a release). Check the logs for the
                 operation kind before releasing.
+      - eval_time: 6m
+        alertname: RBXRobsondUnpermittedOrAbortedOperation
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: *ann_UnpermittedOrAbortedOperation
       - eval_time: 14m
         alertname: RBXRobsondUnpermittedOrAbortedOperation
         exp_alerts:
@@ -177,6 +191,12 @@ tests:
         values: '0x10 2x50'
     alert_rule_test:
       - {eval_time: 4m30s, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 5m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - eval_time: 5m30s
+        alertname: RBXRobsondUnpermittedOrAbortedOperation
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: *ann_UnpermittedOrAbortedOperation
       - eval_time: 6m
         alertname: RBXRobsondUnpermittedOrAbortedOperation
         exp_alerts:
@@ -206,7 +226,7 @@ tests:
         values: '0x4 2x30'
     alert_rule_test:
       - {eval_time: 2m, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
-      - eval_time: 3m
+      - eval_time: 2m30s
         alertname: RBXRobsondSystemStreamSuspended
         exp_alerts:
           - exp_labels: {severity: critical, rbx_workstream: robson-trading}
@@ -216,9 +236,15 @@ tests:
                 A month reset or recalibration did not apply. That month's accounting is invalid: no automatic
                 MonthlyHalt, no new entries while it is current, no capacity in its month view, and no release
                 clears it. Nothing repairs a system stream before step 8; see stream_suspensions.
+      - eval_time: 3m
+        alertname: RBXRobsondSystemStreamSuspended
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: *ann_SystemStreamSuspended
       - {eval_time: 3m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
       - {eval_time: 6m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
-      - eval_time: 8m
+      - {eval_time: 7m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
+      - eval_time: 7m30s
         alertname: RBXRobsondPositionStreamSuspended
         exp_alerts:
           - exp_labels: {severity: warning, rbx_workstream: robson-trading}
@@ -228,6 +254,11 @@ tests:
                 A position's event stream refuses appends. The next start repairs it if its suffix is repairable;
                 until then the leg's snapshot is invalid and the budget reports no capacity while it is risk-open.
                 See stream_suspensions.repair_error.
+      - eval_time: 8m
+        alertname: RBXRobsondPositionStreamSuspended
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_PositionStreamSuspended
 
   - name: a suspended position stream alone does not page as a system stream
     interval: 30s
@@ -266,7 +297,7 @@ tests:
       - series: 'robsond_unclean_start{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="no_marker"}'
         values: '1x360'
     alert_rule_test:
-      - eval_time: 1m
+      - eval_time: 0s
         alertname: RBXRobsondUncleanStart
         exp_alerts:
           - exp_labels: {severity: warning, rbx_workstream: robson-trading, reason: no_marker}
@@ -278,6 +309,11 @@ tests:
                 (from PR F part 2) an incident open. From PR F part 2 this start is also fenced until a release.
                 Held to the robsond container's first hour by its start time from kube-state-metrics, and quiet
                 without it.
+      - eval_time: 1m
+        alertname: RBXRobsondUncleanStart
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading, reason: no_marker}
+            exp_annotations: *ann_UncleanStart_no_marker
       - eval_time: 59m
         alertname: RBXRobsondUncleanStart
         exp_alerts:
@@ -422,7 +458,8 @@ tests:
     alert_rule_test:
       - {eval_time: 1m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
       - {eval_time: 9m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
-      - eval_time: 11m
+      - {eval_time: 9m30s, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - eval_time: 10m
         alertname: RBXRobsondMonthBoundaryPending
         exp_alerts:
           - exp_labels: {severity: warning, rbx_workstream: robson-trading}
@@ -433,9 +470,15 @@ tests:
                 stream) and the 60 s poll keeps retrying. Entries are denied meanwhile (ADR-0051 §1). With Armed
                 legs and no recorded previous base the reset waits for the operator. The gauge is set when an
                 attempt returns: it is not accounting health.
+      - eval_time: 11m
+        alertname: RBXRobsondMonthBoundaryPending
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_MonthBoundaryPending
       - {eval_time: 11m, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
       - {eval_time: 59m, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
-      - eval_time: 61m
+      - {eval_time: 59m30s, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
+      - eval_time: 60m
         alertname: RBXRobsondMonthBoundaryPendingLong
         exp_alerts:
           - exp_labels: {severity: critical, rbx_workstream: robson-trading}
@@ -444,6 +487,11 @@ tests:
               description: >-
                 Entries have been denied for over an hour since a boundary attempt failed. Read the ERROR log of
                 handle_month_boundary for the cause.
+      - eval_time: 61m
+        alertname: RBXRobsondMonthBoundaryPendingLong
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: *ann_MonthBoundaryPendingLong
 
   - name: a month boundary that lands within 10 minutes does not warn
     interval: 30s
@@ -482,7 +530,8 @@ tests:
     alert_rule_test:
       - {eval_time: 1m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
       - {eval_time: 5m30s, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
-      - eval_time: 7m
+      - {eval_time: 6m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - eval_time: 6m30s
         alertname: RBXRobsondInsuranceStopStale
         exp_alerts:
           - exp_labels: {severity: critical, rbx_workstream: robson-trading}
@@ -491,6 +540,11 @@ tests:
               description: >-
                 A stop placement or re-placement failed and the tick-cadence retry has not healed it for 5 minutes
                 (ADR-0039). Daemon-down exposure is wider than one rung.
+      - eval_time: 7m
+        alertname: RBXRobsondInsuranceStopStale
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: *ann_InsuranceStopStale
 
   - name: the stale-stop alert is silent at 0
     interval: 30s
@@ -511,7 +565,8 @@ tests:
     alert_rule_test:
       - {eval_time: 1m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
       - {eval_time: 14m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
-      - eval_time: 16m
+      - {eval_time: 14m30s, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - eval_time: 15m
         alertname: RBXRobsondInsuranceStopGaugeAbsent
         exp_alerts:
           - exp_labels: {severity: warning, rbx_workstream: robson-trading, kubernetes_namespace: robson}
@@ -521,6 +576,11 @@ tests:
                 robsond_insurance_stop_stale_positions is missing from a robsond that exports
                 robsond_admission_fence_closed, so RBXRobsondInsuranceStopStale cannot fire. From PR F part 2 the
                 gauge exports at 0 from startup: this is a regression.
+      - eval_time: 16m
+        alertname: RBXRobsondInsuranceStopGaugeAbsent
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading, kubernetes_namespace: robson}
+            exp_annotations: *ann_InsuranceStopGaugeAbsent
 
   - name: on part 1 the stale-stop gauge and the fence are both absent, and both stale-stop alerts are silent
     interval: 30s
@@ -555,7 +615,8 @@ tests:
     alert_rule_test:
       - {eval_time: 1m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
       - {eval_time: 9m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
-      - eval_time: 11m
+      - {eval_time: 9m30s, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+      - eval_time: 10m
         alertname: RBXRobsondJournalRetrySetStuck
         exp_alerts:
           - exp_labels: {severity: warning, rbx_workstream: robson-trading}
@@ -565,6 +626,11 @@ tests:
                 Journal rows, stream suspensions or (from PR F part 2) incident upserts are not landing. A stop
                 cannot mark clean and a release answers `persisting` meanwhile. At 1,024 entries the next one is a
                 persistence failure, which latches.
+      - eval_time: 11m
+        alertname: RBXRobsondJournalRetrySetStuck
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_JournalRetrySetStuck
       - {eval_time: 16m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
 
   - name: a retry set that keeps draining, or one in another namespace, does not warn
@@ -590,7 +656,8 @@ tests:
     alert_rule_test:
       - {eval_time: 1m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
       - {eval_time: 29m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
-      - eval_time: 31m
+      - {eval_time: 30m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - eval_time: 30m30s
         alertname: RBXRobsondOrphanStopsWithheld
         exp_alerts:
           - exp_labels: {severity: warning, rbx_workstream: robson-trading}
@@ -600,10 +667,16 @@ tests:
                 For 30 minutes the sweep has kept ins- orders outside coverage because an incident is open, the
                 fence is closed or the latch is set (design §2.9). They may partially reduce an Active leg on the
                 same symbol and side. The pending list shows them under withheld_protective_orders.
+      - eval_time: 31m
+        alertname: RBXRobsondOrphanStopsWithheld
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_OrphanStopsWithheld
       # Withholding stopped at 40 m (released); the window empties by 70 m.
       - {eval_time: 75m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
       - {eval_time: 1m30s, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
-      - eval_time: 3m
+      - {eval_time: 2m, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
+      - eval_time: 2m30s
         alertname: RBXRobsondOrphanWithheldReportTruncated
         exp_alerts:
           - exp_labels: {severity: warning, rbx_workstream: robson-trading}
@@ -611,6 +684,11 @@ tests:
               summary: "More than 500 orphan stops withheld in one scan"
               description: >-
                 The pending list shows 500; the veto applies to every one. Read the venue's open orders.
+      - eval_time: 3m
+        alertname: RBXRobsondOrphanWithheldReportTruncated
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_OrphanWithheldReportTruncated
       - {eval_time: 40m, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
 
   - name: one withheld scan never warns, before or after its window ends
@@ -656,7 +734,8 @@ tests:
     alert_rule_test:
       - {eval_time: 1m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
       - {eval_time: 29m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
-      - eval_time: 31m
+      - {eval_time: 30m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - eval_time: 30m30s
         alertname: RBXRobsondJournalStatementBound
         exp_alerts:
           - exp_labels: {severity: warning, rbx_workstream: robson-trading}
@@ -665,6 +744,11 @@ tests:
               description: >-
                 A warning threshold for composite operations, not a maximum. Review the operation's venue work for a
                 loop; robsond_journal_operation_statements_max shows the largest since the start.
+      - eval_time: 31m
+        alertname: RBXRobsondJournalStatementBound
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_JournalStatementBound
       - eval_time: 89m
         alertname: RBXRobsondJournalStatementBound
         exp_alerts:
@@ -816,7 +900,7 @@ tests:
     alert_rule_test:
       - {eval_time: 5m, alertname: RBXRobsondTargetDown, exp_alerts: []}
       - {eval_time: 13m, alertname: RBXRobsondTargetDown, exp_alerts: []}
-      - eval_time: 14m
+      - eval_time: 13m30s
         alertname: RBXRobsondTargetDown
         exp_alerts:
           - exp_labels: {severity: critical, rbx_workstream: robson-trading}
@@ -825,6 +909,11 @@ tests:
               description: >-
                 No healthy robsond scrape target for 3 minutes, longer than a deploy's gap: down, restarting, or
                 scrape broken. The exchange stops are the only protection meanwhile.
+      - eval_time: 14m
+        alertname: RBXRobsondTargetDown
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: *ann_TargetDown
 
   - name: target down pages when the pod is gone and nothing replaces it
     interval: 30s
@@ -893,7 +982,7 @@ tests:
         values: '1x20'
     alert_rule_test:
       - {eval_time: 1m30s, alertname: RBXRobsondRestarting, exp_alerts: []}
-      - eval_time: 2m30s
+      - eval_time: 2m
         alertname: RBXRobsondRestarting
         exp_alerts:
           - exp_labels: {severity: critical, rbx_workstream: robson-trading, namespace: robson, pod: robsond-6c9d8f7b5-a1b2c, container: robsond, reason: CrashLoopBackOff}
@@ -902,6 +991,11 @@ tests:
               description: >-
                 The robsond container has been waiting to start again for 2 minutes. A fast crash loop shows first
                 as RBXRobsondTargetDown; this one names the pod and the reason.
+      - eval_time: 2m30s
+        alertname: RBXRobsondRestarting
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading, namespace: robson, pod: robsond-6c9d8f7b5-a1b2c, container: robsond, reason: CrashLoopBackOff}
+            exp_annotations: *ann_Restarting_CrashLoopBackOff
 
   - name: a creating container, another namespace or container, or no series never pages
     interval: 30s

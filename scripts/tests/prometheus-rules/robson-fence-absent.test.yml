@@ -145,7 +145,7 @@ tests:
     alert_rule_test:
       - {eval_time: 1m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
       - {eval_time: 4m30s, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
-      - eval_time: 6m
+      - eval_time: 5m
         alertname: RBXRobsondFenceMetricAbsent
         exp_alerts:
           - exp_labels: {severity: critical, rbx_workstream: robson-trading, kubernetes_namespace: robson}
@@ -155,6 +155,11 @@ tests:
                 No robsond_admission_fence_closed series from namespace robson for 5 minutes: robsond is
                 down or not scraped, or runs an image before PR F part 2. Every fence alert is blind
                 meanwhile, and the exchange stops are the only protection.
+      - eval_time: 6m
+        alertname: RBXRobsondFenceMetricAbsent
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading, kubernetes_namespace: robson}
+            exp_annotations: *ann_FenceMetricAbsent
 
   - name: part 2 exports the fence from startup, so a running daemon is silent
     interval: 30s
