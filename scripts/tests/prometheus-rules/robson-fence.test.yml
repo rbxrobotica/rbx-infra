@@ -1,0 +1,994 @@
+# promtool unit tests for the Robson fence alerts (ADR-0056 step 7, PR F) in
+# rbxrobotica/rbx-infra: groups rbx.robson.fence and
+# rbx.robson.fence.negative-control. Every alert gets a firing case, a
+# not-firing case and an absent-metric case; a rule that must never fire is
+# checked at several times, not only after recovery. Production scrapes and
+# evaluates every 30 s, so these do too. Run through
+# scripts/test-prometheus-rules.sh, which extracts rules/ from
+# platform/monitoring/kube-prometheus-stack.yml.
+#
+# Time starts at 0 (the Unix epoch), so kube_pod_container_state_started holds
+# a start in seconds from there: -7200 is a container started 2 h before the
+# test window, 3630 one that started at 60.5 m.
+rule_files:
+  - rules/rbx-robson-trading.yml
+
+evaluation_interval: 30s
+
+tests:
+  # ── RBXRobsondAdmissionFenceClosed ──────────────────────────────────────
+  - name: fence closed fires per reason after 5 minutes and clears on release
+    interval: 30s
+    input_series:
+      # unclean_start closed from 0 to 20 m, released at 20.5 m.
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="unclean_start"}'
+        values: '1x40 0x40'
+      # uncertain_outcome closed from 10 m.
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="uncertain_outcome"}'
+        values: '0x19 1x21 0x40'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="unknown"}'
+        values: '0x80'
+    alert_rule_test:
+      - {eval_time: 2m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - {eval_time: 4m30s, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - eval_time: 5m
+        alertname: RBXRobsondAdmissionFenceClosed
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading, reason: unclean_start}
+            exp_annotations: &ann_AdmissionFenceClosed_unclean_start
+              summary: "Robson admissions are fenced: unclean_start"
+              description: >-
+                An open incident (unclean_start) has kept new entries closed for 5 minutes (ADR-0056 step 7). Exits,
+                stops and the protective API continue. Read GET /recovery/pending, then release at its generation
+                with POST /recovery/release once the risk is understood. A latch-class reason (any but
+                unclean_start, uncertain_outcome and unknown) needs a restart first: only a restart clears the
+                latch. EXPECTED once, with reason unclean_start, at the first deploy of PR F part 2: that start is
+                fenced by design and this pages unless the operator releases within 5 minutes. That page is not a
+                failure.
+      - eval_time: 16m
+        alertname: RBXRobsondAdmissionFenceClosed
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading, reason: unclean_start}
+            exp_annotations: *ann_AdmissionFenceClosed_unclean_start
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading, reason: uncertain_outcome}
+            exp_annotations: &ann_AdmissionFenceClosed_uncertain_outcome
+              summary: "Robson admissions are fenced: uncertain_outcome"
+              description: >-
+                An open incident (uncertain_outcome) has kept new entries closed for 5 minutes (ADR-0056 step 7).
+                Exits, stops and the protective API continue. Read GET /recovery/pending, then release at its
+                generation with POST /recovery/release once the risk is understood. A latch-class reason (any but
+                unclean_start, uncertain_outcome and unknown) needs a restart first: only a restart clears the
+                latch. EXPECTED once, with reason unclean_start, at the first deploy of PR F part 2: that start is
+                fenced by design and this pages unless the operator releases within 5 minutes. That page is not a
+                failure.
+      - {eval_time: 25m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+
+  - name: fence closed is silent while the fence metric is absent (part 1) or in another namespace
+    interval: 30s
+    input_series:
+      - series: 'robsond_cycles_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",result="success"}'
+        values: '0+10x80'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-t",reason="unclean_start"}'
+        values: '1x80'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - {eval_time: 6m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - {eval_time: 20m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - {eval_time: 40m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+
+  # ── Absent metrics: a daemon exporting none of the rules' series ────────
+  - name: with none of their series, the robsond-metric alerts stay silent throughout
+    interval: 30s
+    input_series:
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '1x80'
+      - series: 'robsond_cycles_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",result="success"}'
+        values: '0+10x80'
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '0x80'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - {eval_time: 20m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+      - {eval_time: 35m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+
+  # ── RBXRobsondJournalLatchSet ───────────────────────────────────────────
+  - name: latch pages one minute after it is set
+    interval: 30s
+    input_series:
+      - series: 'robsond_journal_latch{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x10 1x30'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - {eval_time: 5m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - {eval_time: 6m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - eval_time: 7m
+        alertname: RBXRobsondJournalLatchSet
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: &ann_JournalLatchSet
+              summary: "Robson journal latch is set"
+              description: >-
+                A venue send went out without its journal row, journal history was discarded or conflicted, an
+                event-log stream was suspended, an operation was aborted, a venue mutation ran without a permit, or
+                (from PR F part 2) the generation ran out. Admissions stay closed until a restart, and from PR F
+                part 2 until a release after it. The stop will not mark the epoch clean.
+
+  - name: latch is silent at 0 and in another namespace
+    interval: 30s
+    input_series:
+      - series: 'robsond_journal_latch{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x40'
+      - series: 'robsond_journal_latch{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-t"}'
+        values: '1x40'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - {eval_time: 5m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+
+  # ── RBXRobsondUnpermittedOrAbortedOperation ─────────────────────────────
+  - name: an unpermitted mutation pages at once and clears 10 minutes later
+    interval: 30s
+    input_series:
+      - series: 'robsond_unpermitted_mutations_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x10 1x50'
+      - series: 'robsond_aborted_operations_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x60'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 4m30s, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - eval_time: 6m
+        alertname: RBXRobsondUnpermittedOrAbortedOperation
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: &ann_UnpermittedOrAbortedOperation
+              summary: "Robson ran a venue mutation without a permit, or dropped an operation midway"
+              description: >-
+                Either may have reached the venue with nothing left to record the answer. The journal latch is set,
+                so admissions are closed until a restart (and from PR F part 2 a release). Check the logs for the
+                operation kind before releasing.
+      - eval_time: 14m
+        alertname: RBXRobsondUnpermittedOrAbortedOperation
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: *ann_UnpermittedOrAbortedOperation
+      - {eval_time: 16m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 25m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+
+  - name: an aborted operation pages at once
+    interval: 30s
+    input_series:
+      - series: 'robsond_unpermitted_mutations_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x60'
+      - series: 'robsond_aborted_operations_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x10 2x50'
+    alert_rule_test:
+      - {eval_time: 4m30s, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - eval_time: 6m
+        alertname: RBXRobsondUnpermittedOrAbortedOperation
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: *ann_UnpermittedOrAbortedOperation
+
+  - name: unpermitted and aborted counters are silent when flat or in another namespace
+    interval: 30s
+    input_series:
+      - series: 'robsond_unpermitted_mutations_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '3x60'
+      - series: 'robsond_aborted_operations_total{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-t"}'
+        values: '0+1x60'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 5m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 12m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 25m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+
+  # ── RBXRobsondSystemStreamSuspended, RBXRobsondPositionStreamSuspended ──
+  - name: a system stream pages at once, a position stream warns after 5 minutes
+    interval: 30s
+    input_series:
+      - series: 'robsond_streams_suspended{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",kind="system"}'
+        values: '0x4 1x30'
+      - series: 'robsond_streams_suspended{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",kind="position"}'
+        values: '0x4 2x30'
+    alert_rule_test:
+      - {eval_time: 2m, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
+      - eval_time: 3m
+        alertname: RBXRobsondSystemStreamSuspended
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: &ann_SystemStreamSuspended
+              summary: "Robson month-boundary stream suspended"
+              description: >-
+                A month reset or recalibration did not apply. That month's accounting is invalid: no automatic
+                MonthlyHalt, no new entries while it is current, no capacity in its month view, and no release
+                clears it. Nothing repairs a system stream before step 8; see stream_suspensions.
+      - {eval_time: 3m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
+      - {eval_time: 6m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
+      - eval_time: 8m
+        alertname: RBXRobsondPositionStreamSuspended
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: &ann_PositionStreamSuspended
+              summary: "Robson position stream suspended"
+              description: >-
+                A position's event stream refuses appends. The next start repairs it if its suffix is repairable;
+                until then the leg's snapshot is invalid and the budget reports no capacity while it is risk-open.
+                See stream_suspensions.repair_error.
+
+  - name: a suspended position stream alone does not page as a system stream
+    interval: 30s
+    input_series:
+      - series: 'robsond_streams_suspended{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",kind="system"}'
+        values: '0x30'
+      - series: 'robsond_streams_suspended{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",kind="position"}'
+        values: '1x30'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
+      - {eval_time: 5m, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
+      - {eval_time: 10m, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
+
+  - name: suspended-stream alerts are silent at 0 and in another namespace
+    interval: 30s
+    input_series:
+      - series: 'robsond_streams_suspended{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",kind="position"}'
+        values: '0x30'
+      - series: 'robsond_streams_suspended{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-t",kind="system"}'
+        values: '1x30'
+      - series: 'robsond_streams_suspended{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-t",kind="position"}'
+        values: '1x30'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
+      - {eval_time: 10m, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
+      - {eval_time: 6m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
+      - {eval_time: 10m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
+
+  # ── RBXRobsondUncleanStart ──────────────────────────────────────────────
+  - name: a start after an unclean stop warns for the container's first hour
+    interval: 30s
+    input_series:
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '0x360'
+      - series: 'robsond_unclean_start{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="no_marker"}'
+        values: '1x360'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: RBXRobsondUncleanStart
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading, reason: no_marker}
+            exp_annotations: &ann_UncleanStart_no_marker
+              summary: "Robson started after an unclean stop"
+              description: >-
+                The previous robsond process wrote no clean-stop marker: it crashed or was killed (OOM, SIGKILL),
+                ran past its stop deadline, or stopped latched, with an operation aborted, something unlanded or
+                (from PR F part 2) an incident open. From PR F part 2 this start is also fenced until a release.
+                Held to the robsond container's first hour by its start time from kube-state-metrics, and quiet
+                without it.
+      - eval_time: 59m
+        alertname: RBXRobsondUncleanStart
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading, reason: no_marker}
+            exp_annotations: *ann_UncleanStart_no_marker
+      - {eval_time: 61m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+
+  - name: marker_version, which every start before part 2 reports, never warns
+    interval: 30s
+    input_series:
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '0x240'
+      - series: 'robsond_unclean_start{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="marker_version"}'
+        values: '1x240'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 30m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 59m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 90m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+
+  - name: a scrape gap on a long-running unclean-started process does not warn again (Codex round 1)
+    interval: 30s
+    input_series:
+      # Container started 10 h before the window; kube-state-metrics keeps
+      # reporting it. robsond's scrape fails from 60.5 m to 62 m.
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '-36000x500'
+      - series: 'robsond_unclean_start{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="no_marker"}'
+        values: '1x120 stale _x3 1x300'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 63m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 121m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 122m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 123m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 3h, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+
+  - name: an in-place restart in the same pod warns again for the new container's first hour
+    interval: 30s
+    input_series:
+      # The old container started 2 h before the window, itself after an
+      # unclean stop; it is killed at 60 m and restarts in place at 60.5 m.
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '-7200x120 3630x300'
+      - series: 'robsond_unclean_start{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="no_marker"}'
+        values: '1x120 stale _ 1x300'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 30m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 59m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - eval_time: 62m
+        alertname: RBXRobsondUncleanStart
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading, reason: no_marker}
+            exp_annotations: *ann_UncleanStart_no_marker
+      - eval_time: 119m
+        alertname: RBXRobsondUncleanStart
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading, reason: no_marker}
+            exp_annotations: *ann_UncleanStart_no_marker
+      - {eval_time: 122m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+
+  - name: a new pod after an unclean stop warns, and the clean pod before it did not
+    interval: 30s
+    input_series:
+      # Pod a: a part-1 start (marker_version) for 2 h, then killed.
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '-7200x240 stale'
+      - series: 'robsond_unclean_start{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="marker_version"}'
+        values: '1x240 stale'
+      # Pod b's container starts at 120.5 m; its predecessor wrote no marker.
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-b",container="robsond",uid="u-b"}'
+        values: '_x241 7230x200'
+      - series: 'robsond_unclean_start{kubernetes_namespace="robson",kubernetes_pod_name="robsond-b",reason="no_marker"}'
+        values: '_x242 1x200'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 1h, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - eval_time: 2h05m
+        alertname: RBXRobsondUncleanStart
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading, reason: no_marker}
+            exp_annotations: *ann_UncleanStart_no_marker
+      - eval_time: 3h
+        alertname: RBXRobsondUncleanStart
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading, reason: no_marker}
+            exp_annotations: *ann_UncleanStart_no_marker
+      - {eval_time: 3h05m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+
+  - name: another container's recent start does not stand in for this pod's
+    interval: 30s
+    input_series:
+      # robsond-a has run for 2 h after an unclean stop; robsond-b, with no
+      # robsond series, started recently. Only a per-pod join keeps them apart.
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '-7200x120'
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-b",container="robsond",uid="u-b"}'
+        values: '0x120'
+      - series: 'robsond_unclean_start{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="no_marker"}'
+        values: '1x120'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 10m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 30m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+
+  - name: without kube-state-metrics the unclean-start warning is quiet (documented)
+    interval: 30s
+    input_series:
+      - series: 'robsond_unclean_start{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="no_marker"}'
+        values: '1x60'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 10m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 25m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+
+  - name: a clean start (no unclean series) or another namespace never warns
+    interval: 30s
+    input_series:
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '0x60'
+      - series: 'robsond_cycles_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",result="success"}'
+        values: '0+10x60'
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson-testnet",pod="robsond-t",container="robsond",uid="u-t"}'
+        values: '0x60'
+      - series: 'robsond_unclean_start{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-t",reason="no_marker"}'
+        values: '1x60'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 10m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 25m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+
+  # ── RBXRobsondMonthBoundaryPending, RBXRobsondMonthBoundaryPendingLong ──
+  - name: a pending month boundary warns at 10 minutes and pages at 60
+    interval: 30s
+    input_series:
+      - series: 'robsond_month_boundary_pending{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '1x180'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 9m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - eval_time: 11m
+        alertname: RBXRobsondMonthBoundaryPending
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: &ann_MonthBoundaryPending
+              summary: "Robson month-boundary reset has not landed"
+              description: >-
+                A boundary attempt failed (wallet read, the previous month's base, the database or a suspended month
+                stream) and the 60 s poll keeps retrying. Entries are denied meanwhile (ADR-0051 §1). With Armed
+                legs and no recorded previous base the reset waits for the operator. The gauge is set when an
+                attempt returns: it is not accounting health.
+      - {eval_time: 11m, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
+      - {eval_time: 59m, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
+      - eval_time: 61m
+        alertname: RBXRobsondMonthBoundaryPendingLong
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: &ann_MonthBoundaryPendingLong
+              summary: "Robson month-boundary reset still pending after an hour"
+              description: >-
+                Entries have been denied for over an hour since a boundary attempt failed. Read the ERROR log of
+                handle_month_boundary for the cause.
+
+  - name: a month boundary that lands within 10 minutes does not warn
+    interval: 30s
+    input_series:
+      - series: 'robsond_month_boundary_pending{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0 1x15 0x60'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 5m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 8m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 10m30s, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 12m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 30m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+
+  - name: month-boundary alerts are silent at 0 and in another namespace
+    interval: 30s
+    input_series:
+      - series: 'robsond_month_boundary_pending{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x180'
+      - series: 'robsond_month_boundary_pending{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-t"}'
+        values: '1x180'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 11m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 70m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 11m, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
+      - {eval_time: 70m, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
+
+  # ── RBXRobsondInsuranceStopStale ────────────────────────────────────────
+  - name: a stale exchange stop pages after 5 minutes
+    interval: 30s
+    input_series:
+      - series: 'robsond_insurance_stop_stale_positions{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x2 1x30'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - {eval_time: 5m30s, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - eval_time: 7m
+        alertname: RBXRobsondInsuranceStopStale
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: &ann_InsuranceStopStale
+              summary: "Robson has open legs whose exchange stop is behind"
+              description: >-
+                A stop placement or re-placement failed and the tick-cadence retry has not healed it for 5 minutes
+                (ADR-0039). Daemon-down exposure is wider than one rung.
+
+  - name: the stale-stop alert is silent at 0
+    interval: 30s
+    input_series:
+      - series: 'robsond_insurance_stop_stale_positions{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x30'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - {eval_time: 6m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - {eval_time: 10m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+
+  # ── RBXRobsondInsuranceStopGaugeAbsent ──────────────────────────────────
+  - name: a daemon exporting the fence but not the stale-stop gauge warns after 15 minutes
+    interval: 30s
+    input_series:
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="unclean_start"}'
+        values: '0x60'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 14m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - eval_time: 16m
+        alertname: RBXRobsondInsuranceStopGaugeAbsent
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading, kubernetes_namespace: robson}
+            exp_annotations: &ann_InsuranceStopGaugeAbsent
+              summary: "Robson exports its fence but not its stale-stop gauge"
+              description: >-
+                robsond_insurance_stop_stale_positions is missing from a robsond that exports
+                robsond_admission_fence_closed, so RBXRobsondInsuranceStopStale cannot fire. From PR F part 2 the
+                gauge exports at 0 from startup: this is a regression.
+
+  - name: on part 1 the stale-stop gauge and the fence are both absent, and both stale-stop alerts are silent
+    interval: 30s
+    input_series:
+      - series: 'robsond_cycles_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",result="success"}'
+        values: '0+10x60'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 16m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 25m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 6m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - {eval_time: 25m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+
+  - name: the stale-stop gauge's absence is silent when part 2 exports both
+    interval: 30s
+    input_series:
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a",reason="unclean_start"}'
+        values: '0x60'
+      - series: 'robsond_insurance_stop_stale_positions{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x60'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 16m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 25m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+
+  # ── RBXRobsondJournalRetrySetStuck ──────────────────────────────────────
+  - name: a retry set nonzero for 10 minutes warns, and clears when it drains
+    interval: 30s
+    input_series:
+      - series: 'robsond_journal_retry_set_depth{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '3x30 0x20'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+      - {eval_time: 9m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+      - eval_time: 11m
+        alertname: RBXRobsondJournalRetrySetStuck
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: &ann_JournalRetrySetStuck
+              summary: "Robson journal writes have been pending for 10 minutes"
+              description: >-
+                Journal rows, stream suspensions or (from PR F part 2) incident upserts are not landing. A stop
+                cannot mark clean and a release answers `persisting` meanwhile. At 1,024 entries the next one is a
+                persistence failure, which latches.
+      - {eval_time: 16m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+
+  - name: a retry set that keeps draining, or one in another namespace, does not warn
+    interval: 30s
+    input_series:
+      - series: 'robsond_journal_retry_set_depth{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '1 0 2 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0'
+      - series: 'robsond_journal_retry_set_depth{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-t"}'
+        values: '5x40'
+    alert_rule_test:
+      - {eval_time: 5m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+      - {eval_time: 11m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+      - {eval_time: 17m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+
+  # ── RBXRobsondOrphanStopsWithheld, RBXRobsondOrphanWithheldReportTruncated
+  - name: orphan stops withheld for 30 minutes warn, and a truncated report warns at once
+    interval: 30s
+    input_series:
+      - series: 'robsond_orphan_cancel_withheld_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0+1x80 80x100'
+      - series: 'robsond_orphan_cancel_withheld_overflow_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x4 3x170'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 29m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - eval_time: 31m
+        alertname: RBXRobsondOrphanStopsWithheld
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: &ann_OrphanStopsWithheld
+              summary: "Robson is keeping orphan stop orders while fenced"
+              description: >-
+                For 30 minutes the sweep has kept ins- orders outside coverage because an incident is open, the
+                fence is closed or the latch is set (design §2.9). They may partially reduce an Active leg on the
+                same symbol and side. The pending list shows them under withheld_protective_orders.
+      # Withholding stopped at 40 m (released); the window empties by 70 m.
+      - {eval_time: 75m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 1m30s, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
+      - eval_time: 3m
+        alertname: RBXRobsondOrphanWithheldReportTruncated
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: &ann_OrphanWithheldReportTruncated
+              summary: "More than 500 orphan stops withheld in one scan"
+              description: >-
+                The pending list shows 500; the veto applies to every one. Read the venue's open orders.
+      - {eval_time: 40m, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
+
+  - name: one withheld scan never warns, before or after its window ends
+    interval: 30s
+    input_series:
+      # One scan withholds at 5.5 m; the increase stays in the 30 m window
+      # until 35 m, so the 30 m hold is never reached.
+      - series: 'robsond_orphan_cancel_withheld_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x10 2x100'
+    alert_rule_test:
+      - {eval_time: 6m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 20m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 30m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 34m30s, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 35m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 35m30s, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 36m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 45m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+
+  - name: orphan alerts are silent at 0
+    interval: 30s
+    input_series:
+      - series: 'robsond_orphan_cancel_withheld_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x100'
+      - series: 'robsond_orphan_cancel_withheld_overflow_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x100'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 45m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
+      - {eval_time: 45m, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
+
+  # ── RBXRobsondJournalStatementBound ─────────────────────────────────────
+  - name: an operation past 40 statements warns for an hour
+    interval: 30s
+    input_series:
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '-7200x260'
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '0x60 1x200'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 29m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - eval_time: 31m
+        alertname: RBXRobsondJournalStatementBound
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: &ann_JournalStatementBound
+              summary: "A Robson operation went past 40 journal statements"
+              description: >-
+                A warning threshold for composite operations, not a maximum. Review the operation's venue work for a
+                loop; robsond_journal_operation_statements_max shows the largest since the start.
+      - eval_time: 89m
+        alertname: RBXRobsondJournalStatementBound
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_JournalStatementBound
+      - {eval_time: 92m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+
+  - name: an increase across an observed in-place reset warns
+    interval: 30s
+    input_series:
+      # Pod a restarts in place at 120.5 m, and a zero is scraped.
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '-7200x240 7230x60'
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '5x240 0 1x60'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 115m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - eval_time: 125m
+        alertname: RBXRobsondJournalStatementBound
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_JournalStatementBound
+
+  - name: an increase across an observed reset warns without kube-state-metrics
+    interval: 30s
+    input_series:
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '5x240 0 1x60'
+    alert_rule_test:
+      - {eval_time: 115m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - eval_time: 125m
+        alertname: RBXRobsondJournalStatementBound
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_JournalStatementBound
+
+  - name: an in-place restart whose startup passed the bound before any scrape warns, with no zero ever scraped (Codex round 1)
+    interval: 30s
+    input_series:
+      # The old container's count has been 1 for 90 m. It restarts in place
+      # at 90.5 m and the new process is at 1 by its first scrape at 91.5 m:
+      # every sample is 1, so increase() sees nothing.
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '-7200x180 5430x300'
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '1x180 stale _ 1x300'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 60m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 89m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - eval_time: 92m
+        alertname: RBXRobsondJournalStatementBound
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_JournalStatementBound
+      - eval_time: 150m
+        alertname: RBXRobsondJournalStatementBound
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_JournalStatementBound
+      - {eval_time: 152m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+
+  - name: a scrape gap on a long-running process with a count does not warn (Codex round 1)
+    interval: 30s
+    input_series:
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '-36000x500'
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '1x120 stale _x3 1x300'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 63m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 121m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 122m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 123m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 150m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+
+  - name: a container born past the bound (startup) warns for its first hour
+    interval: 30s
+    input_series:
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '_x10 300x200'
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '_x10 2x200'
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: RBXRobsondJournalStatementBound
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_JournalStatementBound
+      - eval_time: 60m
+        alertname: RBXRobsondJournalStatementBound
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: robson-trading}
+            exp_annotations: *ann_JournalStatementBound
+      - {eval_time: 66m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 90m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+
+  - name: a long-running count, another namespace, or a startup count without kube-state-metrics does not warn
+    interval: 30s
+    input_series:
+      # Pod a: a flat count on a container 2 h old when the window opens.
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '-7200x300'
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '2x300'
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-t"}'
+        values: '0+1x300'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 30m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 59m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+
+  - name: another container's recent start does not stand in for this pod's statement count
+    interval: 30s
+    input_series:
+      # robsond-a has run for 2 h with a count of 2; robsond-b, with no
+      # robsond series, started recently. Only a per-pod join keeps them apart.
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-a",container="robsond",uid="u-a"}'
+        values: '-7200x120'
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-b",container="robsond",uid="u-b"}'
+        values: '0x120'
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '2x120'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 10m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 30m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+
+  - name: without kube-state-metrics a startup count is quiet (documented)
+    interval: 30s
+    input_series:
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-a"}'
+        values: '_x10 2x100'
+    alert_rule_test:
+      - {eval_time: 10m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 30m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+
+  # ── RBXRobsondTargetDown ────────────────────────────────────────────────
+  - name: target down pages 3 minutes after up drops to 0
+    interval: 30s
+    input_series:
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="robsond-6c9d8f7b5-a1b2c"}'
+        values: '1x20 0x20'
+    alert_rule_test:
+      - {eval_time: 5m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 13m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - eval_time: 14m
+        alertname: RBXRobsondTargetDown
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: &ann_TargetDown
+              summary: "robsond is not being scraped"
+              description: >-
+                No healthy robsond scrape target for 3 minutes, longer than a deploy's gap: down, restarting, or
+                scrape broken. The exchange stops are the only protection meanwhile.
+
+  - name: target down pages when the pod is gone and nothing replaces it
+    interval: 30s
+    input_series:
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="robsond-6c9d8f7b5-a1b2c"}'
+        values: '1x20 stale'
+      - series: 'robsond_cycles_total{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-t",result="success"}'
+        values: '0+1x40'
+    alert_rule_test:
+      - {eval_time: 13m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - eval_time: 14m
+        alertname: RBXRobsondTargetDown
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: *ann_TargetDown
+
+  - name: a deploy gap as long as the longest measured (5 evaluations, 2 minutes) stays silent
+    interval: 30s
+    input_series:
+      # Recreate: the old pod's listener closes at 10 m, the pod goes at
+      # 10.5 m, and the new pod is scraped healthy from 12.5 m. A 2-minute
+      # hold would page at 12 m.
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="robsond-6c9d8f7b5-a1b2c"}'
+        values: '1x19 0 stale'
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="robsond-7f4b9c8d6-d3e4f"}'
+        values: '_x25 1x40'
+    alert_rule_test:
+      - {eval_time: 11m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 12m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 13m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 16m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+
+  - name: other healthy targets do not hide a missing robsond
+    interval: 30s
+    input_series:
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="robsond-6c9d8f7b5-a1b2c"}'
+        values: '1x4 stale'
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="redis-5d6f7c8b9-x1y2z"}'
+        values: '1x40'
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-5b6c7d8e9-t1u2v"}'
+        values: '1x40'
+      - series: 'up{job="kube-state-metrics",kubernetes_namespace="robson",kubernetes_pod_name="robsond-6c9d8f7b5-a1b2c"}'
+        values: '1x40'
+    alert_rule_test:
+      - eval_time: 8m
+        alertname: RBXRobsondTargetDown
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading}
+            exp_annotations: *ann_TargetDown
+
+  - name: a healthy robsond target never pages
+    interval: 30s
+    input_series:
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="robsond-6c9d8f7b5-a1b2c"}'
+        values: '1x40'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 5m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+
+  # ── RBXRobsondRestarting ────────────────────────────────────────────────
+  - name: a crash loop for 2 minutes pages with the pod and the reason
+    interval: 30s
+    input_series:
+      - series: 'kube_pod_container_status_waiting_reason{job="kube-state-metrics",namespace="robson",pod="robsond-6c9d8f7b5-a1b2c",container="robsond",reason="CrashLoopBackOff"}'
+        values: '1x20'
+    alert_rule_test:
+      - {eval_time: 1m30s, alertname: RBXRobsondRestarting, exp_alerts: []}
+      - eval_time: 2m30s
+        alertname: RBXRobsondRestarting
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading, namespace: robson, pod: robsond-6c9d8f7b5-a1b2c, container: robsond, reason: CrashLoopBackOff}
+            exp_annotations: &ann_Restarting_CrashLoopBackOff
+              summary: "robsond is restarting (robsond-6c9d8f7b5-a1b2c: CrashLoopBackOff)"
+              description: >-
+                The robsond container has been waiting to start again for 2 minutes. A fast crash loop shows first
+                as RBXRobsondTargetDown; this one names the pod and the reason.
+
+  - name: a creating container, another namespace or container, or no series never pages
+    interval: 30s
+    input_series:
+      - series: 'kube_pod_container_status_waiting_reason{job="kube-state-metrics",namespace="robson",pod="robsond-6c9d8f7b5-a1b2c",container="robsond",reason="ContainerCreating"}'
+        values: '1x20'
+      - series: 'kube_pod_container_status_waiting_reason{job="kube-state-metrics",namespace="robson-testnet",pod="robsond-5b6c7d8e9-t1u2v",container="robsond",reason="CrashLoopBackOff"}'
+        values: '1x20'
+      - series: 'kube_pod_container_status_waiting_reason{job="kube-state-metrics",namespace="robson",pod="redis-5d6f7c8b9-x1y2z",container="redis",reason="CrashLoopBackOff"}'
+        values: '1x20'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondRestarting, exp_alerts: []}
+      - {eval_time: 3m, alertname: RBXRobsondRestarting, exp_alerts: []}
+      - {eval_time: 5m, alertname: RBXRobsondRestarting, exp_alerts: []}
+      - {eval_time: 9m, alertname: RBXRobsondRestarting, exp_alerts: []}
+
+  # ── Part 2's fenced first start, end to end ─────────────────────────────
+  - name: part 2's first deploy pages the fence at 5 minutes, nothing else, and clears on release
+    interval: 30s
+    input_series:
+      # Pod p1 runs F part 1 (container started 2 h before the window): its
+      # start reported marker_version. Its listener closes at 60 m and the
+      # pod is gone at 60.5 m.
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-1111111111-aaaaa",container="robsond",uid="u-1"}'
+        values: '-7200x120 stale'
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="robsond-1111111111-aaaaa"}'
+        values: '1x119 0 stale'
+      - series: 'robsond_unclean_start{kubernetes_namespace="robson",kubernetes_pod_name="robsond-1111111111-aaaaa",reason="marker_version"}'
+        values: '1x119 stale'
+      - series: 'robsond_journal_latch{kubernetes_namespace="robson",kubernetes_pod_name="robsond-1111111111-aaaaa"}'
+        values: '0x119 stale'
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-1111111111-aaaaa"}'
+        values: '0x119 stale'
+      - series: 'robsond_cycles_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-1111111111-aaaaa",result="success"}'
+        values: '0+10x119 stale'
+      # Pod p2 runs F part 2; its container starts at 61 m and is scraped
+      # from 61.5 m. Its predecessor marked version 1, so the start is
+      # unclean (marker_version) and fenced: unclean_start until the
+      # operator releases at 70 m.
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-2222222222-bbbbb",container="robsond",uid="u-2"}'
+        values: '_x122 3660x120'
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '_x123 1x120'
+      - series: 'robsond_unclean_start{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="marker_version"}'
+        values: '_x123 1x120'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unclean_start"}'
+        values: '_x123 1x16 0x103'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="uncertain_outcome"}'
+        values: '_x123 0x120'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unknown"}'
+        values: '_x123 0x120'
+      - series: 'robsond_recovery_incidents_open{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unclean_start"}'
+        values: '_x123 1x16 0x103'
+      - series: 'robsond_insurance_stop_stale_positions{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '_x123 0x120'
+      - series: 'robsond_journal_latch{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '_x123 0x120'
+      - series: 'robsond_journal_retry_set_depth{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '_x123 0x120'
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '_x123 0x120'
+      - series: 'robsond_orphan_cancel_withheld_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '_x123 0x120'
+      - series: 'robsond_streams_suspended{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",kind="system"}'
+        values: '_x123 0x120'
+      - series: 'robsond_streams_suspended{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",kind="position"}'
+        values: '_x123 0x120'
+      - series: 'robsond_cycles_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",result="success"}'
+        values: '_x123 0+10x120'
+    alert_rule_test:
+      - {eval_time: 62m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - {eval_time: 66m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - eval_time: 67m
+        alertname: RBXRobsondAdmissionFenceClosed
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading, reason: unclean_start}
+            exp_annotations: *ann_AdmissionFenceClosed_unclean_start
+      - {eval_time: 72m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 62m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 63m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 62m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 67m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 62m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 90m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 67m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 90m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 67m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - {eval_time: 90m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+      - {eval_time: 90m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
