@@ -528,9 +528,9 @@ spec:
               # robsond_recovery_incidents_open and the stale-stop gauge at 0
               # from startup; part 4 adds the orphan-withheld counters. Every
               # rule on one of them is silent while it is absent. The page on
-              # the fence metric's ABSENCE is not here: every image before part
-              # 2 lacks it, so it merges separately, once part 2 is in
-              # production.
+              # the fence metric's ABSENCE, RBXRobsondFenceMetricAbsent below,
+              # fires on every image before part 2, so it merged separately,
+              # once part 2 was in production.
               #
               # EXPECTED PAGE: part 2's first start is fenced by design (its
               # predecessor marked version 1 at best, and a clean start needs
@@ -815,11 +815,28 @@ spec:
                         work for a loop; robsond_journal_operation_statements_max shows the largest since the start.
 
               # §7 negative control: the alerts above say nothing while robsond
-              # is missing. Target down for 3 minutes, or restarting for 2,
-              # pages. The page on the fence metric's absence for 5 minutes
-              # joins this group only once F part 2 is in production.
+              # is missing. The fence metric absent for 5 minutes, the target
+              # down for 3 minutes, or robsond restarting for 2 minutes, pages.
               - name: rbx.robson.fence.negative-control
                 rules:
+                  # Every reason exports at 0 from startup from F part 2 on, so
+                  # an absent series means a missing daemon, not an open fence.
+                  # It also fires on any image before part 2, which is why it
+                  # merged only once part 2 was in production. A deliberate
+                  # rollback to such an image pages here until it is silenced.
+                  - alert: RBXRobsondFenceMetricAbsent
+                    expr: absent(robsond_admission_fence_closed{kubernetes_namespace="robson"})
+                    for: 5m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson's admission fence is not being exported"
+                      description: >-
+                        No robsond_admission_fence_closed series from namespace robson for 5 minutes: robsond is
+                        down or not scraped, or runs an image before PR F part 2. Every fence alert is blind
+                        meanwhile, and the exchange stops are the only protection.
+
                   # Pod discovery drops the target with the pod, so a missing
                   # target is absent, not up == 0. A deploy (Recreate) is a
                   # gap too: measured over the 7 days to 2026-11-11, at most
