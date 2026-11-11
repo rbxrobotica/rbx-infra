@@ -518,6 +518,347 @@ spec:
                         operator asked for should not page. Prolonged absence
                         from any cause is covered by RBXRobsondMetricsAbsent.
 
+              # ADR-0056 step 7, PR F (the fence): design v8 §7's alerts, which
+              # must be loaded before F part 2 deploys. Every rule in this group
+              # reads robsond's own /metrics, so it selects on
+              # `kubernetes_namespace` (see the LABEL WARNING above).
+              #
+              # These merge while production runs F part 1, and none may fire
+              # on what part 1 lacks. Part 2 adds robsond_admission_fence_closed,
+              # robsond_recovery_incidents_open and the stale-stop gauge at 0
+              # from startup; part 4 adds the orphan-withheld counters. Every
+              # rule on one of them is silent while it is absent. The page on
+              # the fence metric's ABSENCE is not here: every image before part
+              # 2 lacks it, so it merges separately, once part 2 is in
+              # production.
+              #
+              # EXPECTED PAGE: part 2's first start is fenced by design (its
+              # predecessor marked version 1 at best, and a clean start needs
+              # 2), so RBXRobsondAdmissionFenceClosed with reason unclean_start
+              # pages 5 minutes after that deploy unless the operator releases
+              # first. That page is not a failure.
+              - name: rbx.robson.fence
+                rules:
+                  # §7: fence closed more than 5 min. One series per reason,
+                  # so the page names what closed it. Every reason exports at
+                  # 0 from startup from part 2 on; absent before it.
+                  - alert: RBXRobsondAdmissionFenceClosed
+                    expr: max by (reason) (robsond_admission_fence_closed{kubernetes_namespace="robson"}) == 1
+                    for: 5m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson admissions are fenced: {{ $labels.reason }}"
+                      description: >-
+                        An open incident ({{ $labels.reason }}) has kept new entries closed for 5 minutes
+                        (ADR-0056 step 7). Exits, stops and the protective API continue. Read GET
+                        /recovery/pending, then release at its generation with POST /recovery/release once the
+                        risk is understood. A latch-class reason (any but unclean_start, uncertain_outcome and
+                        unknown) needs a restart first: only a restart clears the latch. EXPECTED once, with reason
+                        unclean_start, at the first deploy of PR F part 2: that start is fenced by design and this
+                        pages unless the operator releases within 5 minutes. That page is not a failure.
+
+                  # §7 and P: latch set. Also the backstop for an aborted or
+                  # unpermitted operation counted before its first scrape,
+                  # which increase() cannot see. Exported since PR J.
+                  - alert: RBXRobsondJournalLatchSet
+                    expr: max(robsond_journal_latch{kubernetes_namespace="robson"}) == 1
+                    for: 1m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson journal latch is set"
+                      description: >-
+                        A venue send went out without its journal row, journal history was discarded or conflicted,
+                        an event-log stream was suspended, an operation was aborted, a venue mutation ran without a
+                        permit, or (from PR F part 2) the generation ran out. Admissions stay closed until a
+                        restart, and from PR F part 2 until a release after it. The stop will not mark the epoch
+                        clean.
+
+                  # §7: unpermitted or aborted operations increasing. Both
+                  # counters export at 0 from startup since PR S.
+                  - alert: RBXRobsondUnpermittedOrAbortedOperation
+                    expr: |
+                      sum(increase(robsond_unpermitted_mutations_total{kubernetes_namespace="robson"}[10m])) > 0
+                      or
+                      sum(increase(robsond_aborted_operations_total{kubernetes_namespace="robson"}[10m])) > 0
+                    for: 0m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson ran a venue mutation without a permit, or dropped an operation midway"
+                      description: >-
+                        Either may have reached the venue with nothing left to record the answer. The journal latch
+                        is set, so admissions are closed until a restart (and from PR F part 2 a release). Check the
+                        logs for the operation kind before releasing.
+
+                  # §7 and P: a suspended system stream invalidates that
+                  # month's accounting until step 8. Both kinds export at 0
+                  # from startup since PR P.
+                  - alert: RBXRobsondSystemStreamSuspended
+                    expr: max(robsond_streams_suspended{kubernetes_namespace="robson",kind="system"}) > 0
+                    for: 0m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson month-boundary stream suspended"
+                      description: >-
+                        A month reset or recalibration did not apply. That month's accounting is invalid: no
+                        automatic MonthlyHalt, no new entries while it is current, no capacity in its month view,
+                        and no release clears it. Nothing repairs a system stream before step 8; see
+                        stream_suspensions.
+
+                  # §7 and P: a suspended position stream. Startup repairs it
+                  # when it can; one that stays invalidates its leg.
+                  - alert: RBXRobsondPositionStreamSuspended
+                    expr: max(robsond_streams_suspended{kubernetes_namespace="robson",kind="position"}) > 0
+                    for: 5m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson position stream suspended"
+                      description: >-
+                        A position's event stream refuses appends. The next start repairs it if its suffix is
+                        repairable; until then the leg's snapshot is invalid and the budget reports no capacity
+                        while it is risk-open. See stream_suspensions.repair_error.
+
+                  # §7: any stop not clean. robsond_graceful_stop_total cannot
+                  # carry this: the stop closes the API listener before it
+                  # counts its result, so no scrape sees it. The durable record
+                  # is the next start's marker check. Only no_marker: every
+                  # start of an image before F part 2 reports marker_version
+                  # (version 2 is F's), and from part 2 that reason opens an
+                  # unclean_start incident, which the fence alert pages. The
+                  # gauge stays 1 for the life of the process, so the alert is
+                  # held to the robsond container's first hour, by the start
+                  # time kube-state-metrics reports for it (robsond is the
+                  # container's PID 1 and exports no process start time),
+                  # joined per pod: it warns in each start's first hour, an
+                  # in-place restart included, and not for a scrape gap or an
+                  # older process.
+                  #
+                  # Without kube-state-metrics this goes quiet, deliberately:
+                  # firing on the exporter's absence would warn for the life of
+                  # every process, whatever its start. That reduces coverage.
+                  # From F part 2 an unclean start is still paged by
+                  # RBXRobsondAdmissionFenceClosed, which needs no
+                  # kube-state-metrics, unless a release comes within its 5
+                  # minutes.
+                  - alert: RBXRobsondUncleanStart
+                    expr: |
+                      max by (reason) (
+                        label_replace(
+                          robsond_unclean_start{kubernetes_namespace="robson",reason="no_marker"} == 1,
+                          "pod", "$1", "kubernetes_pod_name", "(.+)"
+                        )
+                        and on (pod)
+                        (time() - max by (pod) (kube_pod_container_state_started{namespace="robson",container="robsond"}) < 3600)
+                      )
+                    for: 0m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson started after an unclean stop"
+                      description: >-
+                        The previous robsond process wrote no clean-stop marker: it crashed or was killed (OOM,
+                        SIGKILL), ran past its stop deadline, or stopped latched, with an operation aborted,
+                        something unlanded or (from PR F part 2) an incident open. From PR F part 2 this start is
+                        also fenced until a release. Held to the robsond container's first hour by its start time
+                        from kube-state-metrics, and quiet without it.
+
+                  # #320: the month's reset has not landed, so the basis is
+                  # invalid and entries are denied until it does. 0 from
+                  # startup.
+                  - alert: RBXRobsondMonthBoundaryPending
+                    expr: max(robsond_month_boundary_pending{kubernetes_namespace="robson"}) == 1
+                    for: 10m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson month-boundary reset has not landed"
+                      description: >-
+                        A boundary attempt failed (wallet read, the previous month's base, the database or a
+                        suspended month stream) and the 60 s poll keeps retrying. Entries are denied meanwhile
+                        (ADR-0051 §1). With Armed legs and no recorded previous base the reset waits for the
+                        operator. The gauge is set when an attempt returns: it is not accounting health.
+
+                  - alert: RBXRobsondMonthBoundaryPendingLong
+                    expr: max(robsond_month_boundary_pending{kubernetes_namespace="robson"}) == 1
+                    for: 60m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson month-boundary reset still pending after an hour"
+                      description: >-
+                        Entries have been denied for over an hour since a boundary attempt failed. Read the ERROR
+                        log of handle_month_boundary for the cause.
+
+                  # An open leg whose exchange stop is behind its plan. From F
+                  # part 2 the gauge exports at 0 from startup; before it, it is
+                  # absent until first set, and this rule is silent then.
+                  - alert: RBXRobsondInsuranceStopStale
+                    expr: max(robsond_insurance_stop_stale_positions{kubernetes_namespace="robson"}) > 0
+                    for: 5m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson has open legs whose exchange stop is behind"
+                      description: >-
+                        A stop placement or re-placement failed and the tick-cadence retry has not healed it for 5
+                        minutes (ADR-0039). Daemon-down exposure is wider than one rung.
+
+                  # The stale-stop gauge's absence must not read as healthy,
+                  # but it is absent on every image before F part 2. So this
+                  # asks only of a daemon that exports the fence (part 2 on),
+                  # which must also export this gauge from startup.
+                  - alert: RBXRobsondInsuranceStopGaugeAbsent
+                    expr: |
+                      absent(robsond_insurance_stop_stale_positions{kubernetes_namespace="robson"})
+                      and on ()
+                      (count(robsond_admission_fence_closed{kubernetes_namespace="robson"}) > 0)
+                    for: 15m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson exports its fence but not its stale-stop gauge"
+                      description: >-
+                        robsond_insurance_stop_stale_positions is missing from a robsond that exports
+                        robsond_admission_fence_closed, so RBXRobsondInsuranceStopStale cannot fire. From PR F
+                        part 2 the gauge exports at 0 from startup: this is a regression.
+
+                  # The retry set holding entries. Exported since PR J; counts
+                  # incident upserts from F part 2.
+                  - alert: RBXRobsondJournalRetrySetStuck
+                    expr: max(robsond_journal_retry_set_depth{kubernetes_namespace="robson"}) > 0
+                    for: 10m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson journal writes have been pending for 10 minutes"
+                      description: >-
+                        Journal rows, stream suspensions or (from PR F part 2) incident upserts are not landing. A
+                        stop cannot mark clean and a release answers `persisting` meanwhile. At 1,024 entries the
+                        next one is a persistence failure, which latches.
+
+                  # F part 4: orphan stops kept while fenced. The veto is doing
+                  # its job; the orphans go after a release. Both counters
+                  # export at 0 from startup from part 4; absent before it.
+                  - alert: RBXRobsondOrphanStopsWithheld
+                    expr: sum(increase(robsond_orphan_cancel_withheld_total{kubernetes_namespace="robson"}[30m])) > 0
+                    for: 30m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "Robson is keeping orphan stop orders while fenced"
+                      description: >-
+                        For 30 minutes the sweep has kept ins- orders outside coverage because an incident is open,
+                        the fence is closed or the latch is set (design §2.9). They may partially reduce an Active
+                        leg on the same symbol and side. The pending list shows them under
+                        withheld_protective_orders.
+
+                  - alert: RBXRobsondOrphanWithheldReportTruncated
+                    expr: sum(increase(robsond_orphan_cancel_withheld_overflow_total{kubernetes_namespace="robson"}[30m])) > 0
+                    for: 0m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "More than 500 orphan stops withheld in one scan"
+                      description: >-
+                        The pending list shows 500; the veto applies to every one. Read the venue's open orders.
+
+                  # J: an operation charged more journal statements than the
+                  # reviewed bound. Forty is a warning threshold for composite
+                  # operations (a multi-leg tick, a scan, /panic, startup), not
+                  # a maximum. The gauge only grows within a process, so
+                  # increase() reads it as the counter it is, across a reset it
+                  # observes. The second half catches a startup that went past
+                  # the bound before the first scrape, when no rise or reset is
+                  # ever seen (an in-place restart from 1 back to 1): any count
+                  # in the robsond container's first hour, by the start time
+                  # kube-state-metrics reports, joined per pod. Without
+                  # kube-state-metrics only the first half works: a startup
+                  # past the bound then goes unwarned, and no other rule
+                  # covers it.
+                  - alert: RBXRobsondJournalStatementBound
+                    expr: |
+                      sum(increase(robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson"}[1h])) > 0
+                      or
+                      sum(
+                        label_replace(
+                          robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson"} > 0,
+                          "pod", "$1", "kubernetes_pod_name", "(.+)"
+                        )
+                        and on (pod)
+                        (time() - max by (pod) (kube_pod_container_state_started{namespace="robson",container="robsond"}) < 3600)
+                      ) > 0
+                    for: 0m
+                    labels:
+                      severity: warning
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "A Robson operation went past 40 journal statements"
+                      description: >-
+                        A warning threshold for composite operations, not a maximum. Review the operation's venue
+                        work for a loop; robsond_journal_operation_statements_max shows the largest since the start.
+
+              # §7 negative control: the alerts above say nothing while robsond
+              # is missing. Target down for 3 minutes, or restarting for 2,
+              # pages. The page on the fence metric's absence for 5 minutes
+              # joins this group only once F part 2 is in production.
+              - name: rbx.robson.fence.negative-control
+                rules:
+                  # Pod discovery drops the target with the pod, so a missing
+                  # target is absent, not up == 0. A deploy (Recreate) is a
+                  # gap too: measured over the 7 days to 2026-11-11, at most
+                  # 4 evaluations (about 2 minutes) in the SIGKILL-era deploys
+                  # and 3 since stops are clean. §7 says 2 minutes; 3 leaves
+                  # room for an image pull and the startup scan.
+                  - alert: RBXRobsondTargetDown
+                    expr: absent(up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name=~"robsond-.+"} == 1)
+                    for: 3m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "robsond is not being scraped"
+                      description: >-
+                        No healthy robsond scrape target for 3 minutes, longer than a deploy's gap: down,
+                        restarting, or scrape broken. The exchange stops are the only protection meanwhile.
+
+                  # kube-state-metrics, so `namespace`. A start that cannot
+                  # record its epoch, reach its journal or pass the
+                  # stale-active gate (exit 78) loops here.
+                  - alert: RBXRobsondRestarting
+                    expr: |
+                      max by (namespace, pod, container, reason) (
+                        kube_pod_container_status_waiting_reason{
+                          namespace="robson",container="robsond",
+                          reason=~"CrashLoopBackOff|CreateContainerError|CreateContainerConfigError|RunContainerError"
+                        }
+                      ) == 1
+                    for: 2m
+                    labels:
+                      severity: critical
+                      rbx_workstream: robson-trading
+                    annotations:
+                      summary: "robsond is restarting ({{ $labels.pod }}: {{ $labels.reason }})"
+                      description: >-
+                        The robsond container has been waiting to start again for 2 minutes. A fast crash loop
+                        shows first as RBXRobsondTargetDown; this one names the pod and the reason.
+
         # Temporarily disable PrometheusRule admission webhooks until the
         # webhook serving certificate/CA bundle is regenerated in an approved
         # maintenance window. The broken CA currently blocks ArgoCD from
