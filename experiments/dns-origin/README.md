@@ -70,5 +70,12 @@ public snapshots/anchors. It never exports the private key. The snapshots expire
 after one hour; repeating the lab re-keys and changes the lab trust anchor.
 This is not a signing-key recovery drill or production custody model.
 
+The first local run accepted the recently expired fixture under Unbound's
+default signature clock-skew allowance. Preserve that failed receipt. A separate
+strict-timestamp run explicitly sets both `val-sig-skew-min` and
+`val-sig-skew-max` to zero, without changing system time. Its successful expiry
+rejection would establish only this stricter lab configuration; it must not be
+reported as the default resolver behavior.
+
 The production parent remains Contabo-dependent, and neither production delegation
 nor full H-dns provider-exit qualification is claimed by these component tests.
