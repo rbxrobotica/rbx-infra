@@ -1,0 +1,206 @@
+# promtool unit tests for RBXRobsondFenceMetricAbsent (rbxrobotica/rbx-infra#392),
+# design v8 §7's negative control on the fence metric: the first case is
+# F part 2's released steady state, where no Robson fence alert pages; the
+# others show the control paging on an image that does not export the fence
+# (F part 1 or older, the rollback case), staying silent while a daemon
+# exports it and through a deploy gap under 5 minutes, and paging 5 minutes
+# after the daemon disappears. Run through scripts/test-prometheus-rules.sh.
+rule_files:
+  - rules/rbx-robson-trading.yml
+
+evaluation_interval: 30s
+
+tests:
+  - name: part 2's steady state after a release, on a clean start, pages nothing
+    interval: 30s
+    input_series:
+      - series: 'kube_pod_container_state_started{job="kube-state-metrics",namespace="robson",pod="robsond-2222222222-bbbbb",container="robsond",uid="u-2"}'
+        values: '-7200x300'
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '1x300'
+      - series: 'robsond_cycles_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",result="success"}'
+        values: '0+10x300'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unclean_start"}'
+        values: '0x300'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="uncertain_outcome"}'
+        values: '0x300'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unlanded_send"}'
+        values: '0x300'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="persistence_failure"}'
+        values: '0x300'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unpermitted_mutation"}'
+        values: '0x300'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="stream_suspended"}'
+        values: '0x300'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="operation_aborted"}'
+        values: '0x300'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="generation_exhausted"}'
+        values: '0x300'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unknown"}'
+        values: '0x300'
+      - series: 'robsond_recovery_incidents_open{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unclean_start"}'
+        values: '0x300'
+      - series: 'robsond_recovery_incidents_open{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="uncertain_outcome"}'
+        values: '0x300'
+      - series: 'robsond_insurance_stop_stale_positions{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '0x300'
+      - series: 'robsond_orphan_cancel_withheld_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '0x300'
+      - series: 'robsond_orphan_cancel_withheld_overflow_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '0x300'
+      - series: 'robsond_journal_latch{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '0x300'
+      - series: 'robsond_journal_retry_set_depth{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '0x300'
+      - series: 'robsond_journal_operations_over_statement_bound{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '0x300'
+      - series: 'robsond_unpermitted_mutations_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '0x300'
+      - series: 'robsond_aborted_operations_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '0x300'
+      - series: 'robsond_month_boundary_pending{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb"}'
+        values: '0x300'
+      - series: 'robsond_streams_suspended{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",kind="system"}'
+        values: '0x300'
+      - series: 'robsond_streams_suspended{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",kind="position"}'
+        values: '0x300'
+      # A clean start (predecessor marked version 2): no robsond_unclean_start.
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondAdmissionFenceClosed, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondJournalLatchSet, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondUnpermittedOrAbortedOperation, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondSystemStreamSuspended, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondPositionStreamSuspended, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondUncleanStart, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondMonthBoundaryPending, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondMonthBoundaryPendingLong, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondInsuranceStopStale, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondInsuranceStopGaugeAbsent, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondJournalRetrySetStuck, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondOrphanStopsWithheld, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondOrphanWithheldReportTruncated, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondJournalStatementBound, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondTargetDown, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondRestarting, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondRestarting, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondRestarting, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondRestarting, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+
+  - name: an image before F part 2 does not export the fence, and this pages
+    interval: 30s
+    input_series:
+      - series: 'up{job="kubernetes-pods-annotations",kubernetes_namespace="robson",kubernetes_pod_name="robsond-1111111111-aaaaa"}'
+        values: '1x40'
+      - series: 'robsond_cycles_total{kubernetes_namespace="robson",kubernetes_pod_name="robsond-1111111111-aaaaa",result="success"}'
+        values: '0+10x40'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - {eval_time: 4m30s, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - eval_time: 5m
+        alertname: RBXRobsondFenceMetricAbsent
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading, kubernetes_namespace: robson}
+            exp_annotations: &ann_FenceMetricAbsent
+              summary: "Robson's admission fence is not being exported"
+              description: >-
+                No robsond_admission_fence_closed series from namespace robson for 5 minutes: robsond is
+                down or not scraped, or runs an image before PR F part 2. Every fence alert is blind
+                meanwhile, and the exchange stops are the only protection.
+      - eval_time: 6m
+        alertname: RBXRobsondFenceMetricAbsent
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading, kubernetes_namespace: robson}
+            exp_annotations: *ann_FenceMetricAbsent
+
+  - name: part 2 exports the fence from startup, so a running daemon is silent
+    interval: 30s
+    input_series:
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unclean_start"}'
+        values: '1x40'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unknown"}'
+        values: '0x40'
+      # A testnet daemon does not stand in for production.
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-5b6c7d8e9-t1u2v",reason="unknown"}'
+        values: '0x40'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - {eval_time: 6m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+
+  - name: a part-2 daemon that disappears pages after 5 minutes
+    interval: 30s
+    input_series:
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unclean_start"}'
+        values: '0x20 stale'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson-testnet",kubernetes_pod_name="robsond-5b6c7d8e9-t1u2v",reason="unknown"}'
+        values: '0x40'
+    alert_rule_test:
+      - {eval_time: 5m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - eval_time: 16m
+        alertname: RBXRobsondFenceMetricAbsent
+        exp_alerts:
+          - exp_labels: {severity: critical, rbx_workstream: robson-trading, kubernetes_namespace: robson}
+            exp_annotations: *ann_FenceMetricAbsent
+
+  - name: a deploy gap under 5 minutes stays silent
+    interval: 30s
+    input_series:
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-2222222222-bbbbb",reason="unclean_start"}'
+        values: '0x20 stale'
+      - series: 'robsond_admission_fence_closed{kubernetes_namespace="robson",kubernetes_pod_name="robsond-3333333333-ccccc",reason="unclean_start"}'
+        values: '_x25 1x40'
+    alert_rule_test:
+      - {eval_time: 11m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - {eval_time: 12m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - {eval_time: 16m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}
+      - {eval_time: 20m, alertname: RBXRobsondFenceMetricAbsent, exp_alerts: []}

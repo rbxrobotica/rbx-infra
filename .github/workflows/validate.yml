@@ -171,6 +171,30 @@ jobs:
           done
           [ "$bad" -eq 0 ]
 
+  prometheus-rules:
+    # The alerting rules live in a Helm values string in
+    # platform/monitoring/kube-prometheus-stack.yml, which yamllint and
+    # kubeconform see as one scalar. This extracts them, runs promtool check
+    # rules over every rule file and the alert unit tests in
+    # scripts/tests/prometheus-rules, in podman from digest-pinned images, so
+    # a broken expression fails the PR instead of reaching Prometheus. The
+    # tooling itself gets bandit, osv-scanner and gitleaks (guardrails §2).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Check and unit-test Prometheus rules with promtool 3.0.1
+        run: bash scripts/test-prometheus-rules.sh
+
+      - name: Security-scan the Prometheus rule tooling
+        run: bash scripts/scan-prometheus-rules-tooling.sh
+
   validate-argocd:
     runs-on: ubuntu-latest
     steps:
