@@ -77,5 +77,54 @@ strict-timestamp run explicitly sets both `val-sig-skew-min` and
 rejection would establish only this stricter lab configuration; it must not be
 reported as the default resolver behavior.
 
+## Executed observations
+
+The strict local NSD/Unbound integration completed in 132.890 seconds: complete
+54-record transfers, explicit unauthorized refusal, phase updates, signed
+positive/negative/wildcard validation, tampered/expired/wrong-DS rejection,
+actual origin shutdown, retention before SOA expiry, withholding after expiry,
+and reconstruction. All owned process groups were removed. The failed default
+skew attempt remains in resilience evidence.
+
+The real temporary origin and ClouDNS secondary preserved the original SOA
+timers. Phase 2 converged across four IPv4 authorities over UDP/TCP in 6.494
+seconds. `probe-managed-secondary.py` passed 184 exact signed RRset checks and
+20 cold Unbound cases using the independently pinned lab anchor.
+
+The ClouDNS UI export omits RRSIG and NSEC: only 22 of the full 54 records appear
+in that export. It is not a complete signed recovery copy. Complete public
+source snapshots and immutable receipts are published in resilience PR11.
+The real managed secondary retained exact phase-2 answers at 125 and 150 seconds
+despite SOA EXPIRE 120. Availability before expiry passed; the declared
+withholding/freshness boundary failed. The provider's supported minimum and stale
+policy are unknown; this is not evidence that it never expires a zone. Origin
+process reconstruction from cached public inputs and sampled authority recovery
+took 6.467 seconds, not a full infrastructure/identity/signing recovery RTO.
+
+The safety cleanup removed the actual origin process, executable cache, runtime
+control state and exact firewall chain/jumps. Final inspection found no public
+53 listener and the same active PostgreSQL/k3s-agent units. The task-owned SSH
+agent was stopped. Provider test zones remain for review without parent
+delegation or production data. Later direct replies still included expired
+fixture signatures; strict cryptographic validation rejected them.
+
+These component results do not pass H-dns. Preserve failed receipts and keep
+freshness policy, complete signed backups, TSIG, IPv6/multi-vantage behavior,
+independent discovery and signing/publication recovery as explicit gaps before
+any production migration or paid continuation.
+
+Reproduction requires the official extracted package hashes in
+`package-pins.json`, new public fixtures/anchors and a fresh work directory:
+
+```sh
+python3 -B experiments/dns-origin/build-fixtures.py --output <new-public-fixtures>
+python3 -B experiments/dns-origin/run-local-lab.py --tools-root <extracted-tools-root> --fixtures <new-public-fixtures> --work-dir <new-local-run-directory>
+python3 -B experiments/dns-origin/probe-managed-secondary.py --tools-root <extracted-tools-root> --fixtures <published-managed-fixtures> --work-dir <new-managed-probe-directory>
+```
+
+Review/rebind the actual origin, partner addresses, fixture validity and test
+ports before repeating remote operations. No script authorizes production NS/DS,
+global transfer ACLs, paid resources, host package installation or live outages.
+
 The production parent remains Contabo-dependent, and neither production delegation
 nor full H-dns provider-exit qualification is claimed by these component tests.
