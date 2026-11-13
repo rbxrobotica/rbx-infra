@@ -8,6 +8,7 @@ import json
 import os
 import pathlib
 import re
+import sys
 import urllib.request
 
 
@@ -30,6 +31,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", required=True, type=pathlib.Path)
     parser.add_argument("--state-dir", required=True, type=pathlib.Path)
+    parser.add_argument("--credential-stdin", action="store_true",
+                        help="One-shot delivery drill only; read the per-check endpoint from stdin")
     args = parser.parse_args()
     report = {"observed_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat()}
     code = 3
@@ -48,8 +51,11 @@ def main():
     except Exception as error:
         report.update({"exit_code": code, "error_type": type(error).__name__})
     try:
-        credentials = pathlib.Path(os.environ["CREDENTIALS_DIRECTORY"])
-        endpoint = (credentials / "healthchecks").read_text().strip()
+        if args.credential_stdin:
+            endpoint = sys.stdin.buffer.read(1024).decode("ascii").strip()
+        else:
+            credentials = pathlib.Path(os.environ["CREDENTIALS_DIRECTORY"])
+            endpoint = (credentials / "healthchecks").read_text().strip()
         heartbeat(endpoint, code != 0, f"synthetic DNS monitor exit={code}; checks={report.get('checks', 0)}")
         report["remote_signal_confirmed"] = True
     except Exception as error:
