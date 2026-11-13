@@ -4,14 +4,22 @@
 import argparse
 import hashlib
 import importlib.util
+import io
 import json
 import pathlib
 import subprocess
+import tarfile
 import time
 
 HOST = "root@161.97.147.76"
 ROOT = "/var/cache/rbx-dns-origin-source"
 NSD_SHA256 = "44e1d576f03084965763c4979942ba158dc8e38b00adedd67ed3739d02da44a2"
+TOOL_FILES = ["usr/sbin/nsd", "usr/sbin/nsd-checkconf", "usr/sbin/nsd-checkzone",
+              "usr/lib/x86_64-linux-gnu/libevent-2.1.so.7",
+              "usr/lib/x86_64-linux-gnu/libfstrm.so.0",
+              "usr/lib/x86_64-linux-gnu/libhiredis.so.1",
+              "usr/lib/x86_64-linux-gnu/libhiredis_ssl.so.1",
+              "usr/lib/x86_64-linux-gnu/libprotobuf-c.so.1"]
 PREFLIGHT = '''import json,pathlib,subprocess
 root=pathlib.Path("/var/cache/rbx-dns-origin-source")
 control=pathlib.Path("/run/rbx-dns-origin-control")
@@ -63,19 +71,46 @@ def main():
             raise ValueError("Public fixture digest differs")
     staged = False
     try:
-        remote("mkdir -m 0755 " + ROOT + " && mkdir -m 0755 " + ROOT + "/tools")
-        staged = True
-        subprocess.run(scp + ["-pr", str(args.tools_root / "usr"), HOST + ":" + ROOT + "/tools/"],
-                       capture_output=True, check=True, timeout=90)
         origin = pathlib.Path(__file__).parent.parent / "dns-origin"
+        files = {"tools/" + name: (args.tools_root / name).read_bytes() for name in TOOL_FILES}
         for path, name in [(origin / "remote-origin.py", "remote-origin.py"),
                            (origin / "nsd-origin.conf.in", "nsd-origin.conf.in"),
                            (fixture / "origin-manifest.json", "manifest.json"),
                            (fixture / "seed/reference.zone", "phase-1.zone"),
                            (fixture / "recovered/reference.zone", "phase-2.zone")]:
-            subprocess.run(scp + [str(path), HOST + ":" + ROOT + "/" + name],
-                           capture_output=True, check=True, timeout=30)
-        remote("chmod -R a+rX " + ROOT)
+            files[name] = path.read_bytes()
+        bundle = args.work_dir / "public-origin-bundle.tar.gz"
+        with tarfile.open(bundle, "w:gz") as archive:
+            for name, data in files.items():
+                member = tarfile.TarInfo(name)
+                member.size, member.mode = len(data), 0o755 if name.startswith("tools/usr/sbin/") else 0o644
+                archive.addfile(member, io.BytesIO(data))
+        report["public_bundle_sha256"] = hashlib.sha256(bundle.read_bytes()).hexdigest()
+        report["public_bundle_bytes"] = bundle.stat().st_size
+        remote("mkdir -m 0755 " + ROOT)
+        staged = True
+        subprocess.run(scp + [str(bundle), HOST + ":" + ROOT + "/bundle.tar.gz"],
+                       capture_output=True, check=True, timeout=90)
+        extract = '''import hashlib,io,pathlib,tarfile
+root=pathlib.Path("/var/cache/rbx-dns-origin-source")
+raw=(root/"bundle.tar.gz").read_bytes()
+assert len(raw)<4*1024*1024 and hashlib.sha256(raw).hexdigest()==EXPECTED
+members={}
+with tarfile.open(fileobj=io.BytesIO(raw),mode="r:gz") as archive:
+ for entry in archive:
+  assert entry.name in ALLOWED and entry.name not in members and entry.isfile()
+  assert 0<=entry.size<=2*1024*1024
+  members[entry.name]=(archive.extractfile(entry).read(),entry.mode)
+assert set(members)==set(ALLOWED) and sum(len(v[0]) for v in members.values())<4*1024*1024
+for name,(data,mode) in members.items():
+ path=root/name
+ path.parent.mkdir(parents=True,exist_ok=True,mode=0o755)
+ path.write_bytes(data)
+ path.chmod(mode)
+(root/"bundle.tar.gz").unlink()
+'''
+        remote("python3 -", "EXPECTED=" + repr(report["public_bundle_sha256"]) +
+               "\nALLOWED=" + repr(list(files)) + "\n" + extract)
         report["prepare"] = remote("python3 " + ROOT + "/remote-origin.py prepare").stdout
         started = time.monotonic()
         report["start"] = remote("python3 " + ROOT + "/remote-origin.py start --phase phase-2").stdout
@@ -112,11 +147,24 @@ def main():
             raise RuntimeError("Managed current-signature validation failed")
     finally:
         if staged:
-            cleanup = remote("python3 " + ROOT + "/remote-origin.py cleanup", check=False)
+            cleanup_command = "if test -f " + ROOT + "/remote-origin.py; then python3 " + ROOT + "/remote-origin.py cleanup; else python3 -; fi"
+            fallback = '''import pathlib,shutil,subprocess
+p=pathlib.Path("/var/cache/rbx-dns-origin-source")
+assert p.is_dir() and not p.is_symlink()
+assert not pathlib.Path("/run/rbx-dns-origin-control").exists()
+assert subprocess.run(["iptables","-S","RBX_DNS_PILOT"],capture_output=True).returncode!=0
+assert subprocess.run(["systemctl","is-active","--quiet","rbx-dns-origin.service"]).returncode!=0
+shutil.rmtree(p)
+'''
+            cleanup = remote(cleanup_command, fallback, check=False)
             report["cleanup_exit_code"] = cleanup.returncode
             report["cleanup"] = cleanup.stdout
             report["after"] = json.loads(remote("python3 -", PREFLIGHT).stdout)
         (args.work_dir / "receipt.json").write_text(json.dumps(report, indent=2) + "\n")
+    if report.get("cleanup_exit_code") != 0 or not all(
+            report["after"][k] for k in ["public_port_53_free", "staging_absent", "control_absent",
+                                       "owned_chain_absent", "origin_unit_inactive", "cleanup_timer_inactive"]):
+        raise RuntimeError("Owned origin cleanup did not complete")
     print(json.dumps(report))
 
 
