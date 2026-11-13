@@ -19,11 +19,11 @@ this experiment.
 | RPO / RTO | Public reference is the last reviewed Git publication; detection target at most 30 minutes plus provider delivery. Signer reconstruction target 15 minutes, measured separately from provisioning/independent custody |
 | Owner | Leandro; primary executor keeps all secrets, restoration, deployment and failure injection on the governed path |
 | Local-only risk | Release/tool caches and encrypted service credential can be reconstructed from Git plus encrypted custody; no canonical private key may exist only in a process or this workstation |
-| Current prerequisites | Local user systemd manager runs with linger enabled. Local noninteractive sudo is not available. Existing Healthchecks project has no API key; creating a project management key needs action-time confirmation. No broad API key is deployed in the worker |
+| Current prerequisites | Local user systemd manager runs with linger enabled; noninteractive sudo is unavailable. The owner explicitly approved project-key creation/custody and the key/check now exist. Native administrative authentication for the protected system service is still pending. No broad API key is deployed in the worker |
 | Limits | Owner GPG emergency kit outer-passphrase/offline custody and successors remain incomplete. This new lab signer is disposable and not a production key or founder-independent recovery pass |
 | Cost | Existing workstation and Hobbyist allowance; no paid resource selected. Annual ClouDNS assessment follows qualification |
 
-## Planned control flow
+## Implemented control flow and activation boundary
 
 `healthchecks-controller.py` reconciles only the exact named check, never deletes
 or modifies the sample check, and uses project-specific management access from
@@ -52,3 +52,27 @@ the recovered phase, verify convergence and cold validation, and execute the
 same owned-process/cache/firewall cleanup (20-minute process cap, 30-minute
 safety cleanup). No production zone, parent DS/NS or persistent host policy is
 changed. This is a lab publication update, not production signing recovery.
+
+## Observed execution
+
+The external missed-heartbeat and recovery emails were delivered, and the check
+was restored to 900/900 seconds. A fresh private Git fetch of the encrypted lab
+signer restored the same public identity and signed 24 currently valid
+authoritative RRsets. Empty recovery keyring, wrong public DS and corrupt
+ciphertext were rejected. Six direct local checks and five original-anchor
+resolver cases passed after preserving an initial loopback-config failure.
+
+An initial recursive SCP timed out before origin startup; its partial public
+cache was removed. A later explicit-member 637,908-byte bundle transferred
+successfully. The managed pilot converged to the recovered publication in
+14.26 seconds; all 184 exact direct checks and 20 cold validating cases passed.
+The temporary origin, control/cache directories and owned firewall rules were
+removed, PostgreSQL/k3s stayed active, and the task SSH agent stopped. One-shot
+detector delivery changed from failure to healthy and DOWN/UP emails arrived.
+
+The native local authentication request expired before installation. The
+persistent local timer is **not active yet**. The check, source, credentials,
+recovery and notification tests are real; continuous runtime must only be
+claimed after authenticated Ansible activation and repeated timer observations.
+The one-shot stdin credential option is a delivery-drill path, not a persistent
+plaintext credential file or substitute for the protected systemd unit.
