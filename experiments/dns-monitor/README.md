@@ -41,3 +41,14 @@ process and restore from a fresh remote ciphertext. Signing renewed data with
 the same public key tests technical owner-only recovery. The old November 11
 ephemeral signer was destroyed and cannot be recovered. Its failed/expired
 observations remain historical evidence.
+
+To test the restored publication on the existing undelegated provider pilot,
+reuse the already-reviewed transient origin lifecycle on Jaguar. Only public
+signed files and verified official binaries reach that host; the private signer
+and owner GPG key remain absent. First recheck port ownership, active PostgreSQL
+and k3s-agent, absent prior staging/control state and exact scoped firewall
+ownership. Source/public pins must already be versioned remotely. Start only
+the recovered phase, verify convergence and cold validation, and execute the
+same owned-process/cache/firewall cleanup (20-minute process cap, 30-minute
+safety cleanup). No production zone, parent DS/NS or persistent host policy is
+changed. This is a lab publication update, not production signing recovery.

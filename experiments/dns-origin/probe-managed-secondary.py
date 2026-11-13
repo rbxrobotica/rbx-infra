@@ -33,6 +33,7 @@ def main():
     parser.add_argument("--tools-root", required=True, type=pathlib.Path)
     parser.add_argument("--work-dir", required=True, type=pathlib.Path)
     parser.add_argument("--phase", choices=["phase-1", "phase-2"], default="phase-2")
+    parser.add_argument("--expected-canary", help="Reviewed TXT value for a recovered-signer publication")
     args = parser.parse_args()
     args.work_dir.mkdir(mode=0o700, exist_ok=False)
     source = (args.fixtures / (args.phase + ".zone")).read_bytes()
@@ -143,7 +144,7 @@ stub-zone:
                     time.sleep(.1)
             for name, kind, rcode, value in [
                 (ORIGIN, "A", "NOERROR", "192.0.2.10"),
-                ("_canary." + ORIGIN, "TXT", "NOERROR", '"' + args.phase + '"'),
+                ("_canary." + ORIGIN, "TXT", "NOERROR", '"' + (args.expected_canary or args.phase) + '"'),
                 ("absent." + ORIGIN, "A", "NXDOMAIN", None),
                 ("mail." + ORIGIN, "TXT", "NOERROR", None),
                 ("probe.wild." + ORIGIN, "A", "NOERROR", "192.0.2.40"),
