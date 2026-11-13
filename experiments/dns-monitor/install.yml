@@ -1,0 +1,64 @@
+---
+- name: Install only the bounded local synthetic DNS monitor
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: "{{ monitor_apply_become | default(true) }}"
+  vars:
+    monitor_source: "{{ playbook_dir }}"
+    release_path: /opt/rbx-dns-monitor
+  tasks:
+    - name: Validate explicit reviewed source paths
+      ansible.builtin.assert:
+        that:
+          - resilience_source is defined
+          - public_reference is defined
+          - public_publication is defined
+          - encrypted_ping_credential is defined
+    - name: Create immutable-code and encrypted-credential locations
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "{{ item.mode }}"
+      loop:
+        - {path: /opt/rbx-dns-monitor, mode: '0755'}
+        - {path: /etc/credstore.encrypted, mode: '0700'}
+    - name: Install reviewed public program and reference files
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ release_path }}/{{ item.name }}"
+        owner: root
+        group: root
+        mode: '0444'
+      loop:
+        - {src: '{{ monitor_source }}/worker.py', name: worker.py}
+        - {src: '{{ resilience_source }}/scripts/check-transfer-pilot-health.py', name: checker.py}
+        - {src: '{{ public_reference }}', name: reference.zone}
+        - {src: '{{ public_publication }}', name: publication.json}
+    - name: Install only the host-wrapped ping credential, never a management key
+      ansible.builtin.copy:
+        src: "{{ encrypted_ping_credential }}"
+        dest: /etc/credstore.encrypted/rbx-dns-monitor-healthchecks
+        owner: root
+        group: root
+        mode: '0600'
+      no_log: true
+    - name: Declare monitor service and timer
+      ansible.builtin.copy:
+        src: "{{ monitor_source }}/{{ item.src }}"
+        dest: "/etc/systemd/system/{{ item.dest }}"
+        owner: root
+        group: root
+        mode: '0644'
+      loop:
+        - {src: monitor.service, dest: rbx-dns-pilot-monitor.service}
+        - {src: monitor.timer, dest: rbx-dns-pilot-monitor.timer}
+    - name: Enable the reviewed timer without touching other units
+      ansible.builtin.systemd_service:
+        name: rbx-dns-pilot-monitor.timer
+        daemon_reload: true
+        enabled: true
+        state: started
+      when: not ansible_check_mode
