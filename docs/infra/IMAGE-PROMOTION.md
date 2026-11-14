@@ -138,6 +138,81 @@ digest-pinned image gets no automated promotion PR. Automating it needs the
 digest to come from the build that pushed the image, a check of that digest
 against the registry, and a test that runs against a registry.
 
+### Changes that do not go through the script
+
+A hand edit and the self-push never call `scripts/promote-image-tag.sh`. For
+them, `validate.yml` runs `scripts/check-digest-pin-promotion.sh` (job
+`image-digest-pins`). It compares the kustomizations under `apps/` of two
+commits and fails when an `images` entry has a new `newTag` beside the `digest`
+it already had. A `newTag` added to an entry that had only the digest counts:
+that is what the `yq` line of the self-push template does to such an entry. On
+a pull request the job runs on the merge commit GitHub makes for it, so the two
+commits are the tip of the base branch in that merge and the result of the
+merge: what merging would change on `main`. On a push to `main` they are the
+commit before the push and its head. Before opening a pull request, the same
+script compares the branch with the commit where it left `main`:
+
+```bash
+bash scripts/check-digest-pin-promotion.sh origin/main...HEAD
+```
+
+It reads both versions by the verifier's rules, in the same pinned environment,
+and it also fails when it cannot tell what the new version runs:
+
+- a kustomization written in one of the ways the verifier refuses;
+- a value of an entry that YAML does not read as a string (`newTag: null` is no
+  tag to kustomize, `newTag: "null"` is one), a `newTag` that is not a tag, a
+  `digest` that is not a sha256 digest (kustomize pastes them into the
+  reference, so `newTag: new@sha256:...` pins as well as the two keys do);
+- a symbolic link or a submodule anywhere under `apps/`, whether it changed or
+  not. Kustomize reads through a link and this check does not, so what the
+  link leads to can change while no kustomization file does. The tree has
+  neither today, and the job stays red for every change while it has one;
+- two kustomization files in one directory;
+- entries that kustomize could apply to one image, one after another, when one
+  of them has a digest. Kustomize applies the entries in their order, each to
+  what the one before left, and the check does not work out the result.
+
+It fails as well when it cannot tell what the previous version ran and the new
+one has an entry with a tag and a digest. There are two cases. If the previous
+version can be read and has entries like those of the last item, an entry of
+the new version passes when its digest is one the file did not have. If the
+previous version cannot be read, or was behind a symbolic link or a submodule,
+every entry with a tag and a digest is refused, whatever the digest. Either
+kind of previous version only reaches `main` through a change this check
+refused, and the change that repairs it may be refused once more: it needs a
+person to read both.
+
+It passes an entry whose tag and digest changed together, one that gained or
+lost its digest, and one without a digest. `newName` is allowed here.
+
+What the check does not do:
+
+- Stop a push to `main`. ArgoCD syncs `main` by itself, so when the job turns
+  red on a self-push the entry may already be deployed, the old image under the
+  new tag. The red run is the notice: set the digest of that tag, or revert.
+- Run on a push, or on a pull request, whose head commit says `[skip ci]`.
+  GitHub starts no workflow for it. On a pull request the next commit without
+  the marker starts the job again, and its comparison covers the skipped ones.
+  On `main` it does not: the next push is compared with the commit before it,
+  which is the skipped one. As of 2026-11-14 the self-pushes of robson-v2,
+  robson-frontend-v2 and the rbx-ia-br site write that marker; none of their
+  entries carries a digest. Take the marker out of a pipeline before pinning
+  its image by digest.
+- Tell whether the digest is the digest of the tag. It compares two commits and
+  asks no registry. A tag and a digest that changed together pass, whatever
+  they are, and so does a digest that changed alone.
+- Accept a new tag whose build published the same contents. That build has the
+  old digest, and the change is refused although it is right. Nothing would be
+  deployed by it: keep the old tag.
+- See a digest that comes from outside the `images` list of that kustomization
+  (a patch, a replacement, a transformer file, a component, a base), a tag that
+  a manifest carries, or a kustomization outside `apps/`. It does not follow an
+  application directory that was moved in the same change either, or an entry
+  whose name changed to one that cannot match what the old one matched.
+- Remember. An entry that drops its digest in one change and gets it back
+  beside a new tag in the next passes both.
+
 ## P1 target standard (future direction)
 
 The current standard writes the promotion commit directly to `main`. P1 moves

@@ -34,6 +34,12 @@ these is refused here and not ignored.
 This reads the images list of one kustomization. What a patch, a replacement or
 a transformer file does to an image is outside it.
 
+scripts/check-digest-pin-promotion.py reads kustomizations through read() as
+well, to compare two commits. It has no image to promote, so it takes a
+kustomization without an images list as one with nothing to compare (Absent)
+and lets an entry carry newName. It compares the values of two versions as
+text, so it asks read() for values that YAML reads as strings.
+
 Exit status: 0 the edit may be installed, 2 refused, with the reason on
 standard error. Reads the two files and writes nothing.
 """
@@ -47,10 +53,15 @@ ENTRY_KEYS = ("name", "newTag", "tagSuffix", "digest")
 PLAIN_NAME = re.compile(r"[A-Za-z0-9_./-]+")
 MAPPING = "tag:yaml.org,2002:map"
 SEQUENCE = "tag:yaml.org,2002:seq"
+STRING = "tag:yaml.org,2002:str"
 
 
 class Refused(Exception):
     pass
+
+
+class Absent(Refused):
+    """The kustomization has no images list, under any spelling kustomize reads."""
 
 
 def literal(text, node, what):
@@ -77,8 +88,14 @@ def overlap(one, other):
     return len(long) == len(short) or long[len(short)] == "."
 
 
-def read(path):
-    """The images entries of a kustomization and the parsed document."""
+def read(path, renames=False, strings=False):
+    """The images entries of a kustomization and the parsed document.
+
+    With renames, an entry may carry newName, a plain image name like its name.
+    With strings, every value of an entry has to be a YAML string. To kustomize
+    `newTag: null` is no tag and `newTag: "null"` is the tag null, and both are
+    the text null in the entries returned here.
+    """
     try:
         with open(path, encoding="utf-8", newline="") as handle:
             text = handle.read()
@@ -87,8 +104,6 @@ def read(path):
     except (OSError, UnicodeError, yaml.YAMLError) as error:
         raise Refused(f"it cannot be read as one YAML document ({type(error).__name__})") from error
 
-    if aliased:
-        raise Refused("it uses a YAML alias")
     if not isinstance(root, yaml.MappingNode) or root.tag != MAPPING:
         raise Refused("its top level is not a mapping")
     keys = [literal(text, key, "a top-level key") for key, _ in root.value]
@@ -99,7 +114,12 @@ def read(path):
     if any(key.casefold() == "imagetags" for key in keys):
         raise Refused("it uses the deprecated imageTags list")
     if "images" not in keys:
-        raise Refused("it has no top-level key spelled images")
+        # Kustomize reads `Images` as the field. With no such key either, and no
+        # merge key above to bring one in, there is no images list.
+        respelled = any(key.casefold() == "images" for key in keys)
+        raise (Refused if respelled else Absent)("it has no top-level key spelled images")
+    if aliased:
+        raise Refused("it uses a YAML alias")
     images = root.value[keys.index("images")][1]
     if not isinstance(images, yaml.SequenceNode) or images.tag != SEQUENCE:
         raise Refused("images is not a list")
@@ -111,17 +131,21 @@ def read(path):
         entry = {}
         for key, value in node.value:
             field = literal(text, key, "a key of an images entry")
-            if field == "newName":
+            if field == "newName" and not renames:
                 raise Refused("an images entry renames an image with newName")
-            if field not in ENTRY_KEYS:
+            if field not in ENTRY_KEYS and field != "newName":
                 raise Refused(f"an images entry has the key {field!a}")
             if field in entry:
                 raise Refused(f"an images entry has the key {field!a} twice")
             entry[field] = literal(text, value, f"the {field} of an images entry")
+            if strings and value.tag != STRING:
+                raise Refused(f"the {field} of an images entry is not a YAML string, write it in quotes: "
+                              f"{entry[field]!a}")
         if "name" not in entry:
             raise Refused("an images entry has no name")
-        if not PLAIN_NAME.fullmatch(entry["name"]):
-            raise Refused(f"the name of an images entry is not a plain image name: {entry['name']!a}")
+        for field in ("name", "newName"):
+            if field in entry and not PLAIN_NAME.fullmatch(entry[field]):
+                raise Refused(f"the {field} of an images entry is not a plain image name: {entry[field]!a}")
         entries.append(entry)
 
     try:

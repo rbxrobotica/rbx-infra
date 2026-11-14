@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Security checks (engineering guardrails §2) for the image promotion tooling:
-# its shell scripts go through shellcheck, the verifier and its tests through
-# bandit, the hash-pinned Python requirements they run with through
-# osv-scanner, and every file of the tooling and the workflows that run it
-# through gitleaks.
+# Security checks (engineering guardrails §2) for the image promotion tooling,
+# the promotion script and the check that a change does not leave an old digest
+# beside a new tag: its shell scripts go through shellcheck, the verifier, the
+# check and their tests through bandit, the hash-pinned Python requirements
+# they run with through osv-scanner, and every file of the tooling and the
+# workflows that run it through gitleaks.
 #
 # Runs the same way locally and in CI (validate.yml, job
 # image-promotion-tooling):
@@ -22,18 +23,24 @@ gitleaks_image="ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb7900
 tooling=(
   .github/workflows/image-update.yml
   .github/workflows/validate.yml
+  scripts/check-digest-pin-promotion.py
+  scripts/check-digest-pin-promotion.sh
   scripts/promote-image-tag.sh
   scripts/promote-image-tag-env.sh
   scripts/promote-image-tag-requirements.txt
   scripts/promote-image-tag-verify.py
   scripts/scan-promote-image-tag-tooling.sh
   scripts/test-promote-image-tag.sh
+  scripts/tests/kustomize_images_model.py
+  scripts/tests/test_check_digest_pin_promotion.py
+  scripts/tests/test_check_digest_pin_promotion_git.py
   scripts/tests/test_promote_image_tag.py
 )
 
 echo "-- shellcheck"
 podman run --rm --network none -v "$root:/repo:ro" -w /repo "$shellcheck_image" --version
 podman run --rm --network none -v "$root:/repo:ro" -w /repo "$shellcheck_image" \
+  scripts/check-digest-pin-promotion.sh \
   scripts/promote-image-tag.sh \
   scripts/promote-image-tag-env.sh \
   scripts/scan-promote-image-tag-tooling.sh \
@@ -45,7 +52,11 @@ podman run --rm -v "$root:/repo:ro" "$python_image" sh -ec '
     --only-binary :all: --require-hashes \
     -r /repo/scripts/tests/prometheus-rules/requirements-security.txt
   bandit --version
-  bandit /repo/scripts/promote-image-tag-verify.py /repo/scripts/tests/test_promote_image_tag.py'
+  bandit /repo/scripts/check-digest-pin-promotion.py /repo/scripts/promote-image-tag-verify.py \
+    /repo/scripts/tests/kustomize_images_model.py \
+    /repo/scripts/tests/test_check_digest_pin_promotion.py \
+    /repo/scripts/tests/test_check_digest_pin_promotion_git.py \
+    /repo/scripts/tests/test_promote_image_tag.py'
 
 echo "-- osv-scanner"
 podman run --rm -v "$root:/repo:ro" -w /repo "$osv_scanner_image" scan source \
