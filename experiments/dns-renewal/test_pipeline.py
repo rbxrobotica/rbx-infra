@@ -6,7 +6,6 @@ import importlib.util
 import json
 import pathlib
 import signal
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -233,8 +232,7 @@ class RenewerTransactionControls(PipelineFixture):
 
                 reader, key_reads = self.signer_reader()
                 with mock.patch.object(renewer, 'remote', side_effect=remote), \
-                        mock.patch.object(renewer.subprocess, 'run', return_value=
-                                          subprocess.CompletedProcess([], 0, stdout='yes\n')), \
+                        mock.patch.object(renewer, 'read_clock', return_value={'synchronized':True}), \
                         mock.patch.object(renewer.time, 'time', return_value=NOW), \
                         mock.patch.object(pathlib.Path, 'read_bytes', new=reader), \
                         mock.patch.object(renewer.probe, 'run', return_value={'exit_code':0, 'checks':24}) as health:
@@ -268,8 +266,7 @@ class RenewerTransactionControls(PipelineFixture):
 
             reader, _ = self.signer_reader()
             with mock.patch.object(renewer, 'remote', side_effect=remote), \
-                    mock.patch.object(renewer.subprocess, 'run', return_value=
-                                      subprocess.CompletedProcess([], 0, stdout='yes\n')), \
+                    mock.patch.object(renewer, 'read_clock', return_value={'synchronized':True}), \
                     mock.patch.object(renewer.time, 'time', return_value=NOW), \
                     mock.patch.object(renewer.time, 'monotonic', side_effect=[0,181]), \
                     mock.patch.object(pathlib.Path, 'read_bytes', new=reader), \
@@ -287,8 +284,7 @@ class RenewerTransactionControls(PipelineFixture):
                 previous_receipt = (state/'current.json').read_bytes()
                 reader, key_reads = self.signer_reader()
                 with mock.patch.object(renewer, 'remote', return_value=self.inspect_receipt(old)) as remote, \
-                        mock.patch.object(renewer.subprocess, 'run', return_value=
-                                          subprocess.CompletedProcess([], 0, stdout='yes\n')), \
+                        mock.patch.object(renewer, 'read_clock', return_value={'synchronized':True}), \
                         mock.patch.object(renewer.time, 'time', return_value=NOW), \
                         mock.patch.object(renewer.time, 'monotonic', side_effect=[0,181]), \
                         mock.patch.object(pathlib.Path, 'read_bytes', new=reader), \
@@ -310,24 +306,32 @@ class RenewerTransactionControls(PipelineFixture):
 
     def test_clock_rollback_or_unsynchronized_clock_blocks_before_remote(self):
         for synchronized, last, error in [
-            ('no\n', NOW-3600, 'clock_not_synchronized'),
-            ('yes\n', NOW+121, 'clock_moved_backwards'),
+            (False, NOW-3600, 'clock_not_synchronized'),
+            (True, NOW+121, 'clock_moved_backwards'),
         ]:
             with self.subTest(error=error), tempfile.TemporaryDirectory() as work:
                 release, state, old = self.setup_state(pathlib.Path(work))
                 (state/'current.json').write_text(json.dumps({'serial':SERIAL,
                                                             'last_success_epoch':last}))
                 before = (state/'current.json').read_bytes()
-                with mock.patch.object(renewer.subprocess, 'run', return_value=
-                                       subprocess.CompletedProcess([], 0, stdout=synchronized)) as clock, \
+                with mock.patch.object(renewer, 'read_clock', return_value=
+                                       {'synchronized':synchronized}) as clock, \
                         mock.patch.object(renewer.time, 'time', return_value=NOW), \
                         mock.patch.object(renewer, 'remote') as remote:
                     with self.assertRaisesRegex(ValueError, error):
                         renewer.execute(release, state, VIRTUAL_CREDENTIALS)
-                self.assertEqual(clock.call_args.args[0][0], '/usr/bin/timedatectl')
+                clock.assert_called_once_with()
                 remote.assert_not_called()
                 self.assertEqual((state/'current.zone').read_bytes(), old)
                 self.assertEqual((state/'current.json').read_bytes(), before)
+
+    def test_synchronized_clock_preserves_diagnostics_at_rollback_tolerance(self):
+        observed = {'source':'kernel_adjtimex_readonly', 'synchronized':True,
+                    'max_error_microseconds':1000, 'state':0, 'kernel_status':0}
+        with mock.patch.object(renewer, 'read_clock', return_value=observed) as clock:
+            result = renewer.clock_check({'last_success_epoch':NOW+120}, NOW)
+        clock.assert_called_once_with()
+        self.assertEqual(result, observed)
 
 
 class GatewayPublicationControls(PipelineFixture):

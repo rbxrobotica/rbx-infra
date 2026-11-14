@@ -28,7 +28,7 @@ def main():
             'signature_lifetime_seconds':604800,'renew_before_seconds':259200,
             'renewal_period_seconds':3600,'renewal_grace_seconds':3600}
     shared=['core.py','probe.py','signal_client.py']
-    for name,files in [('local',shared+['renewer.py','monitor.py']),
+    for name,files in [('local',shared+['renewer.py','monitor.py','clock_status.py']),
                        ('origin',shared+['origin-gateway.py','firewall.py'])]:
         dest=args.out/name;dest.mkdir(mode=0o755)
         for file in files:shutil.copyfile(source/file,dest/file)

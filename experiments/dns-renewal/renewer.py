@@ -14,6 +14,7 @@ import time
 
 import core
 import probe
+from clock_status import read_clock
 from signal_client import heartbeat
 
 
@@ -28,18 +29,18 @@ def remote(release, credentials, command, payload=None):
 
 
 def clock_check(state, now):
-    synced=subprocess.run(['/usr/bin/timedatectl','show','-p','NTPSynchronized','--value'],
-                          capture_output=True,text=True,check=True,timeout=10).stdout.strip()
-    if synced!='yes': raise ValueError('clock_not_synchronized')
+    clock=read_clock()
+    if not clock['synchronized']: raise ValueError('clock_not_synchronized')
     last=state.get('last_success_epoch',0)
     if now<last-120: raise ValueError('clock_moved_backwards')
+    return clock
 
 
 def execute(release, state_dir, credentials):
     _,baseline=core.policy(release)
     state_path=state_dir/'current.json'
     state=json.loads(state_path.read_text()) if state_path.exists() else {}
-    now=int(time.time());clock_check(state,now)
+    now=int(time.time());clock=clock_check(state,now)
     inspected=remote(release,credentials,'inspect')
     raw=base64.b64decode(inspected['zone_base64'],validate=True)
     if len(raw)>core.MAX_ZONE or hashlib.sha256(raw).hexdigest()!=inspected['sha256']:
@@ -84,7 +85,7 @@ def execute(release, state_dir, credentials):
         core.atomic(state_dir/'current.zone',raw)
     core.write_json(state_path,current_receipt)
     pending.unlink(missing_ok=True)
-    return {**current_receipt,'publication_fully_verified':True}
+    return {**current_receipt,'publication_fully_verified':True,'clock':clock}
 
 
 def main():
