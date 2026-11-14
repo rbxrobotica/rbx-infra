@@ -6,6 +6,8 @@ import json
 import pathlib
 import shutil
 import subprocess
+import tarfile
+import io
 
 NSD_SHA='44e1d576f03084965763c4979942ba158dc8e38b00adedd67ed3739d02da44a2'
 TOOLS=['usr/sbin/nsd','usr/sbin/nsd-checkconf','usr/sbin/nsd-checkzone',
@@ -58,6 +60,13 @@ def main():
             inventory[str(path.relative_to(args.out))]=hashlib.sha256(path.read_bytes()).hexdigest()
         elif path.is_dir():path.chmod(0o755)
     (args.out/'manifest.json').write_text(json.dumps(inventory,indent=2)+'\n')
-    print(json.dumps({'public_only_files':len(inventory),'nsd_sha256':NSD_SHA,'stage':str(args.out)}))
+    with tarfile.open(args.out/'origin.tar','w') as archive:
+        for path in sorted((args.out/'origin').rglob('*')):
+            if not path.is_file():continue
+            raw=path.read_bytes();member=tarfile.TarInfo('rbx-dns-renewal/'+str(path.relative_to(args.out/'origin')))
+            member.size=len(raw);member.mode=path.stat().st_mode & 0o777
+            archive.addfile(member,io.BytesIO(raw))
+    print(json.dumps({'public_only_files':len(inventory),'nsd_sha256':NSD_SHA,'stage':str(args.out),
+                      'origin_bundle_sha256':hashlib.sha256((args.out/'origin.tar').read_bytes()).hexdigest()}))
 
 if __name__=='__main__':main()

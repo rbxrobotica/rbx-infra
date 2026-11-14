@@ -56,7 +56,8 @@ def verify_origin(expected, baseline, deadline=15):
 def publish(raw, baseline):
     _, before = selected(baseline)
     zone = core.parse(raw)
-    checked = core.validate(zone, baseline, minimum_remaining=core.RENEW_BEFORE, floor=before['serial'])
+    checked = core.validate(zone, baseline, minimum_remaining=core.RENEW_BEFORE, floor=before['serial'],
+                            maximum_remaining=core.LIFETIME+120)
     digest = hashlib.sha256(raw).hexdigest()
     same = raw == (STATE / 'origin.zone').read_bytes()
     if not same and not core.newer(checked['serial'], before['serial']):

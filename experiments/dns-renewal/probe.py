@@ -25,7 +25,7 @@ def evaluate(response, owner, kind, baseline, floor, warning, now=None):
         raise ValueError('question')
     if response.rcode()!=0 or not response.flags & dns.flags.AA or response.flags & dns.flags.TC:
         raise ValueError('answer_flags')
-    if len(answer)!=1 or len(signatures)!=1 or len(signatures[0])!=1 or answer[0].ttl!=expected.ttl:
+    if len(answer)!=1 or len(signatures)!=1 or len(signatures[0])!=1 or answer[0].ttl!=expected.ttl or signatures[0].ttl!=expected.ttl:
         raise ValueError('rrset_shape_or_ttl')
     observed_serial=None
     if kind=='SOA':
@@ -42,6 +42,7 @@ def evaluate(response, owner, kind, baseline, floor, warning, now=None):
     dns.dnssec.validate(answer[0],signatures[0],{baseline.origin:baseline.get_rdataset(core.ORIGIN,dns.rdatatype.DNSKEY)},now=now)
     sig=next(iter(signatures[0]))
     if sig.inception>now or sig.expiration<=now: raise ValueError('signature_time')
+    if sig.expiration-now>core.LIFETIME+120:raise ValueError('signature_lifetime_exceeds_policy')
     return {'serial':observed_serial,'remaining_seconds':int(sig.expiration-now),
             'signature_expiration_epoch':sig.expiration,'warning':sig.expiration-now<=warning}
 

@@ -31,14 +31,12 @@
         - '{{ release }}'
         - /var/lib/rbx-dns-publisher-home
         - /var/lib/rbx-dns-publisher-home/.ssh
-    - name: Install only immutable public source, vendor and NSD tools
-      ansible.builtin.copy:
-        src: '{{ public_stage }}/origin/'
-        dest: '{{ release }}/'
+    - name: Install the single bounded uncompressed public bundle
+      ansible.builtin.unarchive:
+        src: '{{ public_stage }}/origin.tar'
+        dest: /opt/
         owner: root
         group: root
-        mode: preserve
-        directory_mode: '0755'
     - name: Limit the one key to the exact unprivileged public-zone gateway
       ansible.builtin.copy:
         content: |
@@ -51,15 +49,15 @@
       ansible.builtin.file:
         path: /var/lib/rbx-dns-renew-origin
         state: directory
-        owner: '{{ publisher }}'
-        group: '{{ publisher }}'
+        owner: '{{ omit if ansible_check_mode else publisher }}'
+        group: '{{ omit if ansible_check_mode else publisher }}'
         mode: '0750'
     - name: Seed only an absent publication, never roll back an existing one
       ansible.builtin.copy:
         src: '{{ public_stage }}/baseline.zone'
         dest: /var/lib/rbx-dns-renew-origin/origin.zone
-        owner: '{{ publisher }}'
-        group: '{{ publisher }}'
+        owner: '{{ omit if ansible_check_mode else publisher }}'
+        group: '{{ omit if ansible_check_mode else publisher }}'
         mode: '0640'
         force: false
     - name: Declare isolated service and exact owned network unit

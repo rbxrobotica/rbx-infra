@@ -60,7 +60,11 @@ because signing, SSH or SIGHUP returned successfully.
 
 Build a public-only stage with `stage.py`; its manifest pins source, baseline,
 known SSH host key, pure-Python DNS dependency and the previously verified
-official NSD binary. Ansible declares the remote origin/account/forced key and
+official NSD binary. `prepare-custody.py --work-dir <private-cache>` prepares
+only the dedicated SSH/signal entries, preserves the other checks and verifies
+the SSH identity from a fresh encrypted remote fetch. Copy its public key into
+the public stage as `publisher-public.key`; no private material belongs there.
+Ansible declares the remote origin/account/forced key and
 local protected service/monitor override. Review check/diff before apply; keep
 the remote administrative SSH agent only for this bounded provisioning/drill,
 then stop it. It is never part of unattended operation.

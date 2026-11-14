@@ -67,7 +67,7 @@ def policy(directory):
     return config, zone
 
 
-def validate(zone, baseline, now=None, minimum_remaining=0, floor=None):
+def validate(zone, baseline, now=None, minimum_remaining=0, floor=None, maximum_remaining=None):
     now = int(time.time()) if now is None else now
     if semantics(zone) != semantics(baseline):
         raise ValueError('unsigned_content_or_denial_chain_changed')
@@ -96,6 +96,8 @@ def validate(zone, baseline, now=None, minimum_remaining=0, floor=None):
             sig = next(iter(signatures))
             if sig.inception > now or sig.expiration <= now + minimum_remaining:
                 raise ValueError('signature_time_or_margin')
+            if maximum_remaining is not None and sig.expiration > now + maximum_remaining:
+                raise ValueError('signature_lifetime_exceeds_policy')
             dns.dnssec.validate((owner, data), (owner, signatures), keys, now=now)
             expirations.append(sig.expiration)
             validations += 1
@@ -121,7 +123,8 @@ def renew(raw_key, baseline, previous, now=None):
     soa.clear(); soa.add(replacement, soa.ttl)
     dns.dnssec.sign_zone(zone, keys=[(key, expected)],
                         inception=now - 60, expiration=now + LIFETIME)
-    checked = validate(zone, baseline, now, minimum_remaining=LIFETIME-120, floor=previous)
+    checked = validate(zone, baseline, now, minimum_remaining=LIFETIME-120, floor=previous,
+                       maximum_remaining=LIFETIME+120)
     raw = zone.to_text(relativize=False, sorted=True).encode('ascii')
     return raw, {**checked, 'sha256': hashlib.sha256(raw).hexdigest(),
                  'generated_at_epoch': now, 'origin': ORIGIN, 'synthetic_only': True}

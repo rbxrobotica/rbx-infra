@@ -150,6 +150,11 @@ class RenewalPolicyControls(unittest.TestCase):
                                        minimum_remaining=3600)
                          ['signed_rrsets_validated'], 24)
 
+    def test_excessive_lifetime_is_rejected_when_policy_is_required(self):
+        zone = self.signed(expiration=NOW+CORE.LIFETIME+121)
+        with self.assertRaisesRegex(ValueError, 'lifetime_exceeds_policy'):
+            CORE.validate(zone, self.baseline, now=NOW, maximum_remaining=CORE.LIFETIME+120)
+
     def test_renewal_advances_serial_without_unsigned_changes(self):
         raw, publication = CORE.renew(pem(self.key), self.baseline, SERIAL,
                                       now=NOW+600)
