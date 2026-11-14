@@ -19,7 +19,7 @@ this experiment.
 | RPO / RTO | Public reference is the last reviewed Git publication; detection target at most 30 minutes plus provider delivery. Signer reconstruction target 15 minutes, measured separately from provisioning/independent custody |
 | Owner | Leandro; primary executor keeps all secrets, restoration, deployment and failure injection on the governed path |
 | Local-only risk | Release/tool caches and encrypted service credential can be reconstructed from Git plus encrypted custody; no canonical private key may exist only in a process or this workstation |
-| Current prerequisites | Local user systemd manager runs with linger enabled; noninteractive sudo is unavailable. The owner explicitly approved project-key creation/custody and the key/check now exist. Native administrative authentication for the protected system service is still pending. No broad API key is deployed in the worker |
+| Current prerequisites | The owner approved project-key creation/custody and reported terminal authentication. Read-only verification found the system monitor installed and timer enabled/active; six service completions matched external success signals. Noninteractive sudo remains unavailable and is not needed for this inspection. No broad API key is deployed in the worker |
 | Limits | Owner GPG emergency kit outer-passphrase/offline custody and successors remain incomplete. This new lab signer is disposable and not a production key or founder-independent recovery pass |
 | Cost | Existing workstation and Hobbyist allowance; no paid resource selected. Annual ClouDNS assessment follows qualification |
 
@@ -70,9 +70,30 @@ The temporary origin, control/cache directories and owned firewall rules were
 removed, PostgreSQL/k3s stayed active, and the task SSH agent stopped. One-shot
 detector delivery changed from failure to healthy and DOWN/UP emails arrived.
 
-The native local authentication request expired before installation. The
-persistent local timer is **not active yet**. The check, source, credentials,
-recovery and notification tests are real; continuous runtime must only be
-claimed after authenticated Ansible activation and repeated timer observations.
+The initial native authentication request expired before installation; its
+pending receipt remains historical. After the operator reported terminal
+authentication and the initial installer's existing-state refusal, read-only
+verification found the protected service installed and the enabled timer
+**active/waiting**. Six real service completions between 21:05 and 22:00 local
+all returned DNS exit 0 and confirmed signals, each matching an external
+Healthchecks success within two seconds. The last timer trigger correlated with
+the latest successful completion; an off-calendar historical run is not
+attributed to the timer. All six installed code/configuration hashes exactly
+matched the reviewed files and were root-owned. The external check was up at
+900/900 seconds. Gmail contained missed-signal DOWN and activation UP, about
+1.75 seconds after the first installed-service completion. The oneshot is
+normally inactive between timer runs. No overwrite or additional failure drill
+was necessary. Read-only agreement is not a reconstruction of an unavailable
+Ansible apply/idempotence transcript.
+
+Evidence and current commitment recommendation are in resilience PR11,
+`docs/experiments/2026-11-13-monitor-activation-and-contract-assessment.md` and
+`evidence/2026-11-13-monitor-activation-verification/`. Production H-dns remains
+unqualified. The worker detects expiry but does not renew signatures; repeatable
+renewal/publication, TSIG, independent discovery/vantages and owner-independent
+key recovery remain separate work. Current recommendation is to finish the
+trial and prefer an initial three-month Premium M term rather than prepay for
+the year solely to save USD 4.95. No order was made.
+
 The one-shot stdin credential option is a delivery-drill path, not a persistent
 plaintext credential file or substitute for the protected systemd unit.
