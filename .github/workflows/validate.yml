@@ -195,6 +195,56 @@ jobs:
       - name: Security-scan the Prometheus rule tooling
         run: bash scripts/scan-prometheus-rules-tooling.sh
 
+  image-promotion-tooling:
+    # scripts/promote-image-tag.sh writes what a promotion pull request says
+    # production will run. It must refuse an images entry that pins a digest:
+    # a new tag beside the old digest keeps running the old image. The tests
+    # run in podman from a digest-pinned image, in the environment the script
+    # itself requires (PyYAML pinned by hash), and the script, its verifier and
+    # the tests get shellcheck, bandit, osv-scanner and gitleaks (guardrails
+    # §2).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Test the image promotion script in its pinned environment
+        run: bash scripts/test-promote-image-tag.sh
+
+      - name: Security-scan the image promotion tooling
+        run: bash scripts/scan-promote-image-tag-tooling.sh
+
+  image-promotion-on-runner:
+    # image-update.yml runs the promotion script on ubuntu-latest, with the
+    # bash, awk and python3 that image ships and the PyYAML that
+    # scripts/promote-image-tag-env.sh installs by hash. The same command
+    # provisions the same environment here and the same tests run in it, so a
+    # runner image that cannot provision it, or whose python3 reads a
+    # kustomization differently, fails a pull request before it fails a
+    # promotion.
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Provision the pinned YAML parser as image-update.yml does
+        run: bash scripts/promote-image-tag-env.sh "$RUNNER_TEMP/promote-image-tag-env"
+
+      - name: Test the image promotion script in that environment
+        run: |
+          "$RUNNER_TEMP/promote-image-tag-env/bin/python" -I -B -m unittest discover \
+            -s scripts/tests -p 'test_promote_image_tag.py' -v
+
   validate-argocd:
     runs-on: ubuntu-latest
     steps:

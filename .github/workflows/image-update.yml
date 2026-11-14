@@ -57,9 +57,16 @@ jobs:
         run: |
           echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      # The promotion script has its edit judged by a YAML parser. This is the
+      # environment it runs that in: PyYAML pinned by hash, nothing from the
+      # runner's own site-packages. validate.yml tests the script in an
+      # environment provisioned by the same command on the same runner label.
+      - name: Provision the pinned YAML parser of the promotion script
+        run: bash scripts/promote-image-tag-env.sh "$RUNNER_TEMP/promote-image-tag-env"
+
       - name: Validate and update kustomization
         run: |
-          CHECK_REGISTRY=1 bash scripts/promote-image-tag.sh \
+          CHECK_REGISTRY=1 PROMOTE_IMAGE_TAG_ENV="$RUNNER_TEMP/promote-image-tag-env" bash scripts/promote-image-tag.sh \
             "${{ steps.request.outputs.app }}" \
             "${{ steps.request.outputs.image }}" \
             "${{ steps.request.outputs.tag }}"
