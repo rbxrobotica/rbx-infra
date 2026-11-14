@@ -100,15 +100,47 @@ and tampered publication requests were rejected; the selected zone/hash stayed
 unchanged. Unauthorized external TCP/UDP DNS requests timed out while the
 authorized origin control remained healthy.
 
-Local protected renewal activation awaits operator-terminal authentication.
-The active old monitor remains healthy; no new automatic signatures or renewal
-email drill are claimed yet. The prepared finite `owner-alert-drill.py` will
+The protected local installation subsequently completed with an unchanged
+post-apply preview. Its first two executions failed before publication because
+`timedatectl` could not reach D-Bus in the sandbox. The actual failure produced
+a delivered renewal DOWN email. A read-only replica confirmed a valid publisher
+credential and working constrained SSH, isolating the clock-query defect.
+The repair queries Linux64 `adjtimex` with modes=0 and the same maxerror criterion
+as systemd v255; it neither sets the clock nor needs system-bus access. The
+reviewed two-file update preserves credentials, units, pins and public state,
+and must pass a protected read-only probe before renewal/no-op/monitor runs.
+At that repair checkpoint, 51 offline renewal controls passed. Subsequent
+due-boundary/expired-snapshot controls bring the total to 54, using disposable
+keys and mocked time; no future-time test snapshot was deployed.
+
+The reviewed clock repair then passed a protected diagnostic, actual automatic
+publication and a following verified no-op. Serial `2026111303` retains the
+original DS and full semantic content; all 24 authoritative RRsets were signed
+and validated. All 184 managed direct checks and 20 cold DNSSEC cases passed.
+A captured full public zone matched the worker's hash and restored into local
+NSD with six direct checks/five original-anchor resolver cases passing.
+The actual initial protected failure delivered DOWN at 02:04:55 UTC; repaired
+publication delivered UP at 02:29:08 UTC. Both external checks are up. An
+independent origin restart recovered in 4.274 seconds, preserving the selected
+public hash/serial and active PostgreSQL/k3s.
+
+The hourly timer is enabled/active; the next natural hourly trigger had not yet
+occurred at this observation. The actual protected executions and deterministic
+due-boundary tests establish the narrow executed scope without claiming that
+future elapsed-time cycle has already happened. The independent 15-minute
+monitor has already accepted the renewed serial on a natural trigger.
+
+The prepared finite `owner-alert-drill.py` can
 exercise the real renewal orchestration against a stopped/restarted origin,
 using an ephemeral constrained SSH-agent transport. It is explicitly an owner
 drill, not evidence that the protected systemd unit failed by itself. It refuses
 to publish or overlap an imminent scheduled run, restores the origin in its
 cleanup and does not disable the timer. Never run the outage drill before local
 activation and its first successful publication.
+It was not needed for this checkpoint: real protected failure/recovery already
+provided DOWN/UP delivery evidence. No extra outage signal was injected.
+
+Clock policy reference: [systemd v255 timedated](https://github.com/systemd/systemd/blob/v255/src/timedate/timedated.c#L510).
 
 ## Remaining boundaries
 

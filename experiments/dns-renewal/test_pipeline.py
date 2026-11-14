@@ -304,6 +304,85 @@ class RenewerTransactionControls(PipelineFixture):
                 self.assertFalse((state/'pending.zone').exists())
                 self.assertEqual((state/'current.zone').read_bytes(), old)
 
+    def exercise_existing_deadline(self, remaining):
+        """Run real signing policy with an existing public state; transport is fake."""
+        with tempfile.TemporaryDirectory() as work:
+            release, state, _ = self.setup_state(pathlib.Path(work))
+            old = raw_zone(self.signed(expiration=NOW+remaining))
+            (state/'current.zone').write_bytes(old)
+            payloads = []
+
+            def remote(_release, _credentials, command, payload=None):
+                if command == 'inspect':
+                    return self.inspect_receipt(old)
+                self.assertEqual(command, 'publish')
+                payloads.append(payload)
+                candidate = core.parse(payload)
+                self.assertEqual(core.validate(candidate, self.baseline, now=NOW,
+                                                minimum_remaining=core.RENEW_BEFORE,
+                                                floor=SERIAL)['signed_rrsets_validated'], 24)
+                return {'sha256':hashlib.sha256(payload).hexdigest(),
+                        'origin_reload_verified':True}
+
+            reader, key_reads = self.signer_reader()
+            with mock.patch.object(renewer, 'remote', side_effect=remote), \
+                    mock.patch.object(renewer, 'read_clock', return_value={'synchronized':True}), \
+                    mock.patch.object(renewer.time, 'time', return_value=NOW), \
+                    mock.patch.object(pathlib.Path, 'read_bytes', new=reader), \
+                    mock.patch.object(renewer.probe, 'run', return_value={'exit_code':0, 'checks':24}) as health:
+                result = renewer.execute(release, state, VIRTUAL_CREDENTIALS)
+            self.assertTrue(result['publication_fully_verified'])
+            self.assertEqual(health.call_count, 1)
+            self.assertFalse((state/'pending.zone').exists())
+            stored = json.loads((state/'current.json').read_text())
+            self.assertEqual(stored['serial'], result['serial'])
+            return {'result':result, 'old':old, 'current':(state/'current.zone').read_bytes(),
+                    'payloads':payloads, 'key_reads':len(key_reads),
+                    'health_expected_serial':health.call_args.kwargs['expected_serial']}
+
+    def test_existing_state_just_above_renewal_deadline_stays_verified_noop(self):
+        observed = self.exercise_existing_deadline(core.RENEW_BEFORE+1)
+        self.assertEqual(observed['result']['mode'], 'verified_noop')
+        self.assertEqual(observed['result']['serial'], SERIAL)
+        self.assertEqual(observed['health_expected_serial'], SERIAL)
+        self.assertEqual(observed['key_reads'], 0)
+        self.assertEqual(observed['payloads'], [])
+        self.assertEqual(observed['current'], observed['old'])
+
+    def test_existing_state_at_or_below_deadline_renews_original_key_and_content(self):
+        for remaining in [core.RENEW_BEFORE, core.RENEW_BEFORE-1]:
+            with self.subTest(remaining=remaining):
+                observed = self.exercise_existing_deadline(remaining)
+                self.assertEqual(observed['result']['mode'], 'renewal_due')
+                self.assertEqual(observed['result']['serial'], SERIAL+1)
+                self.assertEqual(observed['result']['valid_until_epoch'], NOW+7*86400)
+                self.assertEqual(observed['health_expected_serial'], SERIAL+1)
+                self.assertEqual(observed['key_reads'], 1)
+                self.assertEqual(observed['payloads'], [observed['current']])
+                candidate = core.parse(observed['current'])
+                self.assertEqual(core.semantics(candidate), core.semantics(self.baseline))
+                candidate_key = next(iter(candidate.get_rdataset(core.ORIGIN, dns.rdatatype.DNSKEY)))
+                self.assertEqual(dns.dnssec.make_ds(candidate.origin, candidate_key, 'SHA256'),
+                                 dns.dnssec.make_ds(self.baseline.origin, self.dnskey, 'SHA256'))
+                self.assertEqual(core.validate(candidate, self.baseline, now=NOW,
+                                                minimum_remaining=core.RENEW_BEFORE,
+                                                floor=SERIAL)['signed_rrsets_validated'], 24)
+
+    def test_expired_selected_snapshot_seeds_fresh_renewal_never_healthy_noop(self):
+        observed = self.exercise_existing_deadline(-1)
+        with self.assertRaisesRegex(ValueError, 'signature_time_or_margin'):
+            core.validate(core.parse(observed['old']), self.baseline, now=NOW)
+        self.assertEqual(observed['result']['mode'], 'renewal_due')
+        self.assertEqual(observed['result']['serial'], SERIAL+1)
+        self.assertEqual(observed['result']['valid_until_epoch'], NOW+7*86400)
+        self.assertEqual(observed['key_reads'], 1)
+        self.assertEqual(observed['payloads'], [observed['current']])
+        self.assertNotEqual(observed['current'], observed['old'])
+        checked = core.validate(core.parse(observed['current']), self.baseline,
+                                now=NOW, minimum_remaining=core.RENEW_BEFORE, floor=SERIAL)
+        self.assertEqual(checked['signed_rrsets_validated'], 24)
+        self.assertEqual(checked['semantic_sha256'], core.semantics(self.baseline))
+
     def test_clock_rollback_or_unsynchronized_clock_blocks_before_remote(self):
         for synchronized, last, error in [
             (False, NOW-3600, 'clock_not_synchronized'),
