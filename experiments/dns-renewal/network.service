@@ -1,0 +1,15 @@
+[Unit]
+Description=Exact source-IP firewall for isolated RBX renewal origin
+Before=rbx-dns-renew-origin.service
+PartOf=rbx-dns-renew-origin.service
+StopWhenUnneeded=yes
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/python3 -B /opt/rbx-dns-renewal/firewall.py start
+ExecStop=/usr/bin/python3 -B /opt/rbx-dns-renewal/firewall.py stop
+NoNewPrivileges=yes
+ProtectHome=yes
+ProtectSystem=strict
+PrivateTmp=yes

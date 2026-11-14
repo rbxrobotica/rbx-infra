@@ -1,0 +1,31 @@
+[Unit]
+Description=RBX synthetic DNS data and signature monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+User=rbx-dns-monitor
+ExecStart=/usr/bin/python3 -B /opt/rbx-dns-monitor/worker.py --release /opt/rbx-dns-monitor --state-dir /var/lib/rbx-dns-monitor
+LoadCredentialEncrypted=healthchecks:/etc/credstore.encrypted/rbx-dns-monitor-healthchecks
+StateDirectory=rbx-dns-monitor
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+MemoryMax=128M
+CPUQuota=10%
+TasksMax=24
+TimeoutStartSec=90
+

@@ -1,0 +1,51 @@
+name: DNS pilot monitor boundaries
+
+on:
+  push:
+    paths:
+      - 'experiments/dns-monitor/**'
+      - 'experiments/dns-renewal/**'
+      - '.github/workflows/dns-pilot-monitor.yml'
+  pull_request:
+    paths:
+      - 'experiments/dns-monitor/**'
+      - 'experiments/dns-renewal/**'
+      - '.github/workflows/dns-pilot-monitor.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-boundaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test without credentials or provider requests
+        run: python3 -B -m unittest discover -s experiments/dns-monitor -p test_monitor.py
+      - name: Parse every pilot implementation
+        run: |
+          python3 -B - <<'PY'
+          import ast
+          import pathlib
+          for path in pathlib.Path('experiments/dns-monitor').glob('*.py'):
+              ast.parse(path.read_text(), filename=str(path))
+          PY
+
+  renewal-boundaries:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install isolated public cryptographic test dependencies
+        run: |
+          python3 -m venv .dns-test-venv
+          .dns-test-venv/bin/pip install 'dnspython[dnssec]>=2.6.1,<3'
+      - name: Test without credentials or provider requests
+        run: .dns-test-venv/bin/python -B -m unittest discover -s experiments/dns-renewal -p 'test_*.py'
+      - name: Parse every renewal implementation
+        run: |
+          python3 -B - <<'PY'
+          import ast
+          import pathlib
+          for path in pathlib.Path('experiments/dns-renewal').glob('*.py'):
+              ast.parse(path.read_text(), filename=str(path))
+          PY
