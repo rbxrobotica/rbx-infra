@@ -130,6 +130,12 @@ due-boundary tests establish the narrow executed scope without claiming that
 future elapsed-time cycle has already happened. The independent 15-minute
 monitor has already accepted the renewed serial on a natural trigger.
 
+The subsequent natural hourly trigger was observed on November 14 at 00:00:04
+America/Sao_Paulo. Its protected verified no-op finished at 00:00:16 with exit 0
+and confirmed external success, after the administrative SSH agent was stopped.
+The earlier future-trigger statement remains an accurate historical checkpoint;
+the scheduled runtime is now independently observed too.
+
 The prepared finite `owner-alert-drill.py` can
 exercise the real renewal orchestration against a stopped/restarted origin,
 using an ephemeral constrained SSH-agent transport. It is explicitly an owner
