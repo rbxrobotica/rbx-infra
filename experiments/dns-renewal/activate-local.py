@@ -4,9 +4,11 @@ import argparse
 import base64
 import json
 import pathlib
+import resource
 import subprocess
 
 def main():
+    resource.setrlimit(resource.RLIMIT_CORE,(0,0))
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--public-stage',required=True,type=pathlib.Path)
     p.add_argument('--resilience',required=True,type=pathlib.Path)

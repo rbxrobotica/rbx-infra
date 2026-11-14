@@ -83,6 +83,33 @@ signing/policy errors, publication interruption, failed convergence, rollback,
 wrong content/key, clock/expiry and atomic selection. Publish sanitized receipts
 separately from older failures; do not promote a production H-dns grade.
 
+## Observed implementation checkpoint
+
+Forty-two offline renewal controls and seven existing monitor controls pass;
+relevant CI is green. The new constrained SSH identity was recovered from a
+fresh encrypted private-remote fetch. The separate renewal check is configured
+at 3600/3600 seconds with its email channel and the other two checks preserved.
+
+The first recursive check-mode copy exceeded 90 seconds without apply. It is
+preserved as a failed preview. The uncompressed public-bundle replacement
+passed preview, actual application (`ok=9`, `changed=8`, no failures) and a
+subsequent preview with `changed=0`. Root-owned forced authorization, dedicated
+account/state ownership, resource limits, exact 12-rule firewall chain and
+active PostgreSQL/k3s were independently verified. Real arbitrary SSH command
+and tampered publication requests were rejected; the selected zone/hash stayed
+unchanged. Unauthorized external TCP/UDP DNS requests timed out while the
+authorized origin control remained healthy.
+
+Local protected renewal activation awaits operator-terminal authentication.
+The active old monitor remains healthy; no new automatic signatures or renewal
+email drill are claimed yet. The prepared finite `owner-alert-drill.py` will
+exercise the real renewal orchestration against a stopped/restarted origin,
+using an ephemeral constrained SSH-agent transport. It is explicitly an owner
+drill, not evidence that the protected systemd unit failed by itself. It refuses
+to publish or overlap an imminent scheduled run, restores the origin in its
+cleanup and does not disable the timer. Never run the outage drill before local
+activation and its first successful publication.
+
 ## Remaining boundaries
 
 The workstation is still the online signer/producer failure domain. Its loss
@@ -92,3 +119,6 @@ discovery, production signing policy/key custody and unattended failover of the
 signer remain unqualified. ClouDNS's confirmed stale-serving policy remains
 unchanged. The trial notice showed November 19 expiry without a cutoff time;
 automated signing does not buy or extend the provider subscription.
+The vendored binary/dependency release is a reviewed pilot snapshot, not an OS
+automatic-update enrollment; production adoption needs an explicit patch/rebuild
+procedure.

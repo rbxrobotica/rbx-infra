@@ -6,15 +6,18 @@ import hashlib
 import importlib.util
 import json
 import pathlib
+import resource
 import subprocess
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
+resource.setrlimit(resource.RLIMIT_CORE,(0,0))
 parser=argparse.ArgumentParser(description='Prepare only dedicated lab publisher/signal custody; keep all private values in memory or encrypted pass.')
 parser.add_argument('--work-dir',required=True,type=pathlib.Path)
 args=parser.parse_args()
 CACHE=args.work_dir
 CACHE.mkdir(mode=0o700,parents=True,exist_ok=True)
+CACHE.chmod(0o700)
 STORE=pathlib.Path.home()/'.password-store'
 ENTRY='rbx/dns/publisher-ssh'
 try:
