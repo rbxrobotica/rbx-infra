@@ -1,0 +1,73 @@
+---
+- name: Declare protected lab renewal and reviewed monitor update
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Require reviewed public stage and wrapped credentials
+      ansible.builtin.assert:
+        that:
+          - public_stage is defined
+          - wrapped_credentials is defined
+    - name: Declare immutable source and protected credential directory
+      ansible.builtin.file:
+        path: '{{ item.path }}'
+        state: directory
+        owner: root
+        group: root
+        mode: '{{ item.mode }}'
+      loop:
+        - {path: /opt/rbx-dns-renewal, mode: '0755'}
+        - {path: /etc/credstore.encrypted, mode: '0700'}
+    - name: Install public renewal and monitoring release
+      ansible.builtin.copy:
+        src: '{{ public_stage }}/local/'
+        dest: /opt/rbx-dns-renewal/
+        owner: root
+        group: root
+        mode: '0444'
+        directory_mode: '0755'
+    - name: Copy only host-wrapped service-specific credentials
+      ansible.builtin.copy:
+        src: '{{ wrapped_credentials }}/{{ item }}.encrypted'
+        dest: '/etc/credstore.encrypted/rbx-dns-renewal-{{ item }}'
+        owner: root
+        group: root
+        mode: '0600'
+      loop: [signer, publisher, healthchecks]
+      no_log: true
+    - name: Declare renewal units and reviewed monitor ExecStart override
+      ansible.builtin.copy:
+        src: '{{ item.src }}'
+        dest: '{{ item.dest }}'
+        owner: root
+        group: root
+        mode: '0644'
+      loop:
+        - {src: '{{ playbook_dir }}/renewal.service', dest: /etc/systemd/system/rbx-dns-pilot-renewal.service}
+        - {src: '{{ playbook_dir }}/renewal.timer', dest: /etc/systemd/system/rbx-dns-pilot-renewal.timer}
+    - name: Declare monitor override location
+      ansible.builtin.file:
+        path: /etc/systemd/system/rbx-dns-pilot-monitor.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+    - name: Replace only the monitor execution path after the drift guard
+      ansible.builtin.copy:
+        content: |
+          [Service]
+          ExecStart=
+          ExecStart=/usr/bin/python3 -B /opt/rbx-dns-renewal/monitor.py --release /opt/rbx-dns-renewal --state-dir /var/lib/rbx-dns-monitor
+        dest: /etc/systemd/system/rbx-dns-pilot-monitor.service.d/renewal.conf
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Enable only the hourly renewal timer
+      ansible.builtin.systemd_service:
+        name: rbx-dns-pilot-renewal.timer
+        daemon_reload: true
+        enabled: true
+        state: started
+      when: not ansible_check_mode
