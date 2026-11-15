@@ -87,6 +87,10 @@ requires personal password setup in a session separate from the logged-in
 owner. This is not proof of bucket scoping: after activation, actual positive
 reads and negative access/mutation tests remain mandatory. No source-reader
 entry, protected worker, timer or continuous backup is claimed yet.
+The invitation token appeared in a diagnostic view; source admission also
+requires explicit confirmation that this temporary authentication handoff has
+closed (consumed/revoked or expired). Do not infer closure from password setup
+alone when the provider's token-replay behavior has not been verified.
 
 Live B2 qualification used only a new, clearly synthetic 44-byte fixture under
 the exact owned prefix, outside the completed-archive naming pattern. Writer

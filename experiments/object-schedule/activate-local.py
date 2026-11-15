@@ -14,12 +14,16 @@ def main():
     resource.setrlimit(resource.RLIMIT_CORE,(0,0))
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('--public-stage',type=Path,required=True)
     args=p.parse_args();stage=args.public_stage.resolve()
+    config=json.loads((stage/'local/runtime.json').read_text())
+    if config.get('source_scope_qualified') is not True:raise ValueError('source_scope_not_qualified')
     source=json.loads(source_access.stored('rbx/object-backup/source-reader'))
-    if source.get('scope_qualified') is not True:raise ValueError('source_scope_not_qualified')
+    if source.get('scope_qualified') is not True or source.get('authentication_handoff_closed') is not True:
+        raise ValueError('source_scope_not_qualified')
     owner=json.loads(source_access.stored('rbx/object-backup/memory-custody'))
     broad=source_access.stored(owner['source']['source_access_ref']).decode().splitlines()[0]
     if source['access_key']==broad:raise ValueError('owner_source_key_refused')
-    config=json.loads((stage/'local/runtime.json').read_text())
+    if any(source['plan'].get(k)!=owner['source'][k] for k in ('source_bucket','source_endpoint','source_region')):
+        raise ValueError('source_mapping_drift')
     material={'source':base64.b64encode(json.dumps(source).encode()).decode()}
     for role in ('writer','verifier'):
         raw=source_access.stored('rbx/object-backup/b2-'+role)

@@ -193,16 +193,16 @@ def witness(client, public, now):
 
 
 def capture(client, root, release, now):
-    import botocore.session
-    from botocore.config import Config
-    spec = importlib.util.spec_from_file_location('archive', release / 'archive.py')
-    archive = importlib.util.module_from_spec(spec); spec.loader.exec_module(archive)
     source = json.loads(credential(root, 'source'))
-    if source.get('scope_qualified') is not True:
+    if source.get('scope_qualified') is not True or source.get('authentication_handoff_closed') is not True:
         raise ValueError('source_scope_not_qualified')
     plan = source['plan']
     if plan['dataset_id'] != 'C008' or not plan['source_endpoint'].startswith('https://'):
         raise ValueError('unexpected_source')
+    import botocore.session
+    from botocore.config import Config
+    spec = importlib.util.spec_from_file_location('archive', release / 'archive.py')
+    archive = importlib.util.module_from_spec(spec); spec.loader.exec_module(archive)
     source_client = botocore.session.get_session().create_client('s3',
         endpoint_url=plan['source_endpoint'], region_name=plan['source_region'],
         aws_access_key_id=source['access_key'], aws_secret_access_key=source['secret_key'],

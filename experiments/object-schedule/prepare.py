@@ -27,7 +27,8 @@ def main():
     source_ready=False
     if (Path.home()/'.password-store/rbx/object-backup/source-reader.gpg').exists():
         reader=json.loads(source_access.stored('rbx/object-backup/source-reader'))
-        source_ready=reader.get('scope_qualified') is True
+        source_ready=(reader.get('scope_qualified') is True and
+                      reader.get('authentication_handoff_closed') is True)
         broad=source_access.stored(custody['source']['source_access_ref']).decode().splitlines()[0]
         if reader['access_key']==broad:raise ValueError('owner_source_key_refused')
     stage.mkdir(mode=0o700,parents=True);local=stage/'local';local.mkdir(mode=0o755)

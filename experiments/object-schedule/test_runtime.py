@@ -1,6 +1,8 @@
 import base64
 import json
 import unittest
+from pathlib import Path
+import tempfile
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.exceptions import InvalidSignature
@@ -90,6 +92,15 @@ class RuntimeTests(unittest.TestCase):
         for bad in [path_form+'/extra',good.split('?')[0]+'/one-segment',
                     good.split('?')[0]+'/../outside']:
             with self.assertRaises(ValueError):r.b2_access.upload_destination(bad)
+
+    def test_source_rejected_before_dependency_or_network_use(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            for value in ({'scope_qualified':False,'authentication_handoff_closed':True},
+                          {'scope_qualified':True,'authentication_handoff_closed':False}):
+                (root/'source').write_text(json.dumps(value))
+                with self.assertRaisesRegex(ValueError,'source_scope_not_qualified'):
+                    r.capture(None,root,root,1020)
 
 
 if __name__ == '__main__': unittest.main()

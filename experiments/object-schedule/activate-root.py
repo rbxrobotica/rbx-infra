@@ -43,7 +43,8 @@ def main():
     if set(payload)!=set(names):raise ValueError('unexpected_credential_set')
     values={k:base64.b64decode(v,validate=True) for k,v in payload.items()}
     reader=json.loads(values['source'])
-    if reader.get('scope_qualified') is not True:raise ValueError('source_not_qualified')
+    if reader.get('scope_qualified') is not True or reader.get('authentication_handoff_closed') is not True:
+        raise ValueError('source_not_qualified')
     for role in ('writer','verifier'):access.admit(role,json.loads(values[role]),config['bucket_id'])
     private=base64.b64decode(values['signer'],validate=True)
     public=Ed25519PrivateKey.from_private_bytes(private).public_key().public_bytes(
