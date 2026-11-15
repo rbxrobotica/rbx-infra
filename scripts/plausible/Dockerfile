@@ -7,7 +7,7 @@ FROM docker.io/library/postgres@sha256:efdf07c2f9d4df592783dcc8ea5f6db02efbf5f64
 # dependencies. curl is used only in this stage and is not added to the runtime.
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
-        ca-certificates=20250419~deb12u1 \
+        ca-certificates=20250419~deb12u2 \
         curl=7.88.1-10+deb12u15 \
     && curl --fail --show-error --silent --location \
         --proto '=https' --tlsv1.2 --max-time 120 \
@@ -23,13 +23,17 @@ LABEL org.opencontainers.image.title="RBX Plausible preservation" \
       org.opencontainers.image.description="Encrypted database backup and bounded weekly analytics tools" \
       org.opencontainers.image.source="https://github.com/rbxrobotica/rbx-infra"
 
-# Patch the base's Perl and PCRE2 packages. The backup process starts directly
+# Patch the base's APT, OpenSSL, Perl and PCRE2 packages. The backup process starts directly
 # as UID 10001; PostgreSQL's root-switching gosu/entrypoint are not used.
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
         python3=3.11.2-1+b1 \
         gnupg=2.2.40-1.1+deb12u2 \
-        ca-certificates=20250419~deb12u1 \
+        ca-certificates=20250419~deb12u2 \
+        apt=2.6.2 \
+        libapt-pkg6.0=2.6.2 \
+        libssl3=3.0.22-1~deb12u2 \
+        openssl=3.0.22-1~deb12u2 \
         perl=5.36.0-7+deb12u4 \
         perl-base=5.36.0-7+deb12u4 \
         perl-modules-5.36=5.36.0-7+deb12u4 \
