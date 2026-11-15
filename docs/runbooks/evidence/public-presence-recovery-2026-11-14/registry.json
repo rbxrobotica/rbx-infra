@@ -1,0 +1,23 @@
+{
+  "schema": "rbx.public-presence.registry-observation.v1",
+  "evidence_date": "2026-11-14",
+  "mode": "authenticated_read_only_manifest_requests",
+  "source_commit": "8643b56486cae9c3fed1e385d35d4cd912591a81",
+  "results": [
+    {
+      "component": "api",
+      "status": 200,
+      "digest": "sha256:d12b9b199b89c91eb2535b56d4c57a78260526bd0eca5a1a06746c4781c629ea"
+    },
+    {
+      "component": "web",
+      "status": 200,
+      "digest": "sha256:e71c9b08b4f110daa57a00617e1401a83405996f05b1ae592e048a14a4163af9"
+    }
+  ],
+  "existing_credential_reference": "rbx/cluster/ghcr-token",
+  "encrypted_remote_private": true,
+  "encrypted_remote_blob_matches_local": true,
+  "token_or_permission_changed": false,
+  "cluster_pull_verified": false
+}

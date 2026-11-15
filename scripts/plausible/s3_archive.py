@@ -110,7 +110,7 @@ class Config:
 def scope_prefix(scope: str) -> str:
     # Explicit callers select the application; an environment variable cannot
     # redirect the existing Plausible CLI into another backup collection.
-    if scope not in ("plausible", "comms"):
+    if scope not in ("plausible", "comms", "public-presence"):
         raise ArchiveError("Unsupported backup scope")
     return f"{scope}/backups/"
 

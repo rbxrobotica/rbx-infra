@@ -65,6 +65,9 @@ spec:
               value: https://auth.merovelis.com
             - name: PRESENCE_WORKER_INTERVAL
               value: 15s
+            # Keep publication side effects held during service recovery.
+            - name: PRESENCE_WORKER
+              value: 'off'
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:

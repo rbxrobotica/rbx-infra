@@ -13,6 +13,9 @@ metadata:
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
     argocd.argoproj.io/sync-wave: "1"
 spec:
+  # Released only after the real backup/restore checkpoint is reviewed.
+  suspend: true
+  activeDeadlineSeconds: 600
   backoffLimit: 5
   template:
     metadata:

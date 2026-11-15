@@ -22,12 +22,12 @@ labels:
       environment: production
     includeSelectors: false
 images:
-  # Promoted by rbx-public-presence CI on each main build (sha-<commit>; docs/infra/IMAGE-PROMOTION.md).
-  # First real pin (2026-09-23): rbx-public-presence main 9ba13e2 (includes the
-  # "reject stale verification claims" race fix, e6ca605), CI green, both images built
-  # by publish-images run 35878301183. The CI self-push step failed only because
-  # RBX_INFRA_PAT is not visible to that repository yet (docs/runbooks/DECISION-TO-ACTION-BRIDGE.md).
+  # Public Presence #21 merge, CI and image build passed. Both authenticated
+  # manifest reads returned 200 on 2026-11-14. Digest promotion is reviewed;
+  # recovering the pull Secret must not resume the old migration automatically.
   - name: ghcr.io/rbxrobotica/rbx-public-presence-api
-    newTag: sha-9ba13e29f7b3a3844b22437077475e703e951ec0
+    newTag: sha-8643b56486cae9c3fed1e385d35d4cd912591a81
+    digest: sha256:d12b9b199b89c91eb2535b56d4c57a78260526bd0eca5a1a06746c4781c629ea
   - name: ghcr.io/rbxrobotica/rbx-public-presence-web
-    newTag: sha-9ba13e29f7b3a3844b22437077475e703e951ec0
+    newTag: sha-8643b56486cae9c3fed1e385d35d4cd912591a81
+    digest: sha256:e71c9b08b4f110daa57a00617e1401a83405996f05b1ae592e048a14a4163af9

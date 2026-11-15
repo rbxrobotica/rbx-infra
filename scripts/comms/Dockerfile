@@ -1,17 +1,21 @@
 # PostgreSQL 16.15 amd64. Build from the repository root; publish only after scans.
 FROM docker.io/library/postgres@sha256:efdf07c2f9d4df592783dcc8ea5f6db02efbf5f6452b527225ff5e58364570e9
 
-LABEL org.opencontainers.image.title="RBX Comms preservation" \
-      org.opencontainers.image.description="Encrypted logical backup of the Comms PostgreSQL database" \
+LABEL org.opencontainers.image.title="RBX PostgreSQL preservation" \
+      org.opencontainers.image.description="Scoped encrypted backups for Comms and Public Presence" \
       org.opencontainers.image.source="https://github.com/rbxrobotica/rbx-infra"
 
-# Patch the base's Perl and PCRE2 packages. The backup process starts directly
+# Patch the base's APT, OpenSSL, Perl and PCRE2 packages. The backup process starts directly
 # as UID 10001; PostgreSQL's root-switching gosu/entrypoint are not used.
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
         python3=3.11.2-1+b1 \
         gnupg=2.2.40-1.1+deb12u2 \
-        ca-certificates=20250419~deb12u1 \
+        ca-certificates=20250419~deb12u2 \
+        apt=2.6.2 \
+        libapt-pkg6.0=2.6.2 \
+        libssl3=3.0.22-1~deb12u2 \
+        openssl=3.0.22-1~deb12u2 \
         perl=5.36.0-7+deb12u4 \
         perl-base=5.36.0-7+deb12u4 \
         perl-modules-5.36=5.36.0-7+deb12u4 \
@@ -25,6 +29,7 @@ RUN apt-get update \
 
 COPY --chown=0:0 scripts/plausible/backup_runner.py scripts/plausible/s3_archive.py /app/plausible/
 COPY --chown=0:0 scripts/comms/backup_runner.py scripts/comms/s3_archive.py /app/comms/
+COPY --chown=0:0 scripts/presence/backup_runner.py scripts/presence/s3_archive.py /app/presence/
 
 # No kubectl or Kubernetes token is required for this PostgreSQL-only job.
 ENV PYTHONDONTWRITEBYTECODE=1 \

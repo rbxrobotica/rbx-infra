@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Preserve only the rbx_comms PostgreSQL database as an encrypted S3 archive.
+"""Preserve one explicitly selected application database as an encrypted archive.
 
 The Job receives a public encryption key, never its private counterpart. The
 receipt proves exact-version ciphertext readback, not successful restoration.
@@ -30,12 +30,23 @@ from plausible.s3_archive import validate_key, validate_version, ArchiveError  #
 
 
 class Config:
-    def __init__(self, env=None):
+    def __init__(self, env=None, *, scope="comms"):
+        # The entry point selects an admitted application. Environment settings
+        # cannot redirect the existing Comms job to another database or prefix.
+        admitted = {"comms": ("rbx_comms", "comms"),
+                    "public-presence": ("public_presence", "presence")}
+        if not isinstance(scope, str) or scope not in admitted:
+            raise BackupError("Unsupported preservation scope")
+        self.scope = scope
+        self.database, module = admitted[scope]
         self.env = dict(os.environ if env is None else env)
+        if scope == "public-presence" and any(not self.env.get(key) for key in
+                ("S3_ARCHIVE_ENDPOINT", "S3_ARCHIVE_BUCKET", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")):
+            raise BackupError("Public Presence requires an explicit backup destination and credentials")
         self.pg_env = source_pg_env(self.env.get("DATABASE_URL"))
-        if self.pg_env["PGDATABASE"] != "rbx_comms":
-            raise BackupError("Only the rbx_comms database may be backed up")
-        self.pg_env["PGAPPNAME"] = "comms-preservation"
+        if self.pg_env["PGDATABASE"] != self.database:
+            raise BackupError("Source database does not match the preservation scope")
+        self.pg_env["PGAPPNAME"] = scope + "-preservation"
         self.fingerprint = self.env.get("BACKUP_RECIPIENT_FINGERPRINT", "").upper()
         if not re.fullmatch(r"(?:[0-9A-F]{40}|[0-9A-F]{64})", self.fingerprint):
             raise BackupError("An exact encryption recipient fingerprint is required")
@@ -47,7 +58,7 @@ class Config:
         self.timeout = bounded_integer(self.env.get("BACKUP_TIMEOUT_SECONDS", 1800),
                                        1, 1800, "backup timeout")
         self.staging = Path(self.env.get("BACKUP_STAGING_DIR", tempfile.gettempdir()))
-        self.archive_script = Path(__file__).with_name("s3_archive.py")
+        self.archive_script = Path(__file__).resolve().parent.parent / module / "s3_archive.py"
 
     def child_env(self, *, postgres=False, archive=False):
         # Pass only runtime settings and the credentials required for that step.
@@ -60,9 +71,9 @@ class Config:
         return result
 
 
-def validate_receipt(raw, metadata):
+def validate_receipt(raw, metadata, *, scope="comms"):
     receipt = one_json(raw, "archive")
-    if (receipt.get("schema") != "rbx.comms.archive-receipt.v1"
+    if (receipt.get("schema") != f"rbx.{scope}.archive-receipt.v1"
             or receipt.get("sha256") != metadata["sha256"]
             or receipt.get("size_bytes") != metadata["size_bytes"]):
         raise BackupError("Archive receipt does not prove ciphertext integrity")
@@ -71,8 +82,8 @@ def validate_receipt(raw, metadata):
         if version is None:
             raise ArchiveError("Missing version")
         validate_version(version)
-        key = validate_key(receipt.get("key", ""), scope="comms")
-        if not key.startswith("comms/backups/full/") or not key.endswith(".gpg"):
+        key = validate_key(receipt.get("key", ""), scope=scope)
+        if not key.startswith(f"{scope}/backups/full/") or not key.endswith(".gpg"):
             raise ArchiveError("Unexpected archive location")
         bucket = receipt.get("bucket", "")
         if not isinstance(bucket, str) or not re.fullmatch(r"[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]", bucket):
@@ -99,7 +110,7 @@ def create_backup(config):
 
     # Unlinking plaintext is not secure erasure. Storage encryption must be
     # provided by the staging filesystem; this runner does not assert it.
-    with tempfile.TemporaryDirectory(prefix="comms-preservation-", dir=config.staging) as directory:
+    with tempfile.TemporaryDirectory(prefix=config.scope + "-preservation-", dir=config.staging) as directory:
         base = Path(directory)
         os.chmod(base, 0o700)
         gnupg = base / "gnupg"
@@ -129,10 +140,10 @@ def create_backup(config):
         catalog = invoke(["pg_restore", "--list", str(dump)], "PostgreSQL archive inspection")
         if not re.search(rb"(?m)^;\s+Dumped from database version: 16(?:\.[0-9]+)?[^\r\n]*$", catalog):
             raise BackupError("PostgreSQL source must be version 16")
-        manifest = {"schema": "rbx.comms.backup-manifest.v1", "id": run_id, "created_at": utc_now(),
+        manifest = {"schema": f"rbx.{config.scope}.backup-manifest.v1", "id": run_id, "created_at": utc_now(),
                     "consistency": "single_database_snapshot", "restore_tested_at": None,
                     "encryption": {"format": "OpenPGP", "recipient_fingerprint": config.fingerprint},
-                    "sources": {"postgres": {"database": "rbx_comms", "major_version": 16,
+                    "sources": {"postgres": {"database": config.database, "major_version": 16,
                                              "snapshot_started_at": started, "snapshot_completed_at": finished,
                                              "format": "pg_dump_custom"}},
                     "files": {"postgres.dump": file_metadata(dump)}}
@@ -158,17 +169,18 @@ def create_backup(config):
             raise BackupError("Encrypted archive is empty")
         receipt = validate_receipt(invoke(
             [sys.executable, str(config.archive_script), "--max-bytes", str(config.max_bytes),
-             "upload", str(encrypted)], "Off-site archive verification", archive=True), metadata)
-        return {"schema": "rbx.comms.backup-receipt.v1", "id": run_id,
+            "upload", str(encrypted)], "Off-site archive verification", archive=True), metadata,
+            scope=config.scope)
+        return {"schema": f"rbx.{config.scope}.backup-receipt.v1", "id": run_id,
                 "location": f"s3://{receipt['bucket']}/{receipt['key']}",
                 "manifest_sha256": manifest_hash, "verified_at": receipt["verified_at"],
                 "restore_tested_at": None, "encryption_recipient": config.fingerprint,
                 "archive": receipt}
 
 
-def main():
+def main(*, scope="comms"):
     try:
-        print(json.dumps(create_backup(Config()), sort_keys=True))
+        print(json.dumps(create_backup(Config(scope=scope)), sort_keys=True))
         return 0
     except BackupError as exc:
         print(json.dumps({"error": str(exc)}), file=sys.stderr)

@@ -3,14 +3,14 @@
 #   routes to the api for HTTPS machine callers such as the Flight Deck outbox worker)
 # Prerequisites before first healthy sync (operator):
 #   - rbx-public-presence-secrets in rbx-ia-br (keys in apps/prod/rbx-public-presence/externalsecret.yml)
-#   - contabo-s3-credentials in rbx-ia-br; bucket rbx-presence with public read on public/
+#   - contabo-s3-credentials in rbx-ia-br; bucket rbx-presence stays private
 #   - ghcr-pull-secret in rbx-public-presence (Ansible k8s-secrets role)
 #   - public_presence DB/role on jaguar (bootstrap-external-postgres-app-db.sh)
 #   - ZITADEL client at auth.merovelis.com (redirect https://presence.rbx.ia.br/auth/callback,
 #     role rbx:public-presence:founder)
 #   - DNS presence.rbx.ia.br (infra/terraform/dns, operator-applied)
 #   - real image tags in apps/prod/rbx-public-presence/kustomization.yml (first pin 2026-09-23;
-#     kept current by the rbx-public-presence publish workflow once RBX_INFRA_PAT reaches that repo)
+#     reviewed manual promotion while recovery is in progress)
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -32,8 +32,7 @@ spec:
     server: https://kubernetes.default.svc
     namespace: rbx-public-presence
   syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
+    # Recovery hold. Do not release the migration or publishing worker merely
+    # by restoring pull credentials. See PUBLIC-PRESENCE-RECOVERY.md.
     syncOptions:
       - CreateNamespace=true
