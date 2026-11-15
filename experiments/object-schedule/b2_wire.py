@@ -30,7 +30,9 @@ def upload_destination(url):
     # https://www.backblaze.com/apidocs/b2-get-upload-url
     if not re.fullmatch(r'pod-\d{3}-\d{4}-\d{2}\.backblaze\.com',p.hostname or ''):
         raise ValueError('unexpected_upload_provider')
-    if p.path!='/b2api/v4/b2_upload_file':raise ValueError('unexpected_upload_route')
+    # The service also returns the path-parameter form of the same upload route.
+    if not re.fullmatch(r'/b2api/v4/b2_upload_file(?:/[A-Za-z0-9_-]{1,512}/[A-Za-z0-9_-]{1,512})?',p.path):
+        raise ValueError('unexpected_upload_route')
     return url
 
 

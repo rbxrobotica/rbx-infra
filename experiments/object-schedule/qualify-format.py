@@ -106,4 +106,10 @@ def main():
 if __name__=='__main__':
     try:main()
     except Exception as e:
-        print(json.dumps({'qualification_completed':False,'error_type':type(e).__name__}));raise SystemExit(1)
+        report={'qualification_completed':False,'error_type':type(e).__name__}
+        safe={'unexpected_upload_provider','unexpected_upload_route','clock_not_synchronized',
+              'archive_stale_or_future','compliance_retention_not_effective',
+              'different_latest_run_requires_review','workload_restore_incomplete',
+              'untrusted_manual_cipher','cipher_identity_mismatch','cipher_readback_mismatch','receipt_relocated'}
+        if isinstance(e,ValueError) and str(e) in safe:report['error_code']=str(e)
+        print(json.dumps(report));raise SystemExit(1)

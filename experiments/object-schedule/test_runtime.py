@@ -80,11 +80,16 @@ class RuntimeTests(unittest.TestCase):
     def test_only_official_native_upload_pods_and_route(self):
         good='https://pod-050-1042-10.backblaze.com/b2api/v4/b2_upload_file?bucket=fixture'
         self.assertEqual(r.b2_access.upload_destination(good),good)
+        path_form=good.split('?')[0]+'/synthetic_endpoint/synthetic_bucket'
+        self.assertEqual(r.b2_access.upload_destination(path_form),path_form)
         for bad in [good.replace('https:','http:'),good.replace('.com/','.com.attacker.invalid/'),
                     good.replace('/b2api/v4/b2_upload_file','/another-route'),
                     good.replace('pod-050-1042-10','secure'),good.replace('https://','https://user@')]:
             with self.assertRaises(ValueError):r.b2_access.upload_destination(bad)
         with self.assertRaises(ValueError):r.b2_access.destination(good)
+        for bad in [path_form+'/extra',good.split('?')[0]+'/one-segment',
+                    good.split('?')[0]+'/../outside']:
+            with self.assertRaises(ValueError):r.b2_access.upload_destination(bad)
 
 
 if __name__ == '__main__': unittest.main()
