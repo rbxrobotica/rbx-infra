@@ -24,6 +24,36 @@ READS = frozenset(('list_objects_v2', 'get_object', 'get_object_tagging',
                   'get_bucket_versioning', 'get_bucket_acl', 'get_bucket_policy',
                   'get_bucket_lifecycle_configuration', 'get_bucket_encryption',
                   'get_object_lock_configuration'))
+SAFE_ERRORS = frozenset(('invalid_document_key', 'unsafe_document_path',
+    'unsafe_or_oversized_input', 'input_grew_past_bound', 'source_write_refused',
+    'request_limit', 'duplicate_or_excess_source_objects', 'object_size_bound',
+    'conditional_read_identity_missing', 'incomplete_pagination',
+    'unexpectedly_small_corpus', 'versioned_history_needs_separate_scope',
+    'source_control_read_failed', 'source_changed_during_read', 'corpus_size_bound',
+    'source_listing_drift', 'archive_size_bound', 'nonregular_or_large_archive_member',
+    'duplicate_or_missing_manifest', 'untrusted_manifest', 'unknown_format',
+    'archive_member_set_mismatch', 'duplicate_or_excess_document_identity',
+    'unsafe_member_identity', 'payload_integrity_failed', 'empty_document',
+    'declared_size_mismatch', 'restored_readback_failed', 'decryption_failed',
+    'owner_signature_not_verified', 'invalid_recipient', 'source_credential_unavailable',
+    'signed_archive_self_verification_failed', 'private_output_directory_required',
+    'network_isolation_missing', 'unexpected_credential_environment',
+    'ciphertext_readback_mismatch', 'pinned_owner_signer_required',
+    'pinned_local_image_required', 'isolated_restore_failed'))
+
+
+class SandboxFailure(Exception):
+    pass
+
+
+def safe_error(error):
+    result = {'success': False, 'error_type': type(error).__name__}
+    if isinstance(error, SandboxFailure):
+        result['error_code'] = 'isolated_restore_failed'
+        result['sandbox'] = error.args[0]
+    elif str(error) in SAFE_ERRORS:
+        result['error_code'] = str(error)
+    return result
 
 
 def sha(raw):
@@ -282,7 +312,8 @@ def main():
         if any(re.search('AWS|CONTABO|BACKBLAZE|SECRET|TOKEN|PASSWORD|GNUPG', k) for k in os.environ):
             raise ValueError('unexpected_credential_environment')
         raw = sys.stdin.buffer.read(LIMIT + 1)
-        report = restore(raw, args.manifest_sha, Path('/restore'), MarkdownIt('commonmark'))
+        root = Path('/restore/documents'); root.mkdir(mode=0o700)
+        report = restore(raw, args.manifest_sha, root, MarkdownIt('commonmark'))
         report.update(network_interfaces=['lo'], source_credentials_present=False,
                       plaintext_storage='isolated disposable tmpfs', sandbox_elapsed_seconds=round(time.monotonic()-started, 3))
         print(json.dumps(report))
@@ -295,10 +326,10 @@ def main():
         raw = gpg_decrypt(cipher, args.signer)
         if not args.image or not args.image.startswith('sha256:'):
             raise ValueError('pinned_local_image_required')
-        command = ['podman', 'run', '--rm', '--pull=never', '--network=none', '--read-only',
+        command = ['podman', 'run', '--rm', '--interactive', '--pull=never', '--http-proxy=false', '--network=none', '--read-only',
             '--cap-drop=all', '--security-opt=no-new-privileges', '--user=65534:65534',
             '--memory=256m', '--pids-limit=32',
-            '--tmpfs=/restore:rw,noexec,nosuid,nodev,size=16m,mode=0700,uid=65534,gid=65534',
+            '--tmpfs=/restore:rw,noexec,nosuid,nodev,size=16m,mode=1777',
             '--mount', f'type=bind,src={Path(__file__).resolve()},dst=/app/archive.py,ro',
             '--mount', f'type=bind,src={args.markdown_package},dst=/deps/markdown_it,ro',
             '--mount', f'type=bind,src={args.mdurl_package},dst=/deps/mdurl,ro',
@@ -306,7 +337,16 @@ def main():
             'sandbox', '--manifest-sha', args.manifest_sha]
         p = subprocess.run(command, input=raw, capture_output=True, timeout=90)
         if p.returncode:
-            raise ValueError('isolated_restore_failed')
+            detail = {'error_type': 'sandbox_process_failed'}
+            try:
+                candidate = json.loads(p.stderr)
+                if re.fullmatch('[A-Za-z_]{1,80}', candidate.get('error_type', '')):
+                    detail['error_type'] = candidate['error_type']
+                if candidate.get('error_code') in SAFE_ERRORS:
+                    detail['error_code'] = candidate['error_code']
+            except (ValueError, TypeError):
+                pass
+            raise SandboxFailure(detail)
         report = json.loads(p.stdout)
         report.update(ciphertext_sha256=sha(cipher), owner_signature_verified=True,
                       restore_phase_elapsed_seconds=round(time.monotonic()-started, 3),
@@ -320,5 +360,5 @@ if __name__ == '__main__':
         main()
     except Exception as error:
         # Never print SDK messages, paths, object keys, payloads or GPG stderr.
-        print(json.dumps({'success': False, 'error_type': type(error).__name__}), file=sys.stderr)
+        print(json.dumps(safe_error(error)), file=sys.stderr)
         sys.exit(1)

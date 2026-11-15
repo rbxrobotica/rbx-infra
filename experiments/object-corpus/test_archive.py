@@ -185,6 +185,12 @@ class ArchiveControls(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'unsafe_or_oversized_input'):
                 archive.read_bounded(p/'link')
 
+    def test_diagnostics_never_return_arbitrary_error_contents(self):
+        detail=archive.safe_error(ValueError('secret-object-name/secret?token=credential'))
+        self.assertEqual(detail, {'success':False,'error_type':'ValueError'})
+        self.assertEqual(archive.safe_error(ValueError('source_listing_drift'))['error_code'],
+                         'source_listing_drift')
+
 
 if __name__ == '__main__':
     unittest.main()
