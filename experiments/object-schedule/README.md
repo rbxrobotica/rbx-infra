@@ -10,7 +10,7 @@ corpus and the already initialized private seven-day Compliance archive.
 the one existing archive bucket and `memory-auto/v1/`, expiring after 90 days:
 
 - Writer: `writeFiles` only; no read, delete, retention or account administration.
-- Verifier: list/read and read-only encryption/retention inspection; no write,
+- Verifier: list/read and read-only file retention inspection; no write,
   delete, bypass or key administration.
 
 The setup path may use the owner's administrative credential to issue these
@@ -48,3 +48,51 @@ compute was for clean provider-exit recovery. Moving a backup coordinator to
 an always-on independent VPS is a separate sizing/operating decision. Keep the
 external missed-heartbeat service outside the executor's failure domain and
 re-evaluate shared underlying providers at supplier selection time.
+
+## Implemented qualification and activation boundary
+
+The producer uses conditional reads and the complete reconciliation from
+`object-corpus/archive.py`, encrypts to a public-only owner keyring in temporary
+storage, and signs a closed receipt with a dedicated Ed25519 workload identity.
+Only ciphertext and the small signed receipt are uploaded. The receipt is
+published last. The witness validates the pinned signature, capture age, full
+ciphertext hash and actual Compliance protection on both uploaded files.
+It cannot decrypt or upload, and its runtime contains no password-store or
+owner management client. A rotation warning is signaled 14 days before the
+90-day B2 key expiration while captures can still complete.
+
+`recover.py` verifies the workload signature and trusted ciphertext/manifest
+hashes before owner-side decryption, then pipes plaintext into the same offline,
+non-root, read-only, disposable tmpfs recovery sandbox as the first manual
+archive. Historical restores do not require a still-fresh backup timestamp.
+Neither a producer upload nor an encrypted witness is counted as a new full
+plaintext restoration.
+
+`prepare.py` constructs a hashed public-only release from the existing official
+dependency set and owner public key. The release contains its own dependency
+copies; a scheduled worker must not depend on disposable build-cache paths.
+`activate-local.py` reads only the exact scoped entries, refuses the known owner
+S3 access key, and sends material to the root installer through stdin.
+`activate-root.py` refuses existing install state, verifies the full release,
+requires source/readback/restore admission, host-wraps each service credential,
+runs Ansible check/diff/apply/check, and runs both real services successfully
+before enabling either timer. It touches no existing DNS unit. A failed first
+activation needs a reviewed update; blind reinstallation is refused.
+
+As of the November 15 preflight, the separate Contabo identity is **Invited**
+and has no returned S3 credentials. Its custom admission role is non-admin,
+does not select all resources and grants only the S3 read endpoint. The owner
+account and source bucket policies are unchanged. The provider invitation
+requires personal password setup in a session separate from the logged-in
+owner. This is not proof of bucket scoping: after activation, actual positive
+reads and negative access/mutation tests remain mandatory. No source-reader
+entry, protected worker, timer or continuous backup is claimed yet.
+
+Live B2 qualification used only a new, clearly synthetic 44-byte fixture under
+the exact owned prefix, outside the completed-archive naming pattern. Writer
+list/delete, verifier upload/delete and verifier read outside the prefix were
+denied; full readback and existing default Compliance retention passed. The
+fixture remains protected; no original or prior backup was removed. A separate
+60+60-second Healthchecks absence drill delivered DOWN and recovery UP to the
+existing Gmail integration, then was paused. The real capture/witness checks
+remain NEW until genuine executions qualify them.

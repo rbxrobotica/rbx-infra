@@ -1,0 +1,13 @@
+[Unit]
+Description=Six-hour RBX memory capture
+
+[Timer]
+OnCalendar=*-*-* 00,06,12,18:00:00 UTC
+Persistent=yes
+OnActiveSec=2min
+AccuracySec=30s
+RandomizedDelaySec=30s
+Unit=rbx-memory-capture.service
+
+[Install]
+WantedBy=timers.target
