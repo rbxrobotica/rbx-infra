@@ -1,21 +1,17 @@
 # PostgreSQL 16.15 bookworm, linux/amd64. Promote the resulting GHCR sha-* image
 # only after its workflow publishes it; this Dockerfile does not deploy it.
-FROM docker.io/library/postgres@sha256:efdf07c2f9d4df592783dcc8ea5f6db02efbf5f6452b527225ff5e58364570e9 AS kubectl-download
+FROM docker.io/library/golang@sha256:5e8afd493a7124a8586e134d9b532731161d4b9becf9dee5a5956b107426f93d AS kubectl-build
 
-# Direct package versions are reviewed pins. APT verifies repository signatures;
-# the final image's immutable digest and vulnerability scan cover transitive OS
-# dependencies. curl is used only in this stage and is not added to the runtime.
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends \
-        ca-certificates=20250419~deb12u2 \
-        curl=7.88.1-10+deb12u15 \
-    && curl --fail --show-error --silent --location \
-        --proto '=https' --tlsv1.2 --max-time 120 \
-        https://dl.k8s.io/release/v1.36.5/bin/linux/amd64/kubectl \
-        --output /usr/local/bin/kubectl \
-    && echo '33bc88a24c3b09cf55bfd59e6ca977881b61fc3f25ab65bc80c65b430248648e  /usr/local/bin/kubectl' | sha256sum --check --strict \
-    && chmod 0755 /usr/local/bin/kubectl \
-    && rm -rf /var/lib/apt/lists/*
+# Upstream v1.36.6 entry point with locked security dependency updates.
+# See kubectl/README.md for provenance; do not disable the final image scan.
+ENV GOTOOLCHAIN=local CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+WORKDIR /src
+COPY kubectl/go.mod kubectl/go.sum ./
+RUN go mod download
+COPY kubectl/main.go ./
+RUN go build -mod=readonly -trimpath \
+    -ldflags='-s -w -X k8s.io/component-base/version.gitVersion=v1.36.6-rbx.1 -X k8s.io/component-base/version.gitMajor=1 -X k8s.io/component-base/version.gitMinor=36 -X k8s.io/client-go/pkg/version.gitVersion=v1.36.6-rbx.1' \
+    -o /out/kubectl .
 
 FROM docker.io/library/postgres@sha256:efdf07c2f9d4df592783dcc8ea5f6db02efbf5f6452b527225ff5e58364570e9
 
@@ -45,7 +41,8 @@ RUN apt-get update \
     && useradd --uid 10001 --gid 10001 --no-log-init --create-home backup-runner \
     && install -d -m 0755 /app
 
-COPY --from=kubectl-download /usr/local/bin/kubectl /usr/local/bin/kubectl
+COPY --from=kubectl-build /out/kubectl /usr/local/bin/kubectl
+COPY kubectl/LICENSE /usr/share/licenses/kubectl/LICENSE
 COPY --chown=0:0 backup_runner.py s3_archive.py weekly_report.py collect_weekly.py /app/
 
 # The current Kubernetes exec path reset/truncated a WebSocket stream in a

@@ -1,0 +1,21 @@
+{
+  "schema": "rbx.public-presence.recovery-ci-compatibility.v1",
+  "checkpoint_date": "2026-11-14",
+  "timezone": "America/Sao_Paulo",
+  "production_mutated": false,
+  "ssh_agent_synthetic_fixture_tests": 24,
+  "plausible_image": {
+    "local_image_id": "sha256:bfb772b0aa284504b466b83189b18873023b8e3321268958eaf37343f19b8d1c",
+    "registry_published": false,
+    "deployed_digest_changed": false,
+    "client_version": "v1.36.6-rbx.1",
+    "upstream_entrypoint_sha256": "b9660b8cacc734cf667f56fd55ae622e8f829536ac18aadf5fb1db0f8eb7edd5",
+    "builder_go_version": "1.27.4",
+    "x_net": "v0.62.0",
+    "x_text": "v0.43.0",
+    "uid": 10001,
+    "trivy_version": "0.69.3",
+    "fixed_high_critical_findings": 0,
+    "module_scan_fixed_high_critical_findings": 0
+  }
+}
