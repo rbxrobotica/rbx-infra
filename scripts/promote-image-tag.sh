@@ -5,11 +5,21 @@
 # Usage:
 #   promote-image-tag.sh <app> <image> <tag-or-image-ref>
 #
+# Required:
+#   PROMOTE_IMAGE_TAG_ENV=<directory>  the environment provisioned by
+#                     `promote-image-tag-env.sh <directory>`: a python3 with
+#                     PyYAML pinned by hash, which the verifier runs in.
+#
 # Optional:
 #   CHECK_REGISTRY=1  verify image:tag exists with `docker manifest inspect`.
 #
 # This script edits only apps/prod/<app>/kustomization.yml and only the image
 # stanza whose `name:` exactly matches <image>.
+#
+# It refuses an entry that also sets `digest:`. Kustomize renders such an entry
+# as image:tag@digest and the cluster pulls by digest, so a new tag beside the
+# old digest keeps running the old image. Promote that image by hand, changing
+# newTag and digest in the same commit.
 set -euo pipefail
 
 APP="${1:-}"
@@ -72,6 +82,18 @@ if [ "${CHECK_REGISTRY:-0}" = "1" ]; then
   fi
 fi
 
+# The verifier runs in the environment of promote-image-tag-env.sh and in no
+# other: whatever PyYAML this machine happens to have is not used.
+SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VERIFY_PYTHON="${PROMOTE_IMAGE_TAG_ENV:-}/bin/python"
+PINS="$(sha256sum < "${SCRIPTS}/promote-image-tag-requirements.txt")"
+if [ -z "${PROMOTE_IMAGE_TAG_ENV:-}" ] || [ ! -x "$VERIFY_PYTHON" ] ||
+  [ "$(cat "${PROMOTE_IMAGE_TAG_ENV}/promote-image-tag-requirements.sha256" 2>/dev/null)" != "$PINS" ]; then
+  echo "PROMOTE_IMAGE_TAG_ENV is not an environment of the current scripts/promote-image-tag-requirements.txt" >&2
+  echo "provision one with: bash scripts/promote-image-tag-env.sh <directory>" >&2
+  exit 2
+fi
+
 TMP="$(mktemp)"
 awk -v image="$IMAGE" -v tag="$TAG" '
   function trim(s) {
@@ -109,6 +131,15 @@ awk -v image="$IMAGE" -v tag="$TAG" '
   fi
   exit "$rc"
 }
+
+# The edit above works by line, and YAML has more ways of giving an entry a
+# digest than a line reader can tell. The verifier parses the kustomization and
+# the edited copy, and the copy is installed only if it agrees: the entry has
+# no digest and its newTag is all that changed.
+if ! "$VERIFY_PYTHON" -I -B "${SCRIPTS}/promote-image-tag-verify.py" "$KUSTOMIZATION" "$TMP" "$IMAGE" "$TAG"; then
+  rm -f "$TMP"
+  exit 2
+fi
 
 mv "$TMP" "$KUSTOMIZATION"
 echo "Updated ${KUSTOMIZATION}: ${IMAGE}:${TAG}"

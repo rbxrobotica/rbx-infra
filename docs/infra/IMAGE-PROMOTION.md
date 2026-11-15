@@ -83,10 +83,60 @@ Two repository-local scripts support stricter promotion review:
   image namespace, immutable `sha-*` tag, kustomization image stanza, and
   optionally the remote GHCR manifest (`CHECK_REGISTRY=1`) before updating one
   `newTag`. It refuses partial promotion for multi-image kustomizations unless
-  `ALLOW_PARTIAL_MULTI_IMAGE=1` is set explicitly.
+  `ALLOW_PARTIAL_MULTI_IMAGE=1` is set explicitly, and it refuses an entry that
+  pins a `digest` (next section).
 - `scripts/report-p1-image-debt.sh` prints the current backlog: production
   `newTag: latest`, manifest `image: *:latest`, direct-main write-back, and
   ArgoCD apps tracking `targetRevision: main`.
+
+## Digest-pinned entries
+
+Some overlays set `digest:` beside `newTag:` so that a moved tag cannot change
+what runs. Kustomize renders such an entry as `image:tag@digest` and the
+cluster pulls by digest; the tag is only a label. A promotion therefore changes
+`newTag` and `digest` in the same commit. Changing `newTag` alone keeps the old
+image running under the new tag's name.
+
+`scripts/promote-image-tag.sh` refuses an entry that carries a digest, so
+`.github/workflows/image-update.yml` fails instead of opening a promotion PR
+for it. Promote that image by hand. Take the digest from the build that pushed
+the tag, whose log prints it; a registry lookup of the tag only shows what the
+tag points at when you ask. The self-push template above also writes only
+`newTag`: do not use it on an entry that carries a digest.
+
+The script edits by line and then asks a YAML parser whether the edit may be
+installed (`scripts/promote-image-tag-verify.py`). A digest reaches an image in
+more ways than a `digest:` line under its name: a key in another letter case, a
+second entry or a second `images` key for the same image, the deprecated
+`imageTags`, escapes, tags, merge keys and aliases, an entry for the name that
+`newName` gave the image, and an entry whose name matches the image as a
+pattern (kustomize reads `rbx.commerce` as also meaning `rbx-commerce`). The
+verifier refuses a kustomization that uses any of them, and accepts an edit only
+when the parsed file differs from the original in that one `newTag`. It reads
+the `images` list of that kustomization and nothing else: an image set by a
+patch, a replacement or a transformer file is outside what it checks.
+
+The verifier runs in its own environment: a virtual environment of the
+machine's python3 with PyYAML pinned by hash in
+`scripts/promote-image-tag-requirements.txt`. Provision it once and hand it to
+the script, as `image-update.yml` does:
+
+```bash
+bash scripts/promote-image-tag-env.sh /tmp/promote-image-tag-env
+PROMOTE_IMAGE_TAG_ENV=/tmp/promote-image-tag-env \
+  bash scripts/promote-image-tag.sh <app> <image> <tag>
+```
+
+The script refuses to run without it, and refuses an environment provisioned
+from other pins.
+
+The script refuses instead of looking the new digest up. A digest read from the
+registry at promotion time pins whatever the tag points at in that moment,
+which is the movement the pin exists to rule out, and nothing in this
+repository tests that lookup against a real registry. The price: a
+digest-pinned image gets no automated promotion PR. Automating it needs the
+digest to come from the build that pushed the image, a check of that digest
+against the registry, and a test that runs against a registry.
 
 ## P1 target standard (future direction)
 
@@ -104,6 +154,7 @@ Blocking conditions for production promotion:
 
 - `newTag: latest` in a production kustomization.
 - A promoted `sha-*` tag missing from GHCR.
+- A `newTag` changed beside an unchanged `digest` in the same `images` entry.
 - Multiple images in one app promoted to different source commits without an
   explicit compatibility note.
 - No rollback target.
