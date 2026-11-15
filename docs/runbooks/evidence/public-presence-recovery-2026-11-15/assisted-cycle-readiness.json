@@ -1,0 +1,67 @@
+{
+  "schema": "rbx.public-presence.assisted-cycle-readiness.v1",
+  "observed_at": "2026-11-15T08:13:34.889083+00:00",
+  "public_presence": {
+    "application_tables": 0,
+    "anonymous_web_status": 503,
+    "service_operational": false,
+    "database_writes_by_this_execution": false
+  },
+  "linkedin": {
+    "organization_id": "103949050",
+    "profile": "rbxsystems",
+    "owner_confirmed_institution": "Merovelis Systems",
+    "observed_remote_label": "RBX Systems",
+    "admin_surface_accessible": true,
+    "start_post_control_visible": true,
+    "history_scope": "five visible published posts",
+    "latest_visible_post_date": "2026-10-22",
+    "prior_source_promotion_date": "2026-09-16",
+    "new_pilot_draft_seen_in_checked_range": false,
+    "exhaustive_history_claimed": false,
+    "must_reconcile_again_before_publish": true,
+    "browser_actions": "read-only navigation; no post, edit, reaction or message"
+  },
+  "flightdeck": {
+    "source_commit": "37cb687d57520774b810aa0a454a0493a1b3b16d",
+    "source_helper_sha256": "036428863f4e76acfd9886fcbdbf228288ec0fdee5d7f30cf6f1f9b44d942b16",
+    "pr_24_observed_state": "OPEN",
+    "owner_scope_unique_and_allowlisted": true,
+    "owner_ids_published": false,
+    "owner_references": "rederive from the current allowlisted OWNER inventory; cached privately as reproducible metadata",
+    "plan": {
+      "schema": "rbx.flightdeck.journal-provisioning.v1",
+      "mode": "plan",
+      "operation": "create",
+      "changed": false,
+      "workstreamId": null,
+      "key": "rbx-weekly-journal",
+      "humanMinutesPerWeek": 90,
+      "sharedAcrossChannels": true
+    },
+    "applied": false,
+    "probe_note": "An initial ad hoc owner-inventory query double-encoded JSON and failed with SQLSTATE 22023. Its parameter encoding was corrected, then the same source provisioner completed read-only planning. No mutation occurred."
+  },
+  "draft": {
+    "source_commit": "e394c539bdd6fee81ae38c9e63e189f4e1cc9773",
+    "sha256": "336bbda41e288cd45cf980424e29a04b6bd6a98bdbf9437dc53b86f3c2b8485c",
+    "exact_runtime_content_version_created": false,
+    "approved": false,
+    "published": false,
+    "receipt_present": false
+  },
+  "capacity": {
+    "weekly_human_minutes_ceiling": 90,
+    "shared_across_all_channels": true,
+    "actual_human_minutes": null,
+    "required_weekly_placements_after_activation": 1,
+    "active_pilot_profile": "institutional LinkedIn only"
+  },
+  "external_backup_and_gpg_handoff_qualified": false,
+  "next_required_evidence": [
+    "external backup destination/scoped credential/public recipient and real restore proof from its owner",
+    "real service readiness after reviewed migration release",
+    "Flight Deck #24 actual merge/owner provisioning after recovery preflight",
+    "immutable version approval, one publication receipt and retrospective"
+  ]
+}

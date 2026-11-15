@@ -1,0 +1,56 @@
+{
+  "schema": "rbx.public-presence.held-access-result.v1",
+  "observed_at": "2026-11-15T08:03:58.764023+00:00",
+  "source_revision": "3ec258863f8621b2bfba5e5058fac4eedc8bce96",
+  "root_sync": {
+    "selected_resource": "argoproj.io/Application argocd/rbx-public-presence",
+    "verified_revision": "3ec258863f8621b2bfba5e5058fac4eedc8bce96",
+    "prune": false,
+    "note": "Pinned-SHA sync was refused by the auto-sync root; canonical-main selective sync succeeded and its resolved revision was verified."
+  },
+  "application": {
+    "manual_sync": true,
+    "operation_present": false,
+    "old_operation_phase": "Failed"
+  },
+  "migration": {
+    "hold_declared_in_git": true,
+    "suspend_applied_before_registry_recovery": true,
+    "present_at_final_observation": false,
+    "active_pods": 0,
+    "remaining_pods": 0,
+    "note": "The terminated ArgoCD hook was later removed by the controller. An initial evidence snapshot expecting its presence failed; this snapshot records its actual absence."
+  },
+  "credential": {
+    "procedure": "bootstrap/ansible/public-presence-registry.yml",
+    "check_mode_changes": 0,
+    "apply_changes": 1,
+    "target": "rbx-public-presence/ghcr-pull-secret",
+    "type": "kubernetes.io/dockerconfigjson",
+    "values_exposed": false,
+    "rotation_performed": false
+  },
+  "image_probe": {
+    "job": "rbx-public-presence-image-check-ww5mv",
+    "pod": "rbx-public-presence-image-check-ww5mv-k5h4n",
+    "node": "tiger",
+    "pull_policy": "Always",
+    "command": "doctrine-check",
+    "image_id": "ghcr.io/rbxrobotica/rbx-public-presence-api@sha256:d12b9b199b89c91eb2535b56d4c57a78260526bd0eca5a1a06746c4781c629ea",
+    "exit_code": 0,
+    "completed_at": "2026-11-15T07:56:36Z",
+    "database_credentials": false,
+    "service_account_token": false,
+    "ttl_seconds_after_finished": 3600
+  },
+  "api_web_deployments": 0,
+  "production_control_configuration_changed": true,
+  "application_database_mutated": false,
+  "migration_released": false,
+  "publication_performed": false,
+  "remaining_gates": [
+    "real external backup/restore handoff",
+    "verified service API/web readiness after controlled migration release",
+    "real Workstream/cycle/version approval/publication receipt and retrospective"
+  ]
+}
