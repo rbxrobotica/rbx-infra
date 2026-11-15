@@ -26,8 +26,10 @@ def stored(ref):
 
 
 def checkpoint(ref, value):
+    if not ref.startswith('rbx/object-backup/') or len(ref.split('/')) != 3:
+        raise ValueError('unexpected_checkpoint_scope')
     raw = json.dumps(value, sort_keys=True).encode()
-    subprocess.run(['pass', 'insert', '--multiline', ref], input=raw,
+    subprocess.run(['pass', 'insert', '--force', '--multiline', ref], input=raw,
                    check=True, capture_output=True, timeout=45)
     if json.loads(stored(ref)) != value:
         raise ValueError('encrypted_custody_mismatch')
