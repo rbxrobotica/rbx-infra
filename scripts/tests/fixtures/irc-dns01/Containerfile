@@ -1,0 +1,7 @@
+FROM docker.io/library/ubuntu@sha256:534baea6a22c03a63003dbc8dbe78fe34bc0d7e595d9a9dc9834884ff530eb55
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends pdns-server pdns-backend-pgsql postgresql-16 python3-dnspython && rm -rf /var/lib/apt/lists/*
+RUN useradd --uid 10001 --no-create-home --home-dir /tmp/lab fixture
+COPY --chmod=0444 runner.py /fixture/runner.py
+COPY --chmod=0444 plan.json /fixture/plan.json
+USER 10001:10001
+ENTRYPOINT ["/usr/bin/python3", "-I", "-B", "/fixture/runner.py"]
