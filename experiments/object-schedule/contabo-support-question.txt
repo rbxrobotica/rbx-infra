@@ -29,7 +29,10 @@ Please provide clear answers to the following:
    unverified test user or regenerating only that user's S3 secret via API?
    Empty-body requests returned HTTP 400; an explicit empty JSON object allowed
    user/role removal. The S3 credential still accepted the immediate probe after
-   that removal. Please clarify the supported data-plane revocation procedure.
+   that removal. A later probe returned HTTP 401 while the owner's original
+   key could still list the same 31 documents. Revocation was observed within
+   an approximately eight-minute checking window, rather than immediately.
+   Please clarify the supported data-plane revocation procedure and guarantee.
 
 This is a technical clarification request only. Please do not modify our account,
 rotate any existing keys, cancel services or add paid products. We can supply

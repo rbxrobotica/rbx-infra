@@ -92,6 +92,10 @@ withdrawn. Empty-body PATCH/DELETE requests returned HTTP 400; sending an explic
 empty JSON object allowed the control-plane withdrawal. Native S3 revocation is
 a separate gate: do not infer it from user removal. The rejected key was never
 printed or deployed; private encrypted custody preserves its audit history.
+The later paired probe returned HTTP 401 for the retired key while the original
+owner key still listed all 31 documents; revocation was thus verified separately,
+within an approximately eight-minute checking window after removal. This is an
+observed bound, not a provider revocation SLO.
 No original key, user, object or source bucket policy was changed. The earlier
 personal-invitation handoff was withdrawn. Its token had appeared in a diagnostic
 view; the invitation target was subsequently removed. The draft support inquiry
@@ -99,7 +103,7 @@ contains no credential or real resource identifier and has not been sent.
 
 No qualified source-reader entry, protected worker, timer or continuous capture
 is claimed. Require a supported, tested default-deny source arrangement and
-verified revocation before issuing/deploying a replacement. Admission also
+documented revocation behavior before issuing/deploying a replacement. Admission also
 requires any authentication handoff to be demonstrably closed; password setup
 alone is not proof of token-replay behavior.
 
