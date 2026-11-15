@@ -130,7 +130,10 @@ spec:
 
 ### Updating Image Tags
 
-Update `apps/prod/{app}/kustomization.yml` with new tag.
+Update `apps/prod/{app}/kustomization.yml` with new tag. If the entry also has a
+`digest`, change both in the same commit: the cluster pulls by digest, and CI
+fails a new tag beside the old digest (`docs/infra/IMAGE-PROMOTION.md`,
+"Digest-pinned entries").
 
 ## External Repositories
 
