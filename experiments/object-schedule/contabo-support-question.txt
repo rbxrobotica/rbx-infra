@@ -1,0 +1,39 @@
+Subject: Qualifying a bucket-only read-only S3 backup identity and revocation
+
+Hello Contabo Support,
+
+We are qualifying a separate S3 identity to back up one existing private bucket.
+It must be read-only for that bucket and denied access to all other current and
+future private buckets. We do not want billing, administrative, write or delete
+access for this identity.
+
+In a bounded test, we created a separate user with a custom role containing
+admin=false, accessAllResources=false and only /object-storage/s3 READ, without
+resource tags. The returned S3 credential could list all ten existing buckets.
+We did not deploy it. We disabled only that test user and removed its roles;
+an immediate S3 read probe with the same credential was still accepted.
+No original object, existing user, original key or bucket policy was changed.
+
+Please provide clear answers to the following:
+
+1. Do role permissions, resource tags and the user's enabled flag restrict S3
+   requests authenticated with application/access keys, or only panel/API use?
+2. What is the supported propagation time for S3 access revocation? Which
+   documented operation immediately invalidates an individual user's S3 key?
+3. Can a user with no broad S3 role receive an explicit read grant for one
+   bucket, with default denial for every other current and future bucket?
+4. Please provide the exact supported role/policy and principal format for that
+   arrangement. Does it require maintaining a Deny statement on every other
+   bucket, including newly created buckets?
+5. Are there prerequisites or JSON-body requirements for deleting a disabled,
+   unverified test user or regenerating only that user's S3 secret via API?
+   Empty-body requests returned HTTP 400; an explicit empty JSON object allowed
+   user/role removal. The S3 credential still accepted the immediate probe after
+   that removal. Please clarify the supported data-plane revocation procedure.
+
+This is a technical clarification request only. Please do not modify our account,
+rotate any existing keys, cancel services or add paid products. We can supply
+redacted request references through the authenticated support channel if needed.
+
+Thank you,
+Leandro / RBX

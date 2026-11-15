@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 import source_access as s
 
 
@@ -31,6 +32,22 @@ class PolicyTests(unittest.TestCase):
         for bucket, principal in [('*', 'arn:aws:iam::tenant:user/customer:worker'),
                                   ('fixture-memory', '*')]:
             with self.assertRaises(ValueError): s.policy(bucket, principal)
+
+    def test_empty_mutations_send_valid_json_and_accept_no_content(self):
+        requests=[]
+        class Response:
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self,*args):return b''
+        class Opener:
+            def open(self,request,timeout):requests.append(request);return Response()
+        owner=object.__new__(s.Owner);owner.token='synthetic'
+        with patch.object(s.urllib.request,'build_opener',return_value=Opener()):
+            self.assertEqual(owner.api('users/fixture',method='DELETE'),{})
+            owner.api('users/fixture')
+        self.assertEqual(requests[0].get_method(),'DELETE')
+        self.assertEqual(requests[0].data,b'{}')
+        self.assertIsNone(requests[1].data)
 
 
 if __name__ == '__main__': unittest.main()

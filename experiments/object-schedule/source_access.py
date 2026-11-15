@@ -54,6 +54,8 @@ class Owner:
     def api(self, path, payload=None, method=None):
         if not re.fullmatch(r'[a-zA-Z0-9/?=&_.%-]+', path) or path.startswith('/'):
             raise ValueError('unexpected_control_path')
+        if payload is None and method in ('PATCH', 'DELETE'):
+            payload = {}
         request = urllib.request.Request(BASE + path, method=method,
             headers={'Authorization': 'Bearer ' + self.token,
                      'Content-Type': 'application/json', 'x-request-id': str(uuid.uuid4())},

@@ -79,18 +79,29 @@ runs Ansible check/diff/apply/check, and runs both real services successfully
 before enabling either timer. It touches no existing DNS unit. A failed first
 activation needs a reviewed update; blind reinstallation is refused.
 
-As of the November 15 preflight, the separate Contabo identity is **Invited**
-and has no returned S3 credentials. Its custom admission role is non-admin,
-does not select all resources and grants only the S3 read endpoint. The owner
-account and source bucket policies are unchanged. The provider invitation
-requires personal password setup in a session separate from the logged-in
-owner. This is not proof of bucket scoping: after activation, actual positive
-reads and negative access/mutation tests remain mandatory. No source-reader
-entry, protected worker, timer or continuous backup is claimed yet.
-The invitation token appeared in a diagnostic view; source admission also
-requires explicit confirmation that this temporary authentication handoff has
-closed (consumed/revoked or expired). Do not infer closure from password setup
-alone when the provider's token-replay behavior has not been verified.
+The November 15 Contabo candidate **failed admission**. S3 credential
+provisioning was delayed and eventually completed while the email remained
+unverified; personal password setup was not demonstrated to be a prerequisite.
+The custom non-admin role, despite `accessAllResources=false`, returned an S3
+key that could list all ten existing buckets. Disabling the candidate and
+removing its roles did not deny the immediate data-plane read probe. The owner
+key was explicitly compared and excluded from every withdrawal operation.
+
+The newly created, unused candidate user and its unassigned custom role were
+withdrawn. Empty-body PATCH/DELETE requests returned HTTP 400; sending an explicit
+empty JSON object allowed the control-plane withdrawal. Native S3 revocation is
+a separate gate: do not infer it from user removal. The rejected key was never
+printed or deployed; private encrypted custody preserves its audit history.
+No original key, user, object or source bucket policy was changed. The earlier
+personal-invitation handoff was withdrawn. Its token had appeared in a diagnostic
+view; the invitation target was subsequently removed. The draft support inquiry
+contains no credential or real resource identifier and has not been sent.
+
+No qualified source-reader entry, protected worker, timer or continuous capture
+is claimed. Require a supported, tested default-deny source arrangement and
+verified revocation before issuing/deploying a replacement. Admission also
+requires any authentication handoff to be demonstrably closed; password setup
+alone is not proof of token-replay behavior.
 
 Live B2 qualification used only a new, clearly synthetic 44-byte fixture under
 the exact owned prefix, outside the completed-archive naming pattern. Writer
