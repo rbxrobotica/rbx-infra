@@ -6,12 +6,14 @@ on:
       - 'experiments/dns-monitor/**'
       - 'experiments/dns-renewal/**'
       - 'experiments/dns-production/**'
+      - 'experiments/dns-state-custody/**'
       - '.github/workflows/dns-pilot-monitor.yml'
   pull_request:
     paths:
       - 'experiments/dns-monitor/**'
       - 'experiments/dns-renewal/**'
       - 'experiments/dns-production/**'
+      - 'experiments/dns-state-custody/**'
       - '.github/workflows/dns-pilot-monitor.yml'
 
 permissions:
@@ -24,6 +26,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Test without credentials or provider requests
         run: python3 -B -m unittest discover -s experiments/dns-monitor -p test_monitor.py
+      - name: Test state archive controls with invented data only
+        run: python3 -B -m unittest discover -s experiments/dns-state-custody -p 'test_*.py'
       - name: Parse every pilot implementation
         run: |
           python3 -B - <<'PY'
