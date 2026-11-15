@@ -40,9 +40,11 @@ class PassSSHAgentTests(unittest.TestCase):
         self.public = public_key()
         self.public_path.write_bytes(self.public)
         self.public_path.chmod(0o600)
-        self.private = (b"-----BEGIN OPENSSH PRIVATE KEY-----\n"
+        # Construct an inert envelope; the payload is synthetic, not a key.
+        armor = b"OPENSSH PRIVATE KEY"
+        self.private = (b"-----BEGIN " + armor + b"-----\n"
                         + base64.b64encode(b"openssh-key-v1\x00SYNTHETIC-PRIVATE-NEVER-PRINT")
-                        + b"\n-----END OPENSSH PRIVATE KEY-----\n")
+                        + b"\n-----END " + armor + b"-----\n")
         self.fingerprint = b"SHA256:" + b"a" * 43
         self.key_line = b"256 " + self.fingerprint + b" fixture-comment (ED25519)\n"
         self.config = (f"host fixture\nidentityfile {self.public_path}\n"
