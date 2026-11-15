@@ -109,7 +109,7 @@ jobs:
             pg_dump --version | grep -E "PostgreSQL\) 16\."
             pg_restore --version | grep -E "PostgreSQL\) 16\."
             gpg --version
-            kubectl version --client | grep -Fx "Client Version: v1.36.5"
+            kubectl version --client | grep -Fx "Client Version: v1.36.6-rbx.1"
           '
 
       - name: Scan the assembled image before publishing

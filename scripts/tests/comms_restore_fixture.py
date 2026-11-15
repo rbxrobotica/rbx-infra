@@ -5,6 +5,7 @@ Run inside the built backup image, network=none, writable private /tmp, no
 production mounts or credentials. Nothing in this fixture proves a production
 archive or live S3 integration; the promotion runbook requires that separately.
 """
+import argparse
 import hashlib
 import json
 import os
@@ -29,7 +30,11 @@ def command(args, timeout=60):
     return result.stdout
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--scope", choices=("comms", "public-presence"), default="comms")
+    scope = parser.parse_args(argv).scope
+    database = "rbx_comms" if scope == "comms" else "public_presence"
     with tempfile.TemporaryDirectory(prefix="comms-restore-fixture-") as directory:
         base = Path(directory)
         data = base / "postgres"
@@ -47,12 +52,24 @@ def main():
                  "-h 127.0.0.1 -p 15432 -k " + str(base)])
         try:
             pg = ["psql", "-X", "-A", "-t", "-v", "ON_ERROR_STOP=1", "-h", "127.0.0.1", "-p", "15432", "-U", "fixture"]
-            command(pg + ["-d", "postgres", "-c", "CREATE DATABASE rbx_comms"])
-            command(pg + ["-d", "rbx_comms", "-c",
-                "CREATE SCHEMA comms; CREATE TABLE comms.submissions(id bigint PRIMARY KEY, body text NOT NULL);"
-                "INSERT INTO comms.submissions VALUES (1, 'synthetic one'),(2, 'synthetic two');"])
-            logical = "SELECT count(*),md5(string_agg(id::text || ':' || body, ',' ORDER BY id)) FROM comms.submissions"
-            expected = command(pg + ["-d", "rbx_comms", "-c", logical]).strip()
+            command(pg + ["-d", "postgres", "-c", "CREATE DATABASE " + database])
+            if scope == "comms":
+                sql = ("CREATE SCHEMA comms; CREATE TABLE comms.submissions(id bigint PRIMARY KEY, body text NOT NULL);"
+                       "INSERT INTO comms.submissions VALUES (1, 'synthetic one'),(2, 'synthetic two');")
+                logical = "SELECT count(*),md5(string_agg(id::text || ':' || body, ',' ORDER BY id)) FROM comms.submissions"
+            else:
+                sql = ("CREATE SCHEMA presence;"
+                    "CREATE TABLE presence.content_items(id bigint PRIMARY KEY, title text NOT NULL);"
+                    "CREATE TABLE presence.content_versions(id bigint PRIMARY KEY, item_id bigint REFERENCES presence.content_items, body text NOT NULL);"
+                    "CREATE TABLE presence.publications(id bigint PRIMARY KEY, version_id bigint REFERENCES presence.content_versions, receipt jsonb NOT NULL);"
+                    "INSERT INTO presence.content_items VALUES (1,'Synthetic draft');"
+                    "INSERT INTO presence.content_versions VALUES (2,1,'Synthetic immutable text');"
+                    "INSERT INTO presence.publications VALUES (3,2,'{\"synthetic_only\":true,\"remote_ref\":\"fixture\"}');")
+                logical = ("SELECT count(*),md5(string_agg(i.title || v.body || p.receipt::text, ',' ORDER BY p.id)) "
+                           "FROM presence.publications p JOIN presence.content_versions v ON v.id=p.version_id "
+                           "JOIN presence.content_items i ON i.id=v.item_id")
+            command(pg + ["-d", database, "-c", sql])
+            expected = command(pg + ["-d", database, "-c", logical]).strip()
             original = runner.run_command
             preserved = base / "preserved.gpg"
 
@@ -63,17 +80,19 @@ def main():
                 assert source.suffix == ".gpg"
                 shutil.copyfile(source, preserved)
                 meta = runner.file_metadata(preserved)
-                return json.dumps({"schema": "rbx.comms.archive-receipt.v1", "bucket": "synthetic-private-bucket",
-                    "key": "comms/backups/full/2026-10-05/synthetic.gpg", "version_id": "synthetic-version",
+                return json.dumps({"schema": f"rbx.{scope}.archive-receipt.v1", "bucket": "synthetic-private-bucket",
+                    "key": f"{scope}/backups/full/2026-10-05/synthetic.gpg", "version_id": "synthetic-version",
                     **meta, "verified_at": runner.utc_now()}).encode()
 
             runner.run_command = transport_stub
             try:
                 receipt = runner.create_backup(runner.Config({
-                    **os.environ, "DATABASE_URL": "postgres://fixture:synthetic@127.0.0.1:15432/rbx_comms",
+                    **os.environ, "DATABASE_URL": "postgres://fixture:synthetic@127.0.0.1:15432/" + database,
                     "BACKUP_PUBLIC_KEY_FILE": str(public), "BACKUP_RECIPIENT_FINGERPRINT": fingerprint,
                     "BACKUP_STAGING_DIR": str(base), "BACKUP_MAX_BYTES": str(16 * 1024 * 1024),
-                    "BACKUP_TIMEOUT_SECONDS": "120"}))
+                    "BACKUP_TIMEOUT_SECONDS": "120", "S3_ARCHIVE_ENDPOINT": "https://storage.example.invalid",
+                    "S3_ARCHIVE_BUCKET": "synthetic-private-bucket", "AWS_ACCESS_KEY_ID": "synthetic-access",
+                    "AWS_SECRET_ACCESS_KEY": "synthetic-key"}, scope=scope))
             finally:
                 runner.run_command = original
             assert receipt["restore_tested_at"] is None
@@ -87,6 +106,8 @@ def main():
                 manifest_bytes = bundle.extractfile("manifest.json").read()
                 assert hashlib.sha256(manifest_bytes).hexdigest() == receipt["manifest_sha256"]
                 manifest = json.loads(manifest_bytes)
+                assert manifest["schema"] == f"rbx.{scope}.backup-manifest.v1"
+                assert manifest["sources"]["postgres"]["database"] == database
                 dump = base / "restored.dump"
                 with dump.open("xb") as output:
                     shutil.copyfileobj(bundle.extractfile("postgres.dump"), output)
@@ -97,7 +118,8 @@ def main():
             restored = command(pg + ["-d", "fixture_restore", "-c", logical]).strip()
             assert restored == expected
             print(json.dumps({"synthetic_only": True, "s3_transport": "stubbed", "postgres_major": 16,
-                              "rows_restored": 2, "logical_fingerprint_match": True,
+                              "database_scope": scope, "rows_restored": 2 if scope == "comms" else 3,
+                              "logical_fingerprint_match": True,
                               "gpg_decryption_manifest_and_dump_hashes": "verified",
                               "runner_plaintext_cleanup": "verified"}))
         finally:

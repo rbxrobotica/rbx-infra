@@ -1,0 +1,22 @@
+{
+  "schema": "rbx.public-presence.local-verification.v1",
+  "synthetic_only": true,
+  "backup_image_local_id": "sha256:67f673dd46ca6f4b2a8885aba08f272d4dfaaadd38e8edd782e50c9d9ff4f87d",
+  "registry_published": false,
+  "restore_network": "none",
+  "public_presence_fixture_rows": 3,
+  "comms_fixture_rows": 2,
+  "gpg_manifest_dump_and_logical_fingerprints": "verified",
+  "cloud_transport": "stubbed",
+  "unit_tests_focused": 82,
+  "security_scan": {
+    "tool": "trivy 0.69.3",
+    "severity_gate": "HIGH,CRITICAL",
+    "ignore_unfixed": true,
+    "fixed_high_critical_findings": 0
+  },
+  "bandit_gate": "medium_and_high",
+  "bandit_findings_at_gate": 0,
+  "yaml_lint": "passed",
+  "production_mutated": false
+}

@@ -1,0 +1,17 @@
+{
+  "schema": "rbx.public-presence.bootstrap-restore-attempt.v1",
+  "observed_at": "2026-11-15T01:39:00.023049+00:00",
+  "source_capture_read_only": true,
+  "source_application_tables": 0,
+  "ciphertext_bytes": 10833,
+  "ciphertext_sha256": "a516d32f010654525159c661a338d1cc42524e6cb1dd81049ff2dd2883a1060d",
+  "archive_location": "operator_encrypted_cache",
+  "decryption": "failed",
+  "observed_gpg_status": "NO_SECKEY",
+  "postgres_restore": "not_started",
+  "external_backup_verified": false,
+  "production_mutated": false,
+  "dependency_owner": "separate_session_designated_by_operator",
+  "source_script_sha256": "07f0224c227a2fb35e5e5195453641447843f8e29cea6a68edfce10642e74d58",
+  "source_revision": "uncommitted helper at capture; hash retained"
+}

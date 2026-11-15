@@ -1,0 +1,23 @@
+---
+# One namespaced registry Secret only. This does not invoke the fleet-wide role.
+# The helper holds credentials in memory, outside Ansible module arguments/facts.
+- name: Recover Public Presence registry access after the migration hold
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars_files:
+    - group_vars/all/main.yml
+    - roles/k8s-secrets/defaults/main.yml
+  tasks:
+    - name: Check the held application and optionally materialize its pull Secret
+      ansible.builtin.command:
+        argv: >-
+          {{ [ansible_playbook_python,
+              playbook_dir + '/../../scripts/presence/registry_recovery.py',
+              '--kubeconfig', kubeconfig_path,
+              '--expected-cluster-uid', rbx_cluster_kube_system_uid]
+             + ([] if ansible_check_mode else ['--apply']) }}
+      register: presence_registry_recovery
+      changed_when: not ansible_check_mode
+      check_mode: false
+      no_log: true

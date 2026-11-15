@@ -4,17 +4,22 @@ on:
   pull_request:
     branches: [main]
     paths:
+      - 'bootstrap/ansible/public-presence-registry.yml'
       - 'scripts/comms/**'
+      - 'scripts/presence/**'
       - 'scripts/plausible/backup_runner.py'
       - 'scripts/plausible/s3_archive.py'
       - 'scripts/tests/test_comms*.py'
+      - 'scripts/tests/test_presence*.py'
       - 'scripts/tests/comms_restore_fixture.py'
       - 'scripts/tests/test_plausible*.py'
       - '.github/workflows/comms-backup-image.yml'
   push:
     branches: [main]
     paths:
+      - 'bootstrap/ansible/public-presence-registry.yml'
       - 'scripts/comms/**'
+      - 'scripts/presence/**'
       - 'scripts/plausible/backup_runner.py'
       - 'scripts/plausible/s3_archive.py'
       - '.github/workflows/comms-backup-image.yml'
@@ -37,9 +42,15 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install the distribution Ansible for executable registry scope tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes --no-install-recommends ansible-core
+
       - name: Test preservation and reporting contracts without production access
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_comms*.py' -v
+          python3 -m unittest discover -s scripts/tests -p 'test_presence*.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_plausible*.py' -v
 
       - name: Install pinned Python security lint dependencies
@@ -49,7 +60,7 @@ jobs:
             markdown-it-py==4.0.0 mdurl==0.1.2 Pygments==2.19.2
 
       - name: Lint Python security boundaries
-        run: bandit --recursive scripts/comms scripts/plausible --severity-level medium
+        run: bandit --recursive scripts/comms scripts/plausible scripts/presence --severity-level medium
 
       - name: Download and verify security tools
         run: |
@@ -67,6 +78,7 @@ jobs:
       - name: Scan backup code, tests, and workflows for secrets
         run: |
           "$RUNNER_TEMP/gitleaks" dir scripts/comms --no-banner --redact
+          "$RUNNER_TEMP/gitleaks" dir scripts/presence --no-banner --redact
           "$RUNNER_TEMP/gitleaks" dir scripts/plausible --no-banner --redact
           "$RUNNER_TEMP/gitleaks" dir scripts/tests --no-banner --redact
           "$RUNNER_TEMP/gitleaks" dir .github/workflows --no-banner --redact
@@ -80,6 +92,8 @@ jobs:
             --severity HIGH,CRITICAL scripts/comms
           "$RUNNER_TEMP/trivy" fs --scanners vuln --exit-code 1 --ignore-unfixed \
             --severity HIGH,CRITICAL scripts/plausible
+          "$RUNNER_TEMP/trivy" fs --scanners vuln --exit-code 1 --ignore-unfixed \
+            --severity HIGH,CRITICAL scripts/presence
 
   build-and-scan:
     needs: verify
@@ -116,7 +130,7 @@ jobs:
             test "$(id -u)" = 10001
             ! command -v kubectl
             python3 --version
-            python3 -c "import comms.backup_runner, comms.s3_archive"
+            python3 -c "import comms.backup_runner, comms.s3_archive, presence.backup_runner, presence.s3_archive"
             pg_dump --version | grep -E "PostgreSQL\) 16\."
             pg_restore --version | grep -E "PostgreSQL\) 16\."
             gpg --version
@@ -131,6 +145,11 @@ jobs:
             --tmpfs /tmp:rw,nosuid,nodev,size=256m,mode=1777 \
             --mount type=bind,src="$PWD/scripts/tests/comms_restore_fixture.py",dst=/fixture.py,readonly \
             --entrypoint python3 "$IMAGE_NAME:$IMAGE_TAG" /fixture.py
+          docker run --rm --network none --read-only --cap-drop ALL \
+            --security-opt no-new-privileges --memory 512m --cpus 1 \
+            --tmpfs /tmp:rw,nosuid,nodev,size=256m,mode=1777 \
+            --mount type=bind,src="$PWD/scripts/tests/comms_restore_fixture.py",dst=/fixture.py,readonly \
+            --entrypoint python3 "$IMAGE_NAME:$IMAGE_TAG" /fixture.py --scope public-presence
 
       - name: Scan the assembled image before publishing
         env:
