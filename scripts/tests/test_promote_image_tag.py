@@ -1,4 +1,5 @@
-"""Throwaway kustomizations and a stub docker; no registry and no cluster.
+"""Throwaway kustomizations, a stub docker and a stub pip; no registry, no
+cluster and no PyPI.
 
 Run with the interpreter of an environment made by
 scripts/promote-image-tag-env.sh, as scripts/test-promote-image-tag.sh does:
@@ -8,6 +9,7 @@ the promotion script is given that same environment.
 import base64
 import os
 from pathlib import Path
+import shutil
 # The tests run the script under test and its verifier as processes.
 import subprocess  # nosec B404
 import sys
@@ -19,6 +21,15 @@ import yaml
 REPO = Path(__file__).resolve().parents[2]
 SCRIPT = REPO / "scripts" / "promote-image-tag.sh"
 VERIFIER = REPO / "scripts" / "promote-image-tag-verify.py"
+PROVISION = REPO / "scripts" / "promote-image-tag-env.sh"
+
+# What a stub `python3 -m pip` does. promote-image-tag-env.sh asks it for its
+# version first and then has it install into the python that follows --python.
+PIP_MISSING = 'echo "No module named pip" >&2\nexit 1'
+PIP_CANNOT_INSTALL = '[ "$3" = --version ] && exit 0\necho "no matching distribution" >&2\nexit 1'
+PIP_INSTALLS_NOTHING = "exit 0"
+# What a stub `python3 -m venv` leaves in the working directory before it fails.
+VENV_STOPS_HALF_WAY = 'mkdir bin && echo "home = /nowhere" > pyvenv.cfg\necho "venv: simulated failure" >&2\nexit 1'
 
 API = "ghcr.io/rbxrobotica/rbx-commerce"
 WEB = "ghcr.io/rbxrobotica/rbx-commerce-web"
@@ -116,6 +127,9 @@ def unseen_digests():
         "deprecated imageTags in upper case": (
             kustomization(API_TAG_ONLY) + f"ImageTags:\n{second}",
             "it uses the deprecated imageTags list"),
+        "deprecated imageTags with a long s": (
+            kustomization(API_TAG_ONLY) + f"imageTag\u017f:\n{second}",
+            "it uses the deprecated imageTags list"),
         "second images key, repeated": (
             kustomization(API_TAG_ONLY) + f"images:\n{second}",
             "two of its top-level keys differ at most in letter case"),
@@ -177,6 +191,21 @@ class PromoteImageTagTests(unittest.TestCase):
         return {**self.stub("docker", 'printf "%s\\n" "$*" >> "$DOCKER_LOG"\nexit "$DOCKER_EXIT"'),
                 "CHECK_REGISTRY": "1", "DOCKER_LOG": str(self.docker_log)}
 
+    def provision(self, pip, target, venv=None):
+        """Run promote-image-tag-env.sh with a python3 whose pip, and whose venv
+        if given, is these shell lines; every other python3 call reaches this
+        interpreter."""
+        python3 = f'if [ "$1" = -m ] && [ "$2" = pip ]; then\n{pip}\nfi\n'
+        if venv:
+            python3 += f'if [ "$1" = -m ] && [ "$2" = venv ]; then\n{venv}\nfi\n'
+        python3 += f'exec "{sys.executable}" "$@"'
+        # LC_ALL: the tests read what mkdir says when it fails.
+        environment = {**os.environ, **self.stub("python3", python3), "LC_ALL": "C"}
+        # The argv is fixed and bash comes from PATH, as in image-update.yml.
+        return subprocess.run(  # nosec B603 B607
+            ["bash", str(PROVISION), str(target)], cwd=self.root, env=environment,
+            capture_output=True, encoding="utf-8", check=False)
+
     def assert_promoted(self, result, path, before, image):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(result.stdout, f"Updated apps/prod/demo/kustomization.yml: {image}:{NEW}\n")
@@ -184,6 +213,19 @@ class PromoteImageTagTests(unittest.TestCase):
         self.assertEqual(before.count(old_stanza), 1)
         self.assertEqual(path.read_text(encoding="utf-8"),
                          before.replace(old_stanza, f"  - name: {image}\n    newTag: {NEW}\n"))
+
+    def assert_removed(self, result, target, reason):
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn(reason, result.stderr)
+        self.assertIn(f"provisioning failed; removed {target}\n", result.stderr)
+        self.assertNotIn("already exists", result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assertFalse(os.path.lexists(target))
+
+    def assert_theirs(self, directory):
+        """The directory someone else made holds what they put in it, and no more."""
+        self.assertEqual([entry.name for entry in directory.iterdir()], ["kept.txt"])
+        self.assertEqual((directory / "kept.txt").read_text(encoding="utf-8"), "theirs\n")
 
     def assert_refused(self, result, path, before, reason, code=2):
         self.assertEqual(result.returncode, code, result.stderr)
@@ -350,6 +392,151 @@ class PromoteImageTagTests(unittest.TestCase):
             with self.subTest(case=case):
                 self.assert_refused(self.promote(API, PROMOTE_IMAGE_TAG_ENV=directory), path, before,
                                     "PROMOTE_IMAGE_TAG_ENV is not an environment of the current")
+
+    def test_provisioned_environment_is_kept_and_the_promotion_accepts_it(self):
+        target = self.root / "environment"
+        # In place of a download: this environment's PyYAML, copied into the new one.
+        copies = ('[ "$3" = --version ] && exit 0\n'
+                  f'cp -r "{Path(yaml.__file__).parent}" '
+                  '"$("$4" -c \'import sysconfig; print(sysconfig.get_path("purelib"))\')"\n'
+                  "exit")
+        result = self.provision(copies, target.name)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout, f"python {sys.version.split()[0]} PyYAML {yaml.__version__}\n")
+        self.assertNotIn("removed", result.stderr)
+        before = kustomization(API_TAG_ONLY)
+        path = self.overlay(before)
+        self.assert_promoted(self.promote(API, PROMOTE_IMAGE_TAG_ENV=str(target)), path, before, API)
+
+    def test_provisioning_that_fails_leaves_no_directory_and_can_be_retried(self):
+        target = self.root / "environment"
+        cases = {
+            "pip cannot install": (PIP_CANNOT_INSTALL, target, "no matching distribution"),
+            "pip cannot install, relative path": (PIP_CANNOT_INSTALL, target.name, "no matching distribution"),
+            "PyYAML is missing after the install": (PIP_INSTALLS_NOTHING, target, "No module named 'yaml'"),
+        }
+        for case, (pip, argument, reason) in cases.items():
+            for attempt in ("first", "second"):
+                with self.subTest(case=case, attempt=attempt):
+                    self.assert_removed(self.provision(pip, argument), target, reason)
+
+    def test_provisioning_that_fails_at_the_venv_or_at_the_marker_leaves_no_directory(self):
+        target = self.root / "environment"
+        for attempt in ("first", "second"):
+            with self.subTest(case="venv stops half way", attempt=attempt):
+                result = self.provision(PIP_INSTALLS_NOTHING, target, venv=VENV_STOPS_HALF_WAY)
+                self.assert_removed(result, target, "venv: simulated failure")
+        self.stub("sha256sum", 'echo "sha256sum: simulated failure" >&2\nexit 1')
+        for attempt in ("first", "second"):
+            with self.subTest(case="the marker cannot be written", attempt=attempt):
+                self.assert_removed(self.provision(PIP_INSTALLS_NOTHING, target), target,
+                                    "sha256sum: simulated failure")
+
+    def test_provisioning_without_pip_or_a_parent_directory_creates_nothing(self):
+        cases = {
+            "python3 has no pip": (PIP_MISSING, self.root / "environment", 2,
+                                   "python3 -m pip is not available on this machine; nothing was created"),
+            "the parent directory is missing": (PIP_CANNOT_INSTALL, self.root / "missing" / "environment", 1,
+                                                "No such file or directory"),
+        }
+        for case, (pip, target, code, reason) in cases.items():
+            with self.subTest(case=case):
+                result = self.provision(pip, target)
+                self.assertEqual(result.returncode, code, result.stderr)
+                self.assertIn(reason, result.stderr)
+                self.assertNotIn("removed", result.stderr)
+                self.assertEqual(result.stdout, "")
+                self.assertEqual(sorted(entry.name for entry in self.root.iterdir()), ["bin", "tmp"])
+
+    def test_provisioning_refuses_what_exists_and_leaves_it_alone(self):
+        directory = self.root / "directory"
+        directory.mkdir()
+        (directory / "kept.txt").write_text("kept\n", encoding="utf-8")
+        regular = self.root / "regular"
+        regular.write_text("kept\n", encoding="utf-8")
+        dangling = self.root / "dangling"
+        dangling.symlink_to(self.root / "nowhere")
+        for case, target in {"a directory": directory, "a file": regular, "a dangling link": dangling}.items():
+            with self.subTest(case=case):
+                result = self.provision(PIP_CANNOT_INSTALL, target)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertEqual(result.stderr, f"already exists: {target}\n")
+                self.assertEqual(result.stdout, "")
+        self.assertEqual((directory / "kept.txt").read_text(encoding="utf-8"), "kept\n")
+        self.assertEqual(regular.read_text(encoding="utf-8"), "kept\n")
+        self.assertTrue(dangling.is_symlink())
+        self.assertFalse(os.path.lexists(self.root / "nowhere"))
+
+    def test_directory_that_appears_before_the_mkdir_is_not_removed(self):
+        target = self.root / "environment"
+        # pip is asked for its version after the script saw no directory and
+        # before the script creates one: someone else creates it in between.
+        appears = (f'[ "$3" = --version ] && mkdir "{target}" && echo theirs > "{target}/kept.txt" && exit 0\n'
+                   "exit 1")
+        result = self.provision(appears, target)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("File exists", result.stderr)
+        self.assertNotIn("removed", result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assert_theirs(target)
+
+    def test_directory_that_is_not_empty_right_after_creation_is_left_alone(self):
+        target = self.root / "environment"
+        self.stub("mkdir", f'"{shutil.which("mkdir")}" "$@" && echo theirs > "{target}/kept.txt"')
+        result = self.provision(PIP_CANNOT_INSTALL, target)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(result.stderr,
+                         f"{target} was not empty right after this run created it; nothing was removed\n")
+        self.assertEqual(result.stdout, "")
+        self.assert_theirs(target)
+
+    def test_cleanup_leaves_a_directory_that_took_the_place_of_its_own(self):
+        target = self.root / "environment"
+        moved = self.root / "moved"
+        # The stub fails right after the swap. What venv or pip would write
+        # through the path after a swap is not something the script prevents.
+        replaces = ('[ "$3" = --version ] && exit 0\n'
+                    f'mv "{target}" "{moved}" && mkdir "{target}" && echo theirs > "{target}/kept.txt"\n'
+                    "exit 1")
+        result = self.provision(replaces, target)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn(f"provisioning failed; {target} no longer names the directory this run was working in, "
+                      "so nothing was removed\n", result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assert_theirs(target)
+        self.assertTrue((moved / "pyvenv.cfg").is_file())
+
+    def test_cleanup_leaves_a_directory_behind_a_repointed_link(self):
+        first, second, link = self.root / "first", self.root / "second", self.root / "link"
+        first.mkdir()
+        (second / "environment").mkdir(parents=True)
+        (second / "environment" / "kept.txt").write_text("theirs\n", encoding="utf-8")
+        link.symlink_to(first)
+        target = link / "environment"
+        repoints = f'[ "$3" = --version ] && exit 0\nln -sfn "{second}" "{link}"\nexit 1'
+        result = self.provision(repoints, target)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn(f"provisioning failed; {target} no longer names the directory this run was working in, "
+                      "so nothing was removed\n", result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assert_theirs(second / "environment")
+        self.assertTrue((first / "environment" / "pyvenv.cfg").is_file())
+
+    def test_cleanup_leaves_a_directory_that_took_the_place_after_its_check(self):
+        target = self.root / "environment"
+        moved = self.root / "moved"
+        # The cleanup calls find -delete after it saw that the path still names
+        # its directory: the replacement happens between the two.
+        self.stub("find", 'case " $* " in *" -delete "*)\n'
+                          f'  mv "{target}" "{moved}" && mkdir "{target}" && echo theirs > "{target}/kept.txt" ;;\n'
+                          f'esac\nexec "{shutil.which("find")}" "$@"')
+        result = self.provision(PIP_CANNOT_INSTALL, target)
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("Directory not empty", result.stderr)
+        self.assertNotIn("removed", result.stderr)
+        self.assertEqual(result.stdout, "")
+        self.assert_theirs(target)
+        self.assertEqual(list(moved.iterdir()), [])
 
     def test_verifier_accepts_the_expected_edit_and_nothing_more(self):
         before = kustomization(API_TAG_ONLY + WEB_TAG_ONLY)
