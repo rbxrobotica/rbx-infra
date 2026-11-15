@@ -129,7 +129,7 @@ class B2:
         if not re.fullmatch(PREFIX + RUN + r'/(archive\.tar\.gpg|receipt\.json)', name) or len(raw) > LIMIT:
             raise ValueError('upload_outside_owned_run')
         grant = self.api('b2_get_upload_url', {'bucketId': self.bucket_id})
-        b2_access.destination(grant['uploadUrl'])
+        b2_access.upload_destination(grant['uploadUrl'])
         # Deliberately omit retention/ACL overrides; existing Compliance default applies.
         request = urllib.request.Request(grant['uploadUrl'], data=raw, headers={
             'Authorization': grant['authorizationToken'],

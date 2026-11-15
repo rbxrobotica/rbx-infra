@@ -27,6 +27,8 @@ def main():
     p.add_argument('--image',required=True);p.add_argument('--markdown-package',type=Path,required=True)
     p.add_argument('--mdurl-package',type=Path,required=True);p.add_argument('--apply',action='store_true')
     args=p.parse_args();source=Path(__file__).resolve().parent
+    # Owner source-tree CLI; installed runtime receives this module in its release.
+    sys.path.insert(0,str(source.parent/'dns-renewal'))
     custody=json.loads(source_access.stored('rbx/object-backup/memory-custody'))
     report={'operation':'qualify workload format from the previously validated manual snapshot',
         'source_read_or_write_attempted':False,'fresh_source_capture':False,'monitor_ping_sent':False,

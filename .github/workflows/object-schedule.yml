@@ -1,16 +1,26 @@
 name: Memory backup schedule controls
 on:
   push:
-    paths: ['experiments/object-schedule/**', 'experiments/object-corpus/**', 'experiments/dns-renewal/clock_status.py', 'experiments/dns-monitor/healthchecks-controller.py', '.github/workflows/object-schedule.yml']
+    paths:
+      - 'experiments/object-schedule/**'
+      - 'experiments/object-corpus/**'
+      - 'experiments/dns-renewal/clock_status.py'
+      - 'experiments/dns-monitor/healthchecks-controller.py'
+      - '.github/workflows/object-schedule.yml'
   pull_request:
-    paths: ['experiments/object-schedule/**', 'experiments/object-corpus/**', 'experiments/dns-renewal/clock_status.py', 'experiments/dns-monitor/healthchecks-controller.py', '.github/workflows/object-schedule.yml']
+    paths:
+      - 'experiments/object-schedule/**'
+      - 'experiments/object-corpus/**'
+      - 'experiments/dns-renewal/clock_status.py'
+      - 'experiments/dns-monitor/healthchecks-controller.py'
+      - '.github/workflows/object-schedule.yml'
 permissions:
   contents: read
 jobs:
   offline-schedule-controls:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
       - name: Use the distribution cryptography package for signature controls
         run: sudo apt-get update -qq && sudo apt-get install -y python3-cryptography
       - run: /usr/bin/python3 -B -m unittest discover -s experiments/object-schedule -p 'test_*.py'

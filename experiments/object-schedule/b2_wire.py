@@ -1,6 +1,7 @@
 """Bounded Native API transport. No pass, owner store or administrative actions."""
 import base64
 import json
+import re
 import urllib.parse
 import urllib.request
 
@@ -18,6 +19,18 @@ def destination(url):
         raise ValueError('unsafe_api_destination')
     if not p.hostname or not (p.hostname=='api.backblazeb2.com' or p.hostname.endswith('.backblazeb2.com')):
         raise ValueError('unexpected_api_provider')
+    return url
+
+
+def upload_destination(url):
+    p=urllib.parse.urlsplit(url)
+    if p.scheme!='https' or p.username or p.password or p.port not in (None,443):
+        raise ValueError('unsafe_upload_destination')
+    # Official Native upload pods use backblaze.com, not the API's backblazeb2.com.
+    # https://www.backblaze.com/apidocs/b2-get-upload-url
+    if not re.fullmatch(r'pod-\d{3}-\d{4}-\d{2}\.backblaze\.com',p.hostname or ''):
+        raise ValueError('unexpected_upload_provider')
+    if p.path!='/b2api/v4/b2_upload_file':raise ValueError('unexpected_upload_route')
     return url
 
 

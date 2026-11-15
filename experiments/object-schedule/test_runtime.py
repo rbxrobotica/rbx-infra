@@ -77,5 +77,14 @@ class RuntimeTests(unittest.TestCase):
         client.api=lambda *args:{'files':[],'nextFileName':'repeated'}
         with self.assertRaisesRegex(ValueError,'archive_pagination_repeated'): client.latest()
 
+    def test_only_official_native_upload_pods_and_route(self):
+        good='https://pod-050-1042-10.backblaze.com/b2api/v4/b2_upload_file?bucket=fixture'
+        self.assertEqual(r.b2_access.upload_destination(good),good)
+        for bad in [good.replace('https:','http:'),good.replace('.com/','.com.attacker.invalid/'),
+                    good.replace('/b2api/v4/b2_upload_file','/another-route'),
+                    good.replace('pod-050-1042-10','secure'),good.replace('https://','https://user@')]:
+            with self.assertRaises(ValueError):r.b2_access.upload_destination(bad)
+        with self.assertRaises(ValueError):r.b2_access.destination(good)
+
 
 if __name__ == '__main__': unittest.main()
