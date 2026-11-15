@@ -11,7 +11,7 @@
     "prefix": "memory-auto/v1/",
     "valid_duration_seconds": 7776000,
     "writer_capabilities": ["writeFiles"],
-    "verifier_capabilities": ["listFiles", "readFiles", "readFileRetentions", "readBucketRetentions", "readBucketEncryption"],
+    "verifier_capabilities": ["listFiles", "readFiles", "readFileRetentions"],
     "forbidden_runtime_capabilities": ["deleteFiles", "writeKeys", "deleteKeys", "writeBuckets", "deleteBuckets", "writeFileRetentions", "writeBucketRetentions", "writeBucketEncryption", "writeFileLegalHolds", "bypassGovernance"],
     "admin_credential_runtime_deployment": false,
     "existing_archives_mutated": false
