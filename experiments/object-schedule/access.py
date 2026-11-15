@@ -8,7 +8,7 @@ PLAN = json.loads(Path(__file__).with_name('access-plan.json').read_text())
 def desired(role, bucket_id):
     if role not in ('writer', 'verifier') or not bucket_id:
         raise ValueError('unknown_role_or_bucket')
-    return {'capabilities': PLAN['destination'][role+'_capabilities'],
+    return {'capabilities': list(PLAN['destination'][role+'_capabilities']),
             'bucketIds': [bucket_id], 'namePrefix': PLAN['destination']['prefix'],
             'validDurationInSeconds': PLAN['destination']['valid_duration_seconds']}
 

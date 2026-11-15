@@ -1,0 +1,14 @@
+name: Memory backup schedule controls
+on:
+  push:
+    paths: ['experiments/object-schedule/**', 'experiments/dns-monitor/healthchecks-controller.py', '.github/workflows/object-schedule.yml']
+  pull_request:
+    paths: ['experiments/object-schedule/**', 'experiments/dns-monitor/healthchecks-controller.py', '.github/workflows/object-schedule.yml']
+permissions:
+  contents: read
+jobs:
+  offline-schedule-controls:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: python3 -B -m unittest discover -s experiments/object-schedule -p 'test_*.py'
