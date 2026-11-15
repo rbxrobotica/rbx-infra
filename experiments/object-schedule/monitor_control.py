@@ -20,13 +20,16 @@ def reconcile(role,apply=False,transport=None,key=None,secret_store=None):
     transport=transport or hc.api;key=key or hc.stored(hc.API_ENTRY)
     name,slug,period,grace,entry=CHECKS[role]
     before=transport(key)['checks']
+    channels={x['channels'] for x in before if x.get('channels')}
+    if len(channels)!=1:raise ValueError('notification_channel_requires_review')
+    channel=next(iter(channels))
     matches=[x for x in before if x['name']==name]
     if len(matches)>1:raise ValueError('duplicate_check_name')
     old=matches[0] if matches else None
     if old and (old.get('slug')!=slug or old.get('schedule')):
         raise ValueError('existing_check_not_owned')
     desired={'name':name,'slug':slug,'tags':'rbx memory backup '+role,
-             'timeout':period,'grace':grace,'channels':'*','unique':['name']}
+             'timeout':period,'grace':grace,'channels':channel,'unique':['name']}
     changed=old is None or not old.get('channels') or any(
         old.get(k)!=v for k,v in desired.items() if k not in ('channels','unique'))
     report={'name':name,'role':role,'period_seconds':period,'grace_seconds':grace,

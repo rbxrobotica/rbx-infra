@@ -51,6 +51,14 @@ class CheckManagement(unittest.TestCase):
     def test_pings_and_management_key_are_not_in_reports(self):
         r=mc.reconcile('witness',True,Transport(),'secret-fixture-api',lambda *a:None)
         self.assertNotIn('secret-fixture-api',str(r));self.assertNotIn('hc-ping.com',str(r))
+    def test_multiple_channels_need_review_before_write(self):
+        t=Transport();t.checks.append({'name':'Another','uuid':'another','channels':'different'})
+        with self.assertRaises(ValueError):mc.reconcile('capture',True,t,'fixture')
+        self.assertEqual(t.writes,[])
+    def test_no_notification_channel_is_not_healthy(self):
+        t=Transport();t.checks[0]['channels']=''
+        with self.assertRaises(ValueError):mc.reconcile('capture',True,t,'fixture')
+        self.assertEqual(t.writes,[])
 
 
 if __name__=='__main__':unittest.main()
