@@ -62,7 +62,7 @@ class Owner:
             raw = response.read(1024 * 1024 + 1)
         if len(raw) > 1024 * 1024:
             raise ValueError('oversized_control_response')
-        return json.loads(raw)
+        return json.loads(raw) if raw else {}
 
 
 def admission_role():
