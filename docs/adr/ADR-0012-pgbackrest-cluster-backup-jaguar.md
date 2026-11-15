@@ -9,11 +9,21 @@
 jaguar (161.97.147.76) runs the shared PostgreSQL 16 cluster holding
 every non-regenerable database RBX operates: ZITADEL (identity),
 PowerDNS backend, Robson, Langfuse, data warehouse and commerce
-sandbox. The resilience audit (rbx-resilience) verified on 2026-08-27
-that this cluster has **no backup of any kind**: no WAL archiving, no
-scheduled dumps. The only deployed backup in the fleet is the k3s etcd
-snapshot pipeline, whose copies land on jaguar itself. RPO today is
-total loss.
+sandbox. The earlier wording that the 2026-08-27 resilience audit proved
+"no backup of any kind" and "no scheduled dumps" was too broad. Historical
+[logical-backup records](../runbooks/JAGUAR-LOGICAL-BACKUP-HISTORY.md) describe
+per-database dumps and globals to Contabo S3 in July, including one isolated
+[Thalamus restore on 2026-07-18](../infra/evidence/2026-07-18-jaguar-thalamus-restore.md).
+That does not prove continuity through August/October, restoration of every
+database, or WAL/PITR. The audit's incomplete inventory is not an observation of
+all backup mechanisms.
+
+The later [2026-10-12 preflight](../../infra/irc/docs/POSTGRES-LIVE-PREFLIGHT-2026-10-12.md)
+found no pgBackRest executable/repository and WAL archiving off. Its crontab
+inspection was inconclusive and cannot establish absence of logical backups.
+Current all-database coverage and observed RPO remain unverified here. The k3s
+etcd snapshot pipeline is a separate state scope; its Jaguar copies do not
+restore application databases.
 
 Every byte of storage RBX controls sits in one Contabo account, so no
 copy inside the current infrastructure can satisfy the audit's
@@ -21,10 +31,20 @@ off-site invariant (different provider AND different account).
 ADR-0004 already selected rsync.net Zurich as the off-site target for
 mail and rejected Hetzner (correlated German hosting), B2-as-primary
 (Object Lock ceremony, CLOUD Act coherence cost, egress fees) and
-Storj; the account was never opened. This ADR extends that same
-destination to the Postgres cluster.
+Storj. This ADR historically extended that destination to the Postgres
+cluster. The operator confirmed no account was available on 2026-10-12.
+The operator also supplied the vendor's 2026-08-31 response withdrawing Zurich
+for new contracts. Region and procurement therefore remain unresolved; another
+region/provider is not silently substituted. See [readiness](../runbooks/RSYNC-NET-READINESS.md)
+and the [2026-10-29 reconciliation](../infra/BACKUP-EVIDENCE-RECONCILIATION-2026-10-29.md).
 
 ## Decision
+
+The accepted physical-backup/WAL direction below remains a design. The
+2026-10-12 observation did not find it active. SFTP destination, procurement,
+key custody, activation and isolated restore require their own evidence. The
+historical logical dump is neither erased by this decision nor evidence that
+these phases were executed.
 
 Deploy **pgBackRest** on jaguar, one stanza (`jaguar`) covering the
 whole cluster, in two phases:

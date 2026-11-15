@@ -1,6 +1,12 @@
 # P1 Cluster Robustness Plan - 2026-07-08
 
-Status: active planning, no production action executed by this document.
+Status: historical planning/evidence snapshot of 2026-07-08. No production
+action was executed by this planning document. Later scoped outcomes are in
+the [July history](CLUSTER-RECOVERY-HISTORY-2026-07.md),
+[upgrade runbook](../runbooks/K3S-UPGRADE-P1.md) and
+[18 October execution](RBX-INFRA-RELIABILITY-EXECUTION-2026-10-18.md).
+Do not treat the findings below as a current health assessment or infer that
+those later outcomes close every workstream.
 
 This plan starts the post-diagnostic P1 tranche for the RBX k3s cluster. It is
 separate from the June 2026 P1 control-plane HA migration, which is already

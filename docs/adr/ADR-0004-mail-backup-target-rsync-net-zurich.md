@@ -11,6 +11,27 @@
 > state is a **future company phase** and will be addressed in a dedicated ADR when the volume
 > and compliance requirements justify a paid offsite target.
 
+## Procurement and evidence clarification (2026-10-29)
+
+The accepted selection above is a historical decision, not an implementation
+receipt. On 2026-08-31 the vendor told the operator that Zurich had been withdrawn
+for new contracts, offering Denver or Silicon Valley. This is the operator's
+attestation of correspondence read in the originating session; email was not
+exported or reopened for this reconciliation. On 2026-10-12 the operator
+confirmed that no rsync.net account was available. An older session's claim that
+rsync.net was already used for mail is not accepted as deployment evidence.
+
+The [readiness record](../runbooks/RSYNC-NET-READINESS.md) must therefore treat
+region, account and contracting as unresolved rather than infer availability
+from a locations page. No replacement region or provider is selected here.
+Preserve the original trade-offs; a changed choice requires owner review and an
+ADR update. Prices and provider-service descriptions below are historical
+selection inputs, not a current quote or a tested RBX configuration.
+
+See [backup evidence reconciliation](../infra/BACKUP-EVIDENCE-RECONCILIATION-2026-10-29.md)
+for the dated evidence chain. This clarification neither purchases storage nor
+asserts a Mailcow backup or restore.
+
 ## Context
 
 Following the institutional mail rollout (`docs/PLAN-mail-self-hosted.md`,
