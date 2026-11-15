@@ -58,7 +58,11 @@ Verify before running tofu (see sections 6 and 7 for validation and secrets deta
 - `infra/terraform/dns/terraform.tfvars` — non-secret runtime values (k3s IP, DKIM CNAMEs)
 - `infra/terraform/dns/terraform.tfstate` — Terraform state, local backend
 
-The state backend is local. If this workstation is lost, state is lost and zones would need to be imported or re-applied. Acceptable for single-operator use; migrate to S3 if that changes.
+The state backend is still local. Its current source copy, backup and exclusive
+ownership must be established before any production change. Single-operator
+use does not waive the mandatory remote-state/backup/recovery gate. Follow
+[DNS state custody](../runbooks/DNS-STATE-CUSTODY.md); do not re-apply zones or
+import resources merely because a workstation lacks its state file.
 
 ---
 
