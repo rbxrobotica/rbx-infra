@@ -265,3 +265,30 @@ has bounded on-failure restarts and a 05:30 local schedule, after the cluster
 CronJob's one-hour start allowance plus 31-minute run window. Check its real timer trigger, service result,
 restart count and ciphertext receipt; do not count a manual start as a timer
 dispatch. Preserve both failed-attempt evidence and earlier verified copies.
+
+## Observed owner recovery after the timer correction
+
+PR 408 was merged at `555b2b4f0989a81b9b82d3feae4ca1b0ae2cd51d` after CI,
+image checks and independent review. Existing owner tool hashes matched their
+source before installation. Installed properties confirmed the bounded restart
+policy, six-minute attempt limit and the revised 05:30 local timer.
+An explicit service check succeeded at 07:54:36 UTC with NRestarts=0.
+
+The revised timer then genuinely triggered at 2026-11-16T08:30:25Z (05:30 BRT).
+The service started at the same instant and completed at 08:30:56Z with exit 0
+and NRestarts=0. The new owner receipt independently verified ciphertext
+SHA-256 `725ad3ef4c232865fe433b6f7198e767fa7fae9e2d1ee160adcc875c5144fef6`,
+matching the validated cluster archive. This proves a real revised owner timer
+run; no restart was needed. Its next calendar occurrence is 05:30 the next day.
+The primary cluster producer's next real daily success after its correction
+still requires observation at 2026-11-17T06:45:00Z. Owner-copy success does not
+relabel the earlier failed primary Job or the explicit producer validation.
+
+The final operational/recovery evidence bundle, including the preserved primary
+failure, retry configuration and successful explicit validation, was recovered
+by its retained unique object key after an ambiguous upload outcome. An exact
+remote version was independently downloaded and verified with SHA-256
+`5c1ffe9b74e6f5064cc6d436fc976d2bdd4245f6767b4e846569e20e9cb672a7`.
+The private proof is `20261116T081537.063814Z.final-evidence-proof.json`.
+No privacy, versioning or integrity gate was bypassed. Preserve the intermediate
+failed attempt records as well as the successful receipts.
