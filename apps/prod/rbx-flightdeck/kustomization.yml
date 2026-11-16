@@ -15,6 +15,11 @@ resources:
   - db-migrate-job.yml
   - db-bootstrap-job.yml
   - public-presence-worker-cronjob.yml
+  - backup-serviceaccount.yml
+  - backup-recipient-configmap.yml
+  - backup-credentials.yml
+  - backup-cronjob.yml
+  - backup-prometheusrule.yml
 labels:
   - pairs:
       app.kubernetes.io/part-of: rbx-flightdeck
