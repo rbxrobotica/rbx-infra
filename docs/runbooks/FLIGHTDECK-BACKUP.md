@@ -101,7 +101,15 @@ as part of backup activation. Preserve the existing application Secret.
 
 `scripts/flightdeck/install_owner_copy.py` plans the owner-host service and
 installs it with `--apply` after its source is reviewed. The daily timer runs at
-04:15 America/Sao_Paulo, after the cluster backup, with persistent catch-up.
+05:30 America/Sao_Paulo, after the cluster backup's full admitted start/run window,
+with persistent catch-up. A failed copy retries after 30 seconds, with at most
+three starts in one hour and a 360-second bound per attempt. The primary can
+start up to one hour after 03:45, then run for 31 minutes, ending near 05:16.
+The independent copy therefore has margin after that complete window. Exhausted retries
+remain a visible service failure; no privacy or integrity gate is skipped.
+The installer re-arms the timer after updating its calendar. If the new time
+has already passed, a persistent timer catch-up is a scheduler invocation and
+must be recorded as catch-up, not an exact on-time dispatch.
 It does not produce the primary backup: the Kubernetes CronJob does that even
 when this desktop is off. The owner service downloads a new exact-version,
 hash-verified ciphertext copy and retains a private receipt. It does not decrypt,
@@ -174,7 +182,7 @@ Owner tools are installed from infra revision
 `cf1af75e0cd057d5075da83f62b4f525289e6495`; their source hashes are in
 `~/.local/share/rbx-flightdeck-tools/backup/source.json`. The independent-copy
 service succeeded with a receipt stamped 05:50 UTC, retaining an exact-version SHA-256-verified
-ciphertext on the owner host. Its daily 04:15 local timer is active. A transient
+ciphertext on the owner host. The initial timer was set to 04:15 local time. A transient
 S3 listing failure on the first attempt was reported as unknown and retained
 as a failed attempt; the later successful readback established current custody.
 
@@ -240,3 +248,20 @@ that validation must remain labeled explicit. The next real daily dispatch
 after this correction is expected at 2026-11-17T06:45:00Z. A successful real
 daily backup after the correction remains unproven until its own receipt,
 remote version and independent download/hash are checked.
+
+The explicit retry-validation Job completed at 07:13:40 UTC on 2026-11-16.
+Its new 205395-byte ciphertext was independently downloaded by exact version,
+with SHA-256
+`725ad3ef4c232865fe433b6f7198e767fa7fae9e2d1ee160adcc875c5144fef6`.
+It succeeded with one pod, so this proves the reconciled producer path and
+configured retry bound, not an exercised pod retry or a successful daily
+scheduler dispatch after the correction.
+
+The first owner-copy timer invocation started at 07:15:21 UTC and exited with
+status 1 at 07:15:52 UTC, with no restart configured. The generic log does not
+prove a particular HTTP or filesystem cause. The newer exact-version download
+above is retained independently on the owner host. The owner-copy service now
+has bounded on-failure restarts and a 05:30 local schedule, after the cluster
+CronJob's one-hour start allowance plus 31-minute run window. Check its real timer trigger, service result,
+restart count and ciphertext receipt; do not count a manual start as a timer
+dispatch. Preserve both failed-attempt evidence and earlier verified copies.
