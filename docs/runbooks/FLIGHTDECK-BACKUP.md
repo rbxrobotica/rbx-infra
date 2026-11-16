@@ -185,12 +185,12 @@ by exact version. Its SHA-256 is
 Private receipts, downloaded ciphertext, restore proofs and source evidence live
 in the owner directories identified above; no decrypted database dump is there.
 
-At 06:01 UTC all three backup alert rules were loaded with health=ok. The first
-real daily scheduler dispatch is expected at 2026-11-16T06:45:00Z. Before claiming
-that dispatch, verify CronJob lastScheduleTime, the Job's controller owner UID and
+At 06:01 UTC all three backup alert rules were loaded with health=ok. Prove a
+real dispatch using CronJob lastScheduleTime, the Job's controller owner UID and
 `batch.kubernetes.io/cronjob-scheduled-timestamp`, then receipt and exact-version
-download/hash. The explicit initial Job's lastSuccessfulTime does not establish
-that proof.
+download/hash. Compare parsed timezone-aware instants: the scheduled annotation
+can use a local offset while CronJob status uses UTC. An explicit Job's
+lastSuccessfulTime does not establish that proof.
 
 After real chat ingestion and review preparation, the explicit
 `rbx-flightdeck-backup-post-intake-20261116` Job produced a new full archive.
@@ -213,3 +213,30 @@ alerts; do not assume host-side collection or independent custody can continue
 while the host cannot create files. The cluster backup and snapshot jobs do not
 depend on that workstation. Do not stop other tasks or delete their volumes as
 part of this runbook.
+
+## First real daily dispatch and bounded retries
+
+The scheduler created `rbx-flightdeck-backup-29913525` at
+2026-11-16T06:45:00Z. The Job's controller owner UID matched the managed
+CronJob, whose lastScheduleTime was 06:45 UTC. Its scheduled annotation was
+`2026-11-16T03:45:00-03:00`, the same instant. No manual instantiation annotation
+was present. This proves the real scheduler dispatch, not backup success.
+
+That first scheduled Job failed at 06:46:55 UTC with BackoffLimitExceeded after
+one pod exited with the safe error `Off-site archive verification failed`.
+The initial configuration allowed no retry. Separate owner-host operations also
+observed transient S3 metadata failures before later successful authenticated
+privacy/versioning checks and exact-version readback. This supports bounded
+retry as a mitigation; the generic producer log does not identify a specific
+provider HTTP error for that failed Job. The failed Job and evidence are
+preserved, along with the earlier verified backups.
+
+The CronJob now admits two serial retries inside the existing 1860-second Job
+deadline. Its 03:45 America/Sao_Paulo schedule, concurrency prohibition, image
+digest, RAM and resource limits, encryption, private-bucket/versioning/readback
+gates and retention are unchanged. No failed Job is relabeled or replaced.
+Verify the reconciled backoffLimit and a fresh explicit retry-validation Job;
+that validation must remain labeled explicit. The next real daily dispatch
+after this correction is expected at 2026-11-17T06:45:00Z. A successful real
+daily backup after the correction remains unproven until its own receipt,
+remote version and independent download/hash are checked.
