@@ -34,9 +34,10 @@ spec:
     namespace: rbx-flightdeck
 
   syncPolicy:
-    # Controlled stateful rollout: verify the scoped backup and recovery,
-    # materialize capture-only credentials, then sync reviewed resources.
-    # Image publication must not implicitly apply database migrations.
-    # Restore automated sync only through a reviewed follow-up after proof.
+    # The private intake release passed the controlled migration/recovery gate.
+    # Keep resource deletion outside automatic reconciliation.
+    automated:
+      prune: false
+      selfHeal: true
     syncOptions:
       - CreateNamespace=true
