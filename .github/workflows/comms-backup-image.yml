@@ -7,6 +7,8 @@ on:
       - 'bootstrap/ansible/public-presence-registry.yml'
       - 'scripts/comms/**'
       - 'scripts/presence/**'
+      - 'scripts/flightdeck/**'
+      - 'scripts/tests/test_flightdeck*.py'
       - 'scripts/plausible/backup_runner.py'
       - 'scripts/plausible/s3_archive.py'
       - 'scripts/tests/test_comms*.py'
@@ -20,6 +22,8 @@ on:
       - 'bootstrap/ansible/public-presence-registry.yml'
       - 'scripts/comms/**'
       - 'scripts/presence/**'
+      - 'scripts/flightdeck/**'
+      - 'scripts/tests/test_flightdeck*.py'
       - 'scripts/plausible/backup_runner.py'
       - 'scripts/plausible/s3_archive.py'
       - '.github/workflows/comms-backup-image.yml'
@@ -49,6 +53,7 @@ jobs:
 
       - name: Test preservation and reporting contracts without production access
         run: |
+          python3 -m unittest discover -s scripts/tests -p 'test_flightdeck*.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_comms*.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_presence*.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_plausible*.py' -v
@@ -60,7 +65,7 @@ jobs:
             markdown-it-py==4.0.0 mdurl==0.1.2 Pygments==2.19.2
 
       - name: Lint Python security boundaries
-        run: bandit --recursive scripts/comms scripts/plausible scripts/presence --severity-level medium
+        run: bandit --recursive scripts/comms scripts/plausible scripts/presence scripts/flightdeck --severity-level medium
 
       - name: Download and verify security tools
         run: |
@@ -77,6 +82,7 @@ jobs:
 
       - name: Scan backup code, tests, and workflows for secrets
         run: |
+          "$RUNNER_TEMP/gitleaks" dir scripts/flightdeck --no-banner --redact
           "$RUNNER_TEMP/gitleaks" dir scripts/comms --no-banner --redact
           "$RUNNER_TEMP/gitleaks" dir scripts/presence --no-banner --redact
           "$RUNNER_TEMP/gitleaks" dir scripts/plausible --no-banner --redact
@@ -130,7 +136,7 @@ jobs:
             test "$(id -u)" = 10001
             ! command -v kubectl
             python3 --version
-            python3 -c "import comms.backup_runner, comms.s3_archive, presence.backup_runner, presence.s3_archive"
+            python3 -c "import comms.backup_runner, comms.s3_archive, presence.backup_runner, presence.s3_archive, flightdeck.backup_runner, flightdeck.s3_archive"
             pg_dump --version | grep -E "PostgreSQL\) 16\."
             pg_restore --version | grep -E "PostgreSQL\) 16\."
             gpg --version
