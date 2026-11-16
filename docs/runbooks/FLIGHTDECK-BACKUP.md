@@ -101,9 +101,11 @@ as part of backup activation. Preserve the existing application Secret.
 
 `scripts/flightdeck/install_owner_copy.py` plans the owner-host service and
 installs it with `--apply` after its source is reviewed. The daily timer runs at
-04:30 America/Sao_Paulo, after the cluster backup's maximum Job deadline,
+05:30 America/Sao_Paulo, after the cluster backup's full admitted start/run window,
 with persistent catch-up. A failed copy retries after 30 seconds, with at most
-three starts in one hour and a 360-second bound per attempt. Exhausted retries
+three starts in one hour and a 360-second bound per attempt. The primary can
+start up to one hour after 03:45, then run for 31 minutes, ending near 05:16.
+The independent copy therefore has margin after that complete window. Exhausted retries
 remain a visible service failure; no privacy or integrity gate is skipped.
 The installer re-arms the timer after updating its calendar. If the new time
 has already passed, a persistent timer catch-up is a scheduler invocation and
@@ -259,7 +261,7 @@ The first owner-copy timer invocation started at 07:15:21 UTC and exited with
 status 1 at 07:15:52 UTC, with no restart configured. The generic log does not
 prove a particular HTTP or filesystem cause. The newer exact-version download
 above is retained independently on the owner host. The owner-copy service now
-has bounded on-failure restarts and a 04:30 local schedule, after the cluster
-Job's 31-minute maximum window. Check its real timer trigger, service result,
+has bounded on-failure restarts and a 05:30 local schedule, after the cluster
+CronJob's one-hour start allowance plus 31-minute run window. Check its real timer trigger, service result,
 restart count and ciphertext receipt; do not count a manual start as a timer
 dispatch. Preserve both failed-attempt evidence and earlier verified copies.

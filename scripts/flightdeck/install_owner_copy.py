@@ -41,7 +41,7 @@ Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 Description=Daily independent encrypted copy of the FlightDeck PostgreSQL backup
 
 [Timer]
-OnCalendar=*-*-* 04:30:00 America/Sao_Paulo
+OnCalendar=*-*-* 05:30:00 America/Sao_Paulo
 Persistent=true
 RandomizedDelaySec=60
 Unit=rbx-flightdeck-owner-copy.service
@@ -65,7 +65,7 @@ WantedBy=timers.target
     # Re-arm an already-active timer against the new calendar. Persistent=true
     # catches a missed eligible copy without explicitly starting the service.
     subprocess.run(['systemctl','--user','restart','rbx-flightdeck-owner-copy.timer'],check=True,capture_output=True)
-    print(json.dumps({'state':'INSTALLED','schedule':'04:30 America/Sao_Paulo','source':source}))
+    print(json.dumps({'state':'INSTALLED','schedule':'05:30 America/Sao_Paulo','source':source}))
 
 
 if __name__=='__main__':
