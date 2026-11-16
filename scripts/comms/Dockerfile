@@ -2,7 +2,7 @@
 FROM docker.io/library/postgres@sha256:efdf07c2f9d4df592783dcc8ea5f6db02efbf5f6452b527225ff5e58364570e9
 
 LABEL org.opencontainers.image.title="RBX PostgreSQL preservation" \
-      org.opencontainers.image.description="Scoped encrypted backups for Comms and Public Presence" \
+      org.opencontainers.image.description="Scoped encrypted application PostgreSQL backups" \
       org.opencontainers.image.source="https://github.com/rbxrobotica/rbx-infra"
 
 # Patch the base's APT, OpenSSL, Perl and PCRE2 packages. The backup process starts directly
@@ -30,6 +30,7 @@ RUN apt-get update \
 COPY --chown=0:0 scripts/plausible/backup_runner.py scripts/plausible/s3_archive.py /app/plausible/
 COPY --chown=0:0 scripts/comms/backup_runner.py scripts/comms/s3_archive.py /app/comms/
 COPY --chown=0:0 scripts/presence/backup_runner.py scripts/presence/s3_archive.py /app/presence/
+COPY --chown=0:0 scripts/flightdeck/backup_runner.py scripts/flightdeck/s3_archive.py /app/flightdeck/
 
 # No kubectl or Kubernetes token is required for this PostgreSQL-only job.
 ENV PYTHONDONTWRITEBYTECODE=1 \

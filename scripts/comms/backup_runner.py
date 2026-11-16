@@ -34,15 +34,16 @@ class Config:
         # The entry point selects an admitted application. Environment settings
         # cannot redirect the existing Comms job to another database or prefix.
         admitted = {"comms": ("rbx_comms", "comms"),
-                    "public-presence": ("public_presence", "presence")}
+                    "public-presence": ("public_presence", "presence"),
+                    "flightdeck": ("flightdeck", "flightdeck")}
         if not isinstance(scope, str) or scope not in admitted:
             raise BackupError("Unsupported preservation scope")
         self.scope = scope
         self.database, module = admitted[scope]
         self.env = dict(os.environ if env is None else env)
-        if scope == "public-presence" and any(not self.env.get(key) for key in
+        if scope in ("public-presence", "flightdeck") and any(not self.env.get(key) for key in
                 ("S3_ARCHIVE_ENDPOINT", "S3_ARCHIVE_BUCKET", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY")):
-            raise BackupError("Public Presence requires an explicit backup destination and credentials")
+            raise BackupError("Application preservation requires an explicit backup destination and credentials")
         self.pg_env = source_pg_env(self.env.get("DATABASE_URL"))
         if self.pg_env["PGDATABASE"] != self.database:
             raise BackupError("Source database does not match the preservation scope")
