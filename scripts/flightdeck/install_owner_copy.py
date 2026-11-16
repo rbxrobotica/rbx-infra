@@ -22,11 +22,15 @@ def main():
            (root/'plausible/backup_runner.py',(scripts/'plausible/backup_runner.py').read_bytes())]
     service='''[Unit]
 Description=Verify and retain an encrypted FlightDeck archive outside the source cluster
+StartLimitIntervalSec=1h
+StartLimitBurst=3
 
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/python3 %h/.local/share/rbx-flightdeck-tools/backup/owner_copy.py
 TimeoutStartSec=360
+Restart=on-failure
+RestartSec=30s
 UMask=0077
 NoNewPrivileges=true
 PrivateTmp=true
@@ -37,7 +41,7 @@ Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
 Description=Daily independent encrypted copy of the FlightDeck PostgreSQL backup
 
 [Timer]
-OnCalendar=*-*-* 04:15:00 America/Sao_Paulo
+OnCalendar=*-*-* 04:30:00 America/Sao_Paulo
 Persistent=true
 RandomizedDelaySec=60
 Unit=rbx-flightdeck-owner-copy.service
@@ -58,7 +62,7 @@ WantedBy=timers.target
         os.replace(temporary,path)
     subprocess.run(['systemctl','--user','daemon-reload'],check=True,capture_output=True)
     subprocess.run(['systemctl','--user','enable','--now','rbx-flightdeck-owner-copy.timer'],check=True,capture_output=True)
-    print(json.dumps({'state':'INSTALLED','schedule':'04:15 America/Sao_Paulo','source':source}))
+    print(json.dumps({'state':'INSTALLED','schedule':'04:30 America/Sao_Paulo','source':source}))
 
 
 if __name__=='__main__':
