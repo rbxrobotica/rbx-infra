@@ -96,3 +96,58 @@ credential plus the existing separate S3 backup credential. Source RBAC must be
 reconciled first, then only the backup ServiceAccount, ConfigMap, ExternalSecret,
 CronJob and PrometheusRule. Do not sync or prune the application database or PVCs
 as part of backup activation. Preserve the existing application Secret.
+
+## Independent owner custody
+
+`scripts/flightdeck/install_owner_copy.py` plans the owner-host service and
+installs it with `--apply` after its source is reviewed. The daily timer runs at
+04:15 America/Sao_Paulo, after the cluster backup, with persistent catch-up.
+It does not produce the primary backup: the Kubernetes CronJob does that even
+when this desktop is off. The owner service downloads a new exact-version,
+hash-verified ciphertext copy and retains a private receipt. It does not decrypt,
+claim restoration, delete old files or change retention. Existing S3 credentials
+are read from pass in process memory. Source hashes and commit are retained.
+
+This copy is outside the source host, cluster and Contabo account storage.
+Its cadence depends on the owner host being available and the existing
+password-store access. Check the user service result and last private copy
+receipt during Sunday review; an unavailable host or credential is a gap,
+not zero data or proof that independent custody is current.
+
+## Executable isolated restore check
+
+Use `scripts/flightdeck/restore_check.py` (also installed with the owner tools).
+It requires the cluster-produced receipt and its independently downloaded
+ciphertext. The receipt's manifest hash, exact archive version and ciphertext
+hash are checked before decryption. Decryption is bounded on the owner host;
+archive members, source database/version and inner dump hash are checked before
+loading. The target must be a fresh dedicated local container with no network,
+no host bind/persistent mounts and tmpfs PostgreSQL data. Its immutable container
+ID is pinned after inspection. Existing databases are rejected.
+The running server's actual `data_directory` and its resolved filesystem path
+must both be `/var/lib/postgresql/data`, the admitted tmpfs. A `PGDATA` or `-D`
+override pointing at the writable container layer is rejected before decryption.
+
+Start a disposable PostgreSQL16 instance in a separate terminal with a build
+lease in run mode. The attached podman helper adds workstation cache binds,
+which this isolated restore target correctly rejects. The fixture password below is public and local-only:
+
+```sh
+rbx-build-cache run -- podman run --rm --name flightdeck-recovery-proof-TIMESTAMP \
+  --network none --memory 768m --cpus 1 \
+  --tmpfs /var/lib/postgresql/data:rw,size=512m \
+  --env POSTGRES_USER=restore_owner --env POSTGRES_DB=flightdeck_restore \
+  --env POSTGRES_PASSWORD=disposable_restore_only \
+  docker.io/library/postgres@sha256:efdf07c2f9d4df592783dcc8ea5f6db02efbf5f6452b527225ff5e58364570e9
+python3 scripts/flightdeck/restore_check.py --archive PRIVATE_FILE.tar.gpg \
+  --receipt PRIVATE_CLUSTER_RECEIPT.json --container flightdeck-recovery-proof-TIMESTAMP \
+  --proof PRIVATE_NEW_PROOF.restore-proof.json
+podman stop flightdeck-recovery-proof-TIMESTAMP
+```
+
+Replace TIMESTAMP with a unique lower-case identifier and use a private proof
+directory. No production URL is an accepted restore argument. Stop the fixture
+after proof is saved; retain ciphertext and proof. If the owner's private key is
+locked or unavailable, report the restore as blocked and keep it off the cluster.
+A successful isolated check validates that recovery point, not PITR or a complete
+host/identity reconstruction RTO.
