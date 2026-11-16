@@ -1,0 +1,24 @@
+name: Cluster DR observation safety
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/cluster-dr/**'
+      - 'scripts/check-node-reliability-capacity.py'
+      - '.github/workflows/cluster-dr.yml'
+  push:
+    paths:
+      - 'experiments/cluster-dr/**'
+      - 'scripts/check-node-reliability-capacity.py'
+      - '.github/workflows/cluster-dr.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: python3 -B -m unittest discover -s experiments/cluster-dr -p 'test_*.py' -v
