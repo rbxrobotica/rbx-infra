@@ -51,8 +51,8 @@ Target schedule: 03:45 America/Sao_Paulo, with no concurrent execution and a
 hours; the small isolated test above does not establish end-to-end recovery RTO.
 Staging must be bounded RAM, not unencrypted node disk. No private key in cluster.
 Retention: preserve all existing versions; no deletion or retention changes.
-The recurring configuration and its first scheduled execution are not yet
-verified by this source change.
+The recurring configuration is active; observed execution evidence is recorded
+below. An explicit Job is not proof of the first scheduled execution.
 
 S3 is outside the database host and cluster but shares the Contabo account.
 Keep exact-version, verified encrypted copies on the owner's separate host;
@@ -151,3 +151,65 @@ after proof is saved; retain ciphertext and proof. If the owner's private key is
 locked or unavailable, report the restore as blocked and keep it off the cluster.
 A successful isolated check validates that recovery point, not PITR or a complete
 host/identity reconstruction RTO.
+
+## Observed cluster activation and owner custody, 2026-11-16
+
+PR 403 was merged at `4d00c430590be420c8f2b69949c46c9fcab48a6b`.
+ArgoCD reconciled the nominal source S3 read permission before the five backup
+resources. CronJob `rbx-flightdeck/rbx-flightdeck-backup` is active at 03:45
+America/Sao_Paulo with the verified pinned image and no private recovery key.
+The explicit initial Job completed at 04:34:40 UTC. Its exact remote version
+was independently downloaded; ciphertext SHA-256 was
+`8ad5dd564e15bdc5d65794f11c57c0f4135b4e04981a19d7041094a8015ecf24`.
+The 154195-byte encrypted owner copy and cluster receipt are retained privately.
+
+That cluster-produced archive was restored in isolation at 04:54 UTC; a second
+fresh restore at 05:40 UTC took 0.645 seconds. Applying migrations 004–007 and
+the canonical intake bootstrap to that restored database also passed, preserving
+three Workstreams and 18 ledger entries with zero Actions or invalid constraints.
+The disposable fixtures were stopped. Measured seconds cover the small local
+restore, not the full four-hour recovery objective or PITR.
+
+Owner tools are installed from infra revision
+`cf1af75e0cd057d5075da83f62b4f525289e6495`; their source hashes are in
+`~/.local/share/rbx-flightdeck-tools/backup/source.json`. The independent-copy
+service succeeded with a receipt stamped 05:50 UTC, retaining an exact-version SHA-256-verified
+ciphertext on the owner host. Its daily 04:15 local timer is active. A transient
+S3 listing failure on the first attempt was reported as unknown and retained
+as a failed attempt; the later successful readback established current custody.
+
+The restore and upgrade evidence bundle was encrypted, archived under the
+private `flightdeck/backups/restore-proof/` prefix and independently downloaded
+by exact version. Its SHA-256 is
+`50628a6497e61283a0e41f5016184f90910bbbaab17563109bc86bcb0cbda1f3`.
+Private receipts, downloaded ciphertext, restore proofs and source evidence live
+in the owner directories identified above; no decrypted database dump is there.
+
+At 06:01 UTC all three backup alert rules were loaded with health=ok. The first
+real daily scheduler dispatch is expected at 2026-11-16T06:45:00Z. Before claiming
+that dispatch, verify CronJob lastScheduleTime, the Job's controller owner UID and
+`batch.kubernetes.io/cronjob-scheduled-timestamp`, then receipt and exact-version
+download/hash. The explicit initial Job's lastSuccessfulTime does not establish
+that proof.
+
+After real chat ingestion and review preparation, the explicit
+`rbx-flightdeck-backup-post-intake-20261116` Job produced a new full archive.
+Its exact version was independently downloaded; the 205395-byte ciphertext has
+SHA-256 `02809ad9660b75c2265dfe28854564e8e81d96e5e5e365c32ead2f881e953956`.
+The installed guarded checker restored it at 06:16 UTC into a fresh no-network,
+tmpfs PostgreSQL16 target. It recovered all seven machine captures, one weekly
+snapshot, migrations 001–007, 39 audit entries, three Workstreams and 18 ledger
+entries. Actions, Signals, Outcomes, routed captures and invalid constraints
+were zero. Restore/inventory took 0.903 seconds; the fixture was stopped.
+The private proof is `post-intake-20261116.restore-proof.json`. This verifies
+recovery of the newly captured data, not only an empty intake schema.
+
+The owner workstation has recurring inode pressure from other local test
+producers. An ENOSPC failure affected an evidence write during validation;
+previous evidence and backups were preserved, and writing resumed when capacity
+returned. The collector's last observed timer runs were healthy with no pending
+records. Continue checking source/transport status and the existing storage
+alerts; do not assume host-side collection or independent custody can continue
+while the host cannot create files. The cluster backup and snapshot jobs do not
+depend on that workstation. Do not stop other tasks or delete their volumes as
+part of this runbook.

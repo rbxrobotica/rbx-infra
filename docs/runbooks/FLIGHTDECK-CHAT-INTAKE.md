@@ -89,3 +89,57 @@ transport-status, pending queue and receipt files in the private owner state.
 Stop the local timer to pause collection; revoke the grant through a coordinated
 operator procedure if its credential is compromised. Preserve queued evidence
 and exact keys; do not mint replacement keys after uncertain writes.
+
+## Observed pilot activation, 2026-11-16
+
+Application PRs 25 and 26 were merged. Main publication run 43808508758 passed,
+including the assembled runtime image scan. The verified image is
+`ghcr.io/rbxrobotica/rbx-flightdeck:sha-eeaa08d5af0e2a94b1570e32a6e1c561c5c93ce8`,
+with tag digest
+`sha256:31597c2036c4b179ace7e2469801bed122311da766d12f994a0d13c083981fd2`.
+Private manifest/config pull was verified with the existing pull integration.
+No registry visibility change or new registry credential was needed.
+
+Infra PR 405, revision `cf1af75e0cd057d5075da83f62b4f525289e6495`, was
+reconciled through ArgoCD without prune. The core ExternalSecret became Ready;
+migration, operator bootstrap and intake bootstrap hooks all succeeded before
+the web Deployment. The application was Healthy/Synced with two updated ready
+replicas at 05:59 UTC. During the rollout, a transient node/API availability
+oscillation coincided with a 503 response. Availability recovered; no node,
+shared database, SSH trust or cluster controller changes were made.
+
+The owner-host collector is installed from the reviewed application source.
+Its code hashes and source commit are in
+`~/.local/share/rbx-flightdeck-tools/intake/source.json`. It changes no Codex
+hooks or configuration. The pilot source reference stays in private custody.
+It is one admitted chat from 2026-11-15T03:00:00Z, not fleet-wide chat coverage.
+
+Seven actual source records were accepted and independently found in the
+owner's private inbox. At 06:02 UTC, two belonged to week 2026-W47 and five were
+older NEW records carried forward. Exact replay returned HTTP 200 with the same
+ID and payload hash; no duplicate was created. Anonymous capture/export and
+capture-key export returned 401; a caller-selected owner returned 400.
+Timer-created collector executions at 06:00 and 06:05 UTC completed with source
+and delivery healthy, no withheld items, and a drained queue. Local receipts
+preserve exact source identities and hashes.
+
+Read-only PostgreSQL inventory found migrations 001–007, seven machine captures,
+seven NEW records and one review snapshot. The three Workstreams and 18 capacity
+entries were preserved; Actions and Signals remained zero. No capture was
+automatically reviewed or routed.
+
+The explicit Job `rbx-flightdeck-intake-review-initial-20261116`, derived from
+the GitOps CronJob, completed at 06:02:55 UTC. Its receipt prepared one immutable
+snapshot for 2026-W46 with cutoff 2026-11-15T21:00:00Z and state
+AWAITING_HUMAN_REVIEW. This is an explicit preparation test, not proof of a
+Sunday scheduler dispatch or completed human review. Ingestion after that cutoff
+cannot rewrite the snapshot; older NEW records remain in carry-forward.
+The first expected real Sunday dispatch is 2026-11-22T21:00:00Z.
+
+All three intake-review and all three backup Prometheus rules were loaded with
+health=ok at 06:01 UTC. The app automation
+`merovelis-revis-o-dominical-no-flightdeck` is active on Sundays at 18:15
+America/Sao_Paulo to read the owner-bound export and prepare a private report.
+It does not approve records or write business state. Its owner-host availability
+is separate from the cluster's 18:00 snapshot preparation. The Plausible Sunday
+automation remains active and unchanged.
