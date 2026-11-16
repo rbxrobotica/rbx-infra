@@ -13,7 +13,7 @@ metadata:
     app.kubernetes.io/part-of: rbx-flightdeck
   annotations:
     # after dependencies (0), migrate (1) and bootstrap (2)
-    argocd.argoproj.io/sync-wave: "3"
+    argocd.argoproj.io/sync-wave: "4"
 spec:
   replicas: 2
   selector:
@@ -102,16 +102,28 @@ spec:
                 secretKeyRef:
                   name: rbx-flightdeck-secrets
                   key: PUBLIC_PRESENCE_WORKER_KEY
+                  optional: true
             - name: PUBLIC_PRESENCE_SERVICE_KEY
               valueFrom:
                 secretKeyRef:
                   name: rbx-flightdeck-secrets
                   key: PUBLIC_PRESENCE_SERVICE_KEY
+                  optional: true
             - name: MAESTRO_ADMIT_KEY
               valueFrom:
                 secretKeyRef:
                   name: rbx-flightdeck-secrets
                   key: MAESTRO_ADMIT_KEY
+                  optional: true
+            - name: INTAKE_REVIEW_WORKER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-flightdeck-secrets
+                  key: INTAKE_REVIEW_WORKER_KEY
+            - name: INTAKE_REVIEW_WORKER_ACTOR_ID
+              value: 0f64f807-d242-4507-8be1-87e051756247
+            - name: INTAKE_REVIEW_CONNECTOR_ID
+              value: f9ccad3c-f1a0-4746-b566-83bc11f0101a
           volumeMounts:
             - name: allowlist
               mountPath: /etc/rbx-flightdeck

@@ -20,6 +20,9 @@ resources:
   - backup-credentials.yml
   - backup-cronjob.yml
   - backup-prometheusrule.yml
+  - intake-bootstrap-job.yml
+  - intake-review-cronjob.yml
+  - intake-review-prometheusrule.yml
 labels:
   - pairs:
       app.kubernetes.io/part-of: rbx-flightdeck

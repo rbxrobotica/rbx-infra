@@ -96,3 +96,20 @@ credential plus the existing separate S3 backup credential. Source RBAC must be
 reconciled first, then only the backup ServiceAccount, ConfigMap, ExternalSecret,
 CronJob and PrometheusRule. Do not sync or prune the application database or PVCs
 as part of backup activation. Preserve the existing application Secret.
+
+## Independent owner custody
+
+`scripts/flightdeck/install_owner_copy.py` plans the owner-host service and
+installs it with `--apply` after its source is reviewed. The daily timer runs at
+04:15 America/Sao_Paulo, after the cluster backup, with persistent catch-up.
+It does not produce the primary backup: the Kubernetes CronJob does that even
+when this desktop is off. The owner service downloads a new exact-version,
+hash-verified ciphertext copy and retains a private receipt. It does not decrypt,
+claim restoration, delete old files or change retention. Existing S3 credentials
+are read from pass in process memory. Source hashes and commit are retained.
+
+This copy is outside the source host, cluster and Contabo account storage.
+Its cadence depends on the owner host being available and the existing
+password-store access. Check the user service result and last private copy
+receipt during Sunday review; an unavailable host or credential is a gap,
+not zero data or proof that independent custody is current.

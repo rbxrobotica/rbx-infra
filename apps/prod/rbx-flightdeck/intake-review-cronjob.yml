@@ -1,0 +1,87 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: rbx-flightdeck-intake-weekly-review
+  namespace: rbx-flightdeck
+  labels:
+    app.kubernetes.io/name: rbx-flightdeck-intake-weekly-review
+    app.kubernetes.io/component: intake-review
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+spec:
+  schedule: "0 18 * * 0"
+  timeZone: America/Sao_Paulo
+  suspend: false
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 120
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: rbx-flightdeck-intake-weekly-review
+            app.kubernetes.io/component: intake-review
+        spec:
+          restartPolicy: Never
+          serviceAccountName: rbx-flightdeck-backup
+          automountServiceAccountToken: false
+          enableServiceLinks: false
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 10001
+            runAsGroup: 10001
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: prepare
+              # Verified Python standard-library runtime. No database/S3 access
+              # or private key is mounted in this API-only preparation Job.
+              image: ghcr.io/rbxrobotica/comms-backup:sha-b3ddae8@sha256:3f5ddf6636672be688670d9fe9361697cd73a24775c264f02a30e51f96297248
+              imagePullPolicy: IfNotPresent
+              command: [python3, -c]
+              args:
+                - |
+                  import json, os, sys, urllib.request
+                  class NoRedirect(urllib.request.HTTPRedirectHandler):
+                      def redirect_request(self, *args, **kwargs):
+                          raise RuntimeError('Redirect refused')
+                  try:
+                      request = urllib.request.Request(
+                          'https://flightdeck.rbxsystems.ch/internal/intake/weekly-review',
+                          method='POST', data=b'', headers={
+                              'Authorization': 'Bearer ' + os.environ['REVIEW_KEY']})
+                      with urllib.request.build_opener(NoRedirect()).open(request, timeout=30) as response:
+                          raw = response.read(4097)
+                          if response.status != 200 or len(raw) > 4096:
+                              raise RuntimeError('Invalid preparation response')
+                          value = json.loads(raw)
+                      if value.get('state') != 'AWAITING_HUMAN_REVIEW':
+                          raise RuntimeError('Preparation not proven')
+                      print(json.dumps({key: value[key] for key in
+                          ('week', 'cutoffAt', 'prepared', 'state')}))
+                  except Exception:
+                      print('Weekly preparation failed; upstream details suppressed', file=sys.stderr)
+                      sys.exit(1)
+              env:
+                - name: REVIEW_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: rbx-flightdeck-secrets
+                      key: INTAKE_REVIEW_WORKER_KEY
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: [ALL]
+              resources:
+                requests:
+                  cpu: 25m
+                  memory: 32Mi
+                limits:
+                  cpu: 200m
+                  memory: 96Mi

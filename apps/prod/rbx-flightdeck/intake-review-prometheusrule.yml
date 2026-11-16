@@ -1,0 +1,56 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: rbx-flightdeck-intake-review
+  namespace: rbx-flightdeck
+  labels:
+    release: kube-prometheus-stack
+spec:
+  groups:
+    - name: rbx-flightdeck.intake-review
+      rules:
+        - alert: RBXFlightDeckIntakeReviewMissing
+          expr: absent(kube_cronjob_info{namespace="rbx-flightdeck", cronjob="rbx-flightdeck-intake-weekly-review"})
+          for: 20m
+          labels:
+            severity: critical
+          annotations:
+            summary: "FlightDeck Sunday preparation CronJob is missing"
+        - alert: RBXFlightDeckIntakeReviewFailed
+          expr: |
+            (
+              (kube_job_status_failed{namespace="rbx-flightdeck"} > 0)
+              and on(namespace, job_name)
+              kube_job_owner{namespace="rbx-flightdeck", owner_kind="CronJob", owner_name="rbx-flightdeck-intake-weekly-review", owner_is_controller="true"}
+            )
+            unless on(namespace, job_name)
+            (
+              kube_job_created{namespace="rbx-flightdeck"}
+              < on(namespace) group_left()
+              kube_cronjob_status_last_successful_time{namespace="rbx-flightdeck", cronjob="rbx-flightdeck-intake-weekly-review"}
+            )
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "FlightDeck Sunday preparation failed"
+            description: "Inspect Job status and its safe response. Preparation is not a human review."
+        - alert: RBXFlightDeckIntakeReviewOverdue
+          expr: |
+            (
+              (time() - kube_cronjob_status_last_successful_time{namespace="rbx-flightdeck", cronjob="rbx-flightdeck-intake-weekly-review"} > 608400)
+              and on(namespace, cronjob)
+              (kube_cronjob_status_last_successful_time{namespace="rbx-flightdeck", cronjob="rbx-flightdeck-intake-weekly-review"} > 0)
+            )
+            or
+            (
+              (time() - kube_cronjob_created{namespace="rbx-flightdeck", cronjob="rbx-flightdeck-intake-weekly-review"} > 608400)
+              unless on(namespace, cronjob)
+              (kube_cronjob_status_last_successful_time{namespace="rbx-flightdeck", cronjob="rbx-flightdeck-intake-weekly-review"} > 0)
+            )
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "FlightDeck has no weekly preparation in seven days and one hour"
+            description: "Verify the immutable database snapshot and actual scheduled Job, not only the metric."
