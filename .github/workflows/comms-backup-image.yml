@@ -51,18 +51,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install --yes --no-install-recommends ansible-core
 
+      - name: Install pinned Python security lint dependencies
+        run: |
+          python3 -m pip install --disable-pip-version-check \
+            bandit==1.8.6 PyYAML==6.0.3 stevedore==5.5.0 rich==14.1.0 \
+            markdown-it-py==4.0.0 mdurl==0.1.2 Pygments==2.19.2
+
       - name: Test preservation and reporting contracts without production access
         run: |
           python3 -m unittest discover -s scripts/tests -p 'test_flightdeck*.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_comms*.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_presence*.py' -v
           python3 -m unittest discover -s scripts/tests -p 'test_plausible*.py' -v
-
-      - name: Install pinned Python security lint dependencies
-        run: |
-          python3 -m pip install --disable-pip-version-check \
-            bandit==1.8.6 PyYAML==6.0.3 stevedore==5.5.0 rich==14.1.0 \
-            markdown-it-py==4.0.0 mdurl==0.1.2 Pygments==2.19.2
 
       - name: Lint Python security boundaries
         run: bandit --recursive scripts/comms scripts/plausible scripts/presence scripts/flightdeck --severity-level medium
