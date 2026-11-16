@@ -79,3 +79,20 @@ calling recovery fully operational.
    A receipt that says `restore_tested_at: null` is not a tested restore.
 7. Repeat the isolated test when the last proof is 28 days old. Escalate at
    35 days. Reconcile drift through IaC; never restore over production to test.
+
+## Reviewed cluster configuration
+
+The backup image source was merged as PR 402, commit
+`b3ddae8538ab9bc82a0550fe914444e6f0d099cc`. Main publication run 43799979487
+passed its tests and image scan. Anonymous registry manifest/config access was
+verified for `ghcr.io/rbxrobotica/comms-backup:sha-b3ddae8` with digest
+`sha256:3f5ddf6636672be688670d9fe9361697cd73a24775c264f02a30e51f96297248`.
+The shared artifact contains a dedicated FlightDeck entry point; existing
+application CronJobs retain their own image pins and scopes.
+
+The GitOps backup resources use that exact image, bounded RAM staging, a public
+recipient ConfigMap, no Kubernetes token, and the existing application database
+credential plus the existing separate S3 backup credential. Source RBAC must be
+reconciled first, then only the backup ServiceAccount, ConfigMap, ExternalSecret,
+CronJob and PrometheusRule. Do not sync or prune the application database or PVCs
+as part of backup activation. Preserve the existing application Secret.
