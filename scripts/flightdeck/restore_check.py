@@ -29,6 +29,11 @@ def validate_target(metadata):
         raise RuntimeError('Dedicated recovery container name required')
     if metadata.get('HostConfig',{}).get('NetworkMode')!='none':
         raise RuntimeError('Recovery container must have no network')
+    if (metadata.get('HostConfig',{}).get('Privileged') or
+            metadata.get('HostConfig',{}).get('PidMode')=='host' or
+            metadata.get('HostConfig',{}).get('IpcMode')=='host' or
+            any(m.get('Type') in ('bind','volume') for m in metadata.get('Mounts',[]))):
+        raise RuntimeError('Recovery container may not expose host state or persistent volumes')
     memory=metadata.get('HostConfig',{}).get('Tmpfs',{})
     if '/var/lib/postgresql/data' not in memory and not any(m.get('Type')=='tmpfs' and
             m.get('Destination')=='/var/lib/postgresql/data' for m in metadata.get('Mounts',[])):
@@ -79,7 +84,9 @@ def main():
         return run_command(argv,env=dict(os.environ),timeout=180,label=label,max_bytes=maximum)
     metadata=json.loads(run(['podman','inspect',args.container],'Isolated container inspection'))[0]
     validate_target(metadata)
-    pg=['podman','exec',args.container,'psql','-X','-At','-v','ON_ERROR_STOP=1',
+    container_id=metadata.get('Id','')
+    if not re.fullmatch(r'[0-9a-f]{64}',container_id):raise RuntimeError('Immutable container identity required')
+    pg=['podman','exec',container_id,'psql','-X','-At','-v','ON_ERROR_STOP=1',
         '-U','restore_owner','-d','flightdeck_restore','-c']
     count=run(pg+["select count(*) from information_schema.tables where table_schema not in ('pg_catalog','information_schema')"],
               'Empty isolated recovery database')
@@ -90,7 +97,7 @@ def main():
     plaintext=run(['gpg','--no-options','--batch','--no-tty','--pinentry-mode','error',
                    '--output','-','--decrypt',str(args.archive)],'Owner-host decryption',LIMIT)
     dump,manifest=read_bundle(plaintext,receipt)
-    restored=subprocess.run(['podman','exec','-i',args.container,'pg_restore','--username=restore_owner',
+    restored=subprocess.run(['podman','exec','-i',container_id,'pg_restore','--username=restore_owner',
         '--dbname=flightdeck_restore','--exit-on-error','--no-owner','--no-privileges'],input=dump,
         stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=180)
     if restored.returncode:raise RuntimeError('Isolated restore failed')
@@ -110,15 +117,18 @@ def main():
         inventory.update(json.loads(run(pg+["select json_build_object('review_snapshots',(select count(*) from intake_weekly_review))"],'Restored review inventory')))
     proof={'schema':'rbx.flightdeck.restore-proof.v1','restored_at':dt.datetime.now(dt.timezone.utc).isoformat(),
            'archive':archive,'manifest_sha256':receipt['manifest_sha256'],'dump_sha256':hashlib.sha256(dump).hexdigest(),
-           'target':{'container':args.container,'database':'flightdeck_restore','network':'none','storage':'tmpfs','major_version':16},
+           'target':{'container':args.container,'container_id':container_id,'database':'flightdeck_restore','network':'none','storage':'tmpfs','major_version':16},
            'inventory':inventory,'restore_seconds':round(time.monotonic()-started,3),
            'production_writes':False,'private_key_in_container':False,'plaintext_on_host_disk':False}
-    with args.proof.open('x') as stream:json.dump(proof,stream,indent=2,sort_keys=True);stream.write('\n')
+    with args.proof.open('x') as stream:
+        json.dump(proof,stream,indent=2,sort_keys=True);stream.write('\n');stream.flush();os.fsync(stream.fileno())
     print(json.dumps({'state':'RESTORED_IN_ISOLATION','proof':str(args.proof),'inventory':inventory,
                       'restore_seconds':proof['restore_seconds']}))
 
 
 if __name__=='__main__':
     try:main()
-    except (BackupError,RuntimeError,OSError,ValueError,KeyError,subprocess.SubprocessError,tarfile.TarError):
+    except (BackupError,RuntimeError) as exc:
+        print(json.dumps({'error':str(exc)}),file=sys.stderr);sys.exit(1)
+    except (OSError,ValueError,KeyError,TypeError,AttributeError,subprocess.SubprocessError,tarfile.TarError):
         print('Isolated FlightDeck recovery failed; source/target details suppressed',file=sys.stderr);sys.exit(1)

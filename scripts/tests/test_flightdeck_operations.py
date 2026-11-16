@@ -17,7 +17,7 @@ sys.path.insert(0,str(SCRIPTS))
 def load(name):
     spec=importlib.util.spec_from_file_location(name,SCRIPTS/'flightdeck'/(name+'.py'))
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
-owner=load('owner_copy');credentials=load('intake_credentials')
+owner=load('owner_copy');credentials=load('intake_credentials');restore=load('restore_check')
 
 
 class OwnerCopy(unittest.TestCase):
@@ -92,6 +92,17 @@ class ReviewTrigger(unittest.TestCase):
         self.assertEqual(seen[0].get_method(),'POST');self.assertEqual(seen[0].data,b'{}')
         self.assertFalse(seen[0].has_header('Cookie'));self.assertFalse(seen[0].has_header('Origin'))
         self.assertNotIn('a'*43,output.getvalue())
+
+
+class RestoreBoundary(unittest.TestCase):
+    def test_host_network_mounts_privilege_and_non_recovery_targets_are_rejected(self):
+        target={'Name':'flightdeck-recovery-proof-test','HostConfig':{'NetworkMode':'none',
+            'Tmpfs':{'/var/lib/postgresql/data':'rw,size=512m'}},'Mounts':[]}
+        restore.validate_target(target)
+        for config in ({'NetworkMode':'host'},{'Privileged':True},{'PidMode':'host'}):
+            with self.assertRaises(RuntimeError):restore.validate_target({**target,'HostConfig':{**target['HostConfig'],**config}})
+        with self.assertRaises(RuntimeError):restore.validate_target({**target,'Name':'production-database'})
+        with self.assertRaises(RuntimeError):restore.validate_target({**target,'Mounts':[{'Type':'bind','Destination':'/owner'}]})
 
 
 if __name__=='__main__':unittest.main()
