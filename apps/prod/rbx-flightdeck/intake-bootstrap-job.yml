@@ -73,7 +73,10 @@ spec:
                   name: rbx-flightdeck-secrets
                   key: INTAKE_CHAT_TOKEN_SHA256
             - name: INTAKE_CHAT_THREAD_ID
-              value: 01a10ca9-7666-7620-84a3-e012932095cc
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-flightdeck-secrets
+                  key: INTAKE_CHAT_THREAD_ID
           resources:
             requests:
               cpu: 50m

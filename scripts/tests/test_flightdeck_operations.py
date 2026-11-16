@@ -48,7 +48,9 @@ class ScopedCredentials(unittest.TestCase):
             ('DATABASE_URL','FLIGHTDECK_OPERATOR_EMAIL','OIDC_ALLOWED_EMAILS','SESSION_SECRET')}}
         original=source['data'].copy();seen=[]
         def command(argv,*,payload=None,**_):
-            if argv[:2]==['pass','show']:return (('a' if 'chat-capture' in argv[2] else 'b')*43).encode()
+            if argv[:2]==['pass','show']:
+                if 'chat-source-thread-id' in argv[2]:return b'11111111-1111-4111-8111-111111111111'
+                return (('a' if 'chat-capture' in argv[2] else 'b')*43).encode()
             if 'get' in argv:
                 kind=argv[argv.index('get')+1]
                 if kind=='namespace':return b'{"metadata":{"uid":"fixture-cluster"}}'
@@ -62,7 +64,7 @@ class ScopedCredentials(unittest.TestCase):
             with patch.object(credentials,'command',side_effect=command),patch.object(sys,'argv',
                 ['test','--kubeconfig',str(config),'--expected-cluster-uid','fixture-cluster','--apply']),contextlib.redirect_stdout(io.StringIO()) as output:
                 credentials.main()
-        self.assertEqual(set(seen[0]['data']),{'INTAKE_CHAT_TOKEN_SHA256','INTAKE_REVIEW_WORKER_KEY'})
+        self.assertEqual(set(seen[0]['data']),{'INTAKE_CHAT_TOKEN_SHA256','INTAKE_REVIEW_WORKER_KEY','INTAKE_CHAT_THREAD_ID'})
         self.assertTrue(all(source['data'][key]==value for key,value in original.items()))
         self.assertNotIn('a'*43,json.dumps(seen));self.assertNotIn('b'*43,output.getvalue())
         self.assertIn('"raw_capture_token_in_cluster": false',output.getvalue())

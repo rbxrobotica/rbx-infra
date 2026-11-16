@@ -31,7 +31,7 @@ Generate new values directly into pass, preserve its existing private encrypted
 remote, and never print them. The narrow Ansible playbook
 `bootstrap/ansible/flightdeck-intake-credentials.yml` checks the exact cluster,
 application hold and existing named Secret. Check mode reads metadata and plans
-only. Apply adds or verifies the two fields through the controlled secret flow,
+only. Apply adds or verifies the two credential fields and private source reference through the controlled secret flow,
 preserving all other fields. A mismatch requires coordinated rotation; it is
 never overwritten automatically. Do not invoke the fleet-wide secrets role.
 
@@ -40,6 +40,10 @@ never overwritten automatically. Do not invoke the fleet-wide secrets role.
 1. Confirm the backup image and database recovery proof. Reconcile source S3
    read RBAC before only backup resources. Check receipt, exact object version
    and independent download. Preserve encrypted owner-host custody.
+The admitted chat ID is kept in `rbx/flightdeck/chat-source-thread-id`, not a
+public GitOps value. The source Secret carries that private reference for the
+bootstrap. It is not an authentication credential.
+
 2. Verify app PR CI and independent review; publish and scan only its main image.
    Keep automatic app sync held while its image pin is promoted.
 3. Materialize the two scoped intake fields from pass through the narrow

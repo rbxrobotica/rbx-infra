@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Narrow Ansible-backed addition of two intake fields to the existing app Secret.
+"""Narrow Ansible-backed addition of intake fields to the existing app Secret.
 
 Never prints a Secret object, raw credential, connection string or upstream error.
 The raw capture token never enters Kubernetes. Other Secret fields are preserved.
@@ -13,6 +13,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import uuid
 
 
 def command(argv, *, payload=None, maximum=1024*1024):
@@ -42,7 +43,7 @@ def main():
     optional={'PUBLIC_PRESENCE_WORKER_KEY','PUBLIC_PRESENCE_SERVICE_KEY','MAESTRO_ADMIT_KEY'}
     if optional.intersection(source.get('data',{})):
         raise RuntimeError('Optional integration changed since preflight; coordinate its existing activation')
-    keys=['INTAKE_CHAT_TOKEN_SHA256','INTAKE_REVIEW_WORKER_KEY']
+    keys=['INTAKE_CHAT_TOKEN_SHA256','INTAKE_REVIEW_WORKER_KEY','INTAKE_CHAT_THREAD_ID']
     if not args.apply:
         print(json.dumps({'mode':'plan','namespace':'rbx-ia-br','secret':'rbx-flightdeck-secrets',
                           'add_or_verify_only':keys,'other_fields_preserved':True}));return
@@ -52,7 +53,9 @@ def main():
         if not re.fullmatch(r'[A-Za-z0-9_-]{43}',value):raise RuntimeError('Purpose credential has an invalid format')
         tokens.append(value)
     if tokens[0]==tokens[1]:raise RuntimeError('Capture and review credentials must differ')
-    values={keys[0]:hashlib.sha256(tokens[0].encode()).hexdigest(),keys[1]:tokens[1]}
+    thread=command(['pass','show','rbx/flightdeck/chat-source-thread-id'],maximum=4096).decode().strip()
+    if str(uuid.UUID(thread))!=thread:raise RuntimeError('Private source reference is invalid')
+    values={keys[0]:hashlib.sha256(tokens[0].encode()).hexdigest(),keys[1]:tokens[1],keys[2]:thread}
     patch_data={key:base64.b64encode(value.encode()).decode() for key,value in values.items()}
     for key,value in patch_data.items():
         if key in source['data'] and source['data'][key]!=value:
