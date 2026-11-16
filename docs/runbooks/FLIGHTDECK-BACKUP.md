@@ -105,6 +105,9 @@ installs it with `--apply` after its source is reviewed. The daily timer runs at
 with persistent catch-up. A failed copy retries after 30 seconds, with at most
 three starts in one hour and a 360-second bound per attempt. Exhausted retries
 remain a visible service failure; no privacy or integrity gate is skipped.
+The installer re-arms the timer after updating its calendar. If the new time
+has already passed, a persistent timer catch-up is a scheduler invocation and
+must be recorded as catch-up, not an exact on-time dispatch.
 It does not produce the primary backup: the Kubernetes CronJob does that even
 when this desktop is off. The owner service downloads a new exact-version,
 hash-verified ciphertext copy and retains a private receipt. It does not decrypt,

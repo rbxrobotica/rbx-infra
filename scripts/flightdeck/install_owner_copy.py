@@ -62,6 +62,9 @@ WantedBy=timers.target
         os.replace(temporary,path)
     subprocess.run(['systemctl','--user','daemon-reload'],check=True,capture_output=True)
     subprocess.run(['systemctl','--user','enable','--now','rbx-flightdeck-owner-copy.timer'],check=True,capture_output=True)
+    # Re-arm an already-active timer against the new calendar. Persistent=true
+    # catches a missed eligible copy without explicitly starting the service.
+    subprocess.run(['systemctl','--user','restart','rbx-flightdeck-owner-copy.timer'],check=True,capture_output=True)
     print(json.dumps({'state':'INSTALLED','schedule':'04:30 America/Sao_Paulo','source':source}))
 
 
