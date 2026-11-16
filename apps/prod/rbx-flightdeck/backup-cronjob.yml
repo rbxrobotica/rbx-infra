@@ -1,5 +1,5 @@
 # Published main-only image and owner-host PostgreSQL recovery were verified.
-# Cluster receipt and actual scheduler-created execution still require proof.
+# Receipts/download/restore are verified; scheduled attempts remain observable.
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -19,7 +19,9 @@ spec:
   jobTemplate:
     spec:
       activeDeadlineSeconds: 1860
-      backoffLimit: 0
+      # Retry transient archive failures serially within the existing deadline.
+      # Privacy, versioning and readback gates stay fail-closed on every attempt.
+      backoffLimit: 2
       ttlSecondsAfterFinished: 259200
       template:
         metadata:
