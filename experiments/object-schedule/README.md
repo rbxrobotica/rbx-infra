@@ -98,8 +98,12 @@ within an approximately eight-minute checking window after removal. This is an
 observed bound, not a provider revocation SLO.
 No original key, user, object or source bucket policy was changed. The earlier
 personal-invitation handoff was withdrawn. Its token had appeared in a diagnostic
-view; the invitation target was subsequently removed. The draft support inquiry
-contains no credential or real resource identifier and has not been sent.
+view; the invitation target was subsequently removed. The owner explicitly
+authorized the inquiry on November 15. The email attempt received an automated
+unmonitored-mailbox notice, so the same approved text was submitted through the
+authenticated support portal and an open ticket was confirmed. Private delivery
+proof is in the companion evidence repository; no technical answer is claimed.
+The inquiry text contains no credential or real resource identifier.
 
 No qualified source-reader entry, protected worker, timer or continuous capture
 is claimed. Require a supported, tested default-deny source arrangement and
