@@ -124,6 +124,9 @@ archive members, source database/version and inner dump hash are checked before
 loading. The target must be a fresh dedicated local container with no network,
 no host bind/persistent mounts and tmpfs PostgreSQL data. Its immutable container
 ID is pinned after inspection. Existing databases are rejected.
+The running server's actual `data_directory` and its resolved filesystem path
+must both be `/var/lib/postgresql/data`, the admitted tmpfs. A `PGDATA` or `-D`
+override pointing at the writable container layer is rejected before decryption.
 
 Start a disposable PostgreSQL16 instance in a separate terminal with a build
 lease in run mode. The attached podman helper adds workstation cache binds,

@@ -22,6 +22,7 @@ from plausible.backup_runner import run_command, BackupError  # noqa: E402
 
 LIMIT=64*1024*1024
 RECIPIENT='88C7C5F7E0FB38128BAA46BC5807B2AAF43E3E41'
+DATA_DIRECTORY='/var/lib/postgresql/data'
 
 
 def validate_target(metadata):
@@ -38,6 +39,13 @@ def validate_target(metadata):
     if '/var/lib/postgresql/data' not in memory and not any(m.get('Type')=='tmpfs' and
             m.get('Destination')=='/var/lib/postgresql/data' for m in metadata.get('Mounts',[])):
         raise RuntimeError('Recovery data must be on tmpfs')
+
+
+def validate_data_directory(configured,resolved):
+    # A tmpfs mount alone is insufficient if PGDATA/-D points elsewhere or the
+    # admitted path is a symlink into the container's writable disk layer.
+    if configured.strip()!=DATA_DIRECTORY or resolved.strip()!=DATA_DIRECTORY:
+        raise RuntimeError('Actual PostgreSQL data directory must be the admitted tmpfs')
 
 
 def read_bundle(plaintext,receipt):
@@ -88,6 +96,11 @@ def main():
     if not re.fullmatch(r'[0-9a-f]{64}',container_id):raise RuntimeError('Immutable container identity required')
     pg=['podman','exec',container_id,'psql','-X','-At','-v','ON_ERROR_STOP=1',
         '-U','restore_owner','-d','flightdeck_restore','-c']
+    data_directory=run(pg+["select current_setting('data_directory')"],
+                       'Actual PostgreSQL data directory').decode()
+    resolved=run(['podman','exec',container_id,'readlink','-f',DATA_DIRECTORY],
+                 'Resolved recovery data directory').decode()
+    validate_data_directory(data_directory,resolved)
     count=run(pg+["select count(*) from information_schema.tables where table_schema not in ('pg_catalog','information_schema')"],
               'Empty isolated recovery database')
     if count.strip()!=b'0':raise RuntimeError('Refusing to restore over an existing database')

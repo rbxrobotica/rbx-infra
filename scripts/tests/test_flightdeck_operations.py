@@ -95,6 +95,13 @@ class ReviewTrigger(unittest.TestCase):
 
 
 class RestoreBoundary(unittest.TestCase):
+    def test_pgdata_override_or_symlink_cannot_turn_unused_tmpfs_into_disk_restore(self):
+        canonical='/var/lib/postgresql/data'
+        restore.validate_data_directory(canonical+'\n',canonical+'\n')
+        for configured,resolved in (('/other/path',canonical),(canonical,'/disk-backed/path'),
+                                    ('/var/lib/postgresql/data/../other',canonical)):
+            with self.assertRaises(RuntimeError):restore.validate_data_directory(configured,resolved)
+
     def test_host_network_mounts_privilege_and_non_recovery_targets_are_rejected(self):
         target={'Name':'flightdeck-recovery-proof-test','HostConfig':{'NetworkMode':'none',
             'Tmpfs':{'/var/lib/postgresql/data':'rw,size=512m'}},'Mounts':[]}
