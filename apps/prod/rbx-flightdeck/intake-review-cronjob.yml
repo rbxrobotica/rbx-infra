@@ -53,8 +53,9 @@ spec:
                   try:
                       request = urllib.request.Request(
                           'https://flightdeck.rbxsystems.ch/internal/intake/weekly-review',
-                          method='POST', data=b'', headers={
-                              'Authorization': 'Bearer ' + os.environ['REVIEW_KEY']})
+                          method='POST', data=b'{}', headers={
+                              'Authorization': 'Bearer ' + os.environ['REVIEW_KEY'],
+                              'Content-Type': 'application/json'})
                       with urllib.request.build_opener(NoRedirect()).open(request, timeout=30) as response:
                           raw = response.read(4097)
                           if response.status != 200 or len(raw) > 4096:

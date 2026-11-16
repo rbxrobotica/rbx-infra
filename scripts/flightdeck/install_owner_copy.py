@@ -17,7 +17,9 @@ def main():
     unit=Path.home()/'.config/systemd/user/rbx-flightdeck-owner-copy.service'
     timer=unit.with_suffix('.timer')
     files=[(root/'owner_copy.py',(scripts/'flightdeck/owner_copy.py').read_bytes()),
-           (root/'plausible/s3_archive.py',(scripts/'plausible/s3_archive.py').read_bytes())]
+           (root/'restore_check.py',(scripts/'flightdeck/restore_check.py').read_bytes()),
+           (root/'plausible/s3_archive.py',(scripts/'plausible/s3_archive.py').read_bytes()),
+           (root/'plausible/backup_runner.py',(scripts/'plausible/backup_runner.py').read_bytes())]
     service='''[Unit]
 Description=Verify and retain an encrypted FlightDeck archive outside the source cluster
 

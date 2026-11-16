@@ -9,6 +9,8 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
+import yaml
+import urllib.request
 
 SCRIPTS=Path(__file__).parents[1]
 sys.path.insert(0,str(SCRIPTS))
@@ -68,6 +70,28 @@ class ScopedCredentials(unittest.TestCase):
         self.assertTrue(all(source['data'][key]==value for key,value in original.items()))
         self.assertNotIn('a'*43,json.dumps(seen));self.assertNotIn('b'*43,output.getvalue())
         self.assertIn('"raw_capture_token_in_cluster": false',output.getvalue())
+
+
+class ReviewTrigger(unittest.TestCase):
+    def test_actual_job_request_is_json_and_does_not_enter_form_csrf_handling(self):
+        manifest=yaml.safe_load((SCRIPTS.parent/'apps/prod/rbx-flightdeck/intake-review-cronjob.yml').read_text())
+        code=manifest['spec']['jobTemplate']['spec']['template']['spec']['containers'][0]['args'][0]
+        seen=[]
+        class Response:
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*_):pass
+            def read(self,*_):return json.dumps({'week':'2026-W47','cutoffAt':'2026-11-22T21:00:00Z',
+                'prepared':1,'state':'AWAITING_HUMAN_REVIEW'}).encode()
+        class Opener:
+            def open(self,request,**_):seen.append(request);return Response()
+        with patch.dict('os.environ',{'REVIEW_KEY':'a'*43}), \
+             patch.object(urllib.request,'build_opener',return_value=Opener()),contextlib.redirect_stdout(io.StringIO()) as output:
+            exec(compile(code,'synthetic-job-trigger','exec'),{})
+        self.assertEqual(seen[0].get_header('Content-type'),'application/json')
+        self.assertEqual(seen[0].get_method(),'POST');self.assertEqual(seen[0].data,b'{}')
+        self.assertFalse(seen[0].has_header('Cookie'));self.assertFalse(seen[0].has_header('Origin'))
+        self.assertNotIn('a'*43,output.getvalue())
 
 
 if __name__=='__main__':unittest.main()
