@@ -125,15 +125,16 @@ loading. The target must be a fresh dedicated local container with no network,
 no host bind/persistent mounts and tmpfs PostgreSQL data. Its immutable container
 ID is pinned after inspection. Existing databases are rejected.
 
-Start a disposable PostgreSQL16 instance in a separate terminal with the normal
-build lease. The fixture password below is public and local-only:
+Start a disposable PostgreSQL16 instance in a separate terminal with a build
+lease in run mode. The attached podman helper adds workstation cache binds,
+which this isolated restore target correctly rejects. The fixture password below is public and local-only:
 
 ```sh
-rbx-build-cache podman --rm --name flightdeck-recovery-proof-TIMESTAMP \
+rbx-build-cache run -- podman run --rm --name flightdeck-recovery-proof-TIMESTAMP \
   --network none --memory 768m --cpus 1 \
   --tmpfs /var/lib/postgresql/data:rw,size=512m \
   --env POSTGRES_USER=restore_owner --env POSTGRES_DB=flightdeck_restore \
-  --env POSTGRES_PASSWORD=disposable_restore_only -- \
+  --env POSTGRES_PASSWORD=disposable_restore_only \
   docker.io/library/postgres@sha256:efdf07c2f9d4df592783dcc8ea5f6db02efbf5f6452b527225ff5e58364570e9
 python3 scripts/flightdeck/restore_check.py --archive PRIVATE_FILE.tar.gpg \
   --receipt PRIVATE_CLUSTER_RECEIPT.json --container flightdeck-recovery-proof-TIMESTAMP \
