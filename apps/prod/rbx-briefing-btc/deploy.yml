@@ -80,6 +80,13 @@ spec:
               value: "rbx-content"
             - name: BRIEFING_S3_PREFIX
               value: "robson/market-briefings"
+            - name: COMMERCE_BASE_URL
+              value: "http://rbx-commerce.rbx-commerce.svc.cluster.local"
+            - name: COMMERCE_CONSUMPTION_SERVICE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-commerce-consumption-key
+                  key: COMMERCE_CONSUMPTION_SERVICE_KEY
             - name: BRIEFING_PUBLIC_SITE_PT
               value: "https://rbx.ia.br/briefing-btc"
             - name: BRIEFING_PUBLIC_SITE_EN
