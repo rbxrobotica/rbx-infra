@@ -173,10 +173,31 @@
   no_log: true
   tags: [robson-prod-secret]
 
-- name: Read robsond API token from pass
-  command: pass show {{ pass_robson_api_token_key }}
+- name: Read robsond OIDC audience from pass
+  command: pass show {{ pass_robson_oidc_audience_key }}
   changed_when: false
-  register: robson_api_token_result
+  register: robson_oidc_audience_result
+  no_log: true
+  tags: [robson-prod-secret]
+
+- name: Read robsond OIDC allowed client IDs from pass
+  command: pass show {{ pass_robson_oidc_allowed_client_ids_key }}
+  changed_when: false
+  register: robson_oidc_allowed_client_ids_result
+  no_log: true
+  tags: [robson-prod-secret]
+
+- name: Read robsond OIDC organization ID from pass
+  command: pass show {{ pass_robson_oidc_organization_id_key }}
+  changed_when: false
+  register: robson_oidc_organization_id_result
+  no_log: true
+  tags: [robson-prod-secret]
+
+- name: Read robsond OIDC allowed subjects from pass
+  command: pass show {{ pass_robson_oidc_allowed_subjects_key }}
+  changed_when: false
+  register: robson_oidc_allowed_subjects_result
   no_log: true
   tags: [robson-prod-secret]
 
@@ -186,17 +207,26 @@
       - robson_db_password_result.stdout | trim | length > 0
       - robson_binance_api_key_result.stdout | trim | length > 0
       - robson_binance_api_secret_result.stdout | trim | length > 0
-      - robson_api_token_result.stdout | trim | length > 0
+      - robson_oidc_audience_result.stdout | trim | regex_search('^[0-9]+$')
+      - robson_oidc_allowed_client_ids_result.stdout | trim | regex_search('^[0-9]+(,[0-9]+)*$')
+      - robson_oidc_organization_id_result.stdout | trim | regex_search('^[0-9]+$')
+      - robson_oidc_allowed_subjects_result.stdout | trim | regex_search('^[0-9]+(,[0-9]+)*$')
       - robson_binance_api_key_result.stdout | trim | regex_search('^[A-Za-z0-9]{64}$')
       - robson_binance_api_secret_result.stdout | trim | regex_search('^[A-Za-z0-9]{64}$')
       - "'\n' not in (robson_db_password_result.stdout | trim)"
       - "'\n' not in (robson_binance_api_key_result.stdout | trim)"
       - "'\n' not in (robson_binance_api_secret_result.stdout | trim)"
-      - "'\n' not in (robson_api_token_result.stdout | trim)"
+      - "'\n' not in (robson_oidc_audience_result.stdout | trim)"
+      - "'\n' not in (robson_oidc_allowed_client_ids_result.stdout | trim)"
+      - "'\n' not in (robson_oidc_organization_id_result.stdout | trim)"
+      - "'\n' not in (robson_oidc_allowed_subjects_result.stdout | trim)"
       - "'\r' not in (robson_db_password_result.stdout | trim)"
       - "'\r' not in (robson_binance_api_key_result.stdout | trim)"
       - "'\r' not in (robson_binance_api_secret_result.stdout | trim)"
-      - "'\r' not in (robson_api_token_result.stdout | trim)"
+      - "'\r' not in (robson_oidc_audience_result.stdout | trim)"
+      - "'\r' not in (robson_oidc_allowed_client_ids_result.stdout | trim)"
+      - "'\r' not in (robson_oidc_organization_id_result.stdout | trim)"
+      - "'\r' not in (robson_oidc_allowed_subjects_result.stdout | trim)"
     fail_msg: >-
       Refusing to apply an empty, multiline, or malformed production Robson
       secret value.
@@ -279,14 +309,20 @@
       --from-literal=projection-tenant-id="{{ _robson_tenant_id }}" \
       --from-literal=binance-api-key="$ROBSON_BINANCE_API_KEY" \
       --from-literal=binance-api-secret="$ROBSON_BINANCE_API_SECRET" \
-      --from-literal=api-token="$ROBSON_API_TOKEN" \
+      --from-literal=oidc-audience="$ROBSON_OIDC_AUDIENCE" \
+      --from-literal=oidc-allowed-client-ids="$ROBSON_OIDC_ALLOWED_CLIENT_IDS" \
+      --from-literal=oidc-tenant-binding="$ROBSON_OIDC_ORGANIZATION_ID={{ _robson_tenant_id }}" \
+      --from-literal=oidc-allowed-subjects="$ROBSON_OIDC_ALLOWED_SUBJECTS" \
       --dry-run=client -o yaml \
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   environment:
     ROBSON_DB_PASSWORD: "{{ robson_db_password_result.stdout | trim }}"
     ROBSON_BINANCE_API_KEY: "{{ robson_binance_api_key_result.stdout | trim }}"
     ROBSON_BINANCE_API_SECRET: "{{ robson_binance_api_secret_result.stdout | trim }}"
-    ROBSON_API_TOKEN: "{{ robson_api_token_result.stdout | trim }}"
+    ROBSON_OIDC_AUDIENCE: "{{ robson_oidc_audience_result.stdout | trim }}"
+    ROBSON_OIDC_ALLOWED_CLIENT_IDS: "{{ robson_oidc_allowed_client_ids_result.stdout | trim }}"
+    ROBSON_OIDC_ORGANIZATION_ID: "{{ robson_oidc_organization_id_result.stdout | trim }}"
+    ROBSON_OIDC_ALLOWED_SUBJECTS: "{{ robson_oidc_allowed_subjects_result.stdout | trim }}"
   changed_when: true
   no_log: true
   tags: [robson-prod-secret]
@@ -365,10 +401,42 @@
       Fix: pass insert {{ pass_robson_testnet_tenant_id_key }} (provide a valid lowercase UUID,
       e.g. output of: cat /proc/sys/kernel/random/uuid)
 
-- name: Read robsond testnet API token from pass
-  command: pass show {{ pass_robson_testnet_api_token_key }}
+- name: Read robsond testnet OIDC audience from pass
+  command: pass show {{ pass_robson_testnet_oidc_audience_key }}
   changed_when: false
-  register: robson_testnet_api_token_result
+  register: robson_testnet_oidc_audience_result
+  no_log: true
+
+- name: Read robsond testnet OIDC allowed client IDs from pass
+  command: pass show {{ pass_robson_testnet_oidc_allowed_client_ids_key }}
+  changed_when: false
+  register: robson_testnet_oidc_allowed_client_ids_result
+  no_log: true
+
+- name: Read robsond testnet OIDC organization ID from pass
+  command: pass show {{ pass_robson_testnet_oidc_organization_id_key }}
+  changed_when: false
+  register: robson_testnet_oidc_organization_id_result
+  no_log: true
+
+- name: Read robsond testnet OIDC allowed subjects from pass
+  command: pass show {{ pass_robson_testnet_oidc_allowed_subjects_key }}
+  changed_when: false
+  register: robson_testnet_oidc_allowed_subjects_result
+  no_log: true
+
+- name: Validate robsond testnet secret inputs
+  assert:
+    that:
+      - robson_testnet_db_password_result.stdout | trim | length > 0
+      - robson_testnet_binance_api_key_result.stdout | trim | length > 0
+      - robson_testnet_binance_api_secret_result.stdout | trim | length > 0
+      - robson_testnet_oidc_audience_result.stdout | trim | regex_search('^[0-9]+$')
+      - robson_testnet_oidc_allowed_client_ids_result.stdout | trim | regex_search('^[0-9]+(,[0-9]+)*$')
+      - robson_testnet_oidc_organization_id_result.stdout | trim | regex_search('^[0-9]+$')
+      - robson_testnet_oidc_allowed_subjects_result.stdout | trim | regex_search('^[0-9]+(,[0-9]+)*$')
+    fail_msg: >-
+      Refusing to apply empty or malformed testnet Robson secret metadata.
   no_log: true
 
 - name: Ensure robson-testnet namespace exists
@@ -387,7 +455,10 @@
       --from-literal=projection-tenant-id="{{ _robson_testnet_tenant_id }}" \
       --from-literal=binance-api-key="$ROBSON_TESTNET_BINANCE_API_KEY" \
       --from-literal=binance-api-secret="$ROBSON_TESTNET_BINANCE_API_SECRET" \
-      --from-literal=api-token="$ROBSON_TESTNET_API_TOKEN" \
+      --from-literal=oidc-audience="$ROBSON_TESTNET_OIDC_AUDIENCE" \
+      --from-literal=oidc-allowed-client-ids="$ROBSON_TESTNET_OIDC_ALLOWED_CLIENT_IDS" \
+      --from-literal=oidc-tenant-binding="$ROBSON_TESTNET_OIDC_ORGANIZATION_ID={{ _robson_testnet_tenant_id }}" \
+      --from-literal=oidc-allowed-subjects="$ROBSON_TESTNET_OIDC_ALLOWED_SUBJECTS" \
       --dry-run=client -o yaml \
     | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
   environment:
@@ -396,7 +467,10 @@
     ROBSON_TESTNET_DB_PASSWORD: "{{ robson_testnet_db_password_result.stdout | trim | urlencode }}"
     ROBSON_TESTNET_BINANCE_API_KEY: "{{ robson_testnet_binance_api_key_result.stdout | trim }}"
     ROBSON_TESTNET_BINANCE_API_SECRET: "{{ robson_testnet_binance_api_secret_result.stdout | trim }}"
-    ROBSON_TESTNET_API_TOKEN: "{{ robson_testnet_api_token_result.stdout | trim }}"
+    ROBSON_TESTNET_OIDC_AUDIENCE: "{{ robson_testnet_oidc_audience_result.stdout | trim }}"
+    ROBSON_TESTNET_OIDC_ALLOWED_CLIENT_IDS: "{{ robson_testnet_oidc_allowed_client_ids_result.stdout | trim }}"
+    ROBSON_TESTNET_OIDC_ORGANIZATION_ID: "{{ robson_testnet_oidc_organization_id_result.stdout | trim }}"
+    ROBSON_TESTNET_OIDC_ALLOWED_SUBJECTS: "{{ robson_testnet_oidc_allowed_subjects_result.stdout | trim }}"
   changed_when: true
   no_log: true
 

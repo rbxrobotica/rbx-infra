@@ -345,7 +345,10 @@ After this, `~/.kube/config-rbx` is derived from pass on every `k8s-secrets` rol
 | `rbx/robson/projection-tenant-id` | `robson/robsond-secret` | `projection-tenant-id` |
 | `rbx/robson/binance-api-key` | `robson/robsond-secret` | `binance-api-key` |
 | `rbx/robson/binance-api-secret` | `robson/robsond-secret` | `binance-api-secret` |
-| `rbx/robson/api-token` | `robson/robsond-secret` | `api-token` |
+| `rbx/robson/oidc-audience` | `robson/robsond-secret` | `oidc-audience` |
+| `rbx/robson/oidc-allowed-client-ids` | `robson/robsond-secret` | `oidc-allowed-client-ids` |
+| `rbx/robson/oidc-organization-id` | `robson/robsond-secret` | part of `oidc-tenant-binding` |
+| `rbx/robson/oidc-allowed-subjects` | `robson/robsond-secret` | `oidc-allowed-subjects` |
 | `rbx/monitoring/grafana-admin-password` | `monitoring/grafana-admin` | `admin-password` |
 
 To rotate any managed secret: update the value in pass, then run the k8s-secrets role.
@@ -378,7 +381,7 @@ API_KEY="secretvalue" ./run.sh
 | Migrations | 20240101000000–20240101000007 applied (prod + testnet) |
 | PostgreSQL | ParadeDB on jaguar, pool connected via `DATABASE_URL` in secret |
 | WebSocket | Reconnects on stream close (Binance closes periodically — normal) |
-| k8s secrets | `robsond-secret` (+ `api-token`), `ghcr-pull-secret` in `robson`; `robsond-testnet-secret` (+ `api-token`), `ghcr-pull-secret` in `robson-testnet`; `grafana-admin` in `monitoring` |
+| k8s secrets | `robsond-secret` and `robsond-testnet-secret` contain tenant-bound RBX Identity metadata and no API token; each namespace also has `ghcr-pull-secret`; `grafana-admin` remains in `monitoring` |
 
 **Operational commands:**
 

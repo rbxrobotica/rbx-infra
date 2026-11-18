@@ -2,7 +2,7 @@
 
 **Status:** Live — operational as of 2026-04-15
 **Date:** 2026-04-12
-**Revised:** 2026-04-15 — R7: deployed, ROBSON_ENV corrected to `production`, ROBSON_API_TOKEN wired, migration index conflicts resolved
+**Revised:** 2026-11-18 — RBX Identity/ZITADEL replaces the static API token
 **Decision:** See `docs/adr/ADR-0003-robson-testnet-isolation.md`
 
 ---
@@ -96,6 +96,8 @@ The ConfigMap in `apps/testnet/robson/robsond-config.yml` must contain:
 | `RUST_LOG` | `robsond=debug,robson_engine=debug,...` | Debug verbosity appropriate for testnet |
 | `ROBSON_API_HOST` | `0.0.0.0` | Same as production |
 | `ROBSON_API_PORT` | `8080` | Same as production |
+| `ROBSON_OIDC_ISSUER` | `https://auth.merovelis.com` | Sole trusted human token issuer |
+| `ROBSON_OIDC_JWKS_URI` | `https://auth.merovelis.com/oauth/v2/keys` | Issuer signing keys |
 
 **`ROBSON_BINANCE_USE_TESTNET: "true"` is the critical key.** It must always be present
 in the testnet ConfigMap. Its absence means the daemon would call `BinanceRestClient::new()`
@@ -111,7 +113,10 @@ The secret in namespace `robson-testnet` must contain exactly these keys:
 | `binance-api-secret` | Binance testnet API secret | `rbx/robson-testnet/binance-api-secret` |
 | `database-url` | `postgresql://robson_testnet:{password}@robson-paradedb.robson-testnet.svc.cluster.local:5432/robson_testnet` | `rbx/robson-testnet/db-password` |
 | `projection-tenant-id` | UUID (distinct from production tenant) | `rbx/robson-testnet/projection-tenant-id` |
-| `api-token` | Bearer token for robsond HTTP API (`/arm`, `/signal`, etc.) | `rbx/robson-testnet/api-token` |
+| `oidc-audience` | Dedicated testnet ZITADEL API project ID | `rbx/robson-testnet/oidc-audience` |
+| `oidc-allowed-client-ids` | CSV of dedicated testnet public client IDs | `rbx/robson-testnet/oidc-allowed-client-ids` |
+| `oidc-tenant-binding` | `<organization-id>=<testnet-tenant-uuid>` | organization ID plus generated testnet tenant |
+| `oidc-allowed-subjects` | CSV of canonical authorized subjects | `rbx/robson-testnet/oidc-allowed-subjects` |
 
 **Note on `database-url` password:** The `db-password` must use only hex characters (`openssl rand -hex 32`). Base64-encoded passwords contain `/`, `+`, `=` which break URL parsing in the PostgreSQL client.
 
@@ -198,9 +203,10 @@ The block:
 1. Reads `rbx/robson-testnet/binance-api-key` and `rbx/robson-testnet/binance-api-secret`
 2. Reads `rbx/robson-testnet/db-password`
 3. Generates and stores `rbx/robson-testnet/projection-tenant-id` on first run (idempotent)
-4. Constructs the `database-url` using `robson-paradedb.robson-testnet.svc.cluster.local:5432`
-5. Creates `robsond-testnet-secret` in namespace `robson-testnet`
-6. Creates `ghcr-pull-secret` in namespace `robson-testnet` (same GHCR token as production)
+4. Reads and validates the dedicated ZITADEL registration metadata
+5. Constructs the `database-url` and tenant binding
+6. Creates `robsond-testnet-secret` in namespace `robson-testnet`
+7. Creates `ghcr-pull-secret` in namespace `robson-testnet` (same GHCR token as production)
 
 Defaults for these tasks are in `bootstrap/ansible/roles/k8s-secrets/defaults/main.yml`
 under the `robsond_testnet_namespace` and `pass_robson_testnet_*` keys.
@@ -246,6 +252,8 @@ Before deploying, verify these preconditions:
 
 - [ ] Binance testnet credentials exist in pass (`rbx/robson-testnet/binance-api-key`, `rbx/robson-testnet/binance-api-secret`)
 - [ ] Testnet DB password exists in pass (`rbx/robson-testnet/db-password`)
+- [ ] Dedicated testnet ZITADEL project, clients, roles and owner grant exist
+- [ ] The four `rbx/robson-testnet/oidc-*` entries contain their real IDs
 - [ ] `robson_testnet` database and user created on ParadeDB (`jaguar`)
 - [ ] Robson Rust code change for `ROBSON_BINANCE_USE_TESTNET` is merged and image is built
 - [ ] New image SHA is available in GHCR (`ghcr.io/rbxrobotica/robson:{sha}`)

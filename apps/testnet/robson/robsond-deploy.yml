@@ -78,12 +78,27 @@ spec:
             secretKeyRef:
               name: robsond-testnet-secret
               key: binance-api-secret
-        # API bearer token (from secret)
-        - name: ROBSON_API_TOKEN
+        # Dedicated testnet RBX Identity registration metadata.
+        - name: ROBSON_OIDC_AUDIENCE
           valueFrom:
             secretKeyRef:
               name: robsond-testnet-secret
-              key: api-token
+              key: oidc-audience
+        - name: ROBSON_OIDC_ALLOWED_CLIENT_IDS
+          valueFrom:
+            secretKeyRef:
+              name: robsond-testnet-secret
+              key: oidc-allowed-client-ids
+        - name: ROBSON_OIDC_TENANT_BINDING
+          valueFrom:
+            secretKeyRef:
+              name: robsond-testnet-secret
+              key: oidc-tenant-binding
+        - name: ROBSON_OIDC_ALLOWED_SUBJECTS
+          valueFrom:
+            secretKeyRef:
+              name: robsond-testnet-secret
+              key: oidc-allowed-subjects
 
         resources:
           requests:
