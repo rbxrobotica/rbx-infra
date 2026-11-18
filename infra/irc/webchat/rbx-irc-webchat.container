@@ -1,0 +1,29 @@
+[Unit]
+Description=RBX local-only IRC webchat
+Documentation=https://thelounge.chat/docs/
+After=network-online.target rbx-irc-tunnel.service
+Wants=network-online.target rbx-irc-tunnel.service
+
+[Container]
+Image=ghcr.io/thelounge/thelounge:4.5.2@sha256:b19c2ef06efce2a494a7f142e5acba2db3086a591453f25916e204d342e3d194
+ContainerName=rbx-irc-webchat
+Exec=start
+Network=host
+UserNS=keep-id:uid=1000,gid=1000
+Volume=%h/.local/share/rbx-irc/thelounge:/var/opt/thelounge:Z
+ReadOnly=true
+ReadOnlyTmpfs=true
+Tmpfs=/tmp:rw,noexec,nosuid,nodev,size=64m
+NoNewPrivileges=true
+DropCapability=all
+PidsLimit=256
+Pull=never
+
+[Service]
+Restart=on-failure
+RestartSec=5
+TimeoutStartSec=90
+TimeoutStopSec=20
+
+[Install]
+WantedBy=default.target

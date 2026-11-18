@@ -19,9 +19,12 @@ ZNC deve permanecer em `127.0.0.1:6501`. O Ergo plaintext deve permanecer em
 verificação de certificado é obrigatório em `6697`. A porta TLS pode ser ligada
 a um IP Tailscale/VPN revisado, nunca a `0.0.0.0` ou `::`.
 
-Não publique WebAdmin, websocket, proxy reverso, DNS público ou regras de
-firewall nesta fase. Revise também o firewall de nuvem antes de qualquer mudança
-de bind: o firewall do sistema operacional sozinho não define a exposição.
+Não publique ZNC WebAdmin, webchat, websocket, proxy reverso, DNS público ou
+regras de firewall nesta fase. O The Lounge local deve permanecer privado em
+`127.0.0.1:9000`; sua rede de container é a do host somente para alcançar o
+túnel IRC em loopback. Revise também o firewall de nuvem antes de qualquer
+mudança de bind: o firewall do sistema operacional sozinho não define a
+exposição.
 
 ## Identidade e autorização
 
@@ -42,9 +45,11 @@ fora de banda quando aplicável e gravação de decisão/resultado no ledger. O 
 ## Segredos e arquivos
 
 Arquivos `.env`, `ircd.yaml`, chaves TLS, configuração ZNC e configuração real do
-bot ficam fora do Git. Use modo `0600` para arquivos sensíveis e `0700` para os
-diretórios. Não coloque segredo na linha de comando quando houver alternativa por
-arquivo ou variável de ambiente; limpe variáveis de sessões de diagnóstico.
+bot ficam fora do Git. Credenciais e usuários do webchat ficam sob
+`~/.config/rbx-irc` e `~/.local/share/rbx-irc`, nunca no repositório. Use modo
+`0600` para arquivos sensíveis e `0700` para os diretórios. Não coloque segredo
+na linha de comando quando houver alternativa por arquivo ou variável de
+ambiente; limpe variáveis de sessões de diagnóstico.
 
 Rotacione imediatamente qualquer credencial exposta e, no mínimo, a cada 90 dias
 para contas de automação. Revogue contas de pessoas no desligamento de acesso.
@@ -60,6 +65,10 @@ pela versão do Ergo ou usar mensagens efêmeras fora do IRC.
 Nunca registre payloads, senhas SASL, mensagens privadas ou conteúdo integral de
 comandos no bot. Revise backups como dados sensíveis e aplique a mesma política de
 retenção do serviço.
+
+O webchat desabilita o armazenamento próprio de mensagens, uploads e previews
+remotos. O histórico opt-in do Ergo continua sujeito à política por sala. A
+senha local do The Lounge não substitui nem deve ser igual à credencial SASL.
 
 Não conecte o ZNC à RBXNet sensível sem revisar e desabilitar buffers/logs
 independentes. Uma integração futura do OpenClaw deve ignorar conversa ambiente,
