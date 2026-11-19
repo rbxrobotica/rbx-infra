@@ -6,7 +6,7 @@ lock bypass, real states, cloud resources managed by OpenTofu, or plaintext
 state artifacts are used. The control receipt must be checkpointed in Git
 before the storage stage is admitted.
 """
-import argparse,json,os,signal,stat,subprocess,time,uuid
+import argparse,base64,hashlib,json,os,signal,stat,subprocess,time,uuid
 from pathlib import Path
 import core,engine,reference
 from qualify import read_object,versions,wait_marker
@@ -117,7 +117,9 @@ def run(args):
                 nonlocal total
                 total+=len(payload)
                 if len(payload)>65536 or total>1024*1024:raise ValueError('payload_budget_exceeded')
-                return client.put_object(Bucket=bucket,Key=key,Body=payload,ServerSideEncryption='AES256')
+                # S3 Object Lock uploads require an explicit integrity checksum.
+                md5=base64.b64encode(hashlib.md5(payload,usedforsecurity=False).digest()).decode()
+                return client.put_object(Bucket=bucket,Key=key,Body=payload,ServerSideEncryption='AES256',ContentMD5=md5)
             history=versions(reader,b,key)
             if history['versions'] or history['markers']:raise ValueError('preserve_existing_storage_attempt')
             snapshots={};meta={};out['snapshots']={}
