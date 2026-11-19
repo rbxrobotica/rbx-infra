@@ -89,9 +89,10 @@ transport investigation. There are six lab identities total (four original,
 two probes); mutable runtime credentials remain unchanged and never receive
 administrative or version-deletion capabilities.
 
-Source: infra PR413, stacked on draft PR394. Detailed sanitized receipts and
-the independent assessment are in the private resilience companion PR, stacked
-on draft PR11. No original state payload, plan, credential or encryption key
+Source: [infra PR413](https://github.com/rbxrobotica/rbx-infra/pull/413), stacked
+on draft PR394. Detailed sanitized receipts and the independent assessment are
+in private [resilience PR13](https://github.com/rbxrobotica/rbx-resilience/pull/13),
+stacked on draft PR11. No original state payload, plan, credential or encryption key
 is committed. The original password-store worktree remains untouched; new lab
 entries are in its separate encrypted feature branch.
 
