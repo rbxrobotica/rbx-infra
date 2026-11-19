@@ -16,7 +16,7 @@ SELECT row_to_json(s) FROM (
     ORDER BY extname
 ) s;
 SELECT row_to_json(s) FROM (
-    SELECT count(*) AS entries, min(amount) AS minimum, max(amount) AS maximum,
+    SELECT count(*) AS entries, min(amount)::text AS minimum, max(amount)::text AS maximum,
            sum(octet_length(payload)) AS payload_bytes
     FROM sample.entries
 ) s;

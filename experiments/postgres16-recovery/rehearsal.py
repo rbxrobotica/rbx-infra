@@ -51,7 +51,10 @@ set -C
 test "$(hostname)" = psyctl-workstation
 test "$(id -un)" = psyctl
 base="$HOME/.local/share/rbx-agent-handoffs/pg16n19"
-test -d "$base" && test ! -L "$base" && test -O "$base"
+test -d "$base"
+test ! -L "$base"
+test -O "$base"
+test "$(stat -c %a "$base")" = 700
 """
 
 
@@ -133,10 +136,6 @@ def command(args, data=None, *, timeout=15, check=True, quiet=False):
     return result
 
 
-def origin():
-    return command(("/usr/bin/git", "-C", str(HERE), "remote", "get-url", "origin")).stdout.decode().strip()
-
-
 def repo(args):
     return command(("/usr/bin/git", "-C", str(HERE), *args)).stdout.decode().strip()
 
@@ -159,10 +158,10 @@ def preflight():
     fs = os.statvfs(ROOT)
     require(fs.f_bavail * fs.f_frsize >= 1024**3, "less than 1 GiB available")
     commit = repo(("rev-parse", "HEAD"))
-    require(origin() == GIT_REMOTE and not repo(("status", "--porcelain", "--", ".")),
+    require(repo(("remote", "get-url", "origin")) == GIT_REMOTE and not repo(("status", "--porcelain", "--", ".")),
             "experiment must run from clean committed source at the expected origin")
     upstream = repo(("rev-parse", "@{upstream}"))
-    ssh('test "$(stat -c %a "$base")" = 700')
+    ssh("")
     require(commit == upstream, "run commit must equal the fetched remote checkpoint")
     return {
         "host": HOST, "peer": PEER, "source_commit": commit, "image": IMAGE,
@@ -342,6 +341,22 @@ def ssh(remote, data=None):
     return command((*SSH, REMOTE + remote), data, timeout=18).stdout
 
 
+def upload_verified(remote, filename, body):
+    observed = ssh(remote + f'head -c {MAX_BYTES + 1} > "$d/{filename}"\n'
+                   f'wc -c < "$d/{filename}"\nsha256sum "$d/{filename}"', body)
+    size, checksum, _ = observed.decode().split()
+    require((int(size), checksum) == (len(body), digest(body)), "upload readback mismatch")
+
+
+def retrieve(remote, filename, limit):
+    data = ssh(remote + f'f="$d/{filename}"\n'
+               'test -f "$f"\ntest ! -L "$f"\ntest -O "$f"\n'
+               'test "$(stat -c %a "$f")" = 600\n'
+               f'head -c {limit + 1} -- "$f"')
+    require(0 < len(data) <= limit, f"retrieved {filename} length outside bound")
+    return data
+
+
 def gpg(home, key, mode, data):
     args = ("/usr/bin/gpg", "--no-options", "--homedir", str(home), "--batch",
             "--no-tty", "--pinentry-mode", "loopback", "--no-symkey-cache",
@@ -379,10 +394,10 @@ def run(preparation):
     stage = "lab-key preparation"
     started = time.monotonic()
     succeeded = False
+    gpg_home = key_dir / "gnupg"
     try:
         phase = time.monotonic()
         key_dir.mkdir(mode=0o700)
-        gpg_home = key_dir / "gnupg"
         gpg_home.mkdir(mode=0o700)
         key = key_dir / "passphrase"
         key.write_bytes(secrets.token_hex(32).encode() + b"\n")
@@ -434,12 +449,10 @@ def run(preparation):
         phase = time.monotonic()
         remote = f'd="$base/archive-{nonce}"\n'
         ssh(remote + 'mkdir -- "$d"')
-        for filename, body in (("archive.gpg", cipher), ("receipt.json", receipt)):
-            observed = ssh(remote + f'test -O "$d" && test ! -L "$d"\n'
-                           f'head -c {MAX_BYTES + 1} > "$d/{filename}"\n'
-                           f'wc -c < "$d/{filename}"\nsha256sum "$d/{filename}"', body)
-            size, checksum, _ = observed.decode().split()
-            require((int(size), checksum) == (len(body), digest(body)), "upload readback mismatch")
+        remote += 'test -d "$d"\ntest ! -L "$d"\ntest -O "$d"\n'
+        remote += 'test "$(stat -c %a "$d")" = 700\n'
+        upload_verified(remote, "archive.gpg", cipher)
+        upload_verified(remote, "receipt.json", receipt)
         evidence["off_host_copy_verified_utc"] = utc()
         evidence["seconds"]["cutoff_to_verified_off_host_copy"] = elapsed(cutoff)
         evidence["seconds"]["upload_and_remote_readback"] = elapsed(phase)
@@ -454,8 +467,8 @@ def run(preparation):
         stage = "independent retrieval"
         recovery = time.monotonic()
         evidence["retrieval_start_utc"] = utc()
-        receipt = ssh(remote + 'head -c 65537 -- "$d/receipt.json"')
-        cipher = ssh(remote + f'head -c {MAX_BYTES + 1} -- "$d/archive.gpg"')
+        receipt = retrieve(remote, "receipt.json", 65536)
+        cipher = retrieve(remote, "archive.gpg", MAX_BYTES)
         evidence["seconds"]["retrieval"] = elapsed(recovery)
         stage = "trusted verification and decryption"
         phase = time.monotonic()
@@ -550,6 +563,12 @@ ROLLBACK;
         evidence["historical_archive_policy"] = ("Integrity verified independently of age; "
                                                  "historical archives remain restorable.")
         evidence["seconds"]["negative_checks_and_final_read"] = elapsed(phase)
+        stage = "persist sanitized reconciliation checkpoint"
+        phase = time.monotonic()
+        checkpoint = canonical({**evidence, "result": "verified-awaiting-runtime-cleanup"})
+        upload_verified(remote, "recovery-checkpoint.json", checkpoint)
+        evidence["recovery_checkpoint"] = metadata(checkpoint)
+        evidence["seconds"]["checkpoint_upload_and_readback"] = elapsed(phase)
         succeeded = True
     except (LabError, subprocess.SubprocessError, OSError, ValueError) as error:
         evidence["failure"] = {"stage": stage, "type": type(error).__name__, "detail": str(error)}
@@ -560,6 +579,18 @@ ROLLBACK;
                 evidence["cleanup"][name] = "no owned container remains"
             except (LabError, subprocess.SubprocessError, OSError) as error:
                 evidence["cleanup"][name] = f"cleanup failed: {error}"
+                succeeded = False
+        if gpg_home.is_dir():
+            try:
+                require(gpg_home.resolve() == gpg_home and
+                        gpg_home.stat().st_uid == os.getuid() and
+                        stat.S_IMODE(gpg_home.stat().st_mode) == 0o700,
+                        "unexpected lab GnuPG home")
+                command(("/usr/bin/gpgconf", "--homedir", str(gpg_home), "--kill", "gpg-agent"),
+                        quiet=True)
+                evidence["cleanup"]["gpg_agent"] = "scoped stop issued"
+            except (LabError, subprocess.SubprocessError, OSError) as error:
+                evidence["cleanup"]["gpg_agent"] = f"cleanup failed: {error}"
                 succeeded = False
         evidence["finish_utc"] = utc()
         evidence["seconds"]["total"] = elapsed(started)

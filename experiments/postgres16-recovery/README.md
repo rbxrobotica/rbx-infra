@@ -97,3 +97,7 @@ When closing retention, verify the nonce and matching recorded hashes and
 remove only that remote `archive-<nonce>` and its local `key-<nonce>`.
 Verify source and target IDs are absent from Podman, and leave unrelated
 containers and caches alone.
+
+The live runner closes its off-host evidence checkpoint before removing the
+restored runtime. The final local receipt additionally records cleanup. The
+lab GnuPG agent is stopped using only the nonce-specific GnuPG home.
