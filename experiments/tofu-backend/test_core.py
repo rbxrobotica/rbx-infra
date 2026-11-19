@@ -34,6 +34,8 @@ ROLE_SCOPES = {
         ['fixture-state-id', 'fixture-archive-id'],
         PREFIX,
     ),
+    'state-probe': (READ_CAPABILITIES + ['writeFiles', 'deleteFiles', 'readFileRetentions'], ['fixture-state-id'], PREFIX),
+    'archive-probe': (READ_CAPABILITIES + ['writeFiles', 'deleteFiles', 'readFileRetentions'], ['fixture-archive-id'], PREFIX),
 }
 
 

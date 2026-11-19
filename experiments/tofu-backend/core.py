@@ -22,6 +22,7 @@ CAPS={
  'archive-reader':['listBuckets','readBuckets','listFiles','readFiles','readFileRetentions'],
  'setup-lab':['listBuckets','readBuckets','listFiles','readFiles','writeFiles','deleteFiles','readFileRetentions'],
 }
+for _role in ('state-probe','archive-probe'):CAPS[_role]=list(CAPS['setup-lab'])
 
 
 def digest(data):return hashlib.sha256(data).hexdigest()
@@ -155,7 +156,7 @@ def setup(run_id):
     for role,caps in CAPS.items():
         buckets,prefix=scope(binding,role)
         made=api(auth,'b2_create_key',{'accountId':auth['accountId'],'keyName':'rbx-tofu-'+role+'-'+run_id,
-           'capabilities':caps,'bucketIds':buckets,'namePrefix':prefix,'validDurationInSeconds':86400 if role=='setup-lab' else 7*86400})
+           'capabilities':caps,'bucketIds':buckets,'namePrefix':prefix,'validDurationInSeconds':86400 if role in ('setup-lab','state-probe','archive-probe') else 7*86400})
         if set(made['capabilities'])!=set(caps) or made['bucketIds']!=buckets or made['namePrefix']!=prefix:
             raise ValueError('scoped_identity_admission_failed')
         verified=wire().authorize(made['applicationKeyId'],made['applicationKey'])
@@ -176,6 +177,8 @@ def scope(binding,role):
     if role not in CAPS:raise ValueError('unexpected_runtime_role')
     if role=='setup-lab':
         return [binding['buckets'][x]['bucketId'] for x in ('state','archive')],binding['prefix']
+    if role in ('state-probe','archive-probe'):
+        return [binding['buckets'][role.split('-')[0]]['bucketId']],binding['prefix']
     bucket=binding['buckets']['archive' if role=='archive-reader' else 'state']['bucketId']
     return [bucket],binding['prefix']+('snapshots/' if role=='archive-reader' else 'active/')
 

@@ -109,9 +109,10 @@ def run(args):
             remote_receipt_checkpoint(args.control_receipt,args.control_sha256)
             out['trusted_control_receipt_sha256']=args.control_sha256
             s3=core.client(b,'runtime',args.sdk_dir);reader=core.client(b,'reader',args.sdk_dir)
-            owner=core.client(b,'setup-lab',args.sdk_dir);archive=core.client(b,'archive-reader',args.sdk_dir)
+            owner=core.client(b,'state-probe',args.sdk_dir);archive_owner=core.client(b,'archive-probe',args.sdk_dir)
+            archive=core.client(b,'archive-reader',args.sdk_dir)
             bucket=b['buckets']['state']['bucketName'];ab=b['buckets']['archive']['bucketName']
-            key=b['prefix']+'active/storage-only/state.enc';total=0
+            key=b['prefix']+'active/storage-only/'+args.output.stem+'.enc';total=0
             def put(client,bucket,key,payload):
                 nonlocal total
                 total+=len(payload)
@@ -130,8 +131,12 @@ def run(args):
                 made=put(s3,bucket,key,payload)
                 got,metadata=read_object(reader,bucket,key,made['VersionId']);meta[number]=metadata
                 g['storage_cipher_readback_'+str(number)]=got==payload and metadata['sse']=='AES256'
-                archive_key=b['prefix']+'snapshots/storage-control-generation'+str(number)+'.enc'
-                made=put(owner,ab,archive_key,payload);again,am=read_object(archive,ab,archive_key,made['VersionId'])
+                archive_key=b['prefix']+'snapshots/'+args.output.stem+'-generation'+str(number)+'.enc'
+                out['current_phase']='archive_put_generation'+str(number);checkpoint()
+                made=put(archive_owner,ab,archive_key,payload)
+                out['current_phase']='archive_read_generation'+str(number);checkpoint()
+                again,am=read_object(archive,ab,archive_key,made['VersionId'])
+                out['current_phase']='archive_retention_generation'+str(number);checkpoint()
                 retained=archive.get_object_retention(Bucket=ab,Key=archive_key,VersionId=made['VersionId'])['Retention']
                 am['retention']={'mode':retained['Mode'],'retain_until':str(retained['RetainUntilDate'])}
                 out['snapshots'][str(number)]={'mutable':metadata,'archive':am}
@@ -142,9 +147,9 @@ def run(args):
             g['versioned_old_state_recovery']=previous==snapshots[1] and meta[1]['version_id']!=meta[2]['version_id']
             outside=b['prefix']+'excluded/storage-canary';put(owner,bucket,outside,b'owned-prefix-canary')
             denied,_=core.safe_call(s3.get_object,Bucket=bucket,Key=outside);out['outside_prefix']=denied
-            cross=b['prefix']+'active/storage-cross-bucket-canary';made=put(owner,ab,cross,b'owned-bucket-canary')
+            cross=b['prefix']+'active/storage-cross-bucket-canary';made=put(archive_owner,ab,cross,b'owned-bucket-canary')
             denied2,_=core.safe_call(s3.get_object,Bucket=ab,Key=cross);out['outside_bucket']=denied2
-            locked,_=core.safe_call(owner.delete_object,Bucket=ab,Key=cross,VersionId=made['VersionId']);out['compliance_delete_canary']=locked
+            locked,_=core.safe_call(archive_owner.delete_object,Bucket=ab,Key=cross,VersionId=made['VersionId']);out['compliance_delete_canary']=locked
             vkey=b['prefix']+'active/probes/storage-version-delete';made=put(owner,bucket,vkey,b'owned-version-delete-canary')
             denied3,_=core.safe_call(s3.delete_object,Bucket=bucket,Key=vkey,VersionId=made['VersionId']);out['runtime_version_delete']=denied3
             g['least_privilege']=all(x.get('http') in (401,403) for x in (denied,denied2,denied3))
