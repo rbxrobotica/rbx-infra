@@ -50,3 +50,50 @@ Execution and review instructions accompany the harness. Run the offline checks
 and use its dry-run before creating lab resources. On failure, preserve the
 sanitized failure separately and check for owned residuals before a fresh nonce
 is used. The parent production records and derived grades are outside this drill.
+
+## Run
+
+Use a clean checkout of the pushed topic branch on ThinkCentre. Confirm the
+current disk guard, available capacity, SSH alias and runtime controllers.
+These commands run from this directory.
+
+```sh
+python3 -B -m unittest discover -s . -p 'test_*.py' -v
+python3 -B rehearsal.py dry-run
+python3 -B rehearsal.py run
+```
+
+Dry-run only reads local configuration, Git, and SSH custody-root metadata.
+The live run is bounded to 180 seconds plus verified container cleanup. It
+writes sanitized success or failure JSON in the printed `run-<nonce>`
+directory. It measures the complete recovery path including a missing-role
+control before restore. The first reader query completes before destructive
+negative tests, which use rejected statements or an uncommitted fixture
+transaction. The final check reconciles the fixture again.
+
+Backup uses `pg_dump -w --format=custom --create`; schema reconciliation uses
+`pg_dump -w --schema-only --create` with only randomized psql restriction
+directives removed. Rows use ordered UTF-8 CSV with a count and SHA-256 for
+each table. Catalog metadata checks database, roles and extension versions.
+Restore verifies the dump TOC and target extension before applying committed
+role SQL with `psql -X -w -qAt -v ON_ERROR_STOP=1`. It then uses
+`pg_restore -w --exit-on-error --create` against the empty target's private
+socket. All client sessions use a cleared environment and explicitly name
+socket, port, database and role.
+
+A closed ZIP contains the custom dump, role SQL and expected manifest,
+each with SHA-256 and length. GnuPG symmetric AES-256 uses a generated lab-only
+passphrase file and isolated home. The verifier requires the receipt's
+locally anchored hash, verifies ciphertext before decryption, then verifies
+plaintext and all members before use. Negative controls cover both direct GPG
+rejection and trusted hash rejection for malformed ciphertext. Backup age is
+an observation from the receipt; old intact archives can still be recovered.
+
+For review compare final evidence, upload/readback and retrieved receipt
+hashes. The committed positive evidence is the durable receipt hash anchor.
+Record any failed run independently. Keep both archive files on the custody
+peer and the matching key directory on ThinkCentre during the review window.
+When closing retention, verify the nonce and matching recorded hashes and
+remove only that remote `archive-<nonce>` and its local `key-<nonce>`.
+Verify source and target IDs are absent from Podman, and leave unrelated
+containers and caches alone.
