@@ -98,6 +98,20 @@ entries are in its separate encrypted feature branch.
 
 ## Primary-operated entry points
 
+The next-candidate comparison now prefers native GCS (generation-guarded
+locking and native history) with AWS S3 native locking as fallback. GitLab.com
+is an option if suitable existing access is available; R2 is deferred on the
+native historical-version gap. See the
+[pending contract](next-candidate-contract.json) and the detailed comparison
+in private resilience PR13. These are public-research/preparation results;
+no alternative-provider account, fixture or successful live qualification has
+been created. Actual account/billing, scoped identity and independent custody
+must be verified before provider mutation. The browser runtime was unavailable
+and no candidate credentials were found in local/ThinkCentre metadata checks.
+
+The ClouDNS Premium M quarter is already separately contracted for secondary
+DNS. It does not replace state locking or encrypted object recovery.
+
 Run offline guards without network or credentials:
 
 ```sh

@@ -1,0 +1,50 @@
+{
+  "type": "proposed native backend qualification contract, not an execution receipt",
+  "date": "2026-11-19",
+  "primary_candidate": "gcs",
+  "fallback_candidate": "aws-s3-native-use-lockfile",
+  "engine_version": "1.13.9",
+  "engine_sha256": "9ce9173bf161f6466ef57dab7edebe8f55089fdf81caa967415323c25d004990",
+  "proposed_primary_region": "us-central1",
+  "admitted_for_live_run": false,
+  "missing_admission_evidence": [
+    "Confirmed project/account and billing eligibility",
+    "Actual isolated bucket, prefix, versioning and public-access policy",
+    "Effective scoped short-lived runtime identity",
+    "Independent encrypted credential/key custody checkpoint",
+    "Reviewed provider-specific setup diff and guarded adapter"
+  ],
+  "budget": {
+    "maximum_synthetic_uploaded_payload_bytes": 1048576,
+    "planned_class_a_operations_max": 200,
+    "planned_class_b_operations_max": 1000,
+    "budget_is_not_a_cloud_billing_cap": true,
+    "paid_annual_commitment": false
+  },
+  "required_executed_gates": [
+    "raw_create_only_lock_and_conflict",
+    "wrong_owner_or_generation_refused",
+    "two_real_engine_exclusion",
+    "normal_owner_release_and_next_writer",
+    "known_owner_crash_and_lost_response_inspection",
+    "historical_version_recovery_without_current_overwrite",
+    "client_encryption_and_provider_at_rest_and_verified_tls",
+    "independent_b2_archive_cipher_export_and_readback",
+    "isolated_recovery_without_active_backend_credentials",
+    "wrong_or_missing_key_corruption_and_manifest_rejected",
+    "denied_and_unavailable_backend_fail_closed",
+    "least_privilege_and_archive_separation",
+    "residual_lock_version_cost_and_custody_closeout"
+  ],
+  "prohibitions": [
+    "No production state inspection, migration, import or apply",
+    "No local-backend apply or -lock=false",
+    "No unknown-owner force unlock",
+    "No automatic alternate-writer promotion",
+    "No secret, state payload or sensitive plan in Git or logs",
+    "No production qualification inferred from docs or local HTTPS control"
+  ],
+  "live_qualification_passed": false,
+  "real_states_migrated": false,
+  "private_evidence_pr": "https://github.com/rbxrobotica/rbx-resilience/pull/13"
+}
