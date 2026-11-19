@@ -60,7 +60,7 @@ class EndpointContract(unittest.TestCase):
             cluster.exec("psql")
         with self.assertRaisesRegex(lab.LabError, "identity"):
             cluster.remove()
-        self.assertEqual([call.args[0][1] for call in command.call_args_list],
+        self.assertEqual([call.args[0][len(lab.PODMAN)] for call in command.call_args_list],
                          ["inspect", "inspect"])
 
     def test_database_system_id_mismatch_prevents_mutation(self):
@@ -85,6 +85,7 @@ class EndpointContract(unittest.TestCase):
                          ("--host=/lab/socket", "--port=55416",
                           "--username=lab_reader", "--dbname=lab_fixture"))
         self.assertEqual(lab.DB_ENV[:2], ("/usr/bin/env", "-i"))
+        self.assertIn("--remote=false", lab.PODMAN)
 
 
 if __name__ == "__main__":

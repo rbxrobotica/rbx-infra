@@ -26,6 +26,8 @@ IMAGE = "docker.io/library/postgres@" + DIGEST
 IMAGE_ID = "75f5a96988cdf694a215073c3e9c001b706b371e2f94df3967f2efdec2787f6b"
 VERSION = "16.15"
 GIT_REMOTE = "git@github.com:rbxrobotica/rbx-infra.git"
+PODMAN = ("/usr/bin/env", "-u", "CONTAINER_HOST", "-u", "CONTAINER_CONNECTION",
+          "/usr/bin/podman", "--remote=false")
 MEMBERS = {"fixture.dump", "roles.sql", "manifest.json"}
 MAX_BYTES = 12 * 1024 * 1024
 TOTAL_SECONDS = 180
@@ -132,7 +134,7 @@ def command(args, data=None, *, timeout=15, check=True, quiet=False):
     )
     if check and result.returncode:
         detail = "" if quiet else result.stderr.decode(errors="replace").strip()[-800:]
-        raise LabError(f"{Path(args[0]).name} exited {result.returncode}: {detail}")
+        raise LabError(f"{"podman" if args[:len(PODMAN)] == PODMAN else Path(args[0]).name} exited {result.returncode}: {detail}")
     return result
 
 
@@ -143,13 +145,13 @@ def repo(args):
 def preflight():
     require(os.getuid() != 0 and os.uname().nodename == HOST, "unexpected runtime host or user")
     require(Path.home() == Path("/home/psyctl"), "unexpected home")
-    info = json.loads(command(("/usr/bin/podman", "info", "--format", "json")).stdout)
+    info = json.loads(command((*PODMAN, "info", "--format", "json")).stdout)
     host = info["host"]
     require(host["security"]["rootless"] and host["arch"] == "amd64" and
             host["cgroupVersion"] == "v2" and
             {"cpu", "memory", "pids"} <= set(host["cgroupControllers"]),
             "rootless runtime or resource controllers unavailable")
-    local = command(("/usr/bin/podman", "image", "inspect", IMAGE,
+    local = command((*PODMAN, "image", "inspect", IMAGE,
                      "--format", "{{.Id}} {{.Digest}}")).stdout.decode().split()
     require(local == [IMAGE_ID, DIGEST], "immutable image/config mismatch")
     root_status = ROOT.stat()
@@ -167,7 +169,7 @@ def preflight():
         "host": HOST, "peer": PEER, "source_commit": commit, "image": IMAGE,
         "image_config": IMAGE_ID, "server_required": VERSION, "rootless": True,
         "cgroup": "v2", "available_bytes": fs.f_bavail * fs.f_frsize,
-        "podman_version": command(("/usr/bin/podman", "--version")).stdout.decode().strip(),
+        "podman_version": command((*PODMAN, "--version")).stdout.decode().strip(),
         "gpg_version": command(("/usr/bin/gpg", "--version")).stdout.decode().splitlines()[0],
     }
 
@@ -180,7 +182,7 @@ class Cluster:
 
     def create(self):
         result = command((
-            "/usr/bin/podman", "create", "--name", self.name,
+            *PODMAN, "create", "--name", self.name,
             "--label", f"rbx.lab.identity={self.name}", "--pull=never",
             "--network=none", "--ipc=private", "--pid=private",
             "--cap-drop=all", "--security-opt=no-new-privileges",
@@ -193,7 +195,7 @@ class Cluster:
         self.cid = result.stdout.decode().strip()
         require(re.fullmatch(r"[0-9a-f]{64}", self.cid), "invalid container ID")
         self.owned()
-        command(("/usr/bin/podman", "start", self.cid))
+        command((*PODMAN, "start", self.cid))
         ready_by = time.monotonic() + 20
         while time.monotonic() < ready_by:
             result = self.exec("pg_isready", "-q", "-t", "1", *self.endpoint("postgres"),
@@ -202,7 +204,7 @@ class Cluster:
                 break
             time.sleep(0.25)
         else:
-            logs = command(("/usr/bin/podman", "logs", "--tail", "15", self.cid),
+            logs = command((*PODMAN, "logs", "--tail", "15", self.cid),
                            check=False)
             raise LabError("fixture did not start: " +
                            (logs.stdout + logs.stderr).decode(errors="replace")[-1100:])
@@ -217,7 +219,7 @@ class Cluster:
 
     def owned(self):
         result = command((
-            "/usr/bin/podman", "inspect", "--type", "container", "--format",
+            *PODMAN, "inspect", "--type", "container", "--format",
             '{{.Id}} {{.Name}} {{index .Config.Labels "rbx.lab.identity"}} '
             '{{.Image}} {{.HostConfig.NetworkMode}} {{.HostConfig.Privileged}}',
             self.cid,
@@ -227,7 +229,7 @@ class Cluster:
 
     def exec(self, *args, data=None, check=True):
         self.owned()
-        return command(("/usr/bin/podman", "exec", "-i", self.cid, *DB_ENV, *args),
+        return command((*PODMAN, "exec", "-i", self.cid, *DB_ENV, *args),
                        data, check=check)
 
     @staticmethod
@@ -262,7 +264,7 @@ SELECT current_database(), session_user, current_setting('server_version_num'),
     def remove(self):
         if self.cid is not None:
             self.owned()
-            command(("/usr/bin/podman", "rm", "-f", "--time=3", self.cid))
+            command((*PODMAN, "rm", "-f", "--time=3", self.cid))
             self.cid = None
 
 
