@@ -1,0 +1,7 @@
+{
+  "version": "1.13.9",
+  "archive": "tofu_1.13.9_linux_amd64.zip",
+  "archive_sha256": "bc44eb6b06446ba83bd4072114891987f590f66cca712737a7f1147c50c539ce",
+  "checksums_sha256": "f8a2925243a71078e84a911f1bb8eaf9c0974c3d5637475921a6af01082d080c",
+  "source": "https://github.com/opentofu/opentofu/releases/tag/v1.13.9"
+}
