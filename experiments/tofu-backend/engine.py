@@ -48,6 +48,7 @@ def configure(binding,root,name,endpoint_override=None):
 
 def seal(working):
     value={'configuration_sha256':core.digest((working/'fixture.tf.json').read_bytes()),
+           'cli_sha256':core.digest((working/'cli.tfrc').read_bytes()),
            'provisioner_sha256':core.digest((core.HERE/'hold.py').read_bytes())}
     path=working/'fixture-guard.json'
     if path.exists():
@@ -57,11 +58,15 @@ def seal(working):
 
 def admit_working(working):
     core.owned_dir(working)
-    configured=sorted(p.name for p in working.iterdir() if p.name.endswith(('.tf','.tf.json')))
-    if configured!=['fixture.tf.json'] or list(working.glob('*.tfstate*')):
+    # OpenTofu also loads .tofu/.tofu.json and automatic variable inputs.
+    # A strict directory allowlist prevents shadowing the hashed .tf.json.
+    allowed={'fixture.tf.json','fixture-guard.json','cli.tfrc','data','gate'}
+    if any(p.name not in allowed or p.is_symlink() for p in working.iterdir()):
         raise ValueError('unexpected_configuration_or_local_state')
+    core.owned_dir(working/'data');core.owned_dir(working/'gate')
     value=json.loads((working/'fixture-guard.json').read_text())
     if (value['configuration_sha256']!=core.digest((working/'fixture.tf.json').read_bytes())
+        or value.get('cli_sha256')!=core.digest((working/'cli.tfrc').read_bytes())
         or value['provisioner_sha256']!=core.digest((core.HERE/'hold.py').read_bytes())):
         raise ValueError('fixture_content_drift')
 

@@ -17,9 +17,14 @@ class EngineGuards(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp,mock.patch.object(core,'BASE',Path(temp)):
             working=engine.configure(binding(),Path(temp)/'owned','a')
             engine.admit_working(working)
-            extra=working/'extra.tf';extra.write_text('resource "null_resource" "unexpected" {}')
-            with self.assertRaisesRegex(ValueError,'unexpected_configuration'):engine.admit_working(working)
-            extra.unlink();config=working/'fixture.tf.json';config.write_text('{}')
+            for name in ('extra.tf','extra.tofu','fixture.tofu.json','input.sym.hcl','secret.auto.tfvars','input.auto.tfvars.json','errored.tfstate'):
+                extra=working/name;extra.write_text('{}')
+                with self.subTest(name=name),self.assertRaisesRegex(ValueError,'unexpected_configuration'):engine.admit_working(working)
+                extra.unlink()
+            cli=working/'cli.tfrc';cli.write_text('disable_checkpoint = false\n')
+            with self.assertRaisesRegex(ValueError,'fixture_content_drift'):engine.admit_working(working)
+            cli.write_text('disable_checkpoint = true\n')
+            config=working/'fixture.tf.json';config.write_text('{}')
             with self.assertRaisesRegex(ValueError,'fixture_content_drift'):engine.admit_working(working)
 
     def test_empty_userinfo_refused(self):
