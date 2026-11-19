@@ -13,6 +13,15 @@ def binding():
 
 
 class EngineGuards(unittest.TestCase):
+    def test_launcher_rejects_configuration_drift_and_extra_code_before_execution(self):
+        with tempfile.TemporaryDirectory() as temp,mock.patch.object(core,'BASE',Path(temp)):
+            working=engine.configure(binding(),Path(temp)/'owned','a')
+            engine.admit_working(working)
+            extra=working/'extra.tf';extra.write_text('resource "null_resource" "unexpected" {}')
+            with self.assertRaisesRegex(ValueError,'unexpected_configuration'):engine.admit_working(working)
+            extra.unlink();config=working/'fixture.tf.json';config.write_text('{}')
+            with self.assertRaisesRegex(ValueError,'fixture_content_drift'):engine.admit_working(working)
+
     def test_empty_userinfo_refused(self):
         for prefix in ('@',':@'):
             with self.assertRaises(ValueError):core.endpoint('https://'+prefix+'s3.us-east-005.backblazeb2.com')

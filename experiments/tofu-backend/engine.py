@@ -42,7 +42,28 @@ def configure(binding,root,name,endpoint_override=None):
     else:core.private_write(path,content)
     cli=working/'cli.tfrc'
     if not cli.exists():core.private_write(cli,b'disable_checkpoint = true\n')
+    seal(working)
     return working
+
+
+def seal(working):
+    value={'configuration_sha256':core.digest((working/'fixture.tf.json').read_bytes()),
+           'provisioner_sha256':core.digest((core.HERE/'hold.py').read_bytes())}
+    path=working/'fixture-guard.json'
+    if path.exists():
+        if json.loads(path.read_text())!=value:raise ValueError('existing_fixture_guard_drift')
+    else:core.private_write(path,json.dumps(value).encode())
+
+
+def admit_working(working):
+    core.owned_dir(working)
+    configured=sorted(p.name for p in working.iterdir() if p.name.endswith(('.tf','.tf.json')))
+    if configured!=['fixture.tf.json'] or list(working.glob('*.tfstate*')):
+        raise ValueError('unexpected_configuration_or_local_state')
+    value=json.loads((working/'fixture-guard.json').read_text())
+    if (value['configuration_sha256']!=core.digest((working/'fixture.tf.json').read_bytes())
+        or value['provisioner_sha256']!=core.digest((core.HERE/'hold.py').read_bytes())):
+        raise ValueError('fixture_content_drift')
 
 
 def environment(binding,working,generation,crypto='correct',hold=False,bad_credentials=False):
@@ -75,8 +96,7 @@ plan {
 
 def start(binary,working,env,args):
     verify_binary(binary)
-    if not (working/'fixture.tf.json').is_file() or working.resolve()!=working:
-        raise ValueError('engine_not_owned_fixture')
+    admit_working(working)
     if args[0] not in ('init','apply','show','state','force-unlock','plan','version'):
         raise ValueError('engine_operation_not_allowed')
     if any(x in ('-lock=false','-migrate-state','-force-copy') for x in args):
@@ -98,8 +118,9 @@ def finish(process,timeout=90):
     summary={'exit_code':process.returncode,'observed_wait_seconds':round(time.monotonic()-started,4),
       'output_sha256':core.digest(combined),'output_bytes':len(combined),
       'lock_error':b'error acquiring the state lock' in lower,
-      'backend_error':any(x in lower for x in (b'backend initialization required',b'failed to get existing workspaces',b'connection refused',b'invalidaccesskeyid',b'signaturedoesnotmatch')),
+      'backend_error':any(x in lower for x in (b'backend initialization required',b'failed to get existing workspaces',b'connection refused',b'invalidaccesskeyid',b'signaturedoesnotmatch',b'accessdenied',b'access denied',b'forbidden')),
       'encryption_error':any(x in lower for x in (b'encrypt',b'decrypt',b'key provider')),
+      'artifact_error':any(x in lower for x in (b'failed to read',b'invalid',b'could not read',b'unable to read',b'error loading state')),
       'raw_output_retained':False}
     return summary,out,err
 
