@@ -209,7 +209,8 @@ def safe_call(function,**kwargs):
                 'version_id':response.get('VersionId'),'sse':response.get('ServerSideEncryption'),
                 'delete_marker':response.get('DeleteMarker')},response
     except Exception as e:
-        response=getattr(e,'response',{})
+        response=getattr(e,'response',None)
+        if not isinstance(response,dict):response={}
         code=response.get('Error',{}).get('Code',type(e).__name__)
         return {'ok':False,'http':response.get('ResponseMetadata',{}).get('HTTPStatusCode'),
                 'error_code':code if re.fullmatch('[A-Za-z0-9_]{1,64}',str(code)) else 'provider_error'},None

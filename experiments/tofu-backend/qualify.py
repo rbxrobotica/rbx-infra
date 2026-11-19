@@ -49,10 +49,13 @@ def run(args):
         return summary,stdout
     try:
         # Raw compare-and-create is tested on a separate, harmless owned canary.
-        probe=b['prefix']+'active/probes/conditional'
+        probe=b['prefix']+'active/probes/conditional-'+args.output.stem
         first,_=core.safe_call(s3.put_object,Bucket=bucket,Key=probe,Body=b'owned-synthetic-first',IfNoneMatch='*',ServerSideEncryption='AES256')
         second,_=core.safe_call(s3.put_object,Bucket=bucket,Key=probe,Body=b'owned-synthetic-second',IfNoneMatch='*',ServerSideEncryption='AES256')
-        current,metadata=read_object(reader,bucket,probe)
+        current=b'';metadata,found=core.safe_call(reader.get_object,Bucket=bucket,Key=probe)
+        if found is not None:
+            current=found['Body'].read(65537)
+            if len(current)>65536:raise ValueError('probe_body_bound')
         out['conditional_put']={'first':first,'conflict':second,'current':metadata,
            'first_body_preserved':current==b'owned-synthetic-first'}
         g['atomic_conditional_put']=first['ok'] and second.get('http')==412 and current==b'owned-synthetic-first';checkpoint()
