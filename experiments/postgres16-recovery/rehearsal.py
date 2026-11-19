@@ -186,7 +186,7 @@ class Cluster:
             "--network=none", "--ipc=private", "--pid=private",
             "--cap-drop=all", "--security-opt=no-new-privileges",
             "--read-only", "--read-only-tmpfs=false", "--image-volume=ignore",
-            "--tmpfs", "/lab:rw,nodev,nosuid,noexec,size=192m,mode=0700,uid=70,gid=70",
+            "--tmpfs", "/lab:rw,nodev,nosuid,noexec,size=192m,mode=1777",
             "--shm-size=16m", "--user=70:70", "--memory=384m",
             "--memory-swap=384m", "--cpus=1", "--pids-limit=48",
             "--entrypoint=/bin/sh", IMAGE_ID, "-c", START,
