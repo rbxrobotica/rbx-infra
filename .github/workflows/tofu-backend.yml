@@ -1,0 +1,19 @@
+name: Synthetic OpenTofu backend guards
+on:
+  pull_request:
+    paths:
+      - 'experiments/tofu-backend/**'
+      - '.github/workflows/tofu-backend.yml'
+  push:
+    paths:
+      - 'experiments/tofu-backend/**'
+      - '.github/workflows/tofu-backend.yml'
+permissions:
+  contents: read
+jobs:
+  offline-guards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: python3 -B -m unittest discover -s experiments/tofu-backend -p 'test_*.py' -v
