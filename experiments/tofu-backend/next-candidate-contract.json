@@ -1,11 +1,15 @@
 {
   "type": "proposed native backend qualification contract, not an execution receipt",
   "date": "2026-11-19",
-  "primary_candidate": "gcs",
-  "fallback_candidate": "aws-s3-native-use-lockfile",
+  "primary_candidate": "azure-blob-native-azurerm-hot-zrs",
+  "fallback_candidate": "gcs-native",
+  "reference_candidate": "aws-s3-native-use-lockfile",
+  "selection_basis": "Role-specific research: lease ID protects state writes; actual cold-start, orphan-lease and off-provider recovery tests remain mandatory",
   "engine_version": "1.13.9",
   "engine_sha256": "9ce9173bf161f6466ef57dab7edebe8f55089fdf81caa967415323c25d004990",
-  "proposed_primary_region": "us-central1",
+  "proposed_primary_region": null,
+  "price_reference_region": "eastus",
+  "storage_profile": "Standard general-purpose-v2, Hot ZRS, non-HNS, native versioning; final region and account unverified",
   "admitted_for_live_run": false,
   "missing_admission_evidence": [
     "Confirmed project/account and billing eligibility",
@@ -16,17 +20,20 @@
   ],
   "budget": {
     "maximum_synthetic_uploaded_payload_bytes": 1048576,
-    "planned_class_a_operations_max": 200,
-    "planned_class_b_operations_max": 1000,
+    "planned_mutating_or_list_operations_max": 200,
+    "planned_read_operations_max": 1000,
+    "provider_meter_classes_must_be_verified": true,
     "budget_is_not_a_cloud_billing_cap": true,
     "paid_annual_commitment": false
   },
   "required_executed_gates": [
-    "raw_create_only_lock_and_conflict",
+    "native_exclusive_acquisition_and_conflict",
     "wrong_owner_or_generation_refused",
     "two_real_engine_exclusion",
     "normal_owner_release_and_next_writer",
     "known_owner_crash_and_lost_response_inspection",
+    "azure_cold_start_and_orphan_lease_recovery",
+    "stale_writer_state_write_refusal_and_old_process_isolation",
     "historical_version_recovery_without_current_overwrite",
     "client_encryption_and_provider_at_rest_and_verified_tls",
     "independent_b2_archive_cipher_export_and_readback",
@@ -36,6 +43,9 @@
     "least_privilege_and_archive_separation",
     "residual_lock_version_cost_and_custody_closeout"
   ],
+  "research_is_not_a_live_benchmark": true,
+  "state_write_fencing_does_not_fence_resource_provider_actions": true,
+  "larger_performance_screen_requires_separate_scope_and_budget": true,
   "prohibitions": [
     "No production state inspection, migration, import or apply",
     "No local-backend apply or -lock=false",

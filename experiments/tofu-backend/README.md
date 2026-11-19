@@ -98,16 +98,25 @@ entries are in its separate encrypted feature branch.
 
 ## Primary-operated entry points
 
-The next-candidate comparison now prefers native GCS (generation-guarded
-locking and native history) with AWS S3 native locking as fallback. GitLab.com
-is an option if suitable existing access is available; R2 is deferred on the
-native historical-version gap. See the
+Role-specific research now prefers Azure Standard Hot ZRS for the first native
+qualification, with GCS next and AWS S3 Standard as the native S3 reference.
+The pinned Azure client attaches the lease ID to state writes; its infinite
+lease, empty-blob initialization and orphan recovery require real tests.
+GCS's generation-checked unlock does not fence state writes. This supersedes
+the preliminary GCS-first cost-based order. Public benchmarks do not measure
+the RBX state/lock workload from its actual client paths and cannot establish
+a local latency winner. GitLab.com remains an access-dependent option and R2
+is deferred on native history. See the
 [pending contract](next-candidate-contract.json) and the detailed comparison
-in private resilience PR13. These are public-research/preparation results;
+and role-specific research in private resilience PR13. These are research and
+preparation results;
 no alternative-provider account, fixture or successful live qualification has
 been created. Actual account/billing, scoped identity and independent custody
 must be verified before provider mutation. The browser runtime was unavailable
-and no candidate credentials were found in local/ThinkCentre metadata checks.
+and prior candidate metadata checks did not establish authenticated access.
+The initial qualification budget remains <=1MiB, 200 mutating/list operations
+and 1,000 read operations. It provides only small-sample timings, not a
+defensible p99; a larger performance study needs a separate reviewed budget.
 
 The ClouDNS Premium M quarter is already separately contracted for secondary
 DNS. It does not replace state locking or encrypted object recovery.
