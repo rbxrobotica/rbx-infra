@@ -190,6 +190,7 @@ def main():
         args.output.write_text(json.dumps(report,indent=2)+'\n')
     else:report=run(args)
     print(json.dumps({k:report[k] for k in ('run_id','setup_complete','completed','qualification_passed','gates','failures') if k in report},sort_keys=True))
+    if args.stage=='run' and not report['qualification_passed']:raise SystemExit(2)
 
 
 if __name__=='__main__':

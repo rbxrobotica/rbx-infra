@@ -55,3 +55,71 @@ Official sources:
 - https://github.com/opentofu/opentofu/releases/tag/v1.13.9
 - https://www.backblaze.com/apidocs/s3-put-object
 - https://www.backblaze.com/apidocs/s3-delete-object
+
+## Executed disposition: November 19, 2026
+
+**The tested B2 endpoint/configuration is rejected as an active backend.**
+OpenTofu1.13.9 initialized two independent S3 backend directories, but the
+synthetic apply and two concurrent native plans failed acquiring the lock.
+The required conditional PUT closed the connection, including an independent
+Content-MD5 probe. No native state version was written. This is an observation
+about this pinned combination, not a claim that all B2 configurations or future
+versions are unsupported. Never work around it with `-lock=false`.
+
+The separate loopback HTTPS control passed nine gates, including contention,
+wrong-owner refusal, ordinary release/reacquisition and read-only encrypted
+artifact validation after shutting down the server. It is an in-memory test
+double, never a deployed or selected production backend.
+
+Nineteen passive-storage gates then passed for actual engine-encrypted
+artifacts: distinct B2 versions, old-version retrieval, AES256 server-side
+encryption, separate one-day Compliance copies, denied unrelated prefix/bucket
+access and version deletion, ThinkCentre encrypted copy/readback, successful
+read-only recovery of both generations, and rejection of wrong/missing keys,
+corruption and untrusted manifests. Unavailable/denied backends stopped safely
+without a root/emergency state file. These capabilities do not repair native
+lock acquisition or qualify real-state migration.
+
+Retained S3 uploads need an explicit integrity checksum. Failed attempts are
+preserved separately; checksummed archive PUT succeeded while the conditional
+mutable-bucket PUT still failed. The S3 checksum requirement is described in
+the [official Object Lock documentation](https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock-managing.html).
+Two one-day, single-bucket probe identities were added after the archive
+transport investigation. There are six lab identities total (four original,
+two probes); mutable runtime credentials remain unchanged and never receive
+administrative or version-deletion capabilities.
+
+Source: infra PR413, stacked on draft PR394. Detailed sanitized receipts and
+the independent assessment are in the private resilience companion PR, stacked
+on draft PR11. No original state payload, plan, credential or encryption key
+is committed. The original password-store worktree remains untouched; new lab
+entries are in its separate encrypted feature branch.
+
+## Primary-operated entry points
+
+Run offline guards without network or credentials:
+
+```sh
+python3 -B -m unittest discover -s experiments/tofu-backend -p 'test_*.py'
+```
+
+The live entry points are `qualify.py setup|run`, `storage_controls.py
+control|storage`, `probe_setup.py` and `checksum_probe.py`. Use a reviewed
+preflight, pinned binary, existing verified SDK directory and a new evidence
+receipt filename. Run engine invocations through `rbx-build-cache run --` for
+the disposable tool cache lease; state, custody and evidence stay on primary.
+
+The storage stage requires the exact successful control receipt and SHA256,
+verifies it against the pushed `origin/codex/synthetic-tofu-backend-20261119`
+receipt, and checks exact owned cipher paths/hashes before any upload. It does
+not initialize or apply a local backend. Recovery uses `tofu show -json` on an
+explicit encrypted artifact with cloud credentials absent; output stays in RAM
+and only classifications/digests/expected-generation matches enter receipts.
+
+Do not rerun or overwrite a completed attempt blindly. Existing identities,
+object histories, local TLS material or the fixed ThinkCentre task directory
+cause a stop requiring review. Failed attempts remain failures. The declared
+payload budget is <=1MiB for all attempts; the executed closeout retained
+9,979 payload bytes. No cleanup/lifecycle/paid-plan change was performed. Lab
+identities expire after one or seven days; snapshot retention is a one-day
+test policy, not a production retention choice.
