@@ -1,0 +1,73 @@
+{
+  "type": "proposed native backend qualification contract, not an execution receipt",
+  "date": "2026-11-20",
+  "primary_candidate": "infomaniak-native-ceph-gva2",
+  "fallback_candidate": "azure-blob-native-azurerm-hot-zrs",
+  "reference_candidate": "aws-s3-native-use-lockfile",
+  "selection_basis": "Owner selected Infomaniak for next synthetic pilot and Azure comparison; Azure state-write fencing remains a documented distinction, not a live result",
+  "engine_version": "1.13.9",
+  "engine_sha256": "9ce9173bf161f6466ef57dab7edebe8f55089fdf81caa967415323c25d004990",
+  "proposed_primary_region": "gva2",
+  "price_reference_region": "gva2 for Infomaniak; eastus for dated Azure model",
+  "storage_profile": "Dedicated synthetic Keystone project and native Ceph S3 bucket; versioning, SSE-C plus engine AES-GCM; no real state",
+  "admitted_for_live_run": false,
+  "missing_admission_evidence": [
+    "Completed official Public Cloud activation with reviewed billing and terms",
+    "Actual dedicated empty synthetic project and provider-attested tenant/key ownership",
+    "Actual isolated bucket, prefix, versioning and private access",
+    "Independent encrypted project-only S3 credential and encryption-key custody checkpoint",
+    "Completed reviewed setup/run/recovery entry points; SDK provenance and backend metadata validation",
+    "Target-specific negative diagnostics; timeouts cannot satisfy negative gates"
+  ],
+  "budget": {
+    "maximum_synthetic_uploaded_payload_bytes": 1048576,
+    "planned_mutating_or_list_operations_max": 200,
+    "planned_read_operations_max": 1000,
+    "provider_meter_classes_must_be_verified": true,
+    "budget_is_not_a_cloud_billing_cap": true,
+    "paid_annual_commitment": false
+  },
+  "required_executed_gates": [
+    "native_exclusive_acquisition_and_conflict",
+    "wrong_owner_or_generation_refused",
+    "two_real_engine_exclusion",
+    "normal_owner_release_and_next_writer",
+    "known_owner_crash_and_lost_response_inspection",
+    "stale_writer_state_write_refusal_and_old_process_isolation",
+    "historical_version_recovery_without_current_overwrite",
+    "client_encryption_and_provider_at_rest_and_verified_tls",
+    "independent_b2_archive_cipher_export_and_readback",
+    "isolated_recovery_without_active_backend_credentials",
+    "wrong_or_missing_key_corruption_and_manifest_rejected",
+    "denied_and_unavailable_backend_fail_closed",
+    "least_privilege_and_archive_separation",
+    "residual_lock_version_cost_and_custody_closeout",
+    "provider_specific_cold_start_crash_owner_and_stale_writer_semantics"
+  ],
+  "research_is_not_a_live_benchmark": true,
+  "state_write_fencing_does_not_fence_resource_provider_actions": true,
+  "larger_performance_screen_requires_separate_scope_and_budget": true,
+  "prohibitions": [
+    "No production state inspection, migration, import or apply",
+    "No local-backend apply or -lock=false",
+    "No unknown-owner force unlock",
+    "No automatic alternate-writer promotion",
+    "No secret, state payload or sensitive plan in Git or logs",
+    "No production qualification inferred from docs or local HTTPS control"
+  ],
+  "live_qualification_passed": false,
+  "real_states_migrated": false,
+  "private_evidence_pr": "https://github.com/rbxrobotica/rbx-resilience/pull/13",
+  "comparison_candidate": "azure-blob-native-azurerm-hot-zrs",
+  "next_after_comparison": "gcs-native",
+  "access_blocker": "Existing account logged in; Public Cloud activation requires outbound international ringing-call verification; owner phone restricts it",
+  "support_ticket": "INK-ETZ-65788-492",
+  "production_admitted": false,
+  "provider_specific_constraints": [
+    "Same-tenant keys share bucket ownership; SDK restrictions are not server IAM",
+    "Native gva endpoints only; legacy Swift excluded",
+    "SSE-C is documented tested; do not assume SSE-S3 support",
+    "SDK counters do not meter engine requests or impose a billing cap",
+    "Azure lease/cold-start tests apply only to the Azure comparison; do not infer execution"
+  ]
+}
