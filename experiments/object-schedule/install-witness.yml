@@ -1,0 +1,45 @@
+---
+- name: Install only independent C008 archive verification
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Require the reviewed witness-only release
+      ansible.builtin.assert:
+        that: [witness_stage is defined, wrapped_credentials is defined]
+    - name: Declare protected witness locations
+      ansible.builtin.file:
+        path: '{{ item.path }}'
+        state: directory
+        owner: root
+        group: root
+        mode: '{{ item.mode }}'
+      loop:
+        - {path: /opt/rbx-memory-witness, mode: '0755'}
+        - {path: /etc/credstore.encrypted, mode: '0700'}
+    - name: Copy public witness code and configuration only
+      ansible.builtin.copy:
+        src: '{{ witness_stage }}/files/'
+        dest: /opt/rbx-memory-witness/
+        owner: root
+        group: root
+        mode: '0444'
+        directory_mode: '0755'
+    - name: Copy only host-wrapped archive reader and ping
+      ansible.builtin.copy:
+        src: '{{ wrapped_credentials }}/{{ item }}.encrypted'
+        dest: '/etc/credstore.encrypted/rbx-memory-{{ item }}'
+        owner: root
+        group: root
+        mode: '0600'
+      loop: [verifier, witness-ping]
+      no_log: true
+    - name: Declare only the witness service and timer
+      ansible.builtin.copy:
+        src: '{{ witness_stage }}/{{ item }}'
+        dest: '/etc/systemd/system/rbx-memory-{{ item }}'
+        owner: root
+        group: root
+        mode: '0644'
+      loop: [witness.service, witness.timer]

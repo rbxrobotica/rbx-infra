@@ -121,7 +121,7 @@ class B2:
         self.bucket_id = bucket_id
 
     def api(self, name, payload):
-        if name not in ('b2_get_upload_url', 'b2_list_file_names', 'b2_get_file_info'):
+        if name not in ('b2_get_upload_url', 'b2_list_file_names', 'b2_list_file_versions', 'b2_get_file_info'):
             raise ValueError('unexpected_runtime_operation')
         return b2_access.request(self.base + '/b2api/v4/' + name, self.token, payload)
 
