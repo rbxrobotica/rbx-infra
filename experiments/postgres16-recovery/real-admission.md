@@ -111,3 +111,29 @@ in the clean key-recovery challenge first. Approve the capture envelope only
 after those outcomes, data classification, storage/target checks and the
 executable capture harness have been recorded. There is no active capture
 authorization in this proposal.
+
+## Dedicated B2 destination checkpoint, 2026-11-20
+
+The dedicated private US East bucket was created with Object Lock. B2
+readback verified SSE-B2 AES256, a seven-day default Compliance period and
+no lifecycle deletion rules. Two 30-day application keys authorized with
+exact bucket and prefix restrictions: the writer has `writeFiles`; the
+verifier has `listFiles`, `readFiles` and `readFileRetentions`. The destination
+locator, separate keys and canary version were preserved in the private
+encrypted credential remote and compared after a fresh checkout. No admin
+credential is used by the verifier.
+
+One 46-byte synthetic object was uploaded under the pilot prefix. A second
+process authorized only as the verifier, listed all versions under that
+prefix and retrieved the single exact version. Its size, SHA-256, SSE-B2 and
+Compliance expiry matched the trusted receipt. Anonymous retrieval and an
+upload-grant request as the verifier both returned HTTP 401. The canary has
+seven days of Compliance retention and 14 days of manual review retention.
+The provider was not asked to delete the locked canary.
+
+See the [evidence PR](https://github.com/rbxrobotica/rbx-resilience/pull/12)
+for the receipts. This checkpoint closes dedicated destination preparation and
+the synthetic storage check. Before real capture, repeat identity, scope,
+policy and freshness checks. The owner-assisted recovery key challenge,
+database classification and objectives, target/harness qualification and
+explicit capture authorization are still required.
