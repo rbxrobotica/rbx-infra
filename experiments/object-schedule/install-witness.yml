@@ -17,15 +17,31 @@
         mode: '{{ item.mode }}'
       loop:
         - {path: /opt/rbx-memory-witness, mode: '0755'}
-        - {path: /etc/credstore.encrypted, mode: '0700'}
+    - name: Inspect shared encrypted credential directory without changing it
+      ansible.builtin.stat:
+        path: /etc/credstore.encrypted
+        follow: false
+      register: shared_credstore
+    - name: Require existing shared directory protection
+      ansible.builtin.assert:
+        that:
+          - not shared_credstore.stat.exists or (shared_credstore.stat.isdir and shared_credstore.stat.uid == 0 and shared_credstore.stat.mode == '0700')
+    - name: Create shared credential directory only if absent
+      ansible.builtin.file:
+        path: /etc/credstore.encrypted
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+      when: not shared_credstore.stat.exists
     - name: Copy public witness code and configuration only
       ansible.builtin.copy:
-        src: '{{ witness_stage }}/files/'
-        dest: /opt/rbx-memory-witness/
+        src: '{{ witness_stage }}/files/{{ item }}'
+        dest: '/opt/rbx-memory-witness/{{ item }}'
         owner: root
         group: root
         mode: '0444'
-        directory_mode: '0755'
+      loop: '{{ witness_public_files }}'
     - name: Copy only host-wrapped archive reader and ping
       ansible.builtin.copy:
         src: '{{ wrapped_credentials }}/{{ item }}.encrypted'

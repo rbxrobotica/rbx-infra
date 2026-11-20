@@ -259,6 +259,9 @@ def main():
             report = capture(client, root, args.release, now)
         else:
             report = witness(client, base64.b64decode(load(args.release / 'workload-public.txt')), now)
+            expected=config.get('initial_expected_run_id')
+            if expected and not (args.state_dir/'last-success.json').exists() and report['run_id']!=expected:
+                raise ValueError('initial_witness_requires_qualified_run')
         report['finished_utc'] = dt.datetime.now(dt.timezone.utc).isoformat()
         args.state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         target = args.state_dir / 'last-success.json'
