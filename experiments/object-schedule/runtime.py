@@ -121,7 +121,7 @@ class B2:
         self.bucket_id = bucket_id
 
     def api(self, name, payload):
-        if name not in ('b2_get_upload_url', 'b2_list_file_names', 'b2_get_file_info'):
+        if name not in ('b2_get_upload_url', 'b2_list_file_names', 'b2_list_file_versions', 'b2_get_file_info'):
             raise ValueError('unexpected_runtime_operation')
         return b2_access.request(self.base + '/b2api/v4/' + name, self.token, payload)
 
@@ -259,6 +259,9 @@ def main():
             report = capture(client, root, args.release, now)
         else:
             report = witness(client, base64.b64decode(load(args.release / 'workload-public.txt')), now)
+            expected=config.get('initial_expected_run_id')
+            if expected and not (args.state_dir/'last-success.json').exists() and report['run_id']!=expected:
+                raise ValueError('initial_witness_requires_qualified_run')
         report['finished_utc'] = dt.datetime.now(dt.timezone.utc).isoformat()
         args.state_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
         target = args.state_dir / 'last-success.json'
