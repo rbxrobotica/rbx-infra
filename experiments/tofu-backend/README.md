@@ -98,8 +98,29 @@ entries are in its separate encrypted feature branch.
 
 ## Primary-operated entry points
 
-Role-specific research now prefers Azure Standard Hot ZRS for the first native
-qualification, with GCS next and AWS S3 Standard as the native S3 reference.
+On 2026-11-20 the owner selected Infomaniak for the next synthetic qualification,
+with Azure Standard Hot ZRS as the comparison. This changes the test order;
+it does not overturn the Azure state-write fencing finding below. Infomaniak
+login succeeded, but Public Cloud activation is blocked at outbound telephone
+verification. The shop offered international ringing-call destinations and no
+Brazilian destination. No product order, cloud project, bucket, key or charge
+was completed. The owner-authorized support question was sent through the
+official support center as ticket `INK-ETZ-65788-492`; a response is pending.
+
+`infomaniak.py` is a separate guarded adapter for native Ceph endpoints in
+`gva1`/`gva2`. Its backend configuration enables native lock files and SSE-C;
+the engine also enforces its own AES-GCM state and plan encryption. The
+adapter does not admit legacy Swift endpoints or reuse the B2 binding.
+Infomaniak documents shared ownership for all identities in one tenant:
+a dedicated synthetic project is required, and separate keys in that project
+must not be described as independently restricted reader/writer identities.
+Only offline guards and offline SDK SSE-C serialization have been exercised.
+There is no completed Infomaniak setup/qualification/recovery runner or live
+receipt yet. Do not invoke this adapter until the actual tenant, scoped
+custody, setup diff and live admission have been reviewed and checkpointed.
+
+The preceding role-specific research preferred Azure Standard Hot ZRS,
+with GCS next and AWS S3 Standard as the native S3 reference.
 The pinned Azure client attaches the lease ID to state writes; its infinite
 lease, empty-blob initialization and orphan recovery require real tests.
 GCS's generation-checked unlock does not fence state writes. This supersedes
@@ -110,10 +131,12 @@ is deferred on native history. See the
 [pending contract](next-candidate-contract.json) and the detailed comparison
 and role-specific research in private resilience PR13. These are research and
 preparation results;
-no alternative-provider account, fixture or successful live qualification has
-been created. Actual account/billing, scoped identity and independent custody
-must be verified before provider mutation. The browser runtime was unavailable
-and prior candidate metadata checks did not establish authenticated access.
+no alternative-provider fixture or successful live qualification has been
+created. Actual account/billing, scoped identity and independent custody
+must be verified before provider mutation. Prior browser failure was resolved
+with a local workspace-path compatibility symlink; it is no longer the access
+blocker. Detailed Infomaniak findings and sanitized receipts are in private
+resilience PR13 under the 2026-11-20 experiment and evidence paths.
 The initial qualification budget remains <=1MiB, 200 mutating/list operations
 and 1,000 read operations. It provides only small-sample timings, not a
 defensible p99; a larger performance study needs a separate reviewed budget.

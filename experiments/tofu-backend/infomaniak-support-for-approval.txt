@@ -1,0 +1,14 @@
+Subject: Public Cloud activation: alternative to outbound international phone verification
+
+Hello Infomaniak Support,
+
+I am trying to activate Public Cloud for RBX SYSTEMS using my existing Infomaniak account from Brazil.
+
+After entering my Brazilian mobile number, the activation screen asks me to call a verification number so that the ringing can be detected. The country selector offers European and North American destinations, but no Brazilian destination. Outbound international calls are restricted on my phone, so I cannot complete this method.
+
+Can you offer SMS verification, a Brazilian verification number, or another official identity-verification procedure that does not require an outbound international call? Please provide the exact secure steps applicable to this Public Cloud activation.
+
+This request does not authorize you to disable account security, grant access to service contents, place an order, change billing, or activate any paid resources.
+
+Thank you,
+Leandro / RBX SYSTEMS
