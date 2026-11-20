@@ -137,3 +137,25 @@ the synthetic storage check. Before real capture, repeat identity, scope,
 policy and freshness checks. The owner-assisted recovery key challenge,
 database classification and objectives, target/harness qualification and
 explicit capture authorization are still required.
+
+## Owner-assisted USB key recovery checkpoint, 2026-11-20
+
+The operator closed a pilot-specific OpenPGP AES-256 kit using the existing
+key copy on the source workstation and a separate outer passphrase entered
+locally on ThinkCentre. Only the closed envelope was copied to the existing
+USB data partition. The host then reopened it from the read-only USB inside
+a network-isolated sandbox with an isolated tmpfs keyring and agent and the
+operational credential directories masked. The operator unlocked both
+layers through local prompts. The imported copy matched the intended
+certificate, decrypted the harmless canary and matched its expected size,
+SHA-256 and GnuPG integrity status. The isolated keyring was removed.
+
+The USB kit contains the protected key copy, public certificate, encrypted
+canary and its manifest. The private encrypted B2 access entries remain in
+their existing separate custody. Store the USB disconnected and keep the
+outer unlock factor separate. This validates the selected key with the owner
+present. Before capture, confirm that the encryption recipient is the exact
+subkey proved by this canary, and confirm authorized access to the B2 verifier
+and account recovery. Database classification and objectives, target/harness
+qualification and explicit capture authorization remain open. See
+[resilience PR 12](https://github.com/rbxrobotica/rbx-resilience/pull/12).
