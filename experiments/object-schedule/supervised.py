@@ -74,7 +74,8 @@ def plan(custody):
     source=custody['source']
     expected={'source_bucket':'rbx-memory','source_endpoint':'https://eu2.contabostorage.com',
       'source_region':'default','source_access_ref':'rbx/s3/access-key','source_secret_ref':'rbx/s3/secret-key'}
-    if custody.get('dataset_id')!='C008' or source!=expected:
+    # Existing custody names the original capture; C008 is the governed corpus.
+    if custody.get('dataset_id')!='rbx-memory-documents-first-capture' or source!=expected:
         raise ValueError('supervised_source_mapping_drift')
     return {**source,'dataset_id':'C008','max_objects':100,'minimum_expected_objects':31,
       'max_object_bytes':524288,'max_total_bytes':4194304,
