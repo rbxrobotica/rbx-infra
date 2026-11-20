@@ -1,0 +1,2 @@
+CREATE ROLE lab_owner NOLOGIN;
+CREATE ROLE lab_reader LOGIN;
