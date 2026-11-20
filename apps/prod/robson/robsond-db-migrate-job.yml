@@ -46,6 +46,11 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
       restartPolicy: OnFailure
+      # Migration 38 recovery (2026-11-20): bounded migrations need every
+      # round trip under 20 ms. Measured from tiger, 8% exceeded 40 ms; altaica
+      # stayed under 16 ms. Operator-authorized pin to altaica.
+      nodeSelector:
+        kubernetes.io/hostname: altaica
 
       containers:
       - name: db-migrate
@@ -87,5 +92,7 @@ spec:
             cpu: "100m"
             memory: "64Mi"
           limits:
-            cpu: "250m"
+            # Request stays 100m so it fits altaica; the limit removes CPU
+            # throttling as a cause of client-side gaps in the bounded apply.
+            cpu: "1000m"
             memory: "128Mi"
