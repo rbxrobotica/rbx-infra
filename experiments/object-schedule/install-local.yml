@@ -1,0 +1,45 @@
+---
+- name: Install only the qualified memory capture and witness
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  become: false
+  tasks:
+    - name: Require an explicit reviewed release and wrapped material
+      ansible.builtin.assert:
+        that: [public_stage is defined, wrapped_credentials is defined]
+    - name: Declare immutable release and protected credential directory
+      ansible.builtin.file:
+        path: '{{ item.path }}'
+        state: directory
+        owner: root
+        group: root
+        mode: '{{ item.mode }}'
+      loop:
+        - {path: /opt/rbx-memory-backup, mode: '0755'}
+        - {path: /etc/credstore.encrypted, mode: '0700'}
+    - name: Install only public code, dependencies, config and encryption recipient
+      ansible.builtin.copy:
+        src: '{{ public_stage }}/local/'
+        dest: /opt/rbx-memory-backup/
+        owner: root
+        group: root
+        mode: '0444'
+        directory_mode: '0755'
+    - name: Install only host-wrapped service-specific credentials
+      ansible.builtin.copy:
+        src: '{{ wrapped_credentials }}/{{ item }}.encrypted'
+        dest: '/etc/credstore.encrypted/rbx-memory-{{ item }}'
+        owner: root
+        group: root
+        mode: '0600'
+      loop: [source, writer, verifier, signer, capture-ping, witness-ping]
+      no_log: true
+    - name: Declare only the two new services and timers
+      ansible.builtin.copy:
+        src: '{{ playbook_dir }}/{{ item }}'
+        dest: '/etc/systemd/system/rbx-memory-{{ item }}'
+        owner: root
+        group: root
+        mode: '0644'
+      loop: [capture.service, witness.service, capture.timer, witness.timer]

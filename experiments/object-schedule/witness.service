@@ -1,0 +1,33 @@
+[Unit]
+Description=Verify RBX memory ciphertext readback, age, signature and retention
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+User=rbx-memory-witness
+ExecStart=/usr/bin/python3 -B /opt/rbx-memory-backup/runtime.py witness --release /opt/rbx-memory-backup --state-dir /var/lib/rbx-memory-witness
+LoadCredentialEncrypted=b2:/etc/credstore.encrypted/rbx-memory-verifier
+LoadCredentialEncrypted=healthchecks:/etc/credstore.encrypted/rbx-memory-witness-ping
+StateDirectory=rbx-memory-witness
+StateDirectoryMode=0700
+UMask=0077
+LimitCORE=0
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+MemoryMax=256M
+MemorySwapMax=0
+CPUQuota=20%
+TasksMax=16
+TimeoutStartSec=180

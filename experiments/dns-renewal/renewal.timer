@@ -1,0 +1,13 @@
+[Unit]
+Description=Check RBX lab signature renewal every hour
+
+[Timer]
+OnBootSec=120s
+OnCalendar=hourly
+Persistent=yes
+AccuracySec=15s
+RandomizedDelaySec=30s
+Unit=rbx-dns-pilot-renewal.service
+
+[Install]
+WantedBy=timers.target

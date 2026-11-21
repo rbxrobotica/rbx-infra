@@ -1,0 +1,16 @@
+{
+  "source": "Read-only November 11 inventory; DNSSEC intent is a historical requirement, not inferred from today's DS presence",
+  "current_authority_names": ["ns1.rbxsystems.ch.", "ns2.rbxsystems.ch."],
+  "zones": {
+    "initelo.com.": true,
+    "iteruno.com.": true,
+    "kulinaryos.com.": false,
+    "merovelis.com.": false,
+    "rbx.ia.br.": false,
+    "rbxsystems.ch.": false,
+    "satwake.com.": true,
+    "strategos.gr.": false,
+    "verentir.com.": true,
+    "zugbrief.com.": true
+  }
+}

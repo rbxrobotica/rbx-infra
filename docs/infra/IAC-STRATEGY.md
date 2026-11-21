@@ -125,6 +125,10 @@ No Ansible changes required for DNS record additions.
 
 ## State file
 
-Terraform state is stored locally (`terraform.tfstate`, gitignored). This is
-acceptable for single-operator use. If the infrastructure is ever managed by multiple
-people, migrate the backend to S3 or Terraform Cloud before proceeding.
+The current DNS configuration still declares local state (`terraform.tfstate`,
+gitignored). This is an observed legacy condition, not an accepted production
+custody policy. The mandatory state/backup/recovery gate requires a qualified
+remote backend, exclusive locking, versioned recovery and tested restoration
+before further production changes, including single-operator operation.
+Follow [DNS state custody](../runbooks/DNS-STATE-CUSTODY.md); never migrate,
+merge, overwrite or force-unlock a discovered state as an incidental repair.

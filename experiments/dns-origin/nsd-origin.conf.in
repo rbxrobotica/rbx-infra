@@ -1,0 +1,24 @@
+server:
+    ip-address: 161.97.147.76@53
+    do-ip6: no
+    server-count: 1
+    hide-version: yes
+    identity: "rbx-synthetic-origin"
+    username: ""
+    chroot: ""
+    zonesdir: "/var/cache/rbx-dns-origin-source"
+    zonelistfile: ""
+    pidfile: "/run/rbx-dns-origin-state/nsd.pid"
+    xfrdfile: "/run/rbx-dns-origin-state/xfrd.state"
+    xfrdir: "/run/rbx-dns-origin-state"
+    logfile: ""
+    verbosity: 1
+    refuse-any: yes
+    minimal-responses: yes
+remote-control:
+    control-enable: no
+zone:
+    name: cloudns-xfr-pilot.rbxsystems.ch
+    zonefile: origin.zone
+    # Replace with exact observed provider IPs; no network-wide transfer ACL.
+<provider-zone-transfer-acl>

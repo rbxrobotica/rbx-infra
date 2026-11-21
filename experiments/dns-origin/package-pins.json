@@ -1,0 +1,59 @@
+{
+  "source": "Official Ubuntu noble/noble-updates APT packages; download only, no host package installation",
+  "packages": [
+    {
+      "metadata": [
+        "Package: libevent-2.1-7t64",
+        "Version: 2.1.12-stable-9ubuntu2.2"
+      ],
+      "filename": "libevent-2.1-7t64_2.1.12-stable-9ubuntu2.2_amd64.deb",
+      "sha256": "083ced6efb23476cb4de4e441b741af02db5653e67fa7fcd6cf7e5f7b78f6101",
+      "size": 145930
+    },
+    {
+      "metadata": [
+        "Package: libfstrm0",
+        "Version: 0.6.1-1build4"
+      ],
+      "filename": "libfstrm0_0.6.1-1build4_amd64.deb",
+      "sha256": "e354a994de9c70cb00097ccd99a268571c6922d9dce3719101c2ab76f1fb3be8",
+      "size": 20978
+    },
+    {
+      "metadata": [
+        "Package: libhiredis1.1.0",
+        "Version: 1.2.0-6ubuntu3"
+      ],
+      "filename": "libhiredis1.1.0_1.2.0-6ubuntu3_amd64.deb",
+      "sha256": "912a25553f29a47d1524c0b58a3c5bff2d067109da2adae9fa9c4fb15efaa568",
+      "size": 41380
+    },
+    {
+      "metadata": [
+        "Package: libprotobuf-c1",
+        "Version: 1.4.1-1ubuntu4"
+      ],
+      "filename": "libprotobuf-c1_1.4.1-1ubuntu4_amd64.deb",
+      "sha256": "577b713651a61e82226e46c9c9e3c23cd16df9ee3c2b27b22b49c5abb2ef8f61",
+      "size": 20790
+    },
+    {
+      "metadata": [
+        "Package: nsd",
+        "Version: 4.8.0-1build3"
+      ],
+      "filename": "nsd_4.8.0-1build3_amd64.deb",
+      "sha256": "faf353ce2481a3a38b2a892645323dcc562a38bbdd5d6215a12858f983942647",
+      "size": 472732
+    },
+    {
+      "metadata": [
+        "Package: unbound",
+        "Version: 1.19.2-1ubuntu3.12"
+      ],
+      "filename": "unbound_1.19.2-1ubuntu3.12_amd64.deb",
+      "sha256": "b6e58bf5976b08db28876a9d7d6c2de546f4f14354f14ecdf93b7d932257e305",
+      "size": 962274
+    }
+  ]
+}

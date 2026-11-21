@@ -1,0 +1,37 @@
+[Unit]
+Description=Capture only RBX memory documents into the protected B2 archive
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+User=rbx-memory-capture
+ExecStart=/usr/bin/python3 -B /opt/rbx-memory-backup/runtime.py capture --release /opt/rbx-memory-backup --state-dir /var/lib/rbx-memory-capture
+Environment=PYTHONPATH=/opt/rbx-memory-backup/deps
+Environment=AWS_EC2_METADATA_DISABLED=true
+LoadCredentialEncrypted=source:/etc/credstore.encrypted/rbx-memory-source
+LoadCredentialEncrypted=b2:/etc/credstore.encrypted/rbx-memory-writer
+LoadCredentialEncrypted=signer:/etc/credstore.encrypted/rbx-memory-signer
+LoadCredentialEncrypted=healthchecks:/etc/credstore.encrypted/rbx-memory-capture-ping
+StateDirectory=rbx-memory-capture
+StateDirectoryMode=0700
+UMask=0077
+LimitCORE=0
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+MemoryMax=384M
+MemorySwapMax=0
+CPUQuota=40%
+TasksMax=32
+TimeoutStartSec=600
