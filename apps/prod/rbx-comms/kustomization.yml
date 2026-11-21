@@ -32,8 +32,8 @@ labels:
 
 images:
   - name: ghcr.io/rbxrobotica/rbx-comms
-    newTag: sha-588d8fd
-    digest: sha256:ae3369b77d3f5779b864e6e82c3ee29dd9f1c58730bdc515d50d7d165c119f98
+    newTag: sha-c2e8556
+    digest: sha256:5442b1ed4ce9287d577b78f14f367ae20e486245756666fd471b89997470293b
   # Anonymous pull, exact-version archive download and isolated restore verified.
   - name: ghcr.io/rbxrobotica/comms-backup
     newTag: sha-a051b67
