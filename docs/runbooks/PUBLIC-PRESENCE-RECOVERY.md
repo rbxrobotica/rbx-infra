@@ -1,24 +1,25 @@
 # Public Presence recovery and first assisted cycle
 
-Checkpoint: 2026-11-14, America/Sao_Paulo. Scope is the Public Presence service
+Checkpoint: 2026-11-15, America/Sao_Paulo. Scope is the Public Presence service
 and one assisted institutional Merovelis Systems LinkedIn cycle within 90 human
-minutes per week. No production migration, deployment, secret mutation,
-publication or receipt is claimed by this source checkpoint.
+minutes per week. The initial source checkpoint on November 14 made no production
+change. The controlled execution below reconstructs the held application's
+registry access. Database activation, publication and receipt remain pending.
 
 ## Observed state and ownership
 
 - Public Presence #21 is merged at `8643b56486cae9c3fed1e385d35d4cd912591a81`;
   FlightDeck #23 at `5387720d9401dca2838c712656511140b13bd62d`.
-- The latest Public Presence CI and image-build jobs passed. Its promotion job
-  failed after the images were published. The companion change removes the
-  protected-branch self-push and emits immutable pins for an infra PR instead.
+- Public Presence #22 is merged at `e394c539bdd6fee81ae38c9e63e189f4e1cc9773`;
+  its CI and image-publication workflow passed. The old promotion self-push
+  failure is replaced by immutable pins for a reviewed infra PR.
 - Authenticated read-only manifest requests returned HTTP 200 for both selected
   images. Their exact digests are pinned in the held overlay. No token was
   renewed or permission expanded.
-- The legacy migration still waits on image pull, with its API/web unavailable.
-  Restoring its missing pull Secret alone can release the old hook. Source
-  configuration now proposes a manual-sync hold, suspended migration and disabled
-  publication worker. These guards are not applied merely by committing them.
+- Initially the legacy migration waited on image pull, with API/web unavailable.
+  Restoring its missing pull Secret alone could release the old hook. The merged
+  source declares manual sync, suspended migration and disabled publication
+  worker. The execution below reconciles the hold before credential recovery.
 - The current `rbx-presence` source bucket listed zero objects and zero bytes,
   with no truncation in the current-object listing; historical versions were
   not enumerated. The first pilot is text only. Recheck before activation;
@@ -31,6 +32,62 @@ publication or receipt is claimed by this source checkpoint.
 The encrypted GHCR credential matches its private password-store remote byte
 for byte. Registry access can reuse it. The exact source reference remains
 `rbx/cluster/ghcr-token`; credential values never belong in this runbook.
+
+## Executed held-access recovery, 2026-11-15
+
+The operator merged infra #399 as
+`3ec258863f8621b2bfba5e5058fac4eedc8bce96` and requested continuation. Its
+manifest verification and both backup-image build/scan/publication workflows
+passed. Published preservation tooling is not a production backup receipt.
+
+The [bounded preflight](evidence/public-presence-recovery-2026-11-15/held-access-preflight.json)
+was checkpointed remotely before execution. This phase reconstructs only
+Git/pass-derived control configuration and an ephemeral probe. It neither
+qualifies the separately owned GPG custody nor releases persistent application
+state without the actual external backup/restore handoff.
+
+The [live result](evidence/public-presence-recovery-2026-11-15/held-access-result.json)
+records:
+
+1. Selective root reconciliation of only `argocd/rbx-public-presence`, without
+   prune. The actual resolved revision matched the merged #399 commit. An initial
+   explicit-SHA sync was refused because the root follows `main` automatically;
+   canonical-main selective sync succeeded and its resolved SHA was verified.
+2. Manual sync on the child Application, termination of its old operation and
+   suspension of the migration before restoring registry access. ArgoCD later
+   removed the terminated hook. At final inspection the migration Job and its
+   pods were absent; the canonical migration manifest remains suspended.
+3. Dedicated Ansible check mode passed with zero changes. Execution reconstructed
+   only `rbx-public-presence/ghcr-pull-secret`, using the existing credential;
+   one change, no rotation and no credential values in output.
+4. Probe Job `rbx-public-presence-image-check-ww5mv` completed on node `tiger`
+   with exit 0 and exact API imageID
+   `sha256:d12b9b199b89c91eb2535b56d4c57a78260526bd0eca5a1a06746c4781c629ea`.
+   It used `Always` pull, no database credentials or service-account token, and
+   ran only `doctrine-check`. The probe has a 3,600-second post-completion TTL.
+
+This proves live API image access and runtime doctrine validation. Authenticated
+registry reads also returned 200 for the selected web manifest; a web deployment
+is not claimed. The service still has zero API/web Deployments, its public root
+returns HTTP 503, and its database still has zero application tables. No migration
+or publication worker was released.
+
+The [assisted-cycle readiness record](evidence/public-presence-recovery-2026-11-15/assisted-cycle-readiness.json)
+records renewed LinkedIn admin-surface access to organization `103949050`. Its
+remote label remains RBX Systems; the institution's owner-confirmed current name
+is Merovelis Systems. Five visible posts were checked, including the distinct
+September promotion of the source article. The new pilot draft was not seen in
+that bounded range; reconcile history again immediately before any publish.
+
+The frozen single-post hash remains unchanged. A read-only owner-scoped Flight
+Deck provisioning plan returned `operation: create`, `changed: false`, one
+90-minute shared ceiling and no Workstream ID yet. Owner references were resolved
+from the current allowlisted OWNER inventory and retained only as reproducible
+private metadata, without printing email or credential values. The source tool
+was the frozen #24 head; GitHub still reported that PR OPEN at inspection despite
+the operator's merge report. No real Workstream, approval, Action, publication
+receipt or retrospective was created by these checks. Actual human minutes
+remain unmeasured, not zero.
 
 ## 1. Hold the existing application before restoring registry access
 
@@ -163,16 +220,16 @@ archive, independent custody or a complete service RTO.
 ## Recovery report
 
 ```text
-State alterado: reproducible source, synthetic isolated tests and encrypted bootstrap cache; no production mutation
-Fonte de verdade: Public Presence migrations/doctrine, infra GitOps and controlled Ansible; real DB remains on jaguar
-Backend remoto: existing private repositories; external production backup destination owned by the other session, not qualified here
-Backup e última execução: encrypted empty-DB cache captured read-only; no external production backup verified
-Último restore testado: synthetic Public Presence/Comms passed; real bootstrap decryption failed NO_SECKEY, restore not started
-RPO/RTO: proposed 24h/4h, not a proven service objective
-IaC/commit: recovery feature branch and companion Public Presence PR; immutable image pins from the merged Public Presence #21
-Drift encontrado: absent pull Secret, stale migration image, running hook, no API/web; promotion self-push failure after successful build
-Estado local residual: reproducible worktrees/caches and encrypted bootstrap artifact; no plaintext production database or private key file on the host
-Riscos ou bloqueios: merge/reconcile the held overlay, integrate external backend/key handoff and pass the actual restore before releasing persistent publication state
+State alterado: held Application control configuration, terminated/suspended legacy hook, one namespaced pull Secret and one ephemeral doctrine-only probe; no application database mutation or publication
+Fonte de verdade: Public Presence migrations/doctrine, infra GitOps and controlled Ansible; real databases remain on jaguar
+Backend remoto: canonical Git repositories and private encrypted password store; external production backup remains with the other session, not qualified here
+Backup e última execução: previous encrypted empty-DB cache is not an external backup; no real external production backup verified
+Último restore testado: synthetic Public Presence/Comms passed; real bootstrap decryption failed NO_SECKEY; live configuration reconstruction/image pull now passed, not a data restore
+RPO/RTO: service targets proposed 24h/4h, no proven full-service recovery guarantee
+IaC/commit: executed merged infra #399 at 3ec258863f8621b2bfba5e5058fac4eedc8bce96; existing reviewed API/web digest pins retained
+Drift encontrado: registry access recovered and stale operation stopped; API/web still absent with HTTP 503, data migration held, real Journal Workstream absent and Flight Deck #24 observed OPEN
+Estado local residual: reproducible worktrees/caches, prior encrypted bootstrap artifact and privately cached owner-reference metadata; no new canonical local state or plaintext production database/key export
+Riscos ou bloqueios: qualify the other owner's external backup/restore handoff, confirm actual #24 merge, then reviewed service activation, owner-scoped provisioning, exact-version approval, publication receipt and retrospective
 ```
 
 Voice: R4 with R6 overlay, RBX Voice System v0.1. Authored with Codex.
