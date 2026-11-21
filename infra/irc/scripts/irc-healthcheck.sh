@@ -12,6 +12,44 @@ fail() { printf '[FAIL] %s\n' "$*"; failures=$((failures + 1)); }
 if command -v tmux >/dev/null 2>&1; then ok 'tmux installed'; else warn 'tmux not installed'; fi
 if command -v weechat >/dev/null 2>&1; then ok 'weechat installed'; else warn 'weechat not installed'; fi
 
+check_user_service() {
+    local unit="$1" label="$2"
+    if ! systemctl --user cat "$unit" >/dev/null 2>&1; then
+        warn "$label user service is not installed"
+    elif systemctl --user is-active --quiet "$unit"; then
+        ok "$label user service is active"
+    else
+        fail "$label user service is installed but inactive"
+    fi
+}
+
+check_user_service rbx-irc-tunnel.service 'IRC tunnel'
+check_user_service rbx-agent-irc.service 'agent mailbox'
+check_user_service rbx-irc-webchat.service 'private webchat'
+
+local_listeners="$(ss -ltnH 2>/dev/null || true)"
+webchat_lines="$(awk '$4 ~ /:9000$/ {print}' <<<"$local_listeners")"
+if [[ -n "$webchat_lines" ]]; then
+    if awk '{print $4}' <<<"$webchat_lines" | grep -Eq '^(0\.0\.0\.0|\*|\[::\]):'; then
+        fail 'webchat port 9000 is bound to a wildcard address'
+    elif grep -Eq '127\.0\.0\.1:9000([[:space:]]|$)' <<<"$webchat_lines"; then
+        ok 'webchat port 9000 is bound only to loopback'
+    else
+        fail 'webchat port 9000 is not bound to IPv4 loopback'
+    fi
+fi
+
+agent_cli="${HOME}/.local/share/rbx-agent-irc/venv/bin/rbx-agent-irc"
+agent_config="${HOME}/.config/rbx-agent-irc/agent.yaml"
+if [[ -x "$agent_cli" && -r "$agent_config" ]]; then
+    agent_status="$($agent_cli --config "$agent_config" status 2>/dev/null || true)"
+    if grep -Fq '"connected": true' <<<"$agent_status"; then
+        ok 'agent mailbox reports an authenticated IRC session'
+    else
+        fail 'agent mailbox service has no fresh authenticated heartbeat'
+    fi
+fi
+
 if [[ ! "$HOST" =~ ^[A-Za-z0-9._@:-]+$ ]]; then
     fail "invalid SSH host: ${HOST}"
 elif ! ssh -o BatchMode=yes -o ConnectTimeout=8 "$HOST" true >/dev/null 2>&1; then
@@ -53,7 +91,7 @@ check_file() {
             fail "$label is accessible to group/other users (mode $mode)"
         fi
     else
-        warn "$label is absent"
+        warn "$label is absent or unreadable by the SSH user"
     fi
 }
 
@@ -67,7 +105,7 @@ check_dir() {
             ok "$label permissions are restricted"
         fi
     else
-        warn "$label is absent"
+        warn "$label is absent or unreadable by the SSH user"
     fi
 }
 
@@ -81,6 +119,14 @@ if systemctl is-enabled --quiet strategos-irc-bot.service 2>/dev/null; then
     fi
 else
     warn 'Strategos IRC bot systemd service is not enabled'
+fi
+bot_source="$root/bots/strategos-irc-bot/app/src/strategos_irc_bot/bot.py"
+if [[ -r "$bot_source" ]]; then
+    if grep -Fq 'connection.settimeout(None)' "$bot_source"; then
+        ok 'deployed Strategos bot clears the connection deadline after connect'
+    else
+        fail 'deployed Strategos bot predates the post-connect timeout fix and reconnects approximately every 15 seconds'
+    fi
 fi
 check_file "$root/znc/.env" 'ZNC .env'
 check_file "$root/ergo/.env" 'Ergo .env'
