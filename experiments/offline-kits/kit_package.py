@@ -26,6 +26,22 @@ MAX_ARCHIVE = 128 * 1024 * 1024
 MAX_MEMBERS = 10000
 
 
+class GpgFailure(ValueError):
+    def __init__(self, statuses, returncode, numeric_errors=()):
+        super().__init__('gpg_operation_failed')
+        # Only fixed protocol keywords and a process return code; never status
+        # arguments, human diagnostics, key IDs, paths or decrypted output.
+        allowed = {'BAD_PASSPHRASE', 'MISSING_PASSPHRASE', 'DECRYPTION_FAILED',
+                   'BADMDC', 'NODATA', 'NO_SECKEY', 'ERROR', 'FAILURE', 'IMPORT_OK',
+                   'IMPORT_PROBLEM', 'DECRYPTION_OKAY', 'GOODMDC', 'END_DECRYPTION'}
+        self.diagnostic = {'status_tags': sorted(statuses & allowed), 'process_exit': returncode,
+                           'numeric_error_codes': sorted(set(numeric_errors))}
+
+
+def phase(name):
+    print(json.dumps({'phase': name}), flush=True)
+
+
 def digest(raw):
     return {'bytes': len(raw), 'sha256': hashlib.sha256(raw).hexdigest()}
 
@@ -178,7 +194,12 @@ def gpg(home, args, raw=None, phrase=None, ask=False, timeout=60):
     statuses = {x.split()[1].decode('ascii') for x in result.stderr.splitlines()
                 if x.startswith(b'[GNUPG:] ') and len(x.split()) >= 2}
     if result.returncode or statuses & {'BADMDC', 'DECRYPTION_FAILED', 'ERROR', 'FAILURE', 'NO_SECKEY'}:
-        raise ValueError('gpg_operation_failed')
+        errors = []
+        for line in result.stderr.splitlines():
+            match = re.fullmatch(rb'\[GNUPG:\] (?:ERROR|FAILURE) [A-Za-z0-9_.-]+ ([0-9]{1,10})', line)
+            if match and int(match[1]) < 2**32:
+                errors.append(int(match[1]))
+        raise GpgFailure(statuses, result.returncode, errors)
     if '--decrypt' in args and not {'DECRYPTION_OKAY', 'GOODMDC', 'END_DECRYPTION'} <= statuses:
         raise ValueError('authenticated_decryption_required')
     return result.stdout, statuses
@@ -301,6 +322,7 @@ def native_phrase():
 
 
 def restore(cipher_path, expected_hash):
+    phase('sandbox_preflight')
     memory_gate()
     if {x.split(':')[0].strip() for x in Path('/proc/net/dev').read_text().splitlines()[2:]} != {'lo'}:
         raise ValueError('networkless_sandbox_required')
@@ -310,21 +332,27 @@ def restore(cipher_path, expected_hash):
     if hashlib.sha256(cipher).hexdigest() != expected_hash:
         raise ValueError('ciphertext_digest_mismatch')
     started = time.monotonic()
+    phase('waiting_outer_unlock')
     phrase = native_phrase()
     with tempfile.TemporaryDirectory(dir='/dev/shm', prefix='rbx-restore-') as temp:
         root = Path(temp); home = root/'gpg'; home.mkdir(mode=0o700)
         try:
+            phase('authenticate_outer_archive')
             clear, _ = gpg(home, ['--output', '-', '--decrypt'], cipher, phrase)
             del phrase
             files, manifest = unpack(clear); del clear
             (home/'gpg-agent.conf').write_text('pinentry-program /usr/bin/pinentry-gnome3\nno-allow-external-cache\n')
             stop_agent(home)
+            phase('import_public_certificate')
             gpg(home, ['--import'], files['public-certificate.gpg'])
+            phase('import_private_key_into_fresh_agent')
             gpg(home, ['--import'], files['private-key.asc'], ask=True, timeout=615)
+            phase('waiting_inner_unlock_and_canary')
             canary, _ = gpg(home, ['--output', '-', '--decrypt'], files['recovery-canary.gpg'], ask=True, timeout=615)
             if digest(canary) != manifest['canary']:
                 raise ValueError('canary_mismatch')
             del canary
+            phase('authenticate_complete_current_and_historical_snapshot')
             count = 0
             for name, body in sorted(files.items()):
                 if name.endswith('.gpg') and name.startswith(('current/', 'history/')):
@@ -332,6 +360,7 @@ def restore(cipher_path, expected_hash):
                     del value
                     count += 1
             bundle = root/'password-store.bundle'; write_new(bundle, files['password-store.bundle'])
+            phase('reconstruct_and_reconcile_git_history')
             repository = root/'restored.git'
             checked(['git', 'clone', '--mirror', str(bundle), str(repository)])
             checked(['git', '-C', str(repository), 'fsck', '--full'])
@@ -376,5 +405,6 @@ if __name__ == '__main__':
         print(json.dumps(answer))
     except Exception as e:
         print(json.dumps({'result': 'failed', 'error_type': type(e).__name__,
-                          'failure': str(e) if isinstance(e, ValueError) else 'system_operation_failed'}))
+                          'failure': str(e) if isinstance(e, ValueError) else 'system_operation_failed',
+                          **({'gpg_diagnostic': e.diagnostic} if isinstance(e, GpgFailure) else {})}))
         raise SystemExit(1)
