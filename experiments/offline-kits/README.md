@@ -91,6 +91,34 @@ start another question or an autonomous conversation loop.
 
 ## Completion and periodic routine
 
+`kit_package.py seal` requires a bounded cgroup with `MemorySwapMax=0` and core
+dumps disabled, an empty private destination and a private source specification.
+It reconciles the vault head with the live private remote, captures every
+current `.gpg`/`.gpg-id` (including encrypted uncommitted files), rebuilds the Git
+bundle and enumerates every retained historical `.gpg` blob. Other untracked
+files remain untouched and excluded. Existing protected key/public/canary inputs
+must match their prepared manifest. The raw key-bearing tar exists in memory
+only. Independent outer protection uses AES256, iterated salted S2K/SHA512 and a
+phrase descriptor; no phrase enters argv, environment or logs. The phrase's
+separate physical custody was owner-confirmed. A complete authenticated outer
+roundtrip and strict member validation precede exclusive ciphertext publication.
+
+`restore_sandbox.py` is an explicitly launched ThinkCentre job. It verifies
+program/ciphertext hashes, then enters a networkless, no-swap, bounded-memory
+sandbox with the operational home and GPG sockets hidden. The native desktop
+prompt receives the independent outer phrase and inner GPG-key passphrase.
+Only native UI sockets needed for pinentry are exposed. A fresh agent must
+authenticate the canary, every current entry and every retained historical
+ciphertext; the rebuilt bundle passes `git fsck` and exact head/history
+reconciliation. No decrypted entry is printed or persisted. Keyrings and their
+agent are transient. A failed job is retained as a failure, not rewritten as a
+passing result.
+
+Validation includes 74 stdlib tests and a real synthetic crypto acceptance:
+outer roundtrip, incorrect factor, tampering and truncation, current/historical
+entry authentication, Git reconstruction and history reconciliation. These
+synthetic results do not qualify real media or real account recovery.
+
 A unit becomes a recovery kit only after its encrypted package is created,
 read back and restored with a fresh keyring and independent unlock path. Record
 each physical read and the exact bytes handed to a remote recovery environment;
