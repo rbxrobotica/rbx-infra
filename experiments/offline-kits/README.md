@@ -114,7 +114,15 @@ reconciliation. No decrypted entry is printed or persisted. Keyrings and their
 agent are transient. A failed job is retained as a failure, not rewritten as a
 passing result.
 
-Validation includes 74 stdlib tests and a real synthetic crypto acceptance:
+`media_copy.py` admits only a passing, fully reconciled private capacity receipt
+for that role, then revalidates the bound USB and takes the same per-role lock.
+It exclusively adds a fresh generation, leaves all previous files intact,
+flushes and verifies nonresident pages before reading each file, and reconciles
+the final names, inodes, sizes, timestamps, link counts and generation directory.
+The exact physically read ciphertext is saved privately for remote restoration.
+A collision, short read, replacement or incomplete proof fails without cleanup.
+
+Validation includes 104 stdlib tests and a real synthetic crypto acceptance:
 outer roundtrip, incorrect factor, tampering and truncation, current/historical
 entry authentication, Git reconstruction and history reconciliation. These
 synthetic results do not qualify real media or real account recovery.
