@@ -125,7 +125,8 @@ def archive(files, manifest):
 
 def allowed_member(name):
     fixed = {'private-key.asc', 'public-certificate.gpg', 'recovery-canary.gpg',
-             'password-store.bundle', 'RECOVERY.md'}
+             'password-store.bundle', 'RECOVERY.md',
+             'tools/kit_package.py', 'tools/restore_sandbox.py'}
     return safe_name(name) and (name in fixed
         or re.fullmatch(r'history/[0-9a-f]{40}\.gpg', name) is not None
         or (name.startswith('current/') and (name.endswith('.gpg') or PurePosixPath(name).name == '.gpg-id')))
@@ -276,10 +277,10 @@ def seal(spec_path, destination):
     if any(files[n] != v for n, v in current_members(store).items()) or head != checked(base+['rev-parse', 'HEAD']).decode().strip():
         raise ValueError('source_changed')
     created = datetime.datetime.now(datetime.timezone.utc).isoformat()
-    files['RECOVERY.md'] = ("# Offline owner recovery\nUse the reviewed offline-kits kit_package.py in a networkless, masked-home, no-swap sandbox.\n"
-        "Open the outer package with its separately recorded physical phrase; open the retained GPG key with its separate physical passphrase.\n"
-        "Never import into the operational keyring during a drill. The current/ overlay includes encrypted uncommitted entries.\n"
-        "No cloud credentials, account recovery codes or founder-independent access are validated merely by this package.\n").encode()
+    tools = Path(__file__).resolve().parent
+    files['RECOVERY.md'] = read_owned(tools/'RECOVERY.md')
+    for name in ('kit_package.py', 'restore_sandbox.py'):
+        files['tools/'+name] = read_owned(tools/name)
     manifest = {'schema': SCHEMA, 'created_utc': created, 'store_head': head,
         'store_commits': commits, 'current_entries': sum(n.startswith('current/') and n.endswith('.gpg') for n in files),
         'historical_ciphertext_blobs': len(history), 'canary': {'bytes': prepared['canary_plaintext_bytes'],
