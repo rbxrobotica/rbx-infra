@@ -16,13 +16,17 @@ import subprocess
 import uuid
 
 
-def main(program, expected_program, ciphertext, expected_cipher, check):
+def main(program, expected_program, ciphertext, expected_cipher, check, readonly_media=False):
     if os.uname().nodename != 'psyctl-ThinkCentre-E73':
         raise ValueError('unexpected_host')
     for path, expected in ((program, expected_program), (ciphertext, expected_cipher)):
         if (path.resolve() != path or not re.fullmatch('[0-9a-f]{64}', expected)
                 or hashlib.sha256(path.read_bytes()).hexdigest() != expected):
             raise ValueError('reviewed_input_mismatch')
+    # This check is on the host source filesystem, before the sandbox's own
+    # read-only bind. A read-only bind of a writable LAN file is not RO media.
+    if readonly_media and not os.statvfs(ciphertext).f_flag & os.ST_RDONLY:
+        raise ValueError('host_source_media_not_readonly')
     lines = subprocess.check_output(['systemctl', '--user', 'show-environment'], text=True).splitlines()
     env = dict(x.split('=', 1) for x in lines if '=' in x)
     if any(not env.get(k) for k in ('DISPLAY', 'XAUTHORITY', 'DBUS_SESSION_BUS_ADDRESS')):
@@ -71,9 +75,10 @@ if __name__ == '__main__':
     parser.add_argument('--ciphertext', type=Path, required=True)
     parser.add_argument('--ciphertext-sha256', required=True)
     parser.add_argument('--check', action='store_true')
+    parser.add_argument('--require-readonly-media', action='store_true')
     a = parser.parse_args()
     try:
-        main(a.program, a.program_sha256, a.ciphertext, a.ciphertext_sha256, a.check)
+        main(a.program, a.program_sha256, a.ciphertext, a.ciphertext_sha256, a.check, a.require_readonly_media)
     except Exception as e:
         print(json.dumps({'result': 'failed', 'error_type': type(e).__name__,
                           'failure': str(e) if isinstance(e, ValueError) else 'system_operation_failed'}))

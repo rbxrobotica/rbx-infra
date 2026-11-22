@@ -52,7 +52,9 @@ the clean recovery host before opening the capsule.
 ## Full verification
 
 1. Run `restore_sandbox.py --check` with the exact reviewed program and ciphertext
-   hashes before a real unlock. This launcher currently permits the qualified
+   hashes before a real unlock. For a direct USB drill include
+   `--require-readonly-media`: it checks the host mount before sandbox bindings.
+   This launcher currently permits the qualified
    ThinkCentre host only. A replacement host needs its identity guard reviewed;
    do not remove isolation gates merely to bypass that guard.
 2. Explicitly launch the real restore with the same reviewed arguments. The

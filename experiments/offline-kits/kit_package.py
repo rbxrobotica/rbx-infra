@@ -329,7 +329,9 @@ def restore(cipher_path, expected_hash):
         raise ValueError('networkless_sandbox_required')
     if any(any(p.iterdir()) for p in (Path.home()/'.gnupg', Path.home()/'.password-store')):
         raise ValueError('operational_credential_dirs_not_masked')
-    cipher = read_owned(cipher_path, MAX_ARCHIVE)
+    # The outer file is authenticated ciphertext. exFAT permissions may be
+    # synthesized as world-readable; private source keys/specs keep strict modes.
+    cipher = read_owned(cipher_path, MAX_ARCHIVE, private=False)
     if hashlib.sha256(cipher).hexdigest() != expected_hash:
         raise ValueError('ciphertext_digest_mismatch')
     started = time.monotonic()
