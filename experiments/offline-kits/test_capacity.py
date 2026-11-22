@@ -85,6 +85,36 @@ class CapacityTests(unittest.TestCase):
             finally:
                 os.close(fd)
 
+    def test_cleanup_preserves_replacement_captured_after_snapshot(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); test = root/'test'; quarantine = root/'quarantine'
+            test.mkdir(); quarantine.mkdir()
+            file = test/'1.h2w'; file.write_bytes(b'x'*512)
+            first = os.open(test, os.O_DIRECTORY); second = os.open(quarantine, os.O_DIRECTORY)
+            try:
+                expected = capacity.files(first)
+                file.unlink(); file.write_bytes(b'user replacement')
+                with self.assertRaisesRegex(ValueError, 'preserved_in_quarantine'):
+                    capacity.clean_owned(first, second, expected)
+                entries = list(quarantine.iterdir())
+                self.assertEqual(len(entries), 1)
+                self.assertEqual(entries[0].read_bytes(), b'user replacement')
+            finally:
+                os.close(first); os.close(second)
+
+    def test_verified_own_files_can_be_removed_without_touching_neighbor(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); test = root/'test'; quarantine = root/'quarantine'
+            test.mkdir(); quarantine.mkdir(); (root/'personal').write_bytes(b'keep')
+            (test/'1.h2w').write_bytes(b'x'*512)
+            first = os.open(test, os.O_DIRECTORY); second = os.open(quarantine, os.O_DIRECTORY)
+            try:
+                capacity.clean_owned(first, second, capacity.files(first))
+                self.assertFalse(list(test.iterdir())); self.assertFalse(list(quarantine.iterdir()))
+                self.assertEqual((root/'personal').read_bytes(), b'keep')
+            finally:
+                os.close(first); os.close(second)
+
 
 if __name__ == '__main__':
     unittest.main()

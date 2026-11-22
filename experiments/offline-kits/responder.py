@@ -132,13 +132,17 @@ def once(registry_path, root, mailbox, cli, config):
             'AND peer=? AND account=? ORDER BY timestamp,id LIMIT 100',
             (registry.get('allowed_peer', 'local'), registry.get('allowed_account', 'rbx-local')))]
     queued = 0
+    attempts = 0
     for row in rows:
         answer = respond(row, registry, root, int(time.time()))
         if answer is None:
             continue
+        if attempts >= 5:
+            break
+        attempts += 1
         # A fixed local mailbox reply only. There is no shell or code handler.
         r = subprocess.run([str(cli), '--config', str(config), 'reply', row['id'], answer],
-                           capture_output=True, timeout=10)
+                           capture_output=True, timeout=4)
         queued += r.returncode == 0
     print(json.dumps({'scanned_addressed_rows': len(rows), 'replies_queued': queued,
                       'executor_or_secret_access': False}))
