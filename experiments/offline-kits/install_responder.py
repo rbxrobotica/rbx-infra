@@ -66,7 +66,7 @@ def main(stage, expected, check=False):
     write_new(status, b'{"phase":"awaiting_restore","count":0,"result":"pending"}\n')
     package = Path(inspect.getsourcefile(agent_cli)).parent.resolve()
     source_files = {p.relative_to(package): p.read_bytes() for p in package.rglob('*.py')}
-    if not source_files or any(p.is_symlink() for p in package.rglob('*')):
+    if Path('__init__.py') not in source_files or any(p.is_symlink() for p in package.rglob('*')):
         raise ValueError('unexpected_mailbox_package')
     frozen = release/'deps'/'strategos_irc_bot'
     frozen.mkdir(mode=0o700, parents=True)
@@ -80,17 +80,20 @@ def main(stage, expected, check=False):
         raise ValueError('mailbox_package_changed_during_snapshot')
     write_new(release/'reply_helper.py', (stage/'reply_helper.py').read_bytes(), 0o500)
     python = home/'.local/share/rbx-agent-irc/venv/bin/python'
+    config = home/'.config/rbx-agent-irc/agent.yaml'
     registry = {'task': 'recovery-kits', 'expires_epoch': int(time.time())+60*86400,
         'allowed_peer': 'local', 'allowed_account': 'rbx-local', 'allowed_source_alias': 'rbx-local',
         'status_relative_path': 'recovery-kits-status.json',
         'contexts': {'ircboot22': {'relative_path': 'ircboot22/CONTEXT.md',
                                   'sha256': hashlib.sha256(context).hexdigest()}},
         'reply_helper': str(release/'reply_helper.py'), 'python_resolved': str(python.resolve()),
+        'config_resolved': str(config.resolve()),
         'frozen_dependency_root': str(release/'deps'),
         'frozen_dependency_files': sorted(frozen_pins),
         'dependency_pins': {**frozen_pins,
              str(release/'reply_helper.py'): hashlib.sha256((release/'reply_helper.py').read_bytes()).hexdigest(),
-             str(python.resolve()): hashlib.sha256(python.resolve().read_bytes()).hexdigest()}}
+             str(python.resolve()): hashlib.sha256(python.resolve().read_bytes()).hexdigest(),
+             str(config.resolve()): hashlib.sha256(config.resolve().read_bytes()).hexdigest()}}
     write_new(registry_path, (json.dumps(registry, indent=2)+'\n').encode())
     write_new(release/'responder.py', (stage/'responder.py').read_bytes(), 0o500)
     unit = (stage/'recovery-irc.service.in').read_text().replace('@RELEASE@', str(release))

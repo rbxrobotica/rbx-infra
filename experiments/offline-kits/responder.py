@@ -126,6 +126,7 @@ def once(registry_path, root, mailbox, python, helper, config):
             or any(p.is_symlink() for p in dependencies.rglob('*'))
             or actual != set(registry['frozen_dependency_files'])
             or str(python.resolve()) != registry['python_resolved']
+            or str(config.resolve()) != registry['config_resolved']
             or str(helper) != registry['reply_helper']):
         raise ValueError('unreviewed_dependency_member_or_entrypoint')
     info = mailbox.lstat()

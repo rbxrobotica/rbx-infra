@@ -12,6 +12,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent/'deps'))
 
 from strategos_irc_bot.agent_config import load_agent_config
 from strategos_irc_bot.agent_store import Mailbox
+import strategos_irc_bot.agent_config as config_module
+import strategos_irc_bot.agent_store as store_module
+
+_frozen = Path(__file__).resolve().parent/'deps'/'strategos_irc_bot'
+if not all(Path(module.__file__).resolve().is_relative_to(_frozen)
+           for module in (config_module, store_module)):
+    raise RuntimeError('refuse_mutable_original_mailbox_import')
 
 
 def main():
