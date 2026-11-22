@@ -22,7 +22,7 @@ def write_new(path, raw, mode=0o600):
         stream.write(raw); stream.flush(); os.fsync(stream.fileno())
 
 
-def main(stage, expected):
+def main(stage, expected, check=False):
     import strategos_irc_bot.agent_cli as agent_cli
     import strategos_irc_bot.agent_store as agent_store
     os.umask(0o077)
@@ -46,6 +46,13 @@ def main(stage, expected):
     if (any((units/n).exists() for n in ('rbx-recovery-irc.service', 'rbx-recovery-irc.timer'))
             or registry_path.exists()):
         raise ValueError('existing_responder_requires_reviewed_update')
+    if check:
+        package = Path(inspect.getsourcefile(agent_cli)).parent.resolve()
+        print(json.dumps({'check_only': True, 'existing_units_or_registry': False,
+              'planned_units': ['rbx-recovery-irc.service', 'rbx-recovery-irc.timer'],
+              'planned_registry': str(registry_path), 'source_modules': len(list(package.rglob('*.py'))),
+              'stage_manifest_sha256': expected, 'transport_or_secret_changes': False}))
+        return
     for p in (units, data, release):
         p.mkdir(mode=0o700, parents=True, exist_ok=True)
         if p.resolve() != p or p.stat().st_uid != os.getuid():
@@ -112,9 +119,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--stage', type=Path, required=True)
     parser.add_argument('--manifest-sha256', required=True)
+    parser.add_argument('--check', action='store_true')
     args = parser.parse_args()
     try:
-        main(args.stage, args.manifest_sha256)
+        main(args.stage, args.manifest_sha256, args.check)
     except Exception as error:
         print(json.dumps({'installed': False, 'error_type': type(error).__name__,
                           'failure': str(error) if isinstance(error, ValueError) else 'system_error'}))
