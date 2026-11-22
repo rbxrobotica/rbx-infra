@@ -41,23 +41,23 @@ def main(program, expected_program, ciphertext, expected_cipher, check):
         '--tmpfs', '/dev/shm', '--tmpfs', home, '--tmpfs', '/run',
         '--dir', '/run/user/'+uid, '--ro-bind', str(bus), str(bus),
         '--ro-bind', '/tmp/.X11-unix', '/tmp/.X11-unix',
-        '--dir', '/work', '--ro-bind', str(auth), '/work/Xauthority',
-        '--ro-bind', str(program), '/work/kit_package.py',
-        '--ro-bind', str(ciphertext), '/work/recovery-kit.tar.gpg',
+        '--dir', '/tmp/work', '--ro-bind', str(auth), '/tmp/work/Xauthority',
+        '--ro-bind', str(program), '/tmp/work/kit_package.py',
+        '--ro-bind', str(ciphertext), '/tmp/work/recovery-kit.tar.gpg',
         '--dir', home+'/.gnupg', '--dir', home+'/.password-store',
         '--setenv', 'HOME', home, '--setenv', 'DISPLAY', env['DISPLAY'],
-        '--setenv', 'XAUTHORITY', '/work/Xauthority',
+        '--setenv', 'XAUTHORITY', '/tmp/work/Xauthority',
         '--setenv', 'DBUS_SESSION_BUS_ADDRESS', env['DBUS_SESSION_BUS_ADDRESS'],
         '--unsetenv', 'GNUPGHOME', '--unsetenv', 'GPG_AGENT_INFO',
-        '--chdir', '/work', '/usr/bin/python3', '-I', '-B']
+        '--chdir', '/tmp/work', '/usr/bin/python3', '-I', '-B']
     if check:
-        args += ['-c', 'import sys;sys.path.insert(0,"/work");import kit_package as k;'
+        args += ['-c', 'import sys;sys.path.insert(0,"/tmp/work");import kit_package as k;'
             'from pathlib import Path;import json;k.memory_gate();'
             'assert {x.split(":")[0].strip() for x in Path("/proc/net/dev").read_text().splitlines()[2:]}=={"lo"};'
             'assert all(not any(p.iterdir()) for p in (Path.home()/".gnupg",Path.home()/".password-store"));'
             'print(json.dumps({"sandbox_preflight":"passed","network_disabled":True,"operational_home_masked":True,"no_swap_cgroup":True,"decrypt_attempted":False}))']
     else:
-        args += ['/work/kit_package.py', 'restore', '--ciphertext', '/work/recovery-kit.tar.gpg',
+        args += ['/tmp/work/kit_package.py', 'restore', '--ciphertext', '/tmp/work/recovery-kit.tar.gpg',
                  '--sha256', expected_cipher]
     result = subprocess.run(args)
     if result.returncode:
