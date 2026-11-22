@@ -111,7 +111,7 @@ def respond(row, registry, root, now):
         return None
 
 
-def once(registry_path, root, mailbox, cli, config):
+def once(registry_path, root, mailbox, python, helper, config):
     raw = read_private(registry_path.parent, registry_path.name, 16384)
     registry = json.loads(raw)
     # The existing reply CLI/package is pinned by the explicit installer, not
@@ -120,6 +120,14 @@ def once(registry_path, root, mailbox, cli, config):
         p = Path(name)
         if p.resolve() != p or hashlib.sha256(p.read_bytes()).hexdigest() != expected:
             raise ValueError('mailbox_dependency_drift')
+    dependencies = Path(registry['frozen_dependency_root'])
+    actual = {str(p) for p in dependencies.rglob('*') if p.is_file()}
+    if (dependencies.resolve() != dependencies
+            or any(p.is_symlink() for p in dependencies.rglob('*'))
+            or actual != set(registry['frozen_dependency_files'])
+            or str(python.resolve()) != registry['python_resolved']
+            or str(helper) != registry['reply_helper']):
+        raise ValueError('unreviewed_dependency_member_or_entrypoint')
     info = mailbox.lstat()
     if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
             or info.st_mode & 0o077 or mailbox.resolve() != mailbox):
@@ -141,7 +149,8 @@ def once(registry_path, root, mailbox, cli, config):
             break
         attempts += 1
         # A fixed local mailbox reply only. There is no shell or code handler.
-        r = subprocess.run([str(cli), '--config', str(config), 'reply', row['id'], answer],
+        r = subprocess.run([str(python), '-I', '-B', str(helper), '--config', str(config),
+                            '--request', row['id'], '--text', answer],
                            capture_output=True, timeout=4)
         queued += r.returncode == 0
     print(json.dumps({'scanned_addressed_rows': len(rows), 'replies_queued': queued,
@@ -154,11 +163,12 @@ if __name__ == '__main__':
     parser.add_argument('--registry', type=Path, required=True)
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--mailbox', type=Path, required=True)
-    parser.add_argument('--cli', type=Path, required=True)
+    parser.add_argument('--python', type=Path, required=True)
+    parser.add_argument('--reply-helper', type=Path, required=True)
     parser.add_argument('--config', type=Path, required=True)
     args = parser.parse_args()
     try:
-        once(args.registry, args.root, args.mailbox, args.cli, args.config)
+        once(args.registry, args.root, args.mailbox, args.python, args.reply_helper, args.config)
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
         print(json.dumps({'result': 'blocked', 'error_type': type(error).__name__}))
         raise SystemExit(1)

@@ -31,7 +31,7 @@ def main(stage, expected):
     if stage.resolve() != stage or hashlib.sha256((stage/'manifest.json').read_bytes()).hexdigest() != expected:
         raise ValueError('untrusted_stage')
     manifest = json.loads((stage/'manifest.json').read_text())
-    names = {'responder.py', 'recovery-irc.service.in', 'recovery-irc.timer'}
+    names = {'responder.py', 'reply_helper.py', 'recovery-irc.service.in', 'recovery-irc.timer'}
     if set(manifest) != names:
         raise ValueError('unexpected_stage_members')
     for name, digest in manifest.items():
@@ -57,15 +57,33 @@ def main(stage, expected):
     write_new(context_dir/'CONTEXT.md', context)
     status = root/'recovery-kits-status.json'
     write_new(status, b'{"phase":"awaiting_restore","count":0,"result":"pending"}\n')
-    dependency_paths = [home/'.local/share/rbx-agent-irc/venv/bin/rbx-agent-irc',
-                        Path(inspect.getsourcefile(agent_cli)), Path(inspect.getsourcefile(agent_store))]
+    package = Path(inspect.getsourcefile(agent_cli)).parent.resolve()
+    source_files = {p.relative_to(package): p.read_bytes() for p in package.rglob('*.py')}
+    if not source_files or any(p.is_symlink() for p in package.rglob('*')):
+        raise ValueError('unexpected_mailbox_package')
+    frozen = release/'deps'/'strategos_irc_bot'
+    frozen.mkdir(mode=0o700, parents=True)
+    frozen_pins = {}
+    for relative, raw in source_files.items():
+        target = frozen/relative
+        target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        write_new(target, raw, 0o400)
+        frozen_pins[str(target)] = hashlib.sha256(raw).hexdigest()
+    if source_files != {p.relative_to(package): p.read_bytes() for p in package.rglob('*.py')}:
+        raise ValueError('mailbox_package_changed_during_snapshot')
+    write_new(release/'reply_helper.py', (stage/'reply_helper.py').read_bytes(), 0o500)
+    python = home/'.local/share/rbx-agent-irc/venv/bin/python'
     registry = {'task': 'recovery-kits', 'expires_epoch': int(time.time())+60*86400,
         'allowed_peer': 'local', 'allowed_account': 'rbx-local', 'allowed_source_alias': 'rbx-local',
         'status_relative_path': 'recovery-kits-status.json',
         'contexts': {'ircboot22': {'relative_path': 'ircboot22/CONTEXT.md',
                                   'sha256': hashlib.sha256(context).hexdigest()}},
-        'dependency_pins': {str(p.resolve()): hashlib.sha256(p.read_bytes()).hexdigest()
-                            for p in dependency_paths}}
+        'reply_helper': str(release/'reply_helper.py'), 'python_resolved': str(python.resolve()),
+        'frozen_dependency_root': str(release/'deps'),
+        'frozen_dependency_files': sorted(frozen_pins),
+        'dependency_pins': {**frozen_pins,
+             str(release/'reply_helper.py'): hashlib.sha256((release/'reply_helper.py').read_bytes()).hexdigest(),
+             str(python.resolve()): hashlib.sha256(python.resolve().read_bytes()).hexdigest()}}
     write_new(registry_path, (json.dumps(registry, indent=2)+'\n').encode())
     write_new(release/'responder.py', (stage/'responder.py').read_bytes(), 0o500)
     unit = (stage/'recovery-irc.service.in').read_text().replace('@RELEASE@', str(release))
@@ -84,6 +102,7 @@ def main(stage, expected):
         'context_task': 'ircboot22', 'context_sha256': hashlib.sha256(context).hexdigest(),
         'registry_expires_epoch': registry['expires_epoch'], 'stage_manifest_sha256': expected,
         'scope': 'pinned context ACK, PING and curated STATUS; no task/secret execution',
+        'frozen_first_party_modules': len(source_files),
         'existing_transport_restarted_or_configured': False}
     write_new(data/'installation.json', (json.dumps(receipt, indent=2)+'\n').encode())
     print(json.dumps(receipt))
