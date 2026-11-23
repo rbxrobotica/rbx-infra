@@ -1,8 +1,7 @@
 # Spaceship DNS migration, inventoried 2026-11-04.
-# All five domains currently have zero custom records, the two parking A records
-# below, and active DNSSEC. Preserve the parking behavior until site cutovers are
-# authorized separately. Do not delegate until BOTH RBX nameservers serve signed
-# zones and the matching DS records have been prepared at Spaceship.
+# Keep parking records until each site has its own cutover.
+# Delegate only after both RBX nameservers serve signed zones and the matching
+# DS records have been prepared at Spaceship.
 # DNSSEC keys/metadata are outside the PowerDNS provider 1.5 zone schema.
 
 locals {
@@ -46,5 +45,15 @@ resource "powerdns_record" "spaceship_parking_a" {
   name    = powerdns_zone.spaceship[each.key].name
   type    = "A"
   ttl     = 300
-  records = ["34.216.117.25", "54.149.79.189"]
+  records = each.key == "initelo.com" ? ["158.220.116.31"] : ["34.216.117.25", "54.149.79.189"]
+}
+
+resource "powerdns_record" "initelo_www" {
+  depends_on = [powerdns_record.spaceship_parking_a]
+
+  zone    = powerdns_zone.spaceship["initelo.com"].name
+  name    = "www.initelo.com."
+  type    = "CNAME"
+  ttl     = 300
+  records = ["initelo.com."]
 }
