@@ -24,8 +24,8 @@ spec:
           type: RuntimeDefault
       containers:
         - name: nginx
-          image: docker.io/nginxinc/nginx-unprivileged:stable-alpine@sha256:e2a8fca8aa356d66159aaf8a877a9c126773635adf210503eefaaeaffeed6ad7
-          command: [nginx, -g, "daemon off;"]
+          image: nginx:stable-alpine@sha256:4d1d4ce08432dc7dfe4af762cb224ce6b5273ae878f41e020ea2425d02ea91a4
+          command: [nginx, -c, /etc/nginx/conf.d/nginx.conf, -g, "daemon off;"]
           ports:
             - name: http
               containerPort: 8080
@@ -75,8 +75,8 @@ spec:
           configMap:
             name: initelo-content
             items:
-              - key: default.conf
-                path: default.conf
+              - key: nginx.conf
+                path: nginx.conf
         - name: tmp
           emptyDir:
             sizeLimit: 16Mi

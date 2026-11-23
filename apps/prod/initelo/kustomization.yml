@@ -13,4 +13,4 @@ configMapGenerator:
       - site/aula.html
       - site/site.css
       - site/tokens.css
-      - site/default.conf
+      - site/nginx.conf
