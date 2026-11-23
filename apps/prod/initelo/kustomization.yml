@@ -6,11 +6,7 @@ resources:
   - deployment.yml
   - service.yml
   - ingress.yml
-configMapGenerator:
-  - name: initelo-content
-    files:
-      - site/index.html
-      - site/aula.html
-      - site/site.css
-      - site/tokens.css
-      - site/nginx.conf
+images:
+  - name: ghcr.io/rbxrobotica/initelo
+    newTag: sha-1fdc5108e11a
+    digest: sha256:f2107d4bf0cba34c602b4341f791afb089f0b48ab2a4d039dd291fc131261533
