@@ -1,0 +1,82 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: initelo
+  labels:
+    app.kubernetes.io/name: initelo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: initelo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: initelo
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: nginx
+          image: docker.io/nginxinc/nginx-unprivileged:stable-alpine@sha256:e2a8fca8aa356d66159aaf8a877a9c126773635adf210503eefaaeaffeed6ad7
+          command: [nginx, -g, "daemon off;"]
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            requests:
+              cpu: 20m
+              memory: 24Mi
+            limits:
+              cpu: 150m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: content
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: content
+          configMap:
+            name: initelo-content
+            items:
+              - key: index.html
+                path: index.html
+              - key: aula.html
+                path: aula.html
+              - key: site.css
+                path: site.css
+              - key: tokens.css
+                path: tokens.css
+        - name: nginx-config
+          configMap:
+            name: initelo-content
+            items:
+              - key: default.conf
+                path: default.conf
+        - name: tmp
+          emptyDir:
+            sizeLimit: 16Mi
