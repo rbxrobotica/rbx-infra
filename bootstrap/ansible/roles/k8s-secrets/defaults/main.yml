@@ -25,7 +25,10 @@ pass_robson_db_password_key: "rbx/robson/db-password"
 pass_robson_tenant_id_key: "rbx/robson/projection-tenant-id"
 pass_robson_binance_api_key: "rbx/robson/binance-api-key"
 pass_robson_binance_api_secret: "rbx/robson/binance-api-secret"
-pass_robson_api_token_key: "rbx/robson/api-token"
+pass_robson_oidc_audience_key: "rbx/robson/oidc-audience"
+pass_robson_oidc_allowed_client_ids_key: "rbx/robson/oidc-allowed-client-ids"
+pass_robson_oidc_organization_id_key: "rbx/robson/oidc-organization-id"
+pass_robson_oidc_allowed_subjects_key: "rbx/robson/oidc-allowed-subjects"
 
 # Testnet robson (namespace: robson-testnet)
 robsond_testnet_namespace: "robson-testnet"
@@ -33,7 +36,10 @@ pass_robson_testnet_db_password_key: "rbx/robson-testnet/db-password"
 pass_robson_testnet_tenant_id_key: "rbx/robson-testnet/projection-tenant-id"
 pass_robson_testnet_binance_api_key: "rbx/robson-testnet/binance-api-key"
 pass_robson_testnet_binance_api_secret: "rbx/robson-testnet/binance-api-secret"
-pass_robson_testnet_api_token_key: "rbx/robson-testnet/api-token"
+pass_robson_testnet_oidc_audience_key: "rbx/robson-testnet/oidc-audience"
+pass_robson_testnet_oidc_allowed_client_ids_key: "rbx/robson-testnet/oidc-allowed-client-ids"
+pass_robson_testnet_oidc_organization_id_key: "rbx/robson-testnet/oidc-organization-id"
+pass_robson_testnet_oidc_allowed_subjects_key: "rbx/robson-testnet/oidc-allowed-subjects"
 
 # rbx-flightdeck (namespace: rbx-flightdeck — Flight Deck mission planning)
 rbx_flightdeck_namespace: "rbx-flightdeck"

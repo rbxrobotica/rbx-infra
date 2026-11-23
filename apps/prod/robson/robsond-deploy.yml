@@ -88,18 +88,29 @@ spec:
             secretKeyRef:
               name: robsond-secret
               key: binance-api-secret
-        # Legacy static bearer token (ADR-0054 rollout bridge). Same
-        # secret key as before (api-token) — only the exposed env var
-        # name changed, from the now-rejected ROBSON_API_TOKEN to
-        # ROBSON_LEGACY_API_TOKEN, matching robsond's dual-accept
-        # middleware during the Google OAuth cutover. Remove this
-        # mapping (and the api-token secret key) once Google login is
-        # confirmed stable — see ADR-0054's migration plan.
-        - name: ROBSON_LEGACY_API_TOKEN
+        # RBX Identity registration metadata. Kept in the role-managed Secret
+        # so Git cannot drift from the provisioned ZITADEL objects. These are
+        # identifiers, not client secrets.
+        - name: ROBSON_OIDC_AUDIENCE
           valueFrom:
             secretKeyRef:
               name: robsond-secret
-              key: api-token
+              key: oidc-audience
+        - name: ROBSON_OIDC_ALLOWED_CLIENT_IDS
+          valueFrom:
+            secretKeyRef:
+              name: robsond-secret
+              key: oidc-allowed-client-ids
+        - name: ROBSON_OIDC_TENANT_BINDING
+          valueFrom:
+            secretKeyRef:
+              name: robsond-secret
+              key: oidc-tenant-binding
+        - name: ROBSON_OIDC_ALLOWED_SUBJECTS
+          valueFrom:
+            secretKeyRef:
+              name: robsond-secret
+              key: oidc-allowed-subjects
         # Funding saga feature gate (Spot→USDT→USDT-M). false → /funding/execute returns 503.
         # Enables the money-moving execute path; the actual transfer is operator-gated by the
         # type-to-confirm in the /funding UI. Set false to disable.

@@ -20,6 +20,11 @@ data:
   ROBSON_API_HOST: "0.0.0.0"
   ROBSON_API_PORT: "8080"
 
+  # Testnet uses its own ZITADEL project/client registrations and tenant
+  # binding. Google remains only the upstream IdP.
+  ROBSON_OIDC_ISSUER: "https://auth.merovelis.com"
+  ROBSON_OIDC_JWKS_URI: "https://auth.merovelis.com/oauth/v2/keys"
+
   # Exchange endpoint — CRITICAL: routes daemon to testnet.binance.vision
   ROBSON_BINANCE_USE_TESTNET: "true"
 

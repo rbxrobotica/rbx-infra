@@ -33,7 +33,10 @@ EXPECTED_TASKS = (
     "Validate projection-tenant-id is a canonical UUID",
     "Read robsond Binance API key from pass",
     "Read robsond Binance API secret from pass",
-    "Read robsond API token from pass",
+    "Read robsond OIDC audience from pass",
+    "Read robsond OIDC allowed client IDs from pass",
+    "Read robsond OIDC organization ID from pass",
+    "Read robsond OIDC allowed subjects from pass",
     "Validate robsond secret inputs",
     "Read deployed robsond Binance API key for scoped rotation",
     "Require replacement Binance API key for scoped rotation",
@@ -47,7 +50,10 @@ kubectl --kubeconfig {{ kubeconfig_path }} create secret generic robsond-secret 
   --from-literal=projection-tenant-id="{{ _robson_tenant_id }}" \
   --from-literal=binance-api-key="$ROBSON_BINANCE_API_KEY" \
   --from-literal=binance-api-secret="$ROBSON_BINANCE_API_SECRET" \
-  --from-literal=api-token="$ROBSON_API_TOKEN" \
+  --from-literal=oidc-audience="$ROBSON_OIDC_AUDIENCE" \
+  --from-literal=oidc-allowed-client-ids="$ROBSON_OIDC_ALLOWED_CLIENT_IDS" \
+  --from-literal=oidc-tenant-binding="$ROBSON_OIDC_ORGANIZATION_ID={{ _robson_tenant_id }}" \
+  --from-literal=oidc-allowed-subjects="$ROBSON_OIDC_ALLOWED_SUBJECTS" \
   --dry-run=client -o yaml \
 | kubectl --kubeconfig {{ kubeconfig_path }} apply -f -
 """
@@ -56,7 +62,16 @@ EXPECTED_SECRET_ENVIRONMENT = {
     "ROBSON_DB_PASSWORD": "{{ robson_db_password_result.stdout | trim }}",
     "ROBSON_BINANCE_API_KEY": "{{ robson_binance_api_key_result.stdout | trim }}",
     "ROBSON_BINANCE_API_SECRET": "{{ robson_binance_api_secret_result.stdout | trim }}",
-    "ROBSON_API_TOKEN": "{{ robson_api_token_result.stdout | trim }}",
+    "ROBSON_OIDC_AUDIENCE": "{{ robson_oidc_audience_result.stdout | trim }}",
+    "ROBSON_OIDC_ALLOWED_CLIENT_IDS": (
+        "{{ robson_oidc_allowed_client_ids_result.stdout | trim }}"
+    ),
+    "ROBSON_OIDC_ORGANIZATION_ID": (
+        "{{ robson_oidc_organization_id_result.stdout | trim }}"
+    ),
+    "ROBSON_OIDC_ALLOWED_SUBJECTS": (
+        "{{ robson_oidc_allowed_subjects_result.stdout | trim }}"
+    ),
 }
 
 EXPECTED_COMMAND_ACTIONS = {
@@ -93,9 +108,21 @@ EXPECTED_COMMAND_ACTIONS = {
         "command",
         "pass show {{ pass_robson_binance_api_secret }}",
     ),
-    "Read robsond API token from pass": (
+    "Read robsond OIDC audience from pass": (
         "command",
-        "pass show {{ pass_robson_api_token_key }}",
+        "pass show {{ pass_robson_oidc_audience_key }}",
+    ),
+    "Read robsond OIDC allowed client IDs from pass": (
+        "command",
+        "pass show {{ pass_robson_oidc_allowed_client_ids_key }}",
+    ),
+    "Read robsond OIDC organization ID from pass": (
+        "command",
+        "pass show {{ pass_robson_oidc_organization_id_key }}",
+    ),
+    "Read robsond OIDC allowed subjects from pass": (
+        "command",
+        "pass show {{ pass_robson_oidc_allowed_subjects_key }}",
     ),
     "Read deployed robsond Binance API key for scoped rotation": (
         "command",
@@ -365,7 +392,10 @@ def validate() -> None:
             "robson_db_password_result.stdout|trim|length>0",
             "robson_binance_api_key_result.stdout|trim|length>0",
             "robson_binance_api_secret_result.stdout|trim|length>0",
-            "robson_api_token_result.stdout|trim|length>0",
+            "robson_oidc_audience_result.stdout|trim|regex_search('^[0-9]+$')",
+            "robson_oidc_allowed_client_ids_result.stdout|trim|regex_search('^[0-9]+(,[0-9]+)*$')",
+            "robson_oidc_organization_id_result.stdout|trim|regex_search('^[0-9]+$')",
+            "robson_oidc_allowed_subjects_result.stdout|trim|regex_search('^[0-9]+(,[0-9]+)*$')",
             "robson_binance_api_key_result.stdout|trim|regex_search('^[A-Za-z0-9]{64}$')",
             "robson_binance_api_secret_result.stdout|trim|regex_search('^[A-Za-z0-9]{64}$')",
         }.issubset(input_assertions),
