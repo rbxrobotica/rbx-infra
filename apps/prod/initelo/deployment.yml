@@ -16,6 +16,8 @@ spec:
         app.kubernetes.io/name: initelo
     spec:
       automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: ghcr-pull-secret
       securityContext:
         runAsNonRoot: true
         runAsUser: 101
@@ -24,8 +26,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: nginx
-          image: nginx:stable-alpine@sha256:4d1d4ce08432dc7dfe4af762cb224ce6b5273ae878f41e020ea2425d02ea91a4
-          command: [nginx, -c, /etc/nginx/conf.d/nginx.conf, -g, "daemon off;"]
+          image: ghcr.io/rbxrobotica/initelo
           ports:
             - name: http
               containerPort: 8080
@@ -50,33 +51,9 @@ spec:
             capabilities:
               drop: [ALL]
           volumeMounts:
-            - name: content
-              mountPath: /usr/share/nginx/html
-              readOnly: true
-            - name: nginx-config
-              mountPath: /etc/nginx/conf.d
-              readOnly: true
             - name: tmp
               mountPath: /tmp
       volumes:
-        - name: content
-          configMap:
-            name: initelo-content
-            items:
-              - key: index.html
-                path: index.html
-              - key: aula.html
-                path: aula.html
-              - key: site.css
-                path: site.css
-              - key: tokens.css
-                path: tokens.css
-        - name: nginx-config
-          configMap:
-            name: initelo-content
-            items:
-              - key: nginx.conf
-                path: nginx.conf
         - name: tmp
           emptyDir:
             sizeLimit: 16Mi
