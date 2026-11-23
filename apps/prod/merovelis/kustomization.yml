@@ -16,4 +16,4 @@ images:
   # Tags promoted by the app repo CI (RBX_INFRA_PAT self-push, issue #168).
   # See gitops/app-of-apps/merovelis-prod.yml and docs/infra/IMAGE-PROMOTION.md.
   - name: ghcr.io/rbxrobotica/merovelis-site
-    newTag: sha-93f9b8e
+    newTag: sha-28e2e18
