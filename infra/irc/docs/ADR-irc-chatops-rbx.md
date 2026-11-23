@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** — 2026-09-24
+**Accepted** — 2026-11-18 (proposto em 2026-09-24)
 
 ## Contexto
 
@@ -20,6 +20,9 @@ Adotar três camadas separadas:
    acessível somente por túnel SSH.
 3. Ergo em container como `RBXNet`, restrito a loopback ou VPN, com contas/SASL
    obrigatórios, registro fechado e canais privados.
+4. The Lounge opcional no desktop, em container rootless, modo privado e HTTP
+   limitado a loopback. Ele alcança somente a RBXNet pelo túnel local e não
+   substitui WeeChat, ZNC nem o histórico autorizado do Ergo.
 
 Um bot Python mínimo atua como adaptador somente leitura para Strategos. Ele
 autentica por conta IRC, não executa shell e mantém integrações reais desligadas
@@ -29,8 +32,9 @@ até existirem contratos de API, RBAC, policy engine e evidência no ledger.
 
 - Clientes GUI: mais simples visualmente, mas menos adequados a sessões remotas
   persistentes e automação leve.
-- The Lounge: boa experiência web, porém adiciona uma superfície HTTP e gestão
-  de sessão que não é necessária nesta fase.
+- The Lounge exposto por proxy/LAN: a experiência web é útil, mas a superfície
+  HTTP remota e a gestão de sessão não se justificam. Foi aceito apenas o modo
+  local, autenticado e limitado a `127.0.0.1`.
 - Matrix: federação e clientes ricos, com custo operacional muito maior.
 - Slack e Discord: convenientes, mas dependem de SaaS externo e reduzem
   soberania/controle de dados.
@@ -75,7 +79,17 @@ local não comprova implantação. Procedimento e aceitação:
 [AGENT-PILOT.md](AGENT-PILOT.md).
 
 Reavaliar após um piloto interno ou antes de permitir qualquer comando mutável,
-listener fora de rede privada, bridge, cliente web ou integração com LLM.
+listener fora de rede privada, bridge, publicação do cliente web ou integração
+com LLM.
+
+### Webchat privado no Mint — 2026-11-18
+
+O operador autorizou instalar o webchat no Mint. The Lounge foi aceito como
+cliente local da RBXNet, em modo privado, com imagem fixada, Podman rootless,
+HTTP em `127.0.0.1:9000`, upload/preview remoto desabilitados e sem arquivo
+adicional de mensagens. A rede fica bloqueada no túnel local do Ergo. Senha do
+webchat e credencial SASL são distintas e permanecem fora do Git. Publicação em
+LAN/VPN, proxy reverso e acesso móvel continuam fora desta decisão.
 
 ### Salas temáticas e histórico — 2026-10-08
 

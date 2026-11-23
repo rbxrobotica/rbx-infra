@@ -35,6 +35,20 @@ O modelo Ergo grava apenas uma referência ao cofre do WeeChat. Execute primeiro
 `/secure set rbx_ergo_password <senha-da-conta-ergo>`; a senha não deve aparecer
 em `irc.conf`.
 
+## 1a. Instalar o webchat privado no Mint
+
+```bash
+./infra/irc/scripts/bootstrap-webchat-mint.sh
+xdg-open http://127.0.0.1:9000
+```
+
+O bootstrap instala um Quadlet Podman rootless, cria um usuário local com senha
+aleatória e confirma que o único listener HTTP é `127.0.0.1:9000`. Consulte a
+senha inicial em `~/.config/rbx-irc/webchat-initial-credentials`, guarde-a em um
+cofre e troque-a pela interface. A credencial SASL do Ergo não é importada:
+informe-a na primeira conexão à RBXNet. O túnel `rbx-irc-tunnel.service` precisa
+estar ativo. Mais detalhes em [../webchat/README.md](../webchat/README.md).
+
 ## 2. Implantar ZNC na Corbetti
 
 ```bash
@@ -235,9 +249,12 @@ RBX_IRC_CONFIRM=rollback-ergo RBX_IRC_HOST=corbetti \
   ./infra/irc/scripts/rollback-ergo.sh
 RBX_IRC_CONFIRM=rollback-strategos-bot RBX_IRC_HOST=corbetti \
   ./infra/irc/scripts/rollback-strategos-bot.sh
+RBX_IRC_CONFIRM=rollback-webchat \
+  ./infra/irc/scripts/rollback-webchat-mint.sh
 ```
 
 Os dois primeiros comandos param e removem somente o container correspondente;
 o terceiro para e desabilita somente a unidade systemd do bot. Configuração,
 aplicação, dados, `.env`, credenciais, certificados, imagens e backups
-permanecem no host.
+permanecem no host. O último para e desabilita somente o webchat local, também
+preservando seus dados e credenciais.
