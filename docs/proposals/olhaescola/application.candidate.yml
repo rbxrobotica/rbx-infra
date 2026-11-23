@@ -1,0 +1,19 @@
+# Candidate outside gitops/app-of-apps; this file is not registered or watched.
+# Activation requires published images, secrets, external DB and exact operator approval.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: olhaescola
+  namespace: argocd
+spec:
+  project: rbx-applications
+  source:
+    repoURL: https://github.com/rbxrobotica/rbx-infra
+    targetRevision: main
+    path: apps/prod/olhaescola
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: olhaescola
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
