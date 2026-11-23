@@ -8,5 +8,5 @@ resources:
   - ingress.yml
 images:
   - name: ghcr.io/rbxrobotica/initelo
-    newTag: sha-d83117cafaac
-    digest: sha256:70eb82e2eef6f906de1679768ce6eca69676225bc8273159d4af965ac8749cde
+    newTag: sha-d1fb40fe31c8
+    digest: sha256:4935d81c172c374b8d78b0023843cbeb2ed4fb6370b72e49eede5d69e0176ca5
