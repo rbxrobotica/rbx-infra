@@ -1,0 +1,79 @@
+---
+- name: Declare one public-only lab origin and constrained SSH publisher
+  hosts: renewal_origin
+  gather_facts: false
+  vars:
+    release: /opt/rbx-dns-renewal
+    publisher: rbx-dns-publisher
+  tasks:
+    - name: Require explicit reviewed public inputs
+      ansible.builtin.assert:
+        that:
+          - public_stage is defined
+          - publisher_public_key is defined
+          - publisher_public_key is match('^ssh-ed25519 [A-Za-z0-9+/=]+ rbx-dns-pilot-publisher$')
+    - name: Create unprivileged publisher identity without password login
+      ansible.builtin.user:
+        name: '{{ publisher }}'
+        system: true
+        home: /var/lib/rbx-dns-publisher-home
+        create_home: false
+        shell: /bin/sh
+        password_lock: true
+    - name: Declare root-owned public source and SSH authorization directories
+      ansible.builtin.file:
+        path: '{{ item }}'
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+      loop:
+        - '{{ release }}'
+        - /var/lib/rbx-dns-publisher-home
+        - /var/lib/rbx-dns-publisher-home/.ssh
+    - name: Install the single bounded uncompressed public bundle
+      ansible.builtin.unarchive:
+        src: '{{ public_stage }}/origin.tar'
+        dest: /opt/
+        owner: root
+        group: root
+    - name: Limit the one key to the exact unprivileged public-zone gateway
+      ansible.builtin.copy:
+        content: |
+          restrict,command="/usr/bin/python3 -B /opt/rbx-dns-renewal/origin-gateway.py" {{ publisher_public_key }}
+        dest: /var/lib/rbx-dns-publisher-home/.ssh/authorized_keys
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Declare persistent public publication storage
+      ansible.builtin.file:
+        path: /var/lib/rbx-dns-renew-origin
+        state: directory
+        owner: '{{ omit if ansible_check_mode else publisher }}'
+        group: '{{ omit if ansible_check_mode else publisher }}'
+        mode: '0750'
+    - name: Seed only an absent publication, never roll back an existing one
+      ansible.builtin.copy:
+        src: '{{ public_stage }}/baseline.zone'
+        dest: /var/lib/rbx-dns-renew-origin/origin.zone
+        owner: '{{ omit if ansible_check_mode else publisher }}'
+        group: '{{ omit if ansible_check_mode else publisher }}'
+        mode: '0640'
+        force: false
+    - name: Declare isolated service and exact owned network unit
+      ansible.builtin.copy:
+        src: '{{ playbook_dir }}/{{ item.source }}'
+        dest: '/etc/systemd/system/{{ item.name }}'
+        owner: root
+        group: root
+        mode: '0644'
+      loop:
+        - {source: origin.service, name: rbx-dns-renew-origin.service}
+        - {source: network.service, name: rbx-dns-renew-network.service}
+    - name: Start only the new isolated origin
+      ansible.builtin.systemd_service:
+        name: rbx-dns-renew-origin.service
+        daemon_reload: true
+        enabled: true
+        state: started
+      when: not ansible_check_mode

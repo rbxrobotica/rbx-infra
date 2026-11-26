@@ -1,0 +1,14 @@
+name: Object corpus archive controls
+on:
+  push:
+    paths: ['experiments/object-corpus/**', '.github/workflows/object-corpus.yml']
+  pull_request:
+    paths: ['experiments/object-corpus/**', '.github/workflows/object-corpus.yml']
+permissions:
+  contents: read
+jobs:
+  offline-archive-controls:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: python3 -B -m unittest discover -s experiments/object-corpus -p 'test_*.py'

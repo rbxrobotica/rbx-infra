@@ -1,0 +1,22 @@
+name: IRC capacity probe safety
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/irc-capacity/**'
+      - '.github/workflows/irc-capacity.yml'
+  push:
+    paths:
+      - 'experiments/irc-capacity/**'
+      - '.github/workflows/irc-capacity.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  offline-safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: python3 -B -m unittest discover -s experiments/irc-capacity -p 'test_capacity_probe.py' -v

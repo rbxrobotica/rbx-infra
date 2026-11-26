@@ -1,0 +1,25 @@
+{
+  "schema": "rbx-memory-schedule-access-plan-v1",
+  "source": {
+    "role": "read only, declared document corpus",
+    "deny_payload_writes": true,
+    "deny_other_corpora": true,
+    "broad_owner_key_runtime_fallback": false
+  },
+  "destination": {
+    "role": "existing dedicated B2 document archive",
+    "prefix": "memory-auto/v1/",
+    "valid_duration_seconds": 7776000,
+    "writer_capabilities": ["writeFiles"],
+    "verifier_capabilities": ["listFiles", "readFiles", "readFileRetentions"],
+    "forbidden_runtime_capabilities": ["deleteFiles", "writeKeys", "deleteKeys", "writeBuckets", "deleteBuckets", "writeFileRetentions", "writeBucketRetentions", "writeBucketEncryption", "writeFileLegalHolds", "bypassGovernance"],
+    "admin_credential_runtime_deployment": false,
+    "existing_archives_mutated": false
+  },
+  "cadence_seconds": 21600,
+  "capture_alert_grace_seconds": 3600,
+  "witness_period_seconds": 900,
+  "witness_grace_seconds": 900,
+  "owner_recovery_key_runtime_deployment": false,
+  "automatic_source_or_archive_deletion": false
+}

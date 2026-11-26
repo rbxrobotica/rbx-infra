@@ -1,0 +1,11 @@
+[Unit]
+Description=Independent fifteen-minute RBX archive readback witness
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=15min
+AccuracySec=30s
+Unit=rbx-memory-witness.service
+
+[Install]
+WantedBy=timers.target

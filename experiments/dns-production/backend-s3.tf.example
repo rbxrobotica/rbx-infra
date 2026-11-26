@@ -1,0 +1,14 @@
+# Inert capability example, NOT an initialized backend or selected supplier.
+# Do not copy into the production module until source-state ownership, external
+# encrypted backup/restore, conditional writes, version history, lock contention
+# and independent recovery have qualified and migration is explicitly authorized.
+# The bucket/region/key/endpoints remain a controlled non-secret backend input;
+# credentials and any client-side encryption material never belong in this file.
+terraform {
+  required_version = ">= 1.10"
+
+  backend "s3" {
+    encrypt      = true
+    use_lockfile = true
+  }
+}
