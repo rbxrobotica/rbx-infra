@@ -80,14 +80,52 @@ current Prometheus scrape set:
 - `RBXCriticalEndpointNotReady` fires when a `langfuse`, `rbx-ledger`,
   `truthmetal` or `websites` endpoint set has no ready backend address.
   `websites` holds the public brand sites.
-- `RBXWebsiteCertificateNotReady`, `RBXWebsiteCertificateExpiringSoon` and
-  `RBXWebsiteCertificateMetricsAbsent` cover the certificates of the `websites`
-  namespace: not Ready for 30 minutes, less than 14 days to expiry, and no
-  cert-manager series for the namespace. cert-manager exports the series since
-  `prometheus.enabled` is true in `platform/cert-manager/application.yml`. A new
-  site whose DNS does not point to the ingress yet keeps its certificate pending
-  under HTTP-01, so `RBXWebsiteCertificateNotReady` fires for it until the DNS
-  cutover: that is expected, not a release failure. Debugging:
+
+### Public brand sites (`websites`)
+
+The rules for the brand sites read an explicit inventory in
+`platform/monitoring/kube-prometheus-stack.yml`: one Endpoints name and one
+Certificate name per site, added in the change that deploys the site. Today the
+inventory has Initelo (`initelo`, `initelo-tls`).
+
+- `RBXWebsiteEndpointMissing`: kube-state-metrics exports no Endpoints object
+  for a registered site for 15 minutes.
+- `RBXWebsiteCertificateNotReady`: a Certificate of the namespace is not Ready
+  for 30 minutes.
+- `RBXWebsiteCertificateExpiringSoon`: a Certificate of the namespace has less
+  than 14 days left, or has expired, for 1 hour. A Certificate that was never
+  issued is left to the alert above.
+- `RBXWebsiteCertificateMetricsAbsent`: a registered Certificate has no
+  readiness or no expiration series for 15 minutes.
+
+The certificate series are intended to come from the cert-manager controller,
+with `prometheus.enabled: true` in `platform/cert-manager/application.yml` and
+the `kubernetes-pods-annotations` scrape job. That is configuration, not proof
+of collection. After any change to it, verify in Prometheus that
+`up{job="kubernetes-pods-annotations", kubernetes_namespace="cert-manager"}` is
+1, that `certmanager_certificate_ready_status{namespace="websites"}` returns
+each registered Certificate with the `namespace`, `name`, `condition` and
+issuer labels, and that the four alerts are loaded without evaluation errors.
+
+What these alerts do not cover: a Certificate or Service that is not in the
+inventory; whether cert-manager's own view of the cluster is current; the
+public path (DNS, ingress, the certificate actually served); and delivery of
+the notification. A probe of the public address is still missing.
+
+Operating notes:
+
+- The certificate alerts identify a Certificate by namespace and name and look
+  back 10 minutes, so a controller restart does not restart their clock. More
+  than 10 minutes without samples does.
+- After changing a Certificate's `issuerRef`, restart the cert-manager
+  controller: v1.14 keeps the gauges of the previous issuer until then, and
+  the alerts take the worst value they see.
+- A new site whose host names do not resolve to the ingress yet cannot complete
+  HTTP-01, so `RBXWebsiteCertificateNotReady` fires for it 30 minutes after it
+  is deployed. That alert is not waived by this explanation. A rollout that
+  accepts it needs, in its own pull request, the name of the pending
+  Certificate, the reason, and a dated DNS cutover that bounds it; an alert on
+  any other Certificate, or one that outlives the cutover, is investigated with
   `docs/runbooks/CERT-MANAGER-DEBUG.md`.
 
 The following Workstream B alerts remain pending until their metric sources are

@@ -277,7 +277,7 @@ spec:
                       summary: "Pod container is waiting in CrashLoopBackOff or image pull failure"
                       description: "A pod container has remained in CrashLoopBackOff, ImagePullBackOff, or ErrImagePull for more than 10 minutes."
 
-                  # `websites` holds the public brand sites (apps/prod/initelo, apps/prod/iteruno).
+                  # `websites` holds the public brand sites (apps/prod/initelo today).
                   - alert: RBXCriticalEndpointNotReady
                     expr: |
                       (
@@ -293,41 +293,104 @@ spec:
                       summary: "Critical service endpoint has no ready backend"
                       description: "A critical RBX endpoint has had no ready backend address for more than 10 minutes."
 
-                  # Certificate alerts for the public brand sites in `websites`. cert-manager exports
-                  # these series because prometheus.enabled is true in
-                  # platform/cert-manager/application.yml, and the kubernetes-pods-annotations job
-                  # above scrapes them. The `namespace` label is the Certificate's namespace. They are
-                  # scoped to `websites` on purpose: widen the matcher to other namespaces only after
-                  # reading their live series, or every stale Certificate there starts to page.
+                  # ── Public brand sites in `websites` ────────────────────────────────
+                  # The rules below read an explicit inventory: one line per site, added
+                  # in the same change that deploys the site. Today: initelo (Service and
+                  # Endpoints `initelo`, Certificate `initelo-tls`, created by the ingress
+                  # shim from the Ingress secretName).
+                  #
+                  # RBXCriticalEndpointNotReady needs the Endpoints object to exist: if a
+                  # site's Service is deleted, or kube-state-metrics stops exporting it,
+                  # that alert has nothing to evaluate. This one fires on the missing
+                  # inventory entry instead.
+                  - alert: RBXWebsiteEndpointMissing
+                    expr: |
+                      absent(kube_endpoint_info{namespace="websites", endpoint="initelo"})
+                    for: 15m
+                    labels:
+                      severity: warning
+                      rbx_workstream: p1b-observability
+                    annotations:
+                      summary: "No Endpoints object exported for {{ $labels.endpoint }} in websites"
+                      description: >-
+                        kube-state-metrics has exported no kube_endpoint_info for {{ $labels.endpoint }}
+                        in websites for 15 minutes: the Service was removed, or the metric is not being
+                        collected. RBXCriticalEndpointNotReady cannot see this site meanwhile.
+
+                  # Certificate alerts. cert-manager exports these series when
+                  # prometheus.enabled is true in platform/cert-manager/application.yml,
+                  # and the kubernetes-pods-annotations job above scrapes them. `namespace`
+                  # and `name` are the Certificate's; the scrape adds the controller pod's
+                  # identity (instance, kubernetes_pod_name, pod labels) and cert-manager
+                  # adds the issuer's.
+                  #
+                  # Alert identity is the Certificate (namespace, name), so that a new
+                  # controller pod does not restart the `for` clock. last_over_time(...[10m])
+                  # bridges up to 10 minutes without samples (a controller restart, a few
+                  # failed scrapes); a longer silence is RBXWebsiteCertificateMetricsAbsent's
+                  # job, and the clock of the other two restarts when samples come back.
+                  # `min` is deliberate: if any series of a Certificate in the window says
+                  # not Ready, or expires sooner, that one wins. Two consequences: after a
+                  # recovery the alert can stay up to 10 minutes longer, and after an
+                  # issuerRef change cert-manager v1.14 keeps the old issuer's gauges until
+                  # the controller restarts, so restart it or expect a false alarm.
+                  #
+                  # Scoped to `websites` on purpose: widen to other namespaces only after
+                  # reading their live series, or every stale Certificate there pages.
                   - alert: RBXWebsiteCertificateNotReady
-                    expr: certmanager_certificate_ready_status{namespace="websites", condition="True"} == 0
+                    expr: |
+                      min by (namespace, name) (
+                        last_over_time(certmanager_certificate_ready_status{namespace="websites", condition="True"}[10m])
+                      ) == 0
                     for: 30m
                     labels:
                       severity: warning
                       rbx_workstream: p1b-observability
                     annotations:
                       summary: "Certificate {{ $labels.name }} in websites is not Ready"
-                      description: "cert-manager has not reported certificate {{ $labels.name }} as Ready for 30 minutes: issuance or renewal is pending or failing. See docs/runbooks/CERT-MANAGER-DEBUG.md."
+                      description: >-
+                        cert-manager has not reported certificate {{ $labels.name }} as Ready for 30
+                        minutes: issuance or renewal is pending or failing. See
+                        docs/runbooks/CERT-MANAGER-DEBUG.md.
 
+                  # cert-manager exports 0 while a Certificate has never been issued; `> 0`
+                  # leaves that case to RBXWebsiteCertificateNotReady. A timestamp in the
+                  # past (an expired certificate) still fires.
                   - alert: RBXWebsiteCertificateExpiringSoon
-                    expr: certmanager_certificate_expiration_timestamp_seconds{namespace="websites"} - time() < 14 * 24 * 3600
+                    expr: |
+                      min by (namespace, name) (
+                        last_over_time(certmanager_certificate_expiration_timestamp_seconds{namespace="websites"}[10m]) > 0
+                      ) - time() < 14 * 24 * 3600
                     for: 1h
                     labels:
                       severity: warning
                       rbx_workstream: p1b-observability
                     annotations:
                       summary: "Certificate {{ $labels.name }} in websites expires in less than 14 days"
-                      description: "By default cert-manager renews a certificate when a third of its lifetime is left (30 days for Let's Encrypt), so less than 14 days means renewal has been failing. See docs/runbooks/CERT-MANAGER-DEBUG.md."
+                      description: >-
+                        Certificate {{ $labels.name }} has less than 14 days left, or has expired. With
+                        cert-manager's default schedule a Let's Encrypt certificate is renewed 30 days
+                        before expiry, so renewal may be failing. See docs/runbooks/CERT-MANAGER-DEBUG.md.
 
+                  # The two alerts above read what cert-manager exports; a Certificate it
+                  # does not export is invisible to them. This one checks the inventory:
+                  # each expected Certificate must have both series. It does not prove that
+                  # cert-manager's view of the cluster is current, only that the series exist.
                   - alert: RBXWebsiteCertificateMetricsAbsent
-                    expr: absent(certmanager_certificate_ready_status{namespace="websites"})
+                    expr: |
+                      absent(certmanager_certificate_ready_status{namespace="websites", name="initelo-tls", condition="True"})
+                      or
+                      absent(certmanager_certificate_expiration_timestamp_seconds{namespace="websites", name="initelo-tls"})
                     for: 15m
                     labels:
                       severity: warning
                       rbx_workstream: p1b-observability
                     annotations:
-                      summary: "No cert-manager certificate metrics for websites"
-                      description: "No certmanager_certificate_ready_status series for namespace websites for 15 minutes: cert-manager is down or not scraped, or the namespace has no Certificate. The two certificate alerts for websites are blind meanwhile."
+                      summary: "cert-manager exports no metrics for certificate {{ $labels.name }} in websites"
+                      description: >-
+                        A certificate series expected for {{ $labels.name }} in websites has been missing
+                        for 15 minutes: cert-manager is down or not scraped, or the Certificate was
+                        removed. The readiness and expiry alerts cannot see it meanwhile.
 
           rbx-robson-trading:
             groups:

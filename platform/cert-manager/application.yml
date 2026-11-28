@@ -24,10 +24,12 @@ spec:
       values: |
         installCRDs: true
         # Controller metrics on (certificate readiness and expiry, for the alerts in
-        # platform/monitoring/kube-prometheus-stack.yml). With the ServiceMonitor off the
-        # chart only adds the prometheus.io/scrape, path and port annotations to the
-        # controller pod, which the kubernetes-pods-annotations scrape job already reads.
-        # No ServiceMonitor CRD is needed at this sync wave.
+        # platform/monitoring/kube-prometheus-stack.yml). With the ServiceMonitor off,
+        # chart v1.14.0 only adds the prometheus.io/scrape, path and port annotations to
+        # the controller pod, which the kubernetes-pods-annotations scrape job is meant to
+        # read. No ServiceMonitor CRD is needed at this sync wave. Changing this value
+        # replaces the controller pod. Prometheus then ingests every controller metric,
+        # not only the certificate series: check its memory after the change.
         prometheus:
           enabled: true
           servicemonitor:
