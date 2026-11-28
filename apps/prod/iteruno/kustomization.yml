@@ -1,0 +1,16 @@
+---
+# Iteruno brand site (iteruno.com), served from the shared `websites` namespace like apps/prod/initelo.
+# Image built and tested by rbxrobotica/iteruno CI (one immutable tag per commit on main).
+# To promote a new build, change `newTag` and `digest` together in the same commit
+# (docs/infra/IMAGE-PROMOTION.md, "Digest-pinned entries").
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: websites
+resources:
+  - deployment.yml
+  - service.yml
+  - ingress.yml
+images:
+  - name: ghcr.io/rbxrobotica/iteruno
+    newTag: sha-2f5f427bd07a
+    digest: sha256:8a0e61d98f8a2fdc93b36667ecf2d09bb10de43d08c58461e200ca712c783263
