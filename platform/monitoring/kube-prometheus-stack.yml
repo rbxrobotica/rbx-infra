@@ -325,22 +325,28 @@ spec:
                   # adds the issuer's.
                   #
                   # Alert identity is the Certificate (namespace, name), so that a new
-                  # controller pod does not restart the `for` clock. last_over_time(...[10m])
-                  # bridges up to 10 minutes without samples (a controller restart, a few
-                  # failed scrapes); a longer silence is RBXWebsiteCertificateMetricsAbsent's
-                  # job, and the clock of the other two restarts when samples come back.
-                  # `min` is deliberate: if any series of a Certificate in the window says
-                  # not Ready, or expires sooner, that one wins. Two consequences: after a
-                  # recovery the alert can stay up to 10 minutes longer, and after an
-                  # issuerRef change cert-manager v1.14 keeps the old issuer's gauges until
-                  # the controller restarts, so restart it or expect a false alarm.
+                  # controller pod does not restart the `for` clock. last_over_time(...[20m])
+                  # takes the latest sample of each series in the last 20 minutes, which
+                  # bridges that long without samples (a controller restart, failed
+                  # scrapes). 20 minutes is chosen against RBXWebsiteCertificateMetricsAbsent
+                  # (`for: 15m`, plus the 5 minutes an instant selector keeps a series whose
+                  # scrapes merely fail): for a registered Certificate, a silence long
+                  # enough to restart the clock of these two alerts has already fired that
+                  # one. A Certificate that is not in the inventory has no such cover.
+                  # `min` is deliberate: of the latest samples of a Certificate's series,
+                  # the worst wins. Two consequences. While a replaced controller's last
+                  # sample is still in the window (up to 20 minutes) it counts, so after a
+                  # recovery reported by a new pod the alert can stay, or even go from
+                  # pending to firing, for that long. And after an issuerRef change
+                  # cert-manager v1.14 keeps exporting the old issuer's gauges until the
+                  # controller restarts, which is not bounded by the window: restart it.
                   #
                   # Scoped to `websites` on purpose: widen to other namespaces only after
                   # reading their live series, or every stale Certificate there pages.
                   - alert: RBXWebsiteCertificateNotReady
                     expr: |
                       min by (namespace, name) (
-                        last_over_time(certmanager_certificate_ready_status{namespace="websites", condition="True"}[10m])
+                        last_over_time(certmanager_certificate_ready_status{namespace="websites", condition="True"}[20m])
                       ) == 0
                     for: 30m
                     labels:
@@ -349,9 +355,10 @@ spec:
                     annotations:
                       summary: "Certificate {{ $labels.name }} in websites is not Ready"
                       description: >-
-                        cert-manager has not reported certificate {{ $labels.name }} as Ready for 30
-                        minutes: issuance or renewal is pending or failing. See
-                        docs/runbooks/CERT-MANAGER-DEBUG.md.
+                        For 30 minutes the worst recent cert-manager report for certificate
+                        {{ $labels.name }} has been not Ready: issuance or renewal is pending or failing,
+                        or a replaced controller's last report is still within the 20 minute window.
+                        See docs/runbooks/CERT-MANAGER-DEBUG.md.
 
                   # cert-manager exports 0 while a Certificate has never been issued; `> 0`
                   # leaves that case to RBXWebsiteCertificateNotReady. A timestamp in the
@@ -359,7 +366,7 @@ spec:
                   - alert: RBXWebsiteCertificateExpiringSoon
                     expr: |
                       min by (namespace, name) (
-                        last_over_time(certmanager_certificate_expiration_timestamp_seconds{namespace="websites"}[10m]) > 0
+                        last_over_time(certmanager_certificate_expiration_timestamp_seconds{namespace="websites"}[20m]) > 0
                       ) - time() < 14 * 24 * 3600
                     for: 1h
                     labels:
@@ -390,7 +397,8 @@ spec:
                       description: >-
                         A certificate series expected for {{ $labels.name }} in websites has been missing
                         for 15 minutes: cert-manager is down or not scraped, or the Certificate was
-                        removed. The readiness and expiry alerts cannot see it meanwhile.
+                        removed. The alert that reads that series (readiness when the labels carry
+                        a condition, expiry otherwise) cannot see this certificate meanwhile.
 
           rbx-robson-trading:
             groups:

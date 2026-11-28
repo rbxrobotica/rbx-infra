@@ -2,10 +2,15 @@
 # `websites` namespace: the `websites` branch of RBXCriticalEndpointNotReady,
 # RBXWebsiteEndpointMissing and the three RBXWebsiteCertificate* alerts.
 #
-# What they show: on series injected with the labels the scrape job and
-# cert-manager v1.14 produce, each alert fires at its onset plus `for` and is
-# silent one evaluation (30 s) earlier, stays silent on the healthy and
-# out-of-scope cases, and keeps its clock across a controller replacement.
+# What the cases below show, each on series injected with the labels this
+# repository's scrape job and cert-manager v1.14 produce: an alert fires at
+# its onset plus `for` and is silent one evaluation (30 s) earlier; it stays
+# silent on the healthy and out-of-scope cases; the certificate alerts keep
+# their clock across a controller replacement and take the worst of the
+# latest samples of a Certificate's series; and a silence that restarts
+# their clock has already fired the inventory alert for a registered
+# Certificate. They are a selection of cases at 30 second resolution, not a
+# proof for every duration or label combination.
 # What they do not show: service discovery, relabeling, whether Prometheus can
 # reach cert-manager, Helm reconciliation or alert delivery. promtool starts
 # the clock at 0, so time() equals the evaluation time and an expiration
@@ -17,7 +22,7 @@ rule_files:
 evaluation_interval: 30s
 
 tests:
-  - name: the registered site healthy, with a Ready certificate far from expiry, pages nothing
+  - name: "the registered site healthy, with a Ready certificate far from expiry, pages nothing"
     interval: 30s
     input_series:
       - series: 'kube_endpoint_info{namespace="websites",endpoint="initelo"}'
@@ -53,7 +58,7 @@ tests:
       - {eval_time: 61m, alertname: RBXWebsiteCertificateMetricsAbsent, exp_alerts: []}
       - {eval_time: 2h, alertname: RBXWebsiteCertificateMetricsAbsent, exp_alerts: []}
 
-  - name: no ready backend pages after 10 minutes, for websites and for the namespaces the rule already named
+  - name: "no ready backend pages after 10 minutes, for websites and for the namespaces the rule already named"
     interval: 30s
     input_series:
       - series: 'kube_endpoint_info{namespace="websites",endpoint="initelo"}'
@@ -95,7 +100,7 @@ tests:
       # The Endpoints object exists, so the inventory alert stays silent.
       - {eval_time: 2h, alertname: RBXWebsiteEndpointMissing, exp_alerts: []}
 
-  - name: a backend that comes back within 10 minutes pages nothing
+  - name: "a backend that comes back within 10 minutes pages nothing"
     interval: 30s
     input_series:
       - series: 'kube_endpoint_info{namespace="websites",endpoint="initelo"}'
@@ -109,7 +114,7 @@ tests:
       - {eval_time: 15m, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
       - {eval_time: 1h, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
 
-  - name: the registered site's Endpoints object missing pages after 15 minutes, although the namespace has others
+  - name: "the registered site's Endpoints object missing pages after 15 minutes, although the namespace has others"
     interval: 30s
     input_series:
       # Another Service of the namespace is exported and healthy.
@@ -133,7 +138,7 @@ tests:
       # Nothing to evaluate for the missing object: this is the gap the inventory alert covers.
       - {eval_time: 2h, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
 
-  - name: a certificate that is not Ready pages after 30 minutes, under the Certificate's identity only
+  - name: "a certificate that is not Ready pages after 30 minutes, under the Certificate's identity only"
     interval: 30s
     input_series:
       - series: 'certmanager_certificate_ready_status{namespace="websites",name="initelo-tls",condition="True",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
@@ -156,9 +161,10 @@ tests:
             exp_annotations:
               summary: "Certificate initelo-tls in websites is not Ready"
               description: >-
-                cert-manager has not reported certificate initelo-tls as Ready for 30
-                minutes: issuance or renewal is pending or failing. See
-                docs/runbooks/CERT-MANAGER-DEBUG.md.
+                For 30 minutes the worst recent cert-manager report for certificate
+                initelo-tls has been not Ready: issuance or renewal is pending or failing,
+                or a replaced controller's last report is still within the 20 minute window.
+                See docs/runbooks/CERT-MANAGER-DEBUG.md.
       - eval_time: 2h
         alertname: RBXWebsiteCertificateNotReady
         exp_alerts:
@@ -166,11 +172,12 @@ tests:
             exp_annotations:
               summary: "Certificate initelo-tls in websites is not Ready"
               description: >-
-                cert-manager has not reported certificate initelo-tls as Ready for 30
-                minutes: issuance or renewal is pending or failing. See
-                docs/runbooks/CERT-MANAGER-DEBUG.md.
+                For 30 minutes the worst recent cert-manager report for certificate
+                initelo-tls has been not Ready: issuance or renewal is pending or failing,
+                or a replaced controller's last report is still within the 20 minute window.
+                See docs/runbooks/CERT-MANAGER-DEBUG.md.
 
-  - name: a certificate that was never issued pages as not Ready and not as expiring
+  - name: "a certificate that was never issued pages as not Ready and not as expiring"
     interval: 30s
     input_series:
       # A new site before its DNS cutover: HTTP-01 is pending, and cert-manager
@@ -188,14 +195,15 @@ tests:
             exp_annotations:
               summary: "Certificate novo-tls in websites is not Ready"
               description: >-
-                cert-manager has not reported certificate novo-tls as Ready for 30
-                minutes: issuance or renewal is pending or failing. See
-                docs/runbooks/CERT-MANAGER-DEBUG.md.
+                For 30 minutes the worst recent cert-manager report for certificate
+                novo-tls has been not Ready: issuance or renewal is pending or failing,
+                or a replaced controller's last report is still within the 20 minute window.
+                See docs/runbooks/CERT-MANAGER-DEBUG.md.
       - {eval_time: 1m, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}
       - {eval_time: 61m, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}
       - {eval_time: 2h, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}
 
-  - name: a controller replacement does not restart the clock of a certificate that stays not Ready
+  - name: "a controller replacement does not restart the clock of a certificate that stays not Ready"
     interval: 30s
     input_series:
       # The first controller pod reports not Ready until 20m and goes away.
@@ -214,9 +222,10 @@ tests:
             exp_annotations:
               summary: "Certificate initelo-tls in websites is not Ready"
               description: >-
-                cert-manager has not reported certificate initelo-tls as Ready for 30
-                minutes: issuance or renewal is pending or failing. See
-                docs/runbooks/CERT-MANAGER-DEBUG.md.
+                For 30 minutes the worst recent cert-manager report for certificate
+                initelo-tls has been not Ready: issuance or renewal is pending or failing,
+                or a replaced controller's last report is still within the 20 minute window.
+                See docs/runbooks/CERT-MANAGER-DEBUG.md.
       - eval_time: 1h
         alertname: RBXWebsiteCertificateNotReady
         exp_alerts:
@@ -224,33 +233,150 @@ tests:
             exp_annotations:
               summary: "Certificate initelo-tls in websites is not Ready"
               description: >-
-                cert-manager has not reported certificate initelo-tls as Ready for 30
-                minutes: issuance or renewal is pending or failing. See
-                docs/runbooks/CERT-MANAGER-DEBUG.md.
+                For 30 minutes the worst recent cert-manager report for certificate
+                initelo-tls has been not Ready: issuance or renewal is pending or failing,
+                or a replaced controller's last report is still within the 20 minute window.
+                See docs/runbooks/CERT-MANAGER-DEBUG.md.
 
-  - name: more than 10 minutes without samples restarts the clock, by design
+  - name: "a recovery reported by a new controller pod is held back by the old pod's last sample, for up to 20 minutes"
     interval: 30s
     input_series:
-      # Not Ready until 10m, no samples until 25m, not Ready again. The lookback
-      # holds the last sample until 20m; from 20m to 25m there is nothing to
-      # evaluate, so the 30 minutes count again from 25m.
+      # The first pod reports not Ready until 25m and goes away; the second reports
+      # Ready from 26m. The old pod's last sample stays in the window until 45m and
+      # `min` takes it: the alert goes from pending to firing at 30m and clears at 45m.
       - series: 'certmanager_certificate_ready_status{namespace="websites",name="initelo-tls",condition="True",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
-        values: '0x20 stale _x28 0x250'
+        values: '0x50 stale'
+      - series: 'certmanager_certificate_ready_status{namespace="websites",name="initelo-tls",condition="True",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-bbbbb",instance="10.42.1.9:9402"}'
+        values: '_x52 1x250'
     alert_rule_test:
-      - {eval_time: 30m, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
-      - {eval_time: 54m30s, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
-      - eval_time: 55m
+      - {eval_time: 29m30s, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - eval_time: 30m
         alertname: RBXWebsiteCertificateNotReady
         exp_alerts:
           - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: initelo-tls}
             exp_annotations:
               summary: "Certificate initelo-tls in websites is not Ready"
               description: >-
-                cert-manager has not reported certificate initelo-tls as Ready for 30
-                minutes: issuance or renewal is pending or failing. See
-                docs/runbooks/CERT-MANAGER-DEBUG.md.
+                For 30 minutes the worst recent cert-manager report for certificate
+                initelo-tls has been not Ready: issuance or renewal is pending or failing,
+                or a replaced controller's last report is still within the 20 minute window.
+                See docs/runbooks/CERT-MANAGER-DEBUG.md.
+      - eval_time: 44m30s
+        alertname: RBXWebsiteCertificateNotReady
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: initelo-tls}
+            exp_annotations:
+              summary: "Certificate initelo-tls in websites is not Ready"
+              description: >-
+                For 30 minutes the worst recent cert-manager report for certificate
+                initelo-tls has been not Ready: issuance or renewal is pending or failing,
+                or a replaced controller's last report is still within the 20 minute window.
+                See docs/runbooks/CERT-MANAGER-DEBUG.md.
+      - {eval_time: 45m, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
 
-  - name: a certificate issued within 30 minutes pages nothing
+  - name: "two series of one Certificate that disagree: the worst wins"
+    interval: 30s
+    input_series:
+      # After an issuerRef change cert-manager v1.14 keeps the old issuer's gauge.
+      # Here the old one still says not Ready and the current one says Ready.
+      - series: 'certmanager_certificate_ready_status{namespace="websites",name="initelo-tls",condition="True",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-staging",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
+        values: '0x300'
+      - series: 'certmanager_certificate_ready_status{namespace="websites",name="initelo-tls",condition="True",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
+        values: '1x300'
+    alert_rule_test:
+      - {eval_time: 29m30s, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - eval_time: 30m
+        alertname: RBXWebsiteCertificateNotReady
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: initelo-tls}
+            exp_annotations:
+              summary: "Certificate initelo-tls in websites is not Ready"
+              description: >-
+                For 30 minutes the worst recent cert-manager report for certificate
+                initelo-tls has been not Ready: issuance or renewal is pending or failing,
+                or a replaced controller's last report is still within the 20 minute window.
+                See docs/runbooks/CERT-MANAGER-DEBUG.md.
+      - eval_time: 2h
+        alertname: RBXWebsiteCertificateNotReady
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: initelo-tls}
+            exp_annotations:
+              summary: "Certificate initelo-tls in websites is not Ready"
+              description: >-
+                For 30 minutes the worst recent cert-manager report for certificate
+                initelo-tls has been not Ready: issuance or renewal is pending or failing,
+                or a replaced controller's last report is still within the 20 minute window.
+                See docs/runbooks/CERT-MANAGER-DEBUG.md.
+
+  - name: "a silence of more than 20 minutes restarts the clock, after the inventory alert has fired"
+    interval: 30s
+    input_series:
+      # Not Ready until 10m, the series go stale at 10m30s, not Ready again from 35m.
+      # The window holds the last sample until 30m. The inventory alert fires 15
+      # minutes after the series went stale, before that. The 30 minutes then count
+      # again from 35m.
+      - series: 'certmanager_certificate_ready_status{namespace="websites",name="initelo-tls",condition="True",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
+        values: '0x20 stale _x48 0x250'
+      # The expiration series is healthy throughout, so only the readiness branch of the inventory alert is at stake.
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="websites",name="initelo-tls",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
+        values: '5184000x400'
+    alert_rule_test:
+      - {eval_time: 25m, alertname: RBXWebsiteCertificateMetricsAbsent, exp_alerts: []}
+      - eval_time: 25m30s
+        alertname: RBXWebsiteCertificateMetricsAbsent
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: initelo-tls, condition: "True"}
+            exp_annotations:
+              summary: "cert-manager exports no metrics for certificate initelo-tls in websites"
+              description: >-
+                A certificate series expected for initelo-tls in websites has been missing
+                for 15 minutes: cert-manager is down or not scraped, or the Certificate was
+                removed. The alert that reads that series (readiness when the labels carry
+                a condition, expiry otherwise) cannot see this certificate meanwhile.
+      - {eval_time: 29m30s, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 30m, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 64m30s, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - eval_time: 65m
+        alertname: RBXWebsiteCertificateNotReady
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: initelo-tls}
+            exp_annotations:
+              summary: "Certificate initelo-tls in websites is not Ready"
+              description: >-
+                For 30 minutes the worst recent cert-manager report for certificate
+                initelo-tls has been not Ready: issuance or renewal is pending or failing,
+                or a replaced controller's last report is still within the 20 minute window.
+                See docs/runbooks/CERT-MANAGER-DEBUG.md.
+
+  - name: "failed scrapes with no stale marker: the clock restarts at the same evaluation at which the inventory alert fires"
+    interval: 30s
+    input_series:
+      # Samples simply stop after 10m. An instant selector keeps the series for 5
+      # minutes, so the inventory alert is pending from 15m and fires at 30m, which
+      # is when the 20 minute window loses the last sample.
+      - series: 'certmanager_certificate_ready_status{namespace="websites",name="initelo-tls",condition="True",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
+        values: '0x20'
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="websites",name="initelo-tls",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
+        values: '5184000x400'
+    alert_rule_test:
+      - {eval_time: 29m30s, alertname: RBXWebsiteCertificateMetricsAbsent, exp_alerts: []}
+      - eval_time: 30m
+        alertname: RBXWebsiteCertificateMetricsAbsent
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: initelo-tls, condition: "True"}
+            exp_annotations:
+              summary: "cert-manager exports no metrics for certificate initelo-tls in websites"
+              description: >-
+                A certificate series expected for initelo-tls in websites has been missing
+                for 15 minutes: cert-manager is down or not scraped, or the Certificate was
+                removed. The alert that reads that series (readiness when the labels carry
+                a condition, expiry otherwise) cannot see this certificate meanwhile.
+      - {eval_time: 29m30s, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 30m, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 1h, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+
+  - name: "a certificate issued within 30 minutes pages nothing"
     interval: 30s
     input_series:
       - series: 'certmanager_certificate_ready_status{namespace="websites",name="initelo-tls",condition="True",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
@@ -260,7 +386,7 @@ tests:
       - {eval_time: 30m, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
       - {eval_time: 2h, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
 
-  - name: a certificate that crosses 14 days to expiry pages one hour later
+  - name: "a certificate that crosses 14 days to expiry pages one hour later"
     interval: 30s
     input_series:
       # 14 days and 30 minutes left at the start: exactly 14 days at 30m, less than that from 30m30s on.
@@ -286,7 +412,7 @@ tests:
                 cert-manager's default schedule a Let's Encrypt certificate is renewed 30 days
                 before expiry, so renewal may be failing. See docs/runbooks/CERT-MANAGER-DEBUG.md.
 
-  - name: a certificate already expired pages after one hour
+  - name: "a certificate already expired pages after one hour"
     interval: 30s
     input_series:
       # Expired 10 minutes after the start: a positive timestamp in the past still counts.
@@ -315,7 +441,75 @@ tests:
                 cert-manager's default schedule a Let's Encrypt certificate is renewed 30 days
                 before expiry, so renewal may be failing. See docs/runbooks/CERT-MANAGER-DEBUG.md.
 
-  - name: the registered certificate missing from the metrics pages after 15 minutes, although the namespace has others
+  - name: "a controller replacement does not restart the clock of a certificate close to expiry"
+    interval: 30s
+    input_series:
+      # 13 days left. The first pod exports it until 20m; the second from 23m.
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="websites",name="initelo-tls",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
+        values: '1123200x40 stale'
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="websites",name="initelo-tls",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-bbbbb",instance="10.42.1.9:9402"}'
+        values: '_x46 1123200x260'
+    alert_rule_test:
+      - {eval_time: 59m30s, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}
+      - eval_time: 1h
+        alertname: RBXWebsiteCertificateExpiringSoon
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: initelo-tls}
+            exp_annotations:
+              summary: "Certificate initelo-tls in websites expires in less than 14 days"
+              description: >-
+                Certificate initelo-tls has less than 14 days left, or has expired. With
+                cert-manager's default schedule a Let's Encrypt certificate is renewed 30 days
+                before expiry, so renewal may be failing. See docs/runbooks/CERT-MANAGER-DEBUG.md.
+      - eval_time: 2h
+        alertname: RBXWebsiteCertificateExpiringSoon
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: initelo-tls}
+            exp_annotations:
+              summary: "Certificate initelo-tls in websites expires in less than 14 days"
+              description: >-
+                Certificate initelo-tls has less than 14 days left, or has expired. With
+                cert-manager's default schedule a Let's Encrypt certificate is renewed 30 days
+                before expiry, so renewal may be failing. See docs/runbooks/CERT-MANAGER-DEBUG.md.
+
+  - name: "two expiration series of one Certificate: a zero is ignored and the earliest positive one wins"
+    interval: 30s
+    input_series:
+      # initelo-tls: one series still at 0 (never issued under that issuer) and one
+      # with 60 days left. The zero must not hide the positive value, nor fire.
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="websites",name="initelo-tls",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-staging",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
+        values: '0x400'
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="websites",name="initelo-tls",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
+        values: '5184000x400'
+      # outro-tls: 60 days under one issuer, 13 days under another. The earliest wins.
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="websites",name="outro-tls",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
+        values: '5184000x400'
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="websites",name="outro-tls",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-staging",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
+        values: '1123200x400'
+    alert_rule_test:
+      - {eval_time: 59m30s, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}
+      - eval_time: 1h
+        alertname: RBXWebsiteCertificateExpiringSoon
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: outro-tls}
+            exp_annotations:
+              summary: "Certificate outro-tls in websites expires in less than 14 days"
+              description: >-
+                Certificate outro-tls has less than 14 days left, or has expired. With
+                cert-manager's default schedule a Let's Encrypt certificate is renewed 30 days
+                before expiry, so renewal may be failing. See docs/runbooks/CERT-MANAGER-DEBUG.md.
+      - eval_time: 2h
+        alertname: RBXWebsiteCertificateExpiringSoon
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: outro-tls}
+            exp_annotations:
+              summary: "Certificate outro-tls in websites expires in less than 14 days"
+              description: >-
+                Certificate outro-tls has less than 14 days left, or has expired. With
+                cert-manager's default schedule a Let's Encrypt certificate is renewed 30 days
+                before expiry, so renewal may be failing. See docs/runbooks/CERT-MANAGER-DEBUG.md.
+
+  - name: "the registered certificate missing from the metrics pages after 15 minutes, although the namespace has others"
     interval: 30s
     input_series:
       # cert-manager is scraped and reports another certificate of the namespace.
@@ -335,19 +529,21 @@ tests:
               description: >-
                 A certificate series expected for initelo-tls in websites has been missing
                 for 15 minutes: cert-manager is down or not scraped, or the Certificate was
-                removed. The readiness and expiry alerts cannot see it meanwhile.
+                removed. The alert that reads that series (readiness when the labels carry
+                a condition, expiry otherwise) cannot see this certificate meanwhile.
           - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: initelo-tls}
             exp_annotations:
               summary: "cert-manager exports no metrics for certificate initelo-tls in websites"
               description: >-
                 A certificate series expected for initelo-tls in websites has been missing
                 for 15 minutes: cert-manager is down or not scraped, or the Certificate was
-                removed. The readiness and expiry alerts cannot see it meanwhile.
+                removed. The alert that reads that series (readiness when the labels carry
+                a condition, expiry otherwise) cannot see this certificate meanwhile.
       # The other two certificate alerts have nothing to evaluate for it.
       - {eval_time: 2h, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
       - {eval_time: 2h, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}
 
-  - name: only the expiration series missing pages for that series
+  - name: "only the expiration series missing pages for that series"
     interval: 30s
     input_series:
       - series: 'certmanager_certificate_ready_status{namespace="websites",name="initelo-tls",condition="True",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
@@ -363,9 +559,10 @@ tests:
               description: >-
                 A certificate series expected for initelo-tls in websites has been missing
                 for 15 minutes: cert-manager is down or not scraped, or the Certificate was
-                removed. The readiness and expiry alerts cannot see it meanwhile.
+                removed. The alert that reads that series (readiness when the labels carry
+                a condition, expiry otherwise) cannot see this certificate meanwhile.
 
-  - name: only the Ready-condition series missing pages, although the False one is exported
+  - name: "only the Ready-condition series missing pages, although the False one is exported"
     interval: 30s
     input_series:
       - series: 'certmanager_certificate_ready_status{namespace="websites",name="initelo-tls",condition="False",issuer_group="cert-manager.io",issuer_kind="ClusterIssuer",issuer_name="letsencrypt-prod",job="kubernetes-pods-annotations",kubernetes_namespace="cert-manager",kubernetes_pod_name="cert-manager-7d9f8c5b6-aaaaa",instance="10.42.0.5:9402"}'
@@ -383,4 +580,5 @@ tests:
               description: >-
                 A certificate series expected for initelo-tls in websites has been missing
                 for 15 minutes: cert-manager is down or not scraped, or the Certificate was
-                removed. The readiness and expiry alerts cannot see it meanwhile.
+                removed. The alert that reads that series (readiness when the labels carry
+                a condition, expiry otherwise) cannot see this certificate meanwhile.
