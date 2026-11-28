@@ -13,12 +13,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
           fetch-depth: 0
 
       - name: Setup yamllint
-        run: pip install yamllint pyyaml
+        # yamllint, pathspec and PyYAML at exact versions, verified by hash
+        # (scripts/validate-yaml-requirements.txt), in a virtual environment
+        # that does not see the site-packages of the runner image. Its bin
+        # directory goes first on PATH, so yamllint and every python3 of the
+        # later steps of this job run with these three packages and no other.
+        run: |
+          python3 -m venv --without-pip "$RUNNER_TEMP/validate-yaml-env"
+          python3 -m pip --python "$RUNNER_TEMP/validate-yaml-env/bin/python" install \
+            --disable-pip-version-check --only-binary :all: --require-hashes \
+            -r scripts/validate-yaml-requirements.txt
+          "$RUNNER_TEMP/validate-yaml-env/bin/yamllint" --version
+          echo "$RUNNER_TEMP/validate-yaml-env/bin" >> "$GITHUB_PATH"
 
       - name: Lint YAML files
         run: |
@@ -51,9 +62,18 @@ jobs:
         run: python3 scripts/validate-argocd-helm-values.py
 
       - name: Setup Helm for effective values and storage contracts
-        uses: azure/setup-helm@v4
-        with:
-          version: v3.17.0
+        # Helm v3.17.0 from get.helm.sh, the version this job already asked
+        # for. The sha256 is the one Helm publishes beside the archive, so a
+        # wrong or tampered body fails closed before extraction, and the last
+        # line fails when another helm comes first on PATH.
+        run: |
+          curl --fail --location --proto '=https' --tlsv1.2 --retry 2 --max-time 120 \
+            https://get.helm.sh/helm-v3.17.0-linux-amd64.tar.gz \
+            --output "$RUNNER_TEMP/helm.tar.gz"
+          echo "fb5d12662fde6eeff36ac4ccacbf3abed96b0ee2de07afdde4edb14e613aee24  $RUNNER_TEMP/helm.tar.gz" | sha256sum --check --strict
+          tar -xzf "$RUNNER_TEMP/helm.tar.gz" -C "$RUNNER_TEMP" linux-amd64/helm
+          sudo install -m 0755 "$RUNNER_TEMP/linux-amd64/helm" /usr/local/bin/helm
+          helm version --short | grep -E '^v3\.17\.0([^0-9]|$)'
 
       - name: Validate rendered reliability chart storage and identity
         run: python3 scripts/validate-reliability-charts.py
@@ -77,7 +97,17 @@ jobs:
           sudo mv kubeconform /usr/local/bin/
 
       - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
+        # kubectl v1.37.3 from dl.k8s.io: the stable release on 2026-11-28,
+        # which is what the unversioned setup action installed that day. The
+        # sha256 is the one Kubernetes publishes beside the binary, and the
+        # last line fails when another kubectl comes first on PATH.
+        run: |
+          curl --fail --location --proto '=https' --tlsv1.2 --retry 2 --max-time 120 \
+            https://dl.k8s.io/release/v1.37.3/bin/linux/amd64/kubectl \
+            --output "$RUNNER_TEMP/kubectl"
+          echo "9a1b55af2795b25dd288dbef62387db9b5530087ab918d28c6ad067f2e3cb07c  $RUNNER_TEMP/kubectl" | sha256sum --check --strict
+          sudo install -m 0755 "$RUNNER_TEMP/kubectl" /usr/local/bin/kubectl
+          kubectl version --client | grep -Fx 'Client Version: v1.37.3'
 
       - name: Validate Kubernetes manifests
         run: |
@@ -291,13 +321,24 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
 
       - name: Setup argocd
+        # Argo CD CLI v3.6.3, the latest release on 2026-11-28, which is what
+        # the unversioned download resolved to that day. Authenticated
+        # download for the reason given at "Setup kubeconform" above. The
+        # sha256 is the one in cli_checksums.txt of the release, so a wrong or
+        # tampered body fails closed before the binary is installed or run.
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
-          chmod +x argocd
-          sudo mv argocd /usr/local/bin/
+          gh release download v3.6.3 \
+            --repo argoproj/argo-cd \
+            --pattern 'argocd-linux-amd64' \
+            --output "$RUNNER_TEMP/argocd"
+          echo "3750cd7ed2a2ef05c640344b86f29aa99c9783e847c8f326c81e3900ad39412b  $RUNNER_TEMP/argocd" | sha256sum --check --strict
+          sudo install -m 0755 "$RUNNER_TEMP/argocd" /usr/local/bin/argocd
+          argocd version --client --short | grep -E '(^|[^0-9.])v3\.6\.3([^0-9]|$)'
 
       - name: Validate ArgoCD Applications
         run: |
@@ -308,26 +349,32 @@ jobs:
           done
 
   security-scan:
-    runs-on: ubuntu-latest
+    # The checks of guardrails §2 over the whole repository, where the jobs
+    # above cover the tooling they test: Trivy over every configuration file
+    # (CRITICAL and HIGH), gitleaks over every file, osv-scanner over every
+    # lockfile. In podman from digest-pinned images, by the script that runs
+    # the same way on a workstation. A finding fails the job unless a
+    # reviewed ignore file names it: .trivyignore.yaml and osv-scanner.toml
+    # carry a date per entry and stop applying on it, and .gitleaks.toml
+    # lists matches that were read and are not secrets.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
-          scan-type: 'config'
-          scan-ref: '.'
-          format: 'table'
-          exit-code: '0'
-          ignore-unfixed: true
-          severity: 'CRITICAL,HIGH'
+          persist-credentials: false
+
+      - name: Scan configuration, secrets and dependencies of the whole repository
+        run: bash scripts/scan-repository.sh
 
   sandbox-email-key-source-test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
 
       - name: Test sandbox email key staging without a cluster or pass store
         run: python3 -m unittest discover -s scripts/tests -p 'test_stage_satwake_sandbox_email_keys.py' -v
@@ -341,7 +388,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
         with:
           fetch-depth: 0
 

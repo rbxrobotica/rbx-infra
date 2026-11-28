@@ -1,0 +1,15 @@
+# yamllint, and the PyYAML that the validation scripts and tests of the
+# validate-yaml job import, installed by the "Setup yamllint" step of
+# .github/workflows/validate.yml into a virtual environment of the runner's
+# python3: the pure-Python wheels of yamllint and pathspec, and PyYAML's
+# manylinux wheels for x86_64 and aarch64 of CPython 3.12, 3.13 and 3.14.
+# Regenerate deliberately when updating yamllint.
+yamllint==1.38.0 --hash=sha256:fc394a5b3be980a4062607b8fdddc0843f4fa394152b6da21722f5d59013c220
+pathspec==1.1.1 --hash=sha256:a00ce642f577bf7f473932318056212bc4f8bfdf53128c78bbd5af0b9b20b189
+PyYAML==6.0.3 \
+    --hash=sha256:ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc \
+    --hash=sha256:9149cad251584d5fb4981be1ecde53a1ca46c891a79788c0df828d2f166bda28 \
+    --hash=sha256:0f29edc409a6392443abf94b9cf89ce99889a1dd5376d94316ae5145dfedd5d6 \
+    --hash=sha256:ee2922902c45ae8ccada2c5b501ab86c36525b883eff4255313a253a3160861c \
+    --hash=sha256:c458b6d084f9b935061bc36216e8a69a7e293a2f1e68bf956dcd9e6cbcd143f5 \
+    --hash=sha256:501a031947e3a9025ed4405a168e6ef5ae3126c59f90ce0cd6f2bfc477be31b7
