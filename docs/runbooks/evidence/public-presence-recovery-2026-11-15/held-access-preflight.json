@@ -1,0 +1,50 @@
+{
+  "schema": "rbx.public-presence.held-access-preflight.v1",
+  "observed_at": "2026-11-15T07:48:32.996258+00:00",
+  "operator_scope": "Continue Public Presence recovery and first assisted Merovelis Systems LinkedIn cycle; shared 90 human minutes/week",
+  "source_revision": "3ec258863f8621b2bfba5e5058fac4eedc8bce96",
+  "cluster_uid": "7c54362a-7c64-4d62-a6ec-a14d4843e8a5",
+  "phase": "held_registry_reconstruction_only",
+  "allowed_resources": [
+    "argocd/rbx-public-presence Application through its root owner",
+    "rbx-public-presence/rbx-public-presence-db-migrate suspend and operation termination",
+    "rbx-public-presence/ghcr-pull-secret through dedicated Ansible",
+    "one bounded image-check Job without database/channel credentials"
+  ],
+  "persistent_application_writes_allowed": false,
+  "database_migration_allowed": false,
+  "publishing_worker_enabled": false,
+  "external_backup_and_gpg_custody": {
+    "owner": "other operator session",
+    "completion_qualified": false,
+    "not_modified_here": true
+  },
+  "reconstruction_sources": {
+    "desired_state": "rbxrobotica/rbx-infra main at source_revision",
+    "registry_credential": "pass:rbx/cluster/ghcr-token",
+    "encrypted_credential_remote_private": true,
+    "encrypted_entry_matches_remote": true,
+    "source_config_rpo": "zero committed configuration loss; Git is the canonical copy",
+    "service_rpo_rto": "proposed 24h/4h; not a proven application guarantee",
+    "procedure": "docs/runbooks/PUBLIC-PRESENCE-RECOVERY.md sections 1-2",
+    "reconstruction_validation": "rendered held overlay; authenticated API/web manifests 200; actual cluster pull to be proved by bounded probe"
+  },
+  "observed_before": {
+    "root_revision": "fe304fc25268ebf1fa21645692cd25d015c41c34",
+    "application_automated": true,
+    "old_migration_operation": "Running",
+    "migration_suspended": false,
+    "pod_phase": "Pending",
+    "pod_wait_reason": "ImagePullBackOff",
+    "api_web_deployments": 0
+  },
+  "safety_sequence": [
+    "reconcile only the reviewed Application through its root owner without prune",
+    "terminate the stale child sync; suspend migration and wait for no nonterminal pods",
+    "run dedicated registry check mode then one-Secret reconstruction",
+    "run doctrine-only Always-pull probe and verify resolved image digest"
+  ],
+  "rollback": "retain manual sync, suspended migration and worker off; do not resume the legacy hook or revert to automated sync",
+  "local_only_risk": "source and rendered manifests are reproducible; namespace overlay has no credential values; no new canonical local state",
+  "production_mutated_at_checkpoint": false
+}
