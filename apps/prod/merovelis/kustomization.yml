@@ -10,6 +10,7 @@ resources:
   - institutional-externalsecrets.yml
   - institutional-deploy.yml
   - institutional-svc.yml
+  - content/compare-job.yml
 labels:
   - pairs:
       app.kubernetes.io/part-of: merovelis
@@ -25,3 +26,125 @@ images:
   - name: ghcr.io/rbxrobotica/rbx-ia-br
     newTag: sha-26d103f
     digest: sha256:2c4d8bbe82d1828ad68ed71cb3ba842e52f90ab9872b233dc6a9d88c50de8258
+# Inputs of the one-off content Jobs (content/). The candidates are
+# site-content/ of rbx-systems-frontend at 26d103f, and the capture is its
+# site-content-recovery/2026-11-07-cache-rescue/site, one file per page with
+# the path flattened. The name suffix follows the content, so a Job always
+# reads the files it was reviewed with.
+configMapGenerator:
+  - name: site-content-job
+    namespace: merovelis
+    files:
+      - content/site-content-job.mjs
+  - name: site-content-candidates
+    namespace: merovelis
+    files:
+      - content/candidates/en__about.md
+      - content/candidates/en__atelier.md
+      - content/candidates/en__briefing-btc.md
+      - content/candidates/en__careers.md
+      - content/candidates/en__cases.md
+      - content/candidates/en__caue-alencar.md
+      - content/candidates/en__changelog.md
+      - content/candidates/en__flavia-ribeiro.md
+      - content/candidates/en__history.md
+      - content/candidates/en__home.md
+      - content/candidates/en__leandro-damasio.md
+      - content/candidates/en__legal.md
+      - content/candidates/en__manifesto.md
+      - content/candidates/en__newsroom.md
+      - content/candidates/en__services__ai-agents.md
+      - content/candidates/en__services__ai-engineering.md
+      - content/candidates/en__services__api-integration.md
+      - content/candidates/en__services__cloud-solutions.md
+      - content/candidates/en__services__custom-systems.md
+      - content/candidates/en__services__devops-cloud.md
+      - content/candidates/en__services__financial-software.md
+      - content/candidates/en__services__llmops.md
+      - content/candidates/en__services__logistics-software.md
+      - content/candidates/en__services__mobile-apps.md
+      - content/candidates/en__services__observability.md
+      - content/candidates/en__services__process-automation.md
+      - content/candidates/en__services__system-maintenance.md
+      - content/candidates/en__services__technical-consulting.md
+      - content/candidates/en__services__ux-ui-design.md
+      - content/candidates/en__services__web-development.md
+      - content/candidates/en__solutions.md
+      - content/candidates/en__team.md
+      - content/candidates/en__trust.md
+      - content/candidates/pt-BR__about.md
+      - content/candidates/pt-BR__atelier.md
+      - content/candidates/pt-BR__briefing-btc.md
+      - content/candidates/pt-BR__careers.md
+      - content/candidates/pt-BR__cases.md
+      - content/candidates/pt-BR__caue-alencar.md
+      - content/candidates/pt-BR__changelog.md
+      - content/candidates/pt-BR__flavia-ribeiro.md
+      - content/candidates/pt-BR__history.md
+      - content/candidates/pt-BR__home.md
+      - content/candidates/pt-BR__leandro-damasio.md
+      - content/candidates/pt-BR__legal.md
+      - content/candidates/pt-BR__manifesto.md
+      - content/candidates/pt-BR__newsroom.md
+      - content/candidates/pt-BR__services__ai-agents.md
+      - content/candidates/pt-BR__services__llmops.md
+      - content/candidates/pt-BR__solutions.md
+      - content/candidates/pt-BR__team.md
+      - content/candidates/pt-BR__trust.md
+  - name: site-content-capture
+    namespace: merovelis
+    files:
+      - content/capture/en__about.md
+      - content/capture/en__atelier.md
+      - content/capture/en__briefing-btc.md
+      - content/capture/en__careers.md
+      - content/capture/en__cases.md
+      - content/capture/en__caue-alencar.md
+      - content/capture/en__changelog.md
+      - content/capture/en__flavia-ribeiro.md
+      - content/capture/en__history.md
+      - content/capture/en__home.md
+      - content/capture/en__leandro-damasio.md
+      - content/capture/en__legal.md
+      - content/capture/en__manifesto.md
+      - content/capture/en__newsroom.md
+      - content/capture/en__products__maestro.md
+      - content/capture/en__services__ai-agents.md
+      - content/capture/en__services__ai-engineering.md
+      - content/capture/en__services__api-integration.md
+      - content/capture/en__services__cloud-solutions.md
+      - content/capture/en__services__custom-systems.md
+      - content/capture/en__services__devops-cloud.md
+      - content/capture/en__services__financial-software.md
+      - content/capture/en__services__llmops.md
+      - content/capture/en__services__logistics-software.md
+      - content/capture/en__services__mobile-apps.md
+      - content/capture/en__services__observability.md
+      - content/capture/en__services__process-automation.md
+      - content/capture/en__services__system-maintenance.md
+      - content/capture/en__services__technical-consulting.md
+      - content/capture/en__services__ux-ui-design.md
+      - content/capture/en__services__web-development.md
+      - content/capture/en__solutions.md
+      - content/capture/en__team.md
+      - content/capture/en__trust.md
+      - content/capture/pt-BR__about.md
+      - content/capture/pt-BR__atelier.md
+      - content/capture/pt-BR__briefing-btc.md
+      - content/capture/pt-BR__careers.md
+      - content/capture/pt-BR__cases.md
+      - content/capture/pt-BR__caue-alencar.md
+      - content/capture/pt-BR__changelog.md
+      - content/capture/pt-BR__flavia-ribeiro.md
+      - content/capture/pt-BR__history.md
+      - content/capture/pt-BR__home.md
+      - content/capture/pt-BR__leandro-damasio.md
+      - content/capture/pt-BR__legal.md
+      - content/capture/pt-BR__manifesto.md
+      - content/capture/pt-BR__newsroom.md
+      - content/capture/pt-BR__products__maestro.md
+      - content/capture/pt-BR__services__ai-agents.md
+      - content/capture/pt-BR__services__llmops.md
+      - content/capture/pt-BR__solutions.md
+      - content/capture/pt-BR__team.md
+      - content/capture/pt-BR__trust.md
