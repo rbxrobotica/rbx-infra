@@ -329,10 +329,12 @@ spec:
                   # takes the latest sample of each series in the last 20 minutes, which
                   # bridges that long without samples (a controller restart, failed
                   # scrapes). 20 minutes is chosen against RBXWebsiteCertificateMetricsAbsent
-                  # (`for: 15m`, plus the 5 minutes an instant selector keeps a series whose
-                  # scrapes merely fail): for a registered Certificate, a silence long
-                  # enough to restart the clock of these two alerts has already fired that
-                  # one. A Certificate that is not in the inventory has no such cover.
+                  # (`for: 15m`, plus the 5 minutes an instant selector keeps a series that
+                  # ended without a stale marker; Prometheus normally writes one when a
+                  # scrape fails or a target goes away): for a registered Certificate, that
+                  # alert fires no later than the evaluation at which a silence makes these
+                  # two lose their clock. Firing is not delivery of a notification. A
+                  # Certificate that is not in the inventory has no such cover.
                   # `min` is deliberate: of the latest samples of a Certificate's series,
                   # the worst wins. Two consequences. While a replaced controller's last
                   # sample is still in the window (up to 20 minutes) it counts, so after a
@@ -398,7 +400,8 @@ spec:
                         A certificate series expected for {{ $labels.name }} in websites has been missing
                         for 15 minutes: cert-manager is down or not scraped, or the Certificate was
                         removed. The alert that reads that series (readiness when the labels carry
-                        a condition, expiry otherwise) cannot see this certificate meanwhile.
+                        a condition, expiry otherwise) has no fresh samples for this certificate, and
+                        what it retains ends when its 20 minute lookback expires.
 
           rbx-robson-trading:
             groups:

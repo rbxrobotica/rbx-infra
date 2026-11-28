@@ -118,7 +118,8 @@ Operating notes:
   and take the worst of the latest samples of its series over the last 20
   minutes, so a controller restart does not restart their clock. More than 20
   minutes without samples does; for a registered Certificate
-  `RBXWebsiteCertificateMetricsAbsent` has fired by then.
+  `RBXWebsiteCertificateMetricsAbsent` fires no later than that evaluation.
+  Firing is not delivery of the notification.
 - Because the worst recent sample wins, a recovery first reported by a new
   controller pod takes up to 20 minutes to clear the alert, and can let a
   pending alert fire in that time.
@@ -134,19 +135,39 @@ Operating notes:
   any other Certificate, or one that outlives the cutover, is investigated with
   `docs/runbooks/CERT-MANAGER-DEBUG.md`.
 
-Releasing a change to these rules or to the cert-manager metrics setting:
+Releasing a change to these rules or to the cert-manager metrics setting.
+A check that fails leaves the release unaccepted until it is explained.
 
-1. Before the merge, record the baseline: the cert-manager pods and the
-   Prometheus pod are Running with no recent restarts; Prometheus memory
-   against its 2Gi limit; `kubectl get certificate -n websites` and
-   `kubectl get endpoints -n websites` show every registered name, Ready and
-   with addresses. An unexplained failure there is resolved first.
-2. After the sync, within 15 minutes: the cert-manager controller pod is
-   Running with the three `prometheus.io/*` annotations; the Prometheus query
-   checks of the previous paragraph pass; the alerts of this section are loaded
-   and inactive, apart from one explained in advance by the pull request.
+1. Before the merge, record the baseline:
+   - the cert-manager pods and the Prometheus pod are Running and Ready, with
+     no recent restarts;
+   - Prometheus memory against its 2Gi limit;
+   - `kubectl get certificate -n websites` and
+     `kubectl get endpoints -n websites` show every registered name, Ready and
+     with addresses;
+   - current evidence that the `email-ops` route delivers: a recent alert
+     notification received, or a controlled test of the route.
+   An unexplained failure there is resolved first.
+2. After the sync, within 15 minutes:
+   - the cert-manager controller pod is Running and Ready with the three
+     `prometheus.io/*` annotations;
+   - `up{job="kubernetes-pods-annotations", kubernetes_namespace="cert-manager"}`
+     is 1;
+   - for each registered Certificate,
+     `certmanager_certificate_ready_status{namespace="websites"}` returns it
+     with its `namespace`, `name`, `condition` and issuer labels, the
+     `condition="True"` series at 1, and
+     `certmanager_certificate_expiration_timestamp_seconds` is positive and
+     matches the certificate's real expiry;
+   - for each registered site, `kube_endpoint_info{namespace="websites"}` and
+     `kube_endpoint_address{namespace="websites", ready="true"}` return its
+     Endpoints object and backends;
+   - the five rules this section depends on (`RBXCriticalEndpointNotReady`,
+     `RBXWebsiteEndpointMissing` and the three `RBXWebsiteCertificate*`) are
+     loaded without evaluation errors and inactive, apart from one explained
+     in advance by the pull request.
 3. Observe for 60 minutes: no restart of cert-manager or Prometheus, Prometheus
-   memory not climbing towards its limit, no alert of this section firing.
+   memory not climbing towards its limit, none of those alerts firing.
 4. Roll back, by reverting the pull request, if the controller is not Ready 10
    minutes after the sync, if Prometheus restarts or exceeds 85% of its memory
    limit, or if `RBXWebsiteCertificateMetricsAbsent` fires and the scrape
