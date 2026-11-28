@@ -354,9 +354,9 @@ jobs:
     # (CRITICAL and HIGH), gitleaks over every file, osv-scanner over every
     # lockfile. In podman from digest-pinned images, by the script that runs
     # the same way on a workstation. A finding fails the job unless a
-    # reviewed ignore file names it: .trivyignore.yaml and osv-scanner.toml
-    # carry a date per entry and stop applying on it, and .gitleaks.toml
-    # lists matches that were read and are not secrets.
+    # reviewed list names that finding: scripts/scan-repository-baseline.toml
+    # lists single Trivy and osv-scanner findings, each until a date, and
+    # .gitleaks.toml lists matches that were read and are not secrets.
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
