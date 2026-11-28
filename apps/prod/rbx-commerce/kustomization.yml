@@ -14,7 +14,10 @@ resources:
   - rbx-commerce-web-svc.yml
   - renewals-cronjob.yml
 images:
+  # The cluster pulls the API by digest, so the tag and the digest change
+  # together: a new tag beside the old digest keeps running the old image.
   - name: ghcr.io/rbxrobotica/rbx-commerce
-    newTag: sha-d9fb5da27d42bb6aabb1f7eae1c104ec5e51b312
+    newTag: sha-5fc677caab5109709140a88516df9a04f982a68f
+    digest: sha256:7cf2e8ee7bd18c8d85e70a7afbf5ea2d1dfa11a5fe7b05a95885a35005e20457
   - name: ghcr.io/rbxrobotica/rbx-commerce-web
     newTag: sha-61b781d6bfffc9b51497f18272d1c1c464a9b424
