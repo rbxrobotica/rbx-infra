@@ -10,7 +10,6 @@ resources:
   - institutional-externalsecrets.yml
   - institutional-deploy.yml
   - institutional-svc.yml
-  - content/compare-job.yml
   - content/publish-job.yml
 labels:
   - pairs:
