@@ -1,5 +1,9 @@
 # Merovelis Site Ingress
 # Public institutional site at the merovelis.com root (and www alias).
+# Since 2026-11-27 the backend is merovelis-institutional, the institutional
+# site (rbx-governance ADR-0003, amendment of 2026-11-13). The Ingress keeps
+# its name and its certificates; merovelis-site, the earlier site, stays
+# deployed and unrouted so that this change can be reverted.
 # DNS for merovelis.com / www.merovelis.com is codified in
 # infra/terraform/dns/merovelis.com.tf (root A + www CNAME -> k3s ingress).
 # Authenticated surfaces (app.merovelis.com, auth.merovelis.com) are owned
@@ -33,7 +37,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: merovelis-site
+                name: merovelis-institutional
                 port:
                   number: 80
     - host: www.merovelis.com
@@ -43,6 +47,6 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: merovelis-site
+                name: merovelis-institutional
                 port:
                   number: 80
