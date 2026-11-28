@@ -1,0 +1,172 @@
+# promtool unit tests for the alerts that cover the public brand sites in the
+# `websites` namespace (apps/prod/initelo, apps/prod/iteruno): the `websites`
+# branch of RBXCriticalEndpointNotReady and the three RBXWebsiteCertificate*
+# alerts. Each firing case pins its edge: silent 30 s before onset plus `for`,
+# firing at it, so changing a rule's `for` must move its case too.
+# promtool starts the clock at 0, so time() equals the evaluation time and an
+# expiration timestamp is the number of seconds the certificate has left at the
+# start. Run through scripts/test-prometheus-rules.sh.
+rule_files:
+  - rules/rbx-p1b-core.yml
+
+evaluation_interval: 30s
+
+tests:
+  - name: a ready backend and a Ready certificate far from expiry page nothing
+    interval: 30s
+    input_series:
+      - series: 'kube_endpoint_info{namespace="websites",endpoint="iteruno"}'
+        values: '1x300'
+      - series: 'kube_endpoint_address{namespace="websites",endpoint="iteruno",ip="10.42.0.10",ready="true"}'
+        values: '1x300'
+      - series: 'certmanager_certificate_ready_status{namespace="websites",name="iteruno-tls",condition="True"}'
+        values: '1x300'
+      - series: 'certmanager_certificate_ready_status{namespace="websites",name="iteruno-tls",condition="False"}'
+        values: '0x300'
+      # 60 days left at the start.
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="websites",name="iteruno-tls"}'
+        values: '5184000x300'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 31m, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}
+      - {eval_time: 61m, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}
+      - {eval_time: 1m, alertname: RBXWebsiteCertificateMetricsAbsent, exp_alerts: []}
+      - {eval_time: 16m, alertname: RBXWebsiteCertificateMetricsAbsent, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXWebsiteCertificateMetricsAbsent, exp_alerts: []}
+
+  - name: a websites Service with no ready backend pages after 10 minutes, and only for that namespace
+    interval: 30s
+    input_series:
+      - series: 'kube_endpoint_info{namespace="websites",endpoint="iteruno"}'
+        values: '1x300'
+      # An address that is not ready does not count as a backend.
+      - series: 'kube_endpoint_address{namespace="websites",endpoint="iteruno",ip="10.42.0.10",ready="false"}'
+        values: '1x300'
+      # The other site in the namespace is healthy.
+      - series: 'kube_endpoint_info{namespace="websites",endpoint="initelo"}'
+        values: '1x300'
+      - series: 'kube_endpoint_address{namespace="websites",endpoint="initelo",ip="10.42.0.11",ready="true"}'
+        values: '1x300'
+      # A namespace the rule does not name stays silent with no backend at all.
+      - series: 'kube_endpoint_info{namespace="rbx-ia-br",endpoint="rbx-site"}'
+        values: '1x300'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
+      - {eval_time: 9m30s, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
+      - eval_time: 10m
+        alertname: RBXCriticalEndpointNotReady
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, endpoint: iteruno}
+            exp_annotations: &ann_EndpointNotReady
+              summary: "Critical service endpoint has no ready backend"
+              description: "A critical RBX endpoint has had no ready backend address for more than 10 minutes."
+      - eval_time: 2h
+        alertname: RBXCriticalEndpointNotReady
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, endpoint: iteruno}
+            exp_annotations: *ann_EndpointNotReady
+
+  - name: a backend that comes back within 10 minutes pages nothing
+    interval: 30s
+    input_series:
+      - series: 'kube_endpoint_info{namespace="websites",endpoint="iteruno"}'
+        values: '1x300'
+      # Ready, gone for 9 minutes (a rollout or a node drain), ready again.
+      - series: 'kube_endpoint_address{namespace="websites",endpoint="iteruno",ip="10.42.0.10",ready="true"}'
+        values: '1x10 stale _x16 1x270'
+    alert_rule_test:
+      - {eval_time: 6m, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
+      - {eval_time: 14m, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
+      - {eval_time: 15m, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
+      - {eval_time: 1h, alertname: RBXCriticalEndpointNotReady, exp_alerts: []}
+
+  - name: a certificate that is not Ready pages after 30 minutes
+    interval: 30s
+    input_series:
+      # A new site before its DNS cutover: the HTTP-01 certificate is pending.
+      - series: 'certmanager_certificate_ready_status{namespace="websites",name="iteruno-tls",condition="True"}'
+        values: '0x300'
+      - series: 'certmanager_certificate_ready_status{namespace="websites",name="iteruno-tls",condition="False"}'
+        values: '1x300'
+      # The other certificate of the namespace is Ready.
+      - series: 'certmanager_certificate_ready_status{namespace="websites",name="initelo-tls",condition="True"}'
+        values: '1x300'
+      # A certificate of a namespace the rule does not name stays silent.
+      - series: 'certmanager_certificate_ready_status{namespace="rbx-ia-br",name="rbx-site-tls",condition="True"}'
+        values: '0x300'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 29m30s, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - eval_time: 30m
+        alertname: RBXWebsiteCertificateNotReady
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: iteruno-tls, condition: "True"}
+            exp_annotations: &ann_CertificateNotReady
+              summary: "Certificate iteruno-tls in websites is not Ready"
+              description: "cert-manager has not reported certificate iteruno-tls as Ready for 30 minutes: issuance or renewal is pending or failing. See docs/runbooks/CERT-MANAGER-DEBUG.md."
+      - eval_time: 2h
+        alertname: RBXWebsiteCertificateNotReady
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: iteruno-tls, condition: "True"}
+            exp_annotations: *ann_CertificateNotReady
+      # The series exist, so the blindness alert stays silent.
+      - {eval_time: 2h, alertname: RBXWebsiteCertificateMetricsAbsent, exp_alerts: []}
+
+  - name: a certificate issued within 30 minutes pages nothing
+    interval: 30s
+    input_series:
+      - series: 'certmanager_certificate_ready_status{namespace="websites",name="iteruno-tls",condition="True"}'
+        values: '0x50 1x250'
+    alert_rule_test:
+      - {eval_time: 25m, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 30m, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+
+  - name: a certificate that crosses 14 days to expiry pages one hour later
+    interval: 30s
+    input_series:
+      # 14 days and 30 minutes left at the start: exactly 14 days at 30m, less than that from 30m30s on.
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="websites",name="iteruno-tls"}'
+        values: '1211400x400'
+      # 60 days left: silent.
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="websites",name="initelo-tls"}'
+        values: '5184000x400'
+      # A certificate of a namespace the rule does not name, one day left: silent.
+      - series: 'certmanager_certificate_expiration_timestamp_seconds{namespace="rbx-ia-br",name="rbx-site-tls"}'
+        values: '86400x400'
+    alert_rule_test:
+      - {eval_time: 30m, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}
+      - {eval_time: 1h30m, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}
+      - eval_time: 1h30m30s
+        alertname: RBXWebsiteCertificateExpiringSoon
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites, name: iteruno-tls}
+            exp_annotations:
+              summary: "Certificate iteruno-tls in websites expires in less than 14 days"
+              description: "By default cert-manager renews a certificate when a third of its lifetime is left (30 days for Let's Encrypt), so less than 14 days means renewal has been failing. See docs/runbooks/CERT-MANAGER-DEBUG.md."
+
+  - name: no cert-manager series for websites pages after 15 minutes
+    interval: 30s
+    input_series:
+      # cert-manager is scraped, but it reports nothing for the namespace.
+      - series: 'certmanager_certificate_ready_status{namespace="rbx-ia-br",name="rbx-site-tls",condition="True"}'
+        values: '1x300'
+    alert_rule_test:
+      - {eval_time: 1m, alertname: RBXWebsiteCertificateMetricsAbsent, exp_alerts: []}
+      - {eval_time: 14m30s, alertname: RBXWebsiteCertificateMetricsAbsent, exp_alerts: []}
+      - eval_time: 15m
+        alertname: RBXWebsiteCertificateMetricsAbsent
+        exp_alerts:
+          - exp_labels: {severity: warning, rbx_workstream: p1b-observability, namespace: websites}
+            exp_annotations:
+              summary: "No cert-manager certificate metrics for websites"
+              description: "No certmanager_certificate_ready_status series for namespace websites for 15 minutes: cert-manager is down or not scraped, or the namespace has no Certificate. The two certificate alerts for websites are blind meanwhile."
+      # The other two certificate alerts have nothing to evaluate.
+      - {eval_time: 2h, alertname: RBXWebsiteCertificateNotReady, exp_alerts: []}
+      - {eval_time: 2h, alertname: RBXWebsiteCertificateExpiringSoon, exp_alerts: []}

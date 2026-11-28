@@ -77,12 +77,23 @@ current Prometheus scrape set:
   no ready address.
 - `RBXPodCrashLoopOrImagePull` fires when any pod container remains in
   `CrashLoopBackOff`, `ImagePullBackOff`, or `ErrImagePull`.
-- `RBXCriticalEndpointNotReady` fires when the critical `langfuse`, `rbx-ledger`,
-  or `truthmetal` endpoint set has no ready backend address.
+- `RBXCriticalEndpointNotReady` fires when a `langfuse`, `rbx-ledger`,
+  `truthmetal` or `websites` endpoint set has no ready backend address.
+  `websites` holds the public brand sites.
+- `RBXWebsiteCertificateNotReady`, `RBXWebsiteCertificateExpiringSoon` and
+  `RBXWebsiteCertificateMetricsAbsent` cover the certificates of the `websites`
+  namespace: not Ready for 30 minutes, less than 14 days to expiry, and no
+  cert-manager series for the namespace. cert-manager exports the series since
+  `prometheus.enabled` is true in `platform/cert-manager/application.yml`. A new
+  site whose DNS does not point to the ingress yet keeps its certificate pending
+  under HTTP-01, so `RBXWebsiteCertificateNotReady` fires for it until the DNS
+  cutover: that is expected, not a release failure. Debugging:
+  `docs/runbooks/CERT-MANAGER-DEBUG.md`.
 
 The following Workstream B alerts remain pending until their metric sources are
 scraped or exposed: ArgoCD app health, cert-manager certificate readiness or
-expiry, APIService condition status, and etcd snapshot age or sync failure.
+expiry outside the `websites` namespace, APIService condition status, and etcd
+snapshot age or sync failure.
 
 ## P1-C Prometheus OOM recovery
 

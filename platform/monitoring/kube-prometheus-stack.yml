@@ -277,10 +277,11 @@ spec:
                       summary: "Pod container is waiting in CrashLoopBackOff or image pull failure"
                       description: "A pod container has remained in CrashLoopBackOff, ImagePullBackOff, or ErrImagePull for more than 10 minutes."
 
+                  # `websites` holds the public brand sites (apps/prod/initelo, apps/prod/iteruno).
                   - alert: RBXCriticalEndpointNotReady
                     expr: |
                       (
-                        kube_endpoint_info{namespace=~"langfuse|rbx-ledger|truthmetal"}
+                        kube_endpoint_info{namespace=~"langfuse|rbx-ledger|truthmetal|websites"}
                         unless on(namespace, endpoint)
                         kube_endpoint_address{ready="true"}
                       )
@@ -291,6 +292,42 @@ spec:
                     annotations:
                       summary: "Critical service endpoint has no ready backend"
                       description: "A critical RBX endpoint has had no ready backend address for more than 10 minutes."
+
+                  # Certificate alerts for the public brand sites in `websites`. cert-manager exports
+                  # these series because prometheus.enabled is true in
+                  # platform/cert-manager/application.yml, and the kubernetes-pods-annotations job
+                  # above scrapes them. The `namespace` label is the Certificate's namespace. They are
+                  # scoped to `websites` on purpose: widen the matcher to other namespaces only after
+                  # reading their live series, or every stale Certificate there starts to page.
+                  - alert: RBXWebsiteCertificateNotReady
+                    expr: certmanager_certificate_ready_status{namespace="websites", condition="True"} == 0
+                    for: 30m
+                    labels:
+                      severity: warning
+                      rbx_workstream: p1b-observability
+                    annotations:
+                      summary: "Certificate {{ $labels.name }} in websites is not Ready"
+                      description: "cert-manager has not reported certificate {{ $labels.name }} as Ready for 30 minutes: issuance or renewal is pending or failing. See docs/runbooks/CERT-MANAGER-DEBUG.md."
+
+                  - alert: RBXWebsiteCertificateExpiringSoon
+                    expr: certmanager_certificate_expiration_timestamp_seconds{namespace="websites"} - time() < 14 * 24 * 3600
+                    for: 1h
+                    labels:
+                      severity: warning
+                      rbx_workstream: p1b-observability
+                    annotations:
+                      summary: "Certificate {{ $labels.name }} in websites expires in less than 14 days"
+                      description: "By default cert-manager renews a certificate when a third of its lifetime is left (30 days for Let's Encrypt), so less than 14 days means renewal has been failing. See docs/runbooks/CERT-MANAGER-DEBUG.md."
+
+                  - alert: RBXWebsiteCertificateMetricsAbsent
+                    expr: absent(certmanager_certificate_ready_status{namespace="websites"})
+                    for: 15m
+                    labels:
+                      severity: warning
+                      rbx_workstream: p1b-observability
+                    annotations:
+                      summary: "No cert-manager certificate metrics for websites"
+                      description: "No certmanager_certificate_ready_status series for namespace websites for 15 minutes: cert-manager is down or not scraped, or the namespace has no Certificate. The two certificate alerts for websites are blind meanwhile."
 
           rbx-robson-trading:
             groups:

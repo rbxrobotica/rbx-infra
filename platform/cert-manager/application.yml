@@ -23,8 +23,15 @@ spec:
     helm:
       values: |
         installCRDs: true
+        # Controller metrics on (certificate readiness and expiry, for the alerts in
+        # platform/monitoring/kube-prometheus-stack.yml). With the ServiceMonitor off the
+        # chart only adds the prometheus.io/scrape, path and port annotations to the
+        # controller pod, which the kubernetes-pods-annotations scrape job already reads.
+        # No ServiceMonitor CRD is needed at this sync wave.
         prometheus:
-          enabled: false
+          enabled: true
+          servicemonitor:
+            enabled: false
 
   destination:
     server: https://kubernetes.default.svc
