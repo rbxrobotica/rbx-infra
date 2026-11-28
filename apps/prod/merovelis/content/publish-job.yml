@@ -4,10 +4,12 @@
 # page is not in the state the comparison of 2026-11-27 found (all 54 equal to
 # the capture). A second run writes nothing. Remove it, with the content/
 # directory, once the publication is verified.
+# Second run: the first, site-content-publish-20261127, wrote the 52 backups
+# and stopped at the first page, because it sent the ETag in quotes.
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: site-content-publish-20261127
+  name: site-content-publish-20261127b
   namespace: merovelis
   labels:
     app.kubernetes.io/name: site-content-publish

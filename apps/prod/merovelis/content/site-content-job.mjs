@@ -34,6 +34,16 @@ const timeout = () => ({ abortSignal: AbortSignal.timeout(15000) });
 const sha256 = (body) => createHash('sha256').update(body).digest('hex');
 const log = (event, fields = {}) => console.log(JSON.stringify({ event, ...fields }));
 
+// GET returns quoted ETags, and this store compares the bare token on PUT: a
+// quoted If-Match is refused with PreconditionFailed (rbx-systems-frontend
+// docs/runbooks/SITE-CONTENT-PUBLICATION.md, and the first run of this Job).
+function conditionalETag(etag) {
+  if (typeof etag !== 'string') throw new Error('InvalidETag');
+  const value = etag.startsWith('"') && etag.endsWith('"') ? etag.slice(1, -1) : etag;
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._:-]*$/.test(value)) throw new Error('InvalidETag');
+  return value;
+}
+
 const keyOf = (file) => `site/${file.replace(/\.md$/, '').split('__').join('/')}/index.md`;
 
 function readDir(directory) {
@@ -187,7 +197,7 @@ async function main() {
         ContentType: page.live?.contentType ?? 'text/markdown',
         ...(page.live?.cacheControl ? { CacheControl: page.live.cacheControl } : {}),
         // The object is replaced only if it is still the one that was read.
-        ...(page.live ? { IfMatch: page.live.etag } : { IfNoneMatch: '*' })
+        ...(page.live ? { IfMatch: conditionalETag(page.live.etag) } : { IfNoneMatch: '*' })
       }),
       timeout()
     );
@@ -200,6 +210,10 @@ async function main() {
 }
 
 main().catch((error) => {
-  log('failed', { error: error?.name, message: String(error?.message ?? error).slice(0, 300) });
+  log('failed', {
+    error: error?.name,
+    status: error?.$metadata?.httpStatusCode,
+    message: String(error?.message ?? error).slice(0, 300)
+  });
   process.exitCode = 1;
 });
