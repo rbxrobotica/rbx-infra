@@ -41,11 +41,13 @@ resource "powerdns_record" "spaceship_parking_a" {
   # PowerDNS/PostgreSQL serial updates while creating a zone.
   depends_on = [powerdns_record.spaceship_ns]
 
+  # Sites already cut over answer from the k3s Ingress; the others keep the
+  # registrar's parking addresses.
   zone    = powerdns_zone.spaceship[each.key].name
   name    = powerdns_zone.spaceship[each.key].name
   type    = "A"
   ttl     = 300
-  records = each.key == "initelo.com" ? ["158.220.116.31"] : ["34.216.117.25", "54.149.79.189"]
+  records = contains(["initelo.com", "iteruno.com"], each.key) ? ["158.220.116.31"] : ["34.216.117.25", "54.149.79.189"]
 }
 
 resource "powerdns_record" "initelo_www" {
@@ -56,4 +58,14 @@ resource "powerdns_record" "initelo_www" {
   type    = "CNAME"
   ttl     = 300
   records = ["initelo.com."]
+}
+
+resource "powerdns_record" "iteruno_www" {
+  depends_on = [powerdns_record.spaceship_parking_a]
+
+  zone    = powerdns_zone.spaceship["iteruno.com"].name
+  name    = "www.iteruno.com."
+  type    = "CNAME"
+  ttl     = 300
+  records = ["iteruno.com."]
 }
