@@ -4,6 +4,10 @@ kind: Application
 metadata:
   name: iteruno
   namespace: argocd
+  # Without this finalizer, removing this Application (a revert of this file) would leave the
+  # Deployment, Service, Ingress and Middleware running with no GitOps owner.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
 spec:
   project: rbx-applications
   source:
