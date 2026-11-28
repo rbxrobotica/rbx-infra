@@ -77,12 +77,119 @@ current Prometheus scrape set:
   no ready address.
 - `RBXPodCrashLoopOrImagePull` fires when any pod container remains in
   `CrashLoopBackOff`, `ImagePullBackOff`, or `ErrImagePull`.
-- `RBXCriticalEndpointNotReady` fires when the critical `langfuse`, `rbx-ledger`,
-  or `truthmetal` endpoint set has no ready backend address.
+- `RBXCriticalEndpointNotReady` fires when a `langfuse`, `rbx-ledger`,
+  `truthmetal` or `websites` endpoint set has no ready backend address.
+  `websites` holds the public brand sites.
+
+### Public brand sites (`websites`)
+
+The rules for the brand sites read an explicit inventory in
+`platform/monitoring/kube-prometheus-stack.yml`: one Endpoints name and one
+Certificate name per site, added in the change that deploys the site. Today the
+inventory has Initelo (`initelo`, `initelo-tls`).
+
+- `RBXWebsiteEndpointMissing`: kube-state-metrics exports no Endpoints object
+  for a registered site for 15 minutes.
+- `RBXWebsiteCertificateNotReady`: a Certificate of the namespace is not Ready
+  for 30 minutes.
+- `RBXWebsiteCertificateExpiringSoon`: a Certificate of the namespace has less
+  than 14 days left, or has expired, for 1 hour. A Certificate that was never
+  issued is left to the alert above.
+- `RBXWebsiteCertificateMetricsAbsent`: a registered Certificate has no
+  readiness or no expiration series for 15 minutes.
+
+The certificate series are intended to come from the cert-manager controller,
+with `prometheus.enabled: true` in `platform/cert-manager/application.yml` and
+the `kubernetes-pods-annotations` scrape job. That is configuration, not proof
+of collection. After any change to it, verify in Prometheus that
+`up{job="kubernetes-pods-annotations", kubernetes_namespace="cert-manager"}` is
+1, that `certmanager_certificate_ready_status{namespace="websites"}` returns
+each registered Certificate with the `namespace`, `name`, `condition` and
+issuer labels, and that the four alerts are loaded without evaluation errors.
+
+What these alerts do not cover: a Certificate or Service that is not in the
+inventory; whether cert-manager's own view of the cluster is current; the
+public path (DNS, ingress, the certificate actually served); and delivery of
+the notification. A probe of the public address is still missing.
+
+The endpoint rules read `kube_endpoint_*`, which kube-state-metrics builds from
+the Endpoints API. Kubernetes deprecates that API from 1.33 and this cluster
+already prints the deprecation warning. The objects are still created and the
+rules still work; they have to move to the EndpointSlice metrics before the API
+stops being served.
+
+Operating notes:
+
+- The readiness and expiry alerts identify a Certificate by namespace and name
+  and take the worst of the latest samples of its series over the last 20
+  minutes, so a controller restart does not restart their clock. More than 20
+  minutes without samples does; for a registered Certificate
+  `RBXWebsiteCertificateMetricsAbsent` fires no later than that evaluation.
+  Firing is not delivery of the notification.
+- Because the worst recent sample wins, a recovery first reported by a new
+  controller pod takes up to 20 minutes to clear the alert, and can let a
+  pending alert fire in that time.
+- After changing a Certificate's `issuerRef`, restart the cert-manager
+  controller: v1.14 keeps exporting the gauges of the previous issuer until
+  then, which the 20 minute window does not bound, and the alerts take the
+  worst value they see.
+- A new site whose host names do not resolve to the ingress yet cannot complete
+  HTTP-01, so `RBXWebsiteCertificateNotReady` fires for it 30 minutes after it
+  is deployed. That alert is not waived by this explanation. A rollout that
+  accepts it needs, in its own pull request, the name of the pending
+  Certificate, the reason, and a dated DNS cutover that bounds it; an alert on
+  any other Certificate, or one that outlives the cutover, is investigated with
+  `docs/runbooks/CERT-MANAGER-DEBUG.md`.
+
+Releasing a change to these rules or to the cert-manager metrics setting.
+A check that fails leaves the release unaccepted until it is explained.
+
+1. Before the merge, record the baseline:
+   - the cert-manager pods and the Prometheus pod are Running and Ready. For
+     each, record the restart count and the reason, exit code and time of the
+     last termination (`lastState.terminated` in the pod status), so that a
+     restart seen later can be told from a pattern that was already there. A
+     termination by out-of-memory, or one without an explanation, is resolved
+     first;
+   - Prometheus memory against its 2Gi limit;
+   - `kubectl get certificate -n websites` and
+     `kubectl get endpoints -n websites` show every registered name, Ready and
+     with addresses;
+   - current evidence that the `email-ops` route delivers: a recent alert
+     notification received, or a controlled test of the route.
+   An unexplained failure there is resolved first.
+2. After the sync, within 15 minutes:
+   - the cert-manager controller pod is Running and Ready with the three
+     `prometheus.io/*` annotations;
+   - `up{job="kubernetes-pods-annotations", kubernetes_namespace="cert-manager"}`
+     is 1;
+   - for each registered Certificate,
+     `certmanager_certificate_ready_status{namespace="websites"}` returns it
+     with its `namespace`, `name`, `condition` and issuer labels, the
+     `condition="True"` series at 1, and
+     `certmanager_certificate_expiration_timestamp_seconds` is positive and
+     matches the certificate's real expiry;
+   - for each registered site, `kube_endpoint_info{namespace="websites"}` and
+     `kube_endpoint_address{namespace="websites", ready="true"}` return its
+     Endpoints object and backends;
+   - the five rules this section depends on (`RBXCriticalEndpointNotReady`,
+     `RBXWebsiteEndpointMissing` and the three `RBXWebsiteCertificate*`) are
+     loaded without evaluation errors and inactive, apart from one explained
+     in advance by the pull request.
+3. Observe for 60 minutes: no restart of Prometheus and none of the
+   cert-manager controller beyond the one replacement this change causes, any
+   other cert-manager restart matching the pattern recorded in step 1,
+   Prometheus memory not climbing towards its limit, none of those alerts
+   firing.
+4. Roll back, by reverting the pull request, if the controller is not Ready 10
+   minutes after the sync, if Prometheus restarts or exceeds 85% of its memory
+   limit, or if `RBXWebsiteCertificateMetricsAbsent` fires and the scrape
+   cannot be fixed within the hour. The revert removes this coverage again.
 
 The following Workstream B alerts remain pending until their metric sources are
 scraped or exposed: ArgoCD app health, cert-manager certificate readiness or
-expiry, APIService condition status, and etcd snapshot age or sync failure.
+expiry outside the `websites` namespace, APIService condition status, and etcd
+snapshot age or sync failure.
 
 ## P1-C Prometheus OOM recovery
 
