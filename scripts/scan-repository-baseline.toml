@@ -12,15 +12,21 @@
 #
 # An entry stops covering its findings at 00:00 UTC of its `expires` date, and
 # the scan fails on them from then on. Before that date, fix the finding and
-# remove its lines, or record a reviewed decision in the statement with a new
-# date. Listing a finding here is not a judgement that it is acceptable.
+# remove its lines, or record a new decision of the operator in the statement
+# with a new date. A statement says who accepted the findings, when, for how
+# long, and who owns their remediation; an entry without that is not a
+# reviewed exception.
 #
 # What is listed is what the scan reported on main at commit f609e74 on
 # 2026-11-28: 188 Trivy findings (CRITICAL and HIGH, Trivy 0.76.2, built-in
 # checks) of 4 checks in 79 Kubernetes manifests, and 3 advisories in one
-# lockfile. The findings tables were written by
-# `scripts/scan-repository-baseline.py --print-findings` and are edited by
-# hand, in a reviewed change, when a finding is fixed or accepted.
+# lockfile. On 2026-11-28 the operator accepted them as listed, with the
+# dates below, including those after 2026-12-27, and named himself owner of
+# their remediation. He gave that answer to the author of the change that
+# added this file, pull request 428, where it is recorded. The findings
+# tables were written by `scripts/scan-repository-baseline.py
+# --print-findings` and are edited by hand, in a reviewed change, when a
+# finding is fixed or a decision changes.
 
 # KSV-0112 (CRITICAL), "Manage all resources at the namespace": 8 in 1 file.
 [[trivy]]
@@ -31,9 +37,10 @@ Role corbetti-agent-writer may create, update, patch and delete every \
 resource of its namespace, in eight namespaces. Present on main at f609e74 \
 on 2026-11-28. The file documents the grant as deliberate (ADR-0500 \
 Amendment 2026-07, rbx-security AGENT-KUBE-001) and bounded by a \
-ValidatingAdmissionPolicy that this scan does not evaluate. No review of \
-that decision is recorded here yet: narrow the Role, or record the review \
-with a new date."""
+ValidatingAdmissionPolicy that this scan does not evaluate. Accepted by the \
+operator on 2026-11-28, for the 8 findings listed here and until the date of \
+this entry. Owner: the operator, who by that date narrows the Role or \
+records a new decision here."""
 
 [trivy.findings]
 "apps/prod/rbx-agent-access/rbac.yml" = [
@@ -55,8 +62,9 @@ statement = """\
 Role corbetti-agent-writer in the same eight namespaces may create \
 pods/exec, and Role plausible-backup-clickhouse may on the one pod it names. \
 Present on main at f609e74 on 2026-11-28. Both files document the grant as \
-deliberate. No review of that decision is recorded here yet: remove \
-pods/exec from the Roles, or record the review with a new date."""
+deliberate. Accepted by the operator on 2026-11-28, for the 9 findings \
+listed here and until the date of this entry. Owner: the operator, who by \
+that date removes pods/exec from the Roles or records a new decision here."""
 
 [trivy.findings]
 "apps/prod/plausible/backup-rbac.yml" = [
@@ -79,8 +87,11 @@ id = "KSV-0118"
 expires = 2027-02-27
 statement = """\
 Workloads and containers that set no securityContext. Present on main at \
-f609e74 on 2026-11-28. Hardening backlog: set a securityContext on the \
-workload and remove its lines from this list."""
+f609e74 on 2026-11-28. Accepted by the operator on 2026-11-28, for the 94 \
+findings listed here and until the date of this entry. That date is later \
+than 2026-12-27, the date recorded for the repair of the CI itself, and the \
+operator accepted it as such. Owner: the operator. Remediation: set a \
+securityContext on the workload and remove its lines from this list."""
 
 [trivy.findings]
 "apps/archived/robson-frontend-react/frontend-deploy.yml" = [
@@ -300,8 +311,12 @@ id = "KSV-0014"
 expires = 2027-02-27
 statement = """\
 Containers that do not set securityContext.readOnlyRootFilesystem to true. \
-Present on main at f609e74 on 2026-11-28. Hardening backlog: make the root \
-file system of the container read-only and remove its lines from this list."""
+Present on main at f609e74 on 2026-11-28. Accepted by the operator on \
+2026-11-28, for the 77 findings listed here and until the date of this \
+entry. That date is later than 2026-12-27, the date recorded for the repair \
+of the CI itself, and the operator accepted it as such. Owner: the operator. \
+Remediation: make the root file system of the container read-only and remove \
+its lines from this list."""
 
 [trivy.findings]
 "apps/archived/robson-frontend-react/frontend-deploy.yml" = [
@@ -530,8 +545,10 @@ statement = """\
 CVE-2026-41178, baggage parsing does not cap the raw header length; OSV \
 gives it no severity. Fixed in otel 1.42.0. Indirect dependency of the \
 kubectl build of the Plausible backup image, present on main at f609e74 on \
-2026-11-28. Updating it changes that image and belongs to a change that \
-builds and scans it."""
+2026-11-28. Accepted by the operator on 2026-11-28, for the 1 finding listed \
+here and until the date of this entry. Owner: the operator. Remediation: \
+update the module in the change that rebuilds and scans that image, and \
+remove this entry."""
 
 [osv.findings]
 "scripts/plausible/kubectl/go.mod" = [
@@ -546,8 +563,10 @@ statement = """\
 CVE-2026-128086, memory allocation amplification in W3C baggage parsing; OSV \
 gives it no severity. Fixed in otel 1.47.0. Indirect dependency of the \
 kubectl build of the Plausible backup image, present on main at f609e74 on \
-2026-11-28. Updating it changes that image and belongs to a change that \
-builds and scans it."""
+2026-11-28. Accepted by the operator on 2026-11-28, for the 1 finding listed \
+here and until the date of this entry. Owner: the operator. Remediation: \
+update the module in the change that rebuilds and scans that image, and \
+remove this entry."""
 
 [osv.findings]
 "scripts/plausible/kubectl/go.mod" = [
@@ -562,8 +581,10 @@ statement = """\
 CVE-2026-128085 (GHSA-q7gw-24fr-5p69), AttributeValueLengthLimit bypass \
 through U+FFFD runes; CVSS 5.3. Fixed in otel/trace 1.47.0. Indirect \
 dependency of the kubectl build of the Plausible backup image, present on \
-main at f609e74 on 2026-11-28. Updating it changes that image and belongs to \
-a change that builds and scans it."""
+main at f609e74 on 2026-11-28. Accepted by the operator on 2026-11-28, for \
+the 1 finding listed here and until the date of this entry. Owner: the \
+operator. Remediation: update the module in the change that rebuilds and \
+scans that image, and remove this entry."""
 
 [osv.findings]
 "scripts/plausible/kubectl/go.mod" = [
