@@ -7,6 +7,9 @@ resources:
   - merovelis-site-deploy.yml
   - merovelis-site-svc.yml
   - merovelis-site-ingress.yml
+  - institutional-externalsecrets.yml
+  - institutional-deploy.yml
+  - institutional-svc.yml
 labels:
   - pairs:
       app.kubernetes.io/part-of: merovelis
@@ -17,3 +20,8 @@ images:
   # See gitops/app-of-apps/merovelis-prod.yml and docs/infra/IMAGE-PROMOTION.md.
   - name: ghcr.io/rbxrobotica/merovelis-site
     newTag: sha-28e2e18
+  # The institutional site. Promoted by hand with a reviewed change: the tag
+  # and the digest change together.
+  - name: ghcr.io/rbxrobotica/rbx-ia-br
+    newTag: sha-26d103f
+    digest: sha256:2c4d8bbe82d1828ad68ed71cb3ba842e52f90ab9872b233dc6a9d88c50de8258
