@@ -11,6 +11,7 @@ resources:
   - institutional-deploy.yml
   - institutional-svc.yml
   - content/compare-job.yml
+  - content/publish-job.yml
 labels:
   - pairs:
       app.kubernetes.io/part-of: merovelis
