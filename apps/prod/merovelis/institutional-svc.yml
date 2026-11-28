@@ -1,0 +1,19 @@
+# Service of the institutional site for merovelis.com.
+apiVersion: v1
+kind: Service
+metadata:
+  name: merovelis-institutional
+  namespace: merovelis
+  labels:
+    app.kubernetes.io/name: merovelis-institutional
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: merovelis
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: merovelis-institutional
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+      protocol: TCP

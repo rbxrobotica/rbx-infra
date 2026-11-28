@@ -1,0 +1,131 @@
+# Deployment: the institutional site (rbxrobotica/rbx-systems-frontend) for
+# merovelis.com, both languages under /en and /pt-br (rbx-governance ADR-0003,
+# amendment of 2026-11-13). It runs beside merovelis-site, the earlier site of
+# this host, which stays deployed and unrouted so the route can go back.
+# Secrets: contabo-s3-credentials and rbx-llm-secrets are replicated from
+# rbx-ia-br by the ExternalSecrets of this directory.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: merovelis-institutional
+  namespace: merovelis
+  labels:
+    app.kubernetes.io/name: merovelis-institutional
+    app.kubernetes.io/component: frontend
+    app.kubernetes.io/part-of: merovelis
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: merovelis-institutional
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: merovelis-institutional
+        app.kubernetes.io/component: frontend
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: workload
+                    operator: NotIn
+                    values:
+                      - analytics
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/name: merovelis-institutional
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: rbx-frontend
+          image: ghcr.io/rbxrobotica/rbx-ia-br:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: CONTABO_S3_ENDPOINT
+              value: "https://eu2.contabostorage.com"
+            - name: CONTABO_S3_CONTENT_BUCKET
+              value: "rbx-content"
+            - name: CONTABO_S3_PUBLIC_URL
+              value: "https://eu2.contabostorage.com/rbx-content"
+            - name: CONTABO_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: CONTABO_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+            # SSR runtime (adapter-node) — ADR-0002 Sovereign Content Delivery Layer.
+            # PORT must match the container/svc port; ORIGIN + forwarded headers let
+            # adapter-node trust the Traefik ingress; cache TTL bounds publish→live.
+            - name: PORT
+              value: "8080"
+            - name: ORIGIN
+              value: "https://merovelis.com"
+            - name: PROTOCOL_HEADER
+              value: "x-forwarded-proto"
+            - name: HOST_HEADER
+              value: "x-forwarded-host"
+            - name: CONTENT_CACHE_TTL_SECONDS
+              value: "60"
+            - name: CONTENT_CACHE_STALE_SECONDS
+              value: "300"
+            # AI chat — routes through the LiteLLM gateway (Thalamus-governed).
+            # The site holds only a virtual key; provider keys live in the gateway.
+            # rbx-llm-secrets is replicated from rbx-ia-br via institutional-externalsecrets.yml.
+            - name: LLM_GATEWAY_URL
+              value: "http://litellm.llm-gateway.svc.cluster.local:4000/v1"
+            - name: LLM_MODEL
+              value: "groq-prod"
+            - name: LLM_GATEWAY_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: rbx-llm-secrets
+                  key: LLM_GATEWAY_KEY
+            # Plausible analytics — privacy-friendly, cookieless.
+            # Self-hosted instance at plausible.rbxsystems.ch. merovelis.com has no
+            # site of its own there yet, so visits are counted under rbxsystems.ch,
+            # whose script this is. Replace the domain and the script once a
+            # merovelis.com site exists in Plausible.
+            - name: VITE_PLAUSIBLE_DOMAIN
+              value: "rbxsystems.ch"
+            # Per-site script: it embeds this domain and the event endpoint, and
+            # the generic /js/script.js embeds neither. Regenerated only if the
+            # site is deleted and recreated in Plausible.
+            - name: VITE_PLAUSIBLE_SCRIPT_SRC
+              value: "https://plausible.rbxsystems.ch/js/pa-YLjAxMQF6_-IvBjbWjVcf.js"
+            - name: VITE_PLAUSIBLE_API_HOST
+              value: "https://plausible.rbxsystems.ch"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: 256Mi
+              cpu: 200m
+            limits:
+              memory: 512Mi
+              cpu: 1000m
