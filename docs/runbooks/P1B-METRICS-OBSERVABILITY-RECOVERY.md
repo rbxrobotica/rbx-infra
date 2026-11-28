@@ -112,6 +112,12 @@ inventory; whether cert-manager's own view of the cluster is current; the
 public path (DNS, ingress, the certificate actually served); and delivery of
 the notification. A probe of the public address is still missing.
 
+The endpoint rules read `kube_endpoint_*`, which kube-state-metrics builds from
+the Endpoints API. Kubernetes deprecates that API from 1.33 and this cluster
+already prints the deprecation warning. The objects are still created and the
+rules still work; they have to move to the EndpointSlice metrics before the API
+stops being served.
+
 Operating notes:
 
 - The readiness and expiry alerts identify a Certificate by namespace and name
@@ -139,8 +145,12 @@ Releasing a change to these rules or to the cert-manager metrics setting.
 A check that fails leaves the release unaccepted until it is explained.
 
 1. Before the merge, record the baseline:
-   - the cert-manager pods and the Prometheus pod are Running and Ready, with
-     no recent restarts;
+   - the cert-manager pods and the Prometheus pod are Running and Ready. For
+     each, record the restart count and the reason, exit code and time of the
+     last termination (`lastState.terminated` in the pod status), so that a
+     restart seen later can be told from a pattern that was already there. A
+     termination by out-of-memory, or one without an explanation, is resolved
+     first;
    - Prometheus memory against its 2Gi limit;
    - `kubectl get certificate -n websites` and
      `kubectl get endpoints -n websites` show every registered name, Ready and
@@ -166,8 +176,11 @@ A check that fails leaves the release unaccepted until it is explained.
      `RBXWebsiteEndpointMissing` and the three `RBXWebsiteCertificate*`) are
      loaded without evaluation errors and inactive, apart from one explained
      in advance by the pull request.
-3. Observe for 60 minutes: no restart of cert-manager or Prometheus, Prometheus
-   memory not climbing towards its limit, none of those alerts firing.
+3. Observe for 60 minutes: no restart of Prometheus and none of the
+   cert-manager controller beyond the one replacement this change causes, any
+   other cert-manager restart matching the pattern recorded in step 1,
+   Prometheus memory not climbing towards its limit, none of those alerts
+   firing.
 4. Roll back, by reverting the pull request, if the controller is not Ready 10
    minutes after the sync, if Prometheus restarts or exceeds 85% of its memory
    limit, or if `RBXWebsiteCertificateMetricsAbsent` fires and the scrape
