@@ -19,5 +19,9 @@ commonLabels:
   environment: production
 
 images:
+  # Since this image the site answers this host only with a permanent redirect
+  # to merovelis.com (rbx-governance ADR-0003, amendment of 2026-11-13). The
+  # tag and the digest change together.
   - name: ghcr.io/rbxrobotica/rbx-ia-br
-    newTag: sha-a033ed9
+    newTag: sha-26d103f
+    digest: sha256:2c4d8bbe82d1828ad68ed71cb3ba842e52f90ab9872b233dc6a9d88c50de8258
