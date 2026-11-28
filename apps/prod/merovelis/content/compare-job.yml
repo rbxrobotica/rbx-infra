@@ -1,0 +1,83 @@
+# One-off, read-only: compares the pages in the content store with the
+# reviewed candidates and with the capture of 2026-11-07, and prints one JSON
+# line per page. It writes nothing. Remove it, with the content/ directory,
+# once the pages are published. A Job is immutable: to run it again with other
+# inputs, give it a new name.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: site-content-compare-20261127
+  namespace: merovelis
+  labels:
+    app.kubernetes.io/name: site-content-compare
+    app.kubernetes.io/component: content
+    app.kubernetes.io/part-of: merovelis
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: site-content-compare
+        app.kubernetes.io/component: content
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: compare
+          image: ghcr.io/rbxrobotica/rbx-ia-br:latest
+          workingDir: /app
+          command: ["node", "/app/job/site-content-job.mjs"]
+          env:
+            - name: MODE
+              value: "compare"
+            - name: CANDIDATES_DIR
+              value: /app/job/candidates
+            - name: CAPTURE_DIR
+              value: /app/job/capture
+            - name: CONTENT_BUCKET
+              value: "rbx-content"
+            - name: CONTABO_S3_ENDPOINT
+              value: "https://eu2.contabostorage.com"
+            - name: CONTABO_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_ACCESS_KEY_ID
+            - name: CONTABO_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: contabo-s3-credentials
+                  key: AWS_SECRET_ACCESS_KEY
+          volumeMounts:
+            - name: script
+              mountPath: /app/job
+              readOnly: true
+            - name: candidates
+              mountPath: /app/job/candidates
+              readOnly: true
+            - name: capture
+              mountPath: /app/job/capture
+              readOnly: true
+          resources:
+            requests:
+              cpu: 10m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop:
+                - ALL
+      volumes:
+        - name: script
+          configMap:
+            name: site-content-job
+        - name: candidates
+          configMap:
+            name: site-content-candidates
+        - name: capture
+          configMap:
+            name: site-content-capture
