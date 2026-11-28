@@ -1,0 +1,64 @@
+# gitleaks configuration of scripts/scan-repository.sh: the default rules, and
+# one allowlist entry for each finding of the scan over all files of main at
+# f609e74 on 2026-11-28 that was read and is not a secret. An entry names the
+# rule, the file and the text, and all three have to match, so the same rule
+# still reports anything else in that file and the same text anywhere else.
+title = "rbx-infra"
+
+[extend]
+useDefault = true
+
+# The secretKey of an ExternalSecret is the name of a key in the Kubernetes
+# Secret it creates, not a value.
+[[allowlists]]
+description = "ExternalSecret key name BRIEFING_S3_BUCKET"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)apps/prod/rbx-briefing-btc-sandbox/external-secrets\.yml$''']
+regexes = ['''^\s*- secretKey: BRIEFING_S3_BUCKET\s*$''']
+
+[[allowlists]]
+description = "ExternalSecret key name CONTABO_S3_SECRET_KEY"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)apps/prod/rbx-cms/externalsecret-s3\.yml$''']
+regexes = ['''^\s*- secretKey: CONTABO_S3_SECRET_KEY\s*$''']
+
+# A template that no ArgoCD Application deploys. Its values are the base64 of
+# "admin", "changeme", "robson-app", "random-cookie-here" and "admin:$2y$10$...".
+[[allowlists]]
+description = "RabbitMQ Secret template with placeholder values"
+targetRules = ["kubernetes-secret-yaml"]
+condition = "AND"
+regexTarget = "match"
+paths = ['''(^|/)apps/staging/rabbitmq/rabbitmq-secrets-template\.yml$''']
+regexes = ['''(admin-password: Y2hhbmdlbWU=|users: YWRtaW46JDJ5JDEwJC4uLg==)''']
+
+# Keys the end-to-end harness makes up for the services it starts on
+# 127.0.0.1, and the name of an environment variable in its README.
+[[allowlists]]
+description = "Synthetic key of the decision-to-action harness"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)e2e/decision-to-action/run\.sh$''']
+regexes = ['''^\s*PP_BFF_KEY="e2e-presence-bff-key-0123456789abcdefgh"\s*$''']
+
+[[allowlists]]
+description = "Environment variable named in the harness README"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+paths = ['''(^|/)e2e/decision-to-action/README\.md$''']
+regexes = ['''keys, `MAESTRO_ENVIRONMENT=test`''']
+
+# SHA-256 digests of public tokenizer files in the evidence of an IRC pilot.
+[[allowlists]]
+description = "Tokenizer file digests of the laya pilot"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)infra/irc/pilots/(evidence/laya-evaluation|laya-runtime)\.json$''']
+regexes = ['''^\s*"(normalized_tokenizer_config_sha256|tokenizer/tokenizer(_config)?\.json)": "[0-9a-f]{64}",?\s*$''']

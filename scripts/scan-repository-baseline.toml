@@ -1,0 +1,592 @@
+# Findings that scripts/scan-repository.sh does not fail on, each until a date.
+# scripts/scan-repository-baseline.py compares the reports of Trivy and
+# osv-scanner with this list.
+#
+# An entry names single findings, not a check or a file:
+# - under [[trivy]], a file and the message Trivy prints, which names the
+#   resource. A message that is listed once covers one occurrence.
+# - under [[osv]], a lockfile and the package at its version.
+# Anything else fails the scan: another resource or container in a listed
+# file, one more occurrence of a listed message, the same advisory in another
+# lockfile or for another version.
+#
+# An entry stops covering its findings at 00:00 UTC of its `expires` date, and
+# the scan fails on them from then on. Before that date, fix the finding and
+# remove its lines, or record a new decision of the operator in the statement
+# with a new date. A statement says who accepted the findings, when, for how
+# long, and who owns their remediation; an entry without that is not a
+# reviewed exception.
+#
+# What is listed is what the scan reported on main at commit f609e74 on
+# 2026-11-28: 188 Trivy findings (CRITICAL and HIGH, Trivy 0.76.2, built-in
+# checks) of 4 checks in 79 Kubernetes manifests, and 3 advisories in one
+# lockfile. On 2026-11-28 the operator accepted them as listed, with the
+# dates below, including those after 2026-12-27, and named himself owner of
+# their remediation. He gave that answer to the author of the change that
+# added this file, pull request 428, where it is recorded. The findings
+# tables were written by `scripts/scan-repository-baseline.py
+# --print-findings` and are edited by hand, in a reviewed change, when a
+# finding is fixed or a decision changes.
+
+# KSV-0112 (CRITICAL), "Manage all resources at the namespace": 8 in 1 file.
+[[trivy]]
+id = "KSV-0112"
+expires = 2026-12-28
+statement = """\
+Role corbetti-agent-writer may create, update, patch and delete every \
+resource of its namespace, in eight namespaces. Present on main at f609e74 \
+on 2026-11-28. The file documents the grant as deliberate (ADR-0500 \
+Amendment 2026-07, rbx-security AGENT-KUBE-001) and bounded by a \
+ValidatingAdmissionPolicy that this scan does not evaluate. Accepted by the \
+operator on 2026-11-28, for the 8 findings listed here and until the date of \
+this entry. Owner: the operator, who by that date narrows the Role or \
+records a new decision here."""
+
+[trivy.findings]
+"apps/prod/rbx-agent-access/rbac.yml" = [
+  "Role 'corbetti-agent-writer' shouldn't manage all resources at the namespace 'eden'",
+  "Role 'corbetti-agent-writer' shouldn't manage all resources at the namespace 'llm-gateway'",
+  "Role 'corbetti-agent-writer' shouldn't manage all resources at the namespace 'rbx-commerce'",
+  "Role 'corbetti-agent-writer' shouldn't manage all resources at the namespace 'rbx-comms'",
+  "Role 'corbetti-agent-writer' shouldn't manage all resources at the namespace 'rbx-maestro'",
+  "Role 'corbetti-agent-writer' shouldn't manage all resources at the namespace 'rbx-observability'",
+  "Role 'corbetti-agent-writer' shouldn't manage all resources at the namespace 'robson'",
+  "Role 'corbetti-agent-writer' shouldn't manage all resources at the namespace 'truthmetal'",
+]
+
+# KSV-0053 (HIGH), "Exec into Pods": 9 in 2 files.
+[[trivy]]
+id = "KSV-0053"
+expires = 2026-12-28
+statement = """\
+Role corbetti-agent-writer in the same eight namespaces may create \
+pods/exec, and Role plausible-backup-clickhouse may on the one pod it names. \
+Present on main at f609e74 on 2026-11-28. Both files document the grant as \
+deliberate. Accepted by the operator on 2026-11-28, for the 9 findings \
+listed here and until the date of this entry. Owner: the operator, who by \
+that date removes pods/exec from the Roles or records a new decision here."""
+
+[trivy.findings]
+"apps/prod/plausible/backup-rbac.yml" = [
+  "Role 'plausible-backup-clickhouse' should not have access to resource '[\"pods/exec\"]' for verbs [\"create\", \"update\", \"patch\", \"delete\", \"deletecollection\", \"impersonate\", \"*\"]",
+]
+"apps/prod/rbx-agent-access/rbac.yml" = [
+  "Role 'corbetti-agent-writer' should not have access to resource '[\"pods/exec\"]' for verbs [\"create\", \"update\", \"patch\", \"delete\", \"deletecollection\", \"impersonate\", \"*\"]",
+  "Role 'corbetti-agent-writer' should not have access to resource '[\"pods/exec\"]' for verbs [\"create\", \"update\", \"patch\", \"delete\", \"deletecollection\", \"impersonate\", \"*\"]",
+  "Role 'corbetti-agent-writer' should not have access to resource '[\"pods/exec\"]' for verbs [\"create\", \"update\", \"patch\", \"delete\", \"deletecollection\", \"impersonate\", \"*\"]",
+  "Role 'corbetti-agent-writer' should not have access to resource '[\"pods/exec\"]' for verbs [\"create\", \"update\", \"patch\", \"delete\", \"deletecollection\", \"impersonate\", \"*\"]",
+  "Role 'corbetti-agent-writer' should not have access to resource '[\"pods/exec\"]' for verbs [\"create\", \"update\", \"patch\", \"delete\", \"deletecollection\", \"impersonate\", \"*\"]",
+  "Role 'corbetti-agent-writer' should not have access to resource '[\"pods/exec\"]' for verbs [\"create\", \"update\", \"patch\", \"delete\", \"deletecollection\", \"impersonate\", \"*\"]",
+  "Role 'corbetti-agent-writer' should not have access to resource '[\"pods/exec\"]' for verbs [\"create\", \"update\", \"patch\", \"delete\", \"deletecollection\", \"impersonate\", \"*\"]",
+  "Role 'corbetti-agent-writer' should not have access to resource '[\"pods/exec\"]' for verbs [\"create\", \"update\", \"patch\", \"delete\", \"deletecollection\", \"impersonate\", \"*\"]",
+]
+
+# KSV-0118 (HIGH), "Default security context configured": 94 in 58 files.
+[[trivy]]
+id = "KSV-0118"
+expires = 2027-02-27
+statement = """\
+Workloads and containers that set no securityContext. Present on main at \
+f609e74 on 2026-11-28. Accepted by the operator on 2026-11-28, for the 94 \
+findings listed here and until the date of this entry. That date is later \
+than 2026-12-27, the date recorded for the repair of the CI itself, and the \
+operator accepted it as such. Owner: the operator. Remediation: set a \
+securityContext on the workload and remove its lines from this list."""
+
+[trivy.findings]
+"apps/archived/robson-frontend-react/frontend-deploy.yml" = [
+  "container robson-frontend in robson namespace is using the default security context",
+  "deployment robson-frontend in robson namespace is using the default security context, which allows root privileges",
+]
+"apps/base/api/deploy.yml" = [
+  "container __NAME__ in __NAME__ namespace is using the default security context",
+  "deployment __NAME__ in __NAME__ namespace is using the default security context, which allows root privileges",
+]
+"apps/base/web-static/deploy.yml" = [
+  "container __NAME__ in __NAME__ namespace is using the default security context",
+  "deployment __NAME__ in __NAME__ namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/eden-outbox/deploy.yml" = [
+  "deployment eden-outbox in eden-outbox namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/eden/api-deploy.yml" = [
+  "container eden-api in eden namespace is using the default security context",
+  "deployment eden-api in eden namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/eden/portal-deploy.yml" = [
+  "container eden-portal in eden namespace is using the default security context",
+  "deployment eden-portal in eden namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/lda-prod/deploy.yml" = [
+  "container lda-prod in lda-prod namespace is using the default security context",
+  "deployment lda-prod in lda-prod namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/md-prec-kulinaryos/md-prec-kulinaryos-deploy.yml" = [
+  "deployment md-prec-kulinaryos in md-prec-kulinaryos namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/merovelis/content/publish-job.yml" = [
+  "job site-content-publish-20261127b in merovelis namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/merovelis/institutional-deploy.yml" = [
+  "container merovelis-institutional in merovelis namespace is using the default security context",
+  "deployment merovelis-institutional in merovelis namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/merovelis/merovelis-site-deploy.yml" = [
+  "deployment merovelis-site in merovelis namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/plausible/clickhouse.yml" = [
+  "container plausible-clickhouse in plausible namespace is using the default security context",
+]
+"apps/prod/plausible/deploy.yml" = [
+  "container plausible in plausible namespace is using the default security context",
+  "deployment plausible in plausible namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-atlas/deploy.yml" = [
+  "deployment rbx-atlas in rbx-atlas namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-briefing-btc-sandbox/session-bff.yml" = [
+  "deployment rbx-briefing-btc-sandbox-session-bff in rbx-briefing-btc-sandbox namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-briefing-btc-sandbox/web.yml" = [
+  "deployment rbx-briefing-btc-sandbox in rbx-briefing-btc-sandbox namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-briefing-btc/deploy.yml" = [
+  "deployment rbx-briefing-btc in rbx-briefing-btc namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-briefing-btc/session-bff.yml" = [
+  "deployment rbx-briefing-btc-session-bff in rbx-briefing-btc namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-catalog/api-deploy.yml" = [
+  "container rbx-catalog-api in rbx-catalog namespace is using the default security context",
+  "deployment rbx-catalog-api in rbx-catalog namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-catalog/console-deploy.yml" = [
+  "container rbx-catalog-console in rbx-catalog namespace is using the default security context",
+  "deployment rbx-catalog-console in rbx-catalog namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-cms/db-migrate-job.yml" = [
+  "container rbx-cms-db-migrate in rbx-cms namespace is using the default security context",
+  "job rbx-cms-db-migrate in rbx-cms namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-cms/deploy.yml" = [
+  "container rbx-cms-backend in rbx-cms namespace is using the default security context",
+  "container rbx-cms-web in rbx-cms namespace is using the default security context",
+  "deployment rbx-cms-backend in rbx-cms namespace is using the default security context, which allows root privileges",
+  "deployment rbx-cms-web in rbx-cms namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-commerce-sandbox/rbx-commerce-sandbox-deploy.yml" = [
+  "deployment rbx-commerce-sandbox in rbx-commerce-sandbox namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-commerce/rbx-commerce-deploy.yml" = [
+  "deployment rbx-commerce in rbx-commerce namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-commerce/rbx-commerce-web-deploy.yml" = [
+  "deployment rbx-commerce-web in rbx-commerce namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-comms-console/deploy.yml" = [
+  "container rbx-comms-console in rbx-comms namespace is using the default security context",
+  "deployment rbx-comms-console in rbx-comms namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-comms/deploy.yml" = [
+  "container rbx-comms in rbx-comms namespace is using the default security context",
+  "deployment rbx-comms in rbx-comms namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-console/deploy.yml" = [
+  "deployment rbx-console in rbx-console namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-console/session-bff.yml" = [
+  "deployment rbx-console-session-bff in rbx-console namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-data/deploy.yml" = [
+  "container rbx-data in rbx-data namespace is using the default security context",
+  "deployment rbx-data in rbx-data namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-eden-system-creator/deploy.yml" = [
+  "deployment rbx-eden-system-creator in rbx-eden-system-creator namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-flightdeck/db-bootstrap-job.yml" = [
+  "job rbx-flightdeck-db-bootstrap in rbx-flightdeck namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-flightdeck/db-migrate-job.yml" = [
+  "job rbx-flightdeck-db-migrate in rbx-flightdeck namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-flightdeck/deploy.yml" = [
+  "deployment rbx-flightdeck in rbx-flightdeck namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-flightdeck/intake-bootstrap-job.yml" = [
+  "job rbx-flightdeck-intake-bootstrap in rbx-flightdeck namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-ia-br/cronjob-submit-sitemap.yml" = [
+  "container submit-sitemap-rbx-ia-br in rbx-ia-br namespace is using the default security context",
+  "container submit-sitemap-rbxsystems-ch in rbxsystems-ch namespace is using the default security context",
+  "cronjob submit-sitemap-rbx-ia-br in rbx-ia-br namespace is using the default security context, which allows root privileges",
+  "cronjob submit-sitemap-rbxsystems-ch in rbxsystems-ch namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-ia-br/deploy.yml" = [
+  "container rbx-ia-br in rbx-ia-br namespace is using the default security context",
+  "deployment rbx-ia-br in rbx-ia-br namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-landing-briefing-btc/rbx-landing-briefing-btc-deploy.yml" = [
+  "deployment rbx-landing-briefing-btc in rbx-landing-briefing-btc namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-maestro/deployment-app.yaml" = [
+  "container rbx-maestro in rbx-maestro namespace is using the default security context",
+  "container rbx-maestro in rbx-maestro namespace is using the default security context",
+  "container rbx-maestro in rbx-maestro namespace is using the default security context",
+  "deployment rbx-maestro in rbx-maestro namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-memory/deploy.yml" = [
+  "container rbx-memory in rbx-memory namespace is using the default security context",
+  "deployment rbx-memory in rbx-memory namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-observability/deploy.yml" = [
+  "container rbx-observability in rbx-observability namespace is using the default security context",
+  "deployment rbx-observability in rbx-observability namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-payments/bitcoind-statefulset.yml" = [
+  "container rbx-btcpay-bitcoind in rbx-payments namespace is using the default security context",
+]
+"apps/prod/rbx-payments/btcpay-deploy.yml" = [
+  "container rbx-btcpay-server in rbx-payments namespace is using the default security context",
+  "deployment rbx-btcpay-server in rbx-payments namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-payments/nbxplorer-deploy.yml" = [
+  "container rbx-btcpay-nbxplorer in rbx-payments namespace is using the default security context",
+  "deployment rbx-btcpay-nbxplorer in rbx-payments namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-portal/deploy.yml" = [
+  "deployment rbx-portal in rbx-portal namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-public-presence/api-deploy.yml" = [
+  "deployment rbx-public-presence-api in rbx-public-presence namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-public-presence/db-migrate-job.yml" = [
+  "job rbx-public-presence-db-migrate in rbx-public-presence namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbx-public-presence/web-deploy.yml" = [
+  "deployment rbx-public-presence-web in rbx-public-presence namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/rbxsystems-ch/deploy.yml" = [
+  "container rbxsystems-ch in rbxsystems-ch namespace is using the default security context",
+  "deployment rbxsystems-ch in rbxsystems-ch namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/robson/redis-deploy.yml" = [
+  "container robson-redis in robson namespace is using the default security context",
+  "deployment robson-redis in robson namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/robson/robson-frontend-v2-deploy.yml" = [
+  "deployment robson-frontend-v2 in robson namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/strategos/strategos-site-deploy.yml" = [
+  "deployment strategos-site in strategos namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/strategos/strategos-ui-deploy.yml" = [
+  "deployment strategos-ui in strategos namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/truthmetal/deploy.yml" = [
+  "container truthmetal in truthmetal namespace is using the default security context",
+  "deployment truthmetal in truthmetal namespace is using the default security context, which allows root privileges",
+]
+"apps/prod/truthmetal/redis-deploy.yml" = [
+  "container truthmetal-redis in truthmetal namespace is using the default security context",
+  "deployment truthmetal-redis in truthmetal namespace is using the default security context, which allows root privileges",
+]
+"apps/staging/backend/backend-staging.yml" = [
+  "container backend-staging in staging namespace is using the default security context",
+  "container backend-staging in staging namespace is using the default security context",
+  "deployment backend-staging in staging namespace is using the default security context, which allows root privileges",
+]
+"apps/staging/backend/cronjob-stop-monitor.yml" = [
+  "container stop-monitor-staging in staging namespace is using the default security context",
+  "container stop-monitor-staging in staging namespace is using the default security context",
+  "cronjob stop-monitor-staging in staging namespace is using the default security context, which allows root privileges",
+]
+"bootstrap/ansible/files/reliability/coredns-deploy.yml" = [
+  "deployment coredns in kube-system namespace is using the default security context, which allows root privileges",
+]
+
+# KSV-0014 (HIGH), "Root file system is not read-only": 77 in 70 files.
+[[trivy]]
+id = "KSV-0014"
+expires = 2027-02-27
+statement = """\
+Containers that do not set securityContext.readOnlyRootFilesystem to true. \
+Present on main at f609e74 on 2026-11-28. Accepted by the operator on \
+2026-11-28, for the 77 findings listed here and until the date of this \
+entry. That date is later than 2026-12-27, the date recorded for the repair \
+of the CI itself, and the operator accepted it as such. Owner: the operator. \
+Remediation: make the root file system of the container read-only and remove \
+its lines from this list."""
+
+[trivy.findings]
+"apps/archived/robson-frontend-react/frontend-deploy.yml" = [
+  "Container 'frontend' of Deployment 'robson-frontend' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/archived/robson-v2/robsond-db-migrate-job.yml" = [
+  "Container 'db-migrate' of Job 'robsond-db-migrate' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/archived/robson-v2/robsond-deployment.yml" = [
+  "Container 'robsond' of Deployment 'robsond' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/base/api/deploy.yml" = [
+  "Container '__NAME__' of Deployment '__NAME__' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/base/web-static/deploy.yml" = [
+  "Container '__NAME__' of Deployment '__NAME__' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/dev-sandboxes/robson-pg-recovery/postgres.yml" = [
+  "Container 'postgres' of Deployment 'robson-pg-sandbox' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/eden-outbox/deploy.yml" = [
+  "Container 'eden-outbox' of Deployment 'eden-outbox' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/eden/api-deploy.yml" = [
+  "Container 'api' of Deployment 'eden-api' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/eden/portal-deploy.yml" = [
+  "Container 'portal' of Deployment 'eden-portal' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/lda-prod/deploy.yml" = [
+  "Container 'lda-frontend' of Deployment 'lda-prod' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/llm-gateway/litellm-deploy.yml" = [
+  "Container 'litellm' of Deployment 'litellm' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/md-prec-kulinaryos/md-prec-kulinaryos-deploy.yml" = [
+  "Container 'md-prec-kulinaryos' of Deployment 'md-prec-kulinaryos' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/merovelis/content/publish-job.yml" = [
+  "Container 'publish' of Job 'site-content-publish-20261127b' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/merovelis/institutional-deploy.yml" = [
+  "Container 'rbx-frontend' of Deployment 'merovelis-institutional' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/merovelis/merovelis-site-deploy.yml" = [
+  "Container 'merovelis-site' of Deployment 'merovelis-site' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/plausible/clickhouse.yml" = [
+  "Container 'clickhouse' of StatefulSet 'plausible-clickhouse' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/plausible/deploy.yml" = [
+  "Container 'plausible' of Deployment 'plausible' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-briefing-btc-sandbox/session-bff.yml" = [
+  "Container 'session-bff' of Deployment 'rbx-briefing-btc-sandbox-session-bff' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-briefing-btc/session-bff.yml" = [
+  "Container 'session-bff' of Deployment 'rbx-briefing-btc-session-bff' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-catalog/api-deploy.yml" = [
+  "Container 'api' of Deployment 'rbx-catalog-api' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-catalog/console-deploy.yml" = [
+  "Container 'console' of Deployment 'rbx-catalog-console' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-cms/db-migrate-job.yml" = [
+  "Container 'migrate' of Job 'rbx-cms-db-migrate' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-cms/deploy.yml" = [
+  "Container 'api' of Deployment 'rbx-cms-backend' should set 'securityContext.readOnlyRootFilesystem' to true",
+  "Container 'web' of Deployment 'rbx-cms-web' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-commerce-sandbox/rbx-commerce-sandbox-deploy.yml" = [
+  "Container 'api' of Deployment 'rbx-commerce-sandbox' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-commerce/rbx-commerce-deploy.yml" = [
+  "Container 'api' of Deployment 'rbx-commerce' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-commerce/rbx-commerce-web-deploy.yml" = [
+  "Container 'web' of Deployment 'rbx-commerce-web' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-comms-console/deploy.yml" = [
+  "Container 'console' of Deployment 'rbx-comms-console' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-comms/deploy.yml" = [
+  "Container 'api' of Deployment 'rbx-comms' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-console/deploy.yml" = [
+  "Container 'console' of Deployment 'rbx-console' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-console/session-bff.yml" = [
+  "Container 'session-bff' of Deployment 'rbx-console-session-bff' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-data/deploy.yml" = [
+  "Container 'api' of Deployment 'rbx-data' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-eden-system-creator/deploy.yml" = [
+  "Container 'api' of Deployment 'rbx-eden-system-creator' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-flightdeck/db-bootstrap-job.yml" = [
+  "Container 'bootstrap' of Job 'rbx-flightdeck-db-bootstrap' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-flightdeck/db-migrate-job.yml" = [
+  "Container 'migrate' of Job 'rbx-flightdeck-db-migrate' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-flightdeck/deploy.yml" = [
+  "Container 'web' of Deployment 'rbx-flightdeck' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-flightdeck/intake-bootstrap-job.yml" = [
+  "Container 'bootstrap' of Job 'rbx-flightdeck-intake-bootstrap' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-ia-br/cronjob-submit-sitemap.yml" = [
+  "Container 'submit-sitemap' of CronJob 'submit-sitemap-rbx-ia-br' should set 'securityContext.readOnlyRootFilesystem' to true",
+  "Container 'submit-sitemap' of CronJob 'submit-sitemap-rbxsystems-ch' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-ia-br/deploy.yml" = [
+  "Container 'rbx-frontend' of Deployment 'rbx-ia-br' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-landing-briefing-btc/rbx-landing-briefing-btc-deploy.yml" = [
+  "Container 'rbx-landing-briefing-btc' of Deployment 'rbx-landing-briefing-btc' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-maestro/deployment-app.yaml" = [
+  "Container 'copy-migrations' of Deployment 'rbx-maestro' should set 'securityContext.readOnlyRootFilesystem' to true",
+  "Container 'maestro' of Deployment 'rbx-maestro' should set 'securityContext.readOnlyRootFilesystem' to true",
+  "Container 'migrate' of Deployment 'rbx-maestro' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-memory/deploy.yml" = [
+  "Container 'api' of Deployment 'rbx-memory' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-observability/deploy.yml" = [
+  "Container 'api' of Deployment 'rbx-observability' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-payments/bitcoind-statefulset.yml" = [
+  "Container 'bitcoind' of StatefulSet 'rbx-btcpay-bitcoind' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-payments/btcpay-deploy.yml" = [
+  "Container 'btcpayserver' of Deployment 'rbx-btcpay-server' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-payments/nbxplorer-deploy.yml" = [
+  "Container 'nbxplorer' of Deployment 'rbx-btcpay-nbxplorer' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-portal/deploy.yml" = [
+  "Container 'portal' of Deployment 'rbx-portal' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbx-token-service/token-service-deploy.yml" = [
+  "Container 'rbx-token-service' of Deployment 'rbx-token-service' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/rbxsystems-ch/deploy.yml" = [
+  "Container 'rbx-frontend' of Deployment 'rbxsystems-ch' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/robson/redis-deploy.yml" = [
+  "Container 'redis' of Deployment 'robson-redis' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/robson/robson-frontend-v2-deploy.yml" = [
+  "Container 'nginx' of Deployment 'robson-frontend-v2' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/robson/robsond-db-migrate-job.yml" = [
+  "Container 'db-migrate' of Job 'robsond-db-migrate' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/robson/robsond-db-retention-cronjob.yml" = [
+  "Container 'db-retention' of CronJob 'robsond-db-retention' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/robson/robsond-deploy.yml" = [
+  "Container 'robsond' of Deployment 'robsond' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/robson/robsond-ep006-migrate-job.yml" = [
+  "Container 'ep006-migrate' of Job 'robsond-ep006-migrate' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/robson/robsond-ep006-verify-job.yml" = [
+  "Container 'ep006-verify' of Job 'robsond-ep006-verify' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/strategos/strategos-site-deploy.yml" = [
+  "Container 'strategos-site' of Deployment 'strategos-site' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/strategos/strategos-ui-deploy.yml" = [
+  "Container 'strategos-ui' of Deployment 'strategos-ui' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/thalamus/deploy.yml" = [
+  "Container 'thalamus-server' of Deployment 'thalamus-server' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/thalamus/maintenance-cronjob.yml" = [
+  "Container 'maintenance' of CronJob 'thalamus-maintenance' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/truthmetal/deploy.yml" = [
+  "Container 'truthmetal' of Deployment 'truthmetal' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/prod/truthmetal/redis-deploy.yml" = [
+  "Container 'redis' of Deployment 'truthmetal-redis' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/staging/backend/backend-staging.yml" = [
+  "Container 'backend' of Deployment 'backend-staging' should set 'securityContext.readOnlyRootFilesystem' to true",
+  "Container 'wait-for-postgres' of Deployment 'backend-staging' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/staging/backend/cronjob-stop-monitor.yml" = [
+  "Container 'monitor' of CronJob 'stop-monitor-staging' should set 'securityContext.readOnlyRootFilesystem' to true",
+  "Container 'wait-for-backend' of CronJob 'stop-monitor-staging' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/staging/postgres/postgres-staging.yml" = [
+  "Container 'postgres' of Deployment 'postgres-staging' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/staging/rabbitmq/rabbitmq-statefulset.yml" = [
+  "Container 'config-init' of StatefulSet 'rabbitmq' should set 'securityContext.readOnlyRootFilesystem' to true",
+  "Container 'rabbitmq' of StatefulSet 'rabbitmq' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/staging/redis/redis-staging.yml" = [
+  "Container 'redis' of Deployment 'redis-staging' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/testnet/robson/robsond-db-migrate-job.yml" = [
+  "Container 'db-migrate' of Job 'robsond-db-migrate' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/testnet/robson/robsond-deploy.yml" = [
+  "Container 'robsond' of Deployment 'robsond' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/testnet/robson/robsond-ep006-migrate-job.yml" = [
+  "Container 'ep006-migrate' of Job 'robsond-ep006-migrate' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+"apps/testnet/robson/robsond-ep006-verify-job.yml" = [
+  "Container 'ep006-verify' of Job 'robsond-ep006-verify' should set 'securityContext.readOnlyRootFilesystem' to true",
+]
+
+# GO-2026-5158: 1 in 1 file.
+[[osv]]
+id = "GO-2026-5158"
+expires = 2026-12-28
+statement = """\
+CVE-2026-41178, baggage parsing does not cap the raw header length; OSV \
+gives it no severity. Fixed in otel 1.42.0. Indirect dependency of the \
+kubectl build of the Plausible backup image, present on main at f609e74 on \
+2026-11-28. Accepted by the operator on 2026-11-28, for the 1 finding listed \
+here and until the date of this entry. Owner: the operator. Remediation: \
+update the module in the change that rebuilds and scans that image, and \
+remove this entry."""
+
+[osv.findings]
+"scripts/plausible/kubectl/go.mod" = [
+  "go.opentelemetry.io/otel@1.41.0",
+]
+
+# GO-2026-6975: 1 in 1 file.
+[[osv]]
+id = "GO-2026-6975"
+expires = 2026-12-28
+statement = """\
+CVE-2026-128086, memory allocation amplification in W3C baggage parsing; OSV \
+gives it no severity. Fixed in otel 1.47.0. Indirect dependency of the \
+kubectl build of the Plausible backup image, present on main at f609e74 on \
+2026-11-28. Accepted by the operator on 2026-11-28, for the 1 finding listed \
+here and until the date of this entry. Owner: the operator. Remediation: \
+update the module in the change that rebuilds and scans that image, and \
+remove this entry."""
+
+[osv.findings]
+"scripts/plausible/kubectl/go.mod" = [
+  "go.opentelemetry.io/otel@1.41.0",
+]
+
+# GO-2026-6974: 1 in 1 file.
+[[osv]]
+id = "GO-2026-6974"
+expires = 2026-12-28
+statement = """\
+CVE-2026-128085 (GHSA-q7gw-24fr-5p69), AttributeValueLengthLimit bypass \
+through U+FFFD runes; CVSS 5.3. Fixed in otel/trace 1.47.0. Indirect \
+dependency of the kubectl build of the Plausible backup image, present on \
+main at f609e74 on 2026-11-28. Accepted by the operator on 2026-11-28, for \
+the 1 finding listed here and until the date of this entry. Owner: the \
+operator. Remediation: update the module in the change that rebuilds and \
+scans that image, and remove this entry."""
+
+[osv.findings]
+"scripts/plausible/kubectl/go.mod" = [
+  "go.opentelemetry.io/otel/trace@1.41.0",
+]
