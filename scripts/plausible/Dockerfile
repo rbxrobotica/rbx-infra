@@ -19,8 +19,8 @@ LABEL org.opencontainers.image.title="RBX Plausible preservation" \
       org.opencontainers.image.description="Encrypted database backup and bounded weekly analytics tools" \
       org.opencontainers.image.source="https://github.com/rbxrobotica/rbx-infra"
 
-# Patch the base's APT, OpenSSL, Perl and PCRE2 packages. The backup process starts directly
-# as UID 10001; PostgreSQL's root-switching gosu/entrypoint are not used.
+# Patch the base's APT, OpenSSL, Perl, PCRE2, PAM and Zstandard packages. The backup process
+# starts directly as UID 10001; PostgreSQL's root-switching gosu/entrypoint are not used.
 RUN apt-get update \
     && apt-get install --yes --no-install-recommends \
         python3=3.11.2-1+b1 \
@@ -35,6 +35,12 @@ RUN apt-get update \
         perl-modules-5.36=5.36.0-7+deb12u4 \
         libperl5.36=5.36.0-7+deb12u4 \
         libpcre2-8-0=10.42-1+deb12u2 \
+        libpam-modules=1.5.2-6+deb12u3 \
+        libpam-modules-bin=1.5.2-6+deb12u3 \
+        libpam-runtime=1.5.2-6+deb12u3 \
+        libpam0g=1.5.2-6+deb12u3 \
+        libzstd1=1.5.4+dfsg2-5+deb12u1 \
+        zstd=1.5.4+dfsg2-5+deb12u1 \
     && rm -rf /var/lib/apt/lists/* \
     && rm -f /usr/local/bin/gosu /usr/local/bin/docker-entrypoint.sh \
     && groupadd --gid 10001 backup-runner \
