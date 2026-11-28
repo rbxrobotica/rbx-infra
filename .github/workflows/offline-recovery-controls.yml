@@ -1,0 +1,15 @@
+name: Offline recovery controls
+on:
+  pull_request:
+    paths: ['experiments/offline-kits/**', '.github/workflows/offline-recovery-controls.yml']
+  push:
+    branches: ['codex/offline-kits-*']
+    paths: ['experiments/offline-kits/**', '.github/workflows/offline-recovery-controls.yml']
+permissions:
+  contents: read
+jobs:
+  isolated-controls:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: python3 -B -m unittest discover -s experiments/offline-kits -p 'test_*.py'

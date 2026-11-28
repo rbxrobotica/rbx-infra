@@ -1,0 +1,11 @@
+[Unit]
+Description=Read addressed recovery-kit IRC requests every 30 seconds
+
+[Timer]
+OnBootSec=45s
+OnUnitInactiveSec=30s
+AccuracySec=2s
+Unit=rbx-recovery-irc.service
+
+[Install]
+WantedBy=timers.target

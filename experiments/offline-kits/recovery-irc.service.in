@@ -1,0 +1,22 @@
+[Unit]
+Description=RBX recovery kit context and status responder
+After=rbx-agent-irc.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I -B @RELEASE@/responder.py --registry %h/.local/share/rbx-recovery-irc/registry.json --root %h/.local/share/rbx-agent-handoffs --mailbox %h/.local/state/rbx-agent-irc/thinkcentre/mailbox.sqlite3 --python %h/.local/share/rbx-agent-irc/venv/bin/python --reply-helper @RELEASE@/reply_helper.py --config %h/.config/rbx-agent-irc/agent.yaml
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=%h/.local/state/rbx-agent-irc/thinkcentre
+RestrictAddressFamilies=AF_UNIX
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryMax=192M
+TasksMax=16
+TimeoutStartSec=30
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONNOUSERSITE=1
+
